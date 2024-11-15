@@ -80,3 +80,22 @@ export const isProd = () => {
 export const NO_OP = () => {
   /**/
 };
+
+const unstableTypes = ['function', 'object'];
+
+export const didChange = (prevValue: any, nextValue: any) => {
+  if (Object.is(prevValue, nextValue)) return false;
+
+  const prevValueString = fastSerialize(prevValue);
+  const nextValueString = fastSerialize(nextValue);
+
+  if (
+    !unstableTypes.includes(typeof prevValue) ||
+    !unstableTypes.includes(typeof nextValue) ||
+    prevValueString !== nextValueString
+  ) {
+    return true;
+  }
+
+  return 'unstable';
+};

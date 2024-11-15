@@ -46,7 +46,7 @@ export interface OutlineLabel {
   text: string | null;
 }
 
-export interface ChangedProp {
+export interface Change {
   name: string;
   prevValue: any;
   nextValue: any;

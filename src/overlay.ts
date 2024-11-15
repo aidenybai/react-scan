@@ -7,13 +7,8 @@ import {
   getType,
   traverseFiber,
 } from './fiber';
-import type {
-  OutlineLabel,
-  Outline,
-  ChangedProp,
-  OutlinePaintTask,
-} from './types';
-import { onIdle, fastSerialize } from './utils';
+import type { OutlineLabel, Outline, Change, OutlinePaintTask } from './types';
+import { onIdle, didChange } from './utils';
 import { getCurrentOptions } from './auto';
 import { MONO_FONT, PURPLE_RGB } from './constants';
 
@@ -58,8 +53,7 @@ export const getOutline = (fiber: Fiber | null): Outline | null => {
   const type = getType(fiber.type);
   if (!type) return null;
 
-  const changedProps: ChangedProp[] = [];
-  const unstableTypes = ['function', 'object'];
+  const changedProps: Change[] = [];
   let unstable = false;
 
   const prevProps = fiber.alternate?.memoizedProps;
@@ -69,32 +63,25 @@ export const getOutline = (fiber: Fiber | null): Outline | null => {
     const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
+    const changed = didChange(prevValue, nextValue);
+
     if (
-      Object.is(prevValue, nextValue) ||
+      !changed ||
       React.isValidElement(prevValue) ||
       React.isValidElement(nextValue) ||
       propName === 'children'
     ) {
       continue;
     }
-    const changedProp: ChangedProp = {
+    const changedProp: Change = {
       name: propName,
       prevValue,
       nextValue,
-      unstable: false,
+      unstable: changed === 'unstable',
     };
     changedProps.push(changedProp);
 
-    const prevValueString = fastSerialize(prevValue);
-    const nextValueString = fastSerialize(nextValue);
-
-    if (
-      !unstableTypes.includes(typeof prevValue) ||
-      !unstableTypes.includes(typeof nextValue) ||
-      prevValueString !== nextValueString
-    ) {
-      continue;
-    }
+    if (changed !== 'unstable') continue;
 
     unstable = true;
     changedProp.unstable = true;
@@ -415,7 +402,7 @@ export const createFullscreenCanvas = () => {
 
 export const createStatus = () => {
   const status = createElement(
-    `<div id="react-scan-status" title="Number of unnecessary renders and time elapsed" style="position:fixed;bottom:3px;right:3px;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;color:white;z-index:2147483647;font-family:${MONO_FONT}" aria-hidden="true">hide scanner</div>`,
+    `<div id="react-scan-status" title="Number of unnecessary renders and time elapsed" style="position:fixed;bottom:3px;right:3px;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;color:white;z-index:2147483647;font-family:${MONO_FONT}" aria-hidden="true">stop ⏹</div>`,
   ) as HTMLDivElement;
 
   let isHidden = localStorage.getItem('react-scan-hidden') === 'true';
