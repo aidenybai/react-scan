@@ -73,7 +73,7 @@ export const scan = (
     `font-weight:bold;font-size:14px;font-weight:bold;font-family:${MONO_FONT}`,
   );
 
-  const ctx = createFullscreenCanvas();
+  const canvasInstance = createFullscreenCanvas();
   const status = createStatus();
 
   const handleCommitFiberRoot = (_rendererID: number, root: FiberRoot) => {
@@ -125,7 +125,7 @@ export const scan = (
       ...outlines,
     ]);
 
-    if (nextPendingOutlines.length && ctx) {
+    if (nextPendingOutlines.length && canvasInstance.ctx) {
       for (let i = 0, len = nextPendingOutlines.length; i < len; i++) {
         const outline = nextPendingOutlines[i];
         totalSelfTime += outline.selfTime;
@@ -134,7 +134,7 @@ export const scan = (
       let text = `×${totalCount}`;
       if (totalSelfTime > 0) text += ` (${totalSelfTime.toFixed(2)}ms)`;
       status.textContent = `${text} · react-scan`;
-      flushOutlines(ctx);
+      flushOutlines(canvasInstance.ctx);
     }
   };
 

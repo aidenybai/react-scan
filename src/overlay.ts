@@ -14,7 +14,7 @@ import type {
   ChangedProp,
   OutlinePaintTask,
 } from './types';
-import { onIdle, fastSerialize } from './utils';
+import { debounce, onIdle, fastSerialize } from './utils';
 import { getCurrentOptions } from './auto';
 import { MONO_FONT, PURPLE_RGB } from './constants';
 
@@ -384,23 +384,47 @@ export const createFullscreenCanvas = () => {
   let resizeScheduled = false;
 
   const resize = () => {
+    activeOutlines = [];
+    pendingOutlines = [];
+
     const dpi = window.devicePixelRatio;
-    canvas.width = dpi * window.innerWidth;
-    canvas.height = dpi * window.innerHeight;
+    const visualViewport = window.visualViewport;
+
+    // Use visualViewport for mobile and fallback to regular viewport for desktop
+    const width = visualViewport?.width ?? window.innerWidth;
+    const height = visualViewport?.height ?? window.innerHeight;
+
+    canvas.width = dpi * width;
+    canvas.height = dpi * height;
+
+    ctx?.setTransform(1, 0, 0, 1, 0, 0);
     ctx?.scale(dpi, dpi);
+
+    // Only apply offset on mobile devices using visualViewport
+    if (visualViewport && /Mobi|Android/i.test(navigator.userAgent)) {
+      ctx?.translate(-visualViewport.offsetLeft, -visualViewport.offsetTop);
+    }
+
     resizeScheduled = false;
   };
 
   resize();
 
-  window.addEventListener('resize', () => {
+  const events = ['resize', 'scroll', 'touchend', 'orientationchange'];
+
+  const handleViewportChange = debounce(() => {
     if (!resizeScheduled) {
       resizeScheduled = true;
       requestAnimationFrame(() => {
         resize();
       });
     }
-  });
+  }, 100);
+
+  for (let i = 0, len = events.length; i < len; i++) {
+    const event = events[i];
+    window.addEventListener(event, handleViewportChange, { passive: true });
+  }
 
   onIdle(() => {
     const prevCanvas = document.getElementById('react-scan-canvas');
@@ -410,7 +434,14 @@ export const createFullscreenCanvas = () => {
     document.documentElement.appendChild(canvas);
   });
 
-  return ctx;
+  const cleanup = () => {
+    for (let i = 0, len = events.length; i < len; i++) {
+      const event = events[i];
+      window.removeEventListener(event, handleViewportChange);
+    }
+  };
+
+  return { ctx, cleanup };
 };
 
 export const createStatus = () => {
