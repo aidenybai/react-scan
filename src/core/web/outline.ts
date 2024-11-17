@@ -159,7 +159,7 @@ export const flushOutlines = (
 
         for (let i = 0, len = mergedOutlines.length; i < len; i++) {
           const outline = mergedOutlines[i];
-          for (let j = 0, len = outline.renders.length; j < len; j++) {
+          for (let j = 0, lenRenders = outline.renders.length; j < lenRenders; j++) {
             const render = outline.renders[j];
             totalTime += render.time;
             totalCount += render.count;
@@ -168,12 +168,43 @@ export const flushOutlines = (
 
         let text = `×${totalCount}`;
         if (totalTime > 0) text += ` (${totalTime.toFixed(2)}ms)`;
-        status.textContent = `${text} · react-scan`;
+
+        const statusText = status.querySelector(
+          '#react-scan-status-text',
+        ) as HTMLSpanElement | null;
+        if (statusText) {
+          statusText.textContent = `${text} · react-scan`;
+        }
       }
 
       await Promise.all(
         mergedOutlines.map(async (outline) => {
           const key = getOutlineKey(outline);
+
+          if (ReactScanInternals.selectedArea) {
+            const { x, y, width, height } = ReactScanInternals.selectedArea;
+            const selectedAreaLeft = x;
+            const selectedAreaTop = y;
+            const selectedAreaRight = x + width;
+            const selectedAreaBottom = y + height;
+
+            const rect = outline.rect;
+            const rectLeft = rect.left + window.scrollX;
+            const rectTop = rect.top + window.scrollY;
+            const rectRight = rectLeft + rect.width;
+            const rectBottom = rectTop + rect.height;
+
+            const isCompletelyWithinSelectedArea =
+              rectLeft >= selectedAreaLeft &&
+              rectRight <= selectedAreaRight &&
+              rectTop >= selectedAreaTop &&
+              rectBottom <= selectedAreaBottom;
+
+            if (!isCompletelyWithinSelectedArea) {
+              return;
+            }
+          }
+
           if (previousOutlines.has(key)) {
             return;
           }

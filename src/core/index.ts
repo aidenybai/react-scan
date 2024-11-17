@@ -9,7 +9,7 @@ import {
 } from './web/outline';
 import { createCanvas } from './web/index';
 import { logIntro } from './web/log';
-import { createStatus } from './web/toolbar';
+import { createStatus } from './web/status';
 import { playGeigerClickSound } from './web/geiger';
 
 interface Options {
@@ -64,12 +64,19 @@ interface Internals {
   options: Options;
   scheduledOutlines: PendingOutline[];
   activeOutlines: ActiveOutline[];
+  selectedArea: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
 }
 
 export const ReactScanInternals: Internals = {
   onCommitFiberRoot: (_rendererID: number, _root: FiberRoot): void => {
     /**/
   },
+  selectedArea: null,
   get isProd() {
     return (
       '_self' in React.createElement('div') &&
