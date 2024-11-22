@@ -10,12 +10,16 @@ import {
 import { logIntro } from './web/log';
 import { playGeigerClickSound } from './web/geiger';
 import { createPerfObserver } from './web/perf-observer';
+<<<<<<< HEAD
 import { initReactScanOverlay } from './web/overlay';
 import {
   createInspectElementStateMachine,
   type States,
 } from './web/inspect-element/inspect-state-machine';
 import { createToolbar } from './web/toolbar';
+=======
+import { printReport as internalPrintReport } from './web/report';
+>>>>>>> d9e5789 (Added printReport function)
 
 export interface Options {
   /**
@@ -263,6 +267,7 @@ export const ReactScanInternals = createStore<Internals>({
 });
 
 export const getReport = () => ReactScanInternals.reportData;
+export const printReport = internalPrintReport;
 
 export const setOptions = (options: Options) => {
   ReactScanInternals.options = {
