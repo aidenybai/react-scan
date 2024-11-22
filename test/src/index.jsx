@@ -8,7 +8,7 @@ import './styles.css';
 
 scan({
   enabled: true,
-  report: true,
+  // report: true,
   // log: true,
   // clearLog: true,
   // playSound: true,
@@ -46,9 +46,9 @@ export const App = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  useEffect(() => {
-    printReport(['Button', 'AddTaskBar']);
-  }, [tasks, activeTab]);
+  // useEffect(() => {
+  //   printReport(['Button', 'AddTaskBar']);
+  // }, [tasks, activeTab]);
 
   return (
     <TooltipContext.Provider value={{ tooltip: 'Hello' }}>
