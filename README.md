@@ -388,11 +388,11 @@ Also, some personal complaints about React Devtools' highlight feature:
 - It looks subjectively ugly (lines look fuzzy, feels sluggish)
 - I'm more ambitious with react-scan (see our roadmap)
 
-**Q: React Native wen?**
+**Q: React Native when?**
 
 Soon :)
 
-**Q: Chrome Extension wen?**
+**Q: Chrome Extension when?**
 
 Soon :)
 
