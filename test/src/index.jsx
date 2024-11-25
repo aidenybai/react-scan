@@ -1,5 +1,7 @@
-import { scan, printReport } from 'react-scan/dist/index.mjs'; // force production build
-import React, { useEffect, useState, createContext } from 'react';
+import { scan} from 'react-scan/dist/index.mjs'; // force production build
+import React, { useState, createContext } from 'react';
+// import { printReport } from 'react-scan/dist/index.mjs'
+// import { useEffect } from 'react';
 import ReactDOMClient from 'react-dom/client';
 import { Analytics } from '@vercel/analytics/react';
 import { highlight } from 'sugar-high';
