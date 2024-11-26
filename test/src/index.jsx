@@ -1,5 +1,7 @@
-import { scan } from 'react-scan/dist/index.mjs'; // force production build
+import { scan} from 'react-scan/dist/index.mjs'; // force production build
 import React, { useState, createContext } from 'react';
+// import { printReport } from 'react-scan/dist/index.mjs'
+// import { useEffect } from 'react';
 import ReactDOMClient from 'react-dom/client';
 import { Analytics } from '@vercel/analytics/react';
 import { highlight } from 'sugar-high';
@@ -15,6 +17,7 @@ scan({
   // renderCountThreshold: 100,
   runInProduction: true,
 });
+
 
 const copyToClipboard = (text) => {
   navigator.clipboard.writeText(text).then(() => {
@@ -44,6 +47,10 @@ export const App = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // useEffect(() => {
+  //   printReport(['Button', 'AddTaskBar']);
+  // }, [tasks, activeTab]);
 
   return (
     <TooltipContext.Provider value={{ tooltip: 'Hello' }}>

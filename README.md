@@ -251,6 +251,7 @@ if (typeof window !== 'undefined') {
 - `scan(options)`: Imperative API to start scanning
 - `useScan(options)`: Hook API to start scanning
 - `withScan(Component, options)`: Useful if you only want to scan a specific component
+- `printReport(componentNames)`: Prints a detailed report in the console for the given components
 
 ## Why React Scan?
 
