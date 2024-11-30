@@ -172,6 +172,18 @@ export const createToolbar = (): (() => void) => {
           </div>
         </div>
       </div>
+      <div id="react-scan-minimap-container" style="
+        pointer-events: auto;
+        background: #000;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 100%;
+        width: 360px;
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 500ms cubic-bezier(0, 0.95, 0.1, 1);
+      ">
+        <!-- Minimap will be injected here -->
+      </div>
       <div id="react-scan-props" style="
         pointer-events: auto;
         background: #000;
@@ -611,12 +623,15 @@ export const createToolbar = (): (() => void) => {
       inspectBtn.style.color = '#999';
     }
 
+    const minimapContainer = toolbar.querySelector<HTMLElement>('#react-scan-minimap-container');
     if (!isInspectActive && !focusActive) {
       propContainer.style.maxHeight = '0';
       propContainer.style.width = 'fit-content';
       propContainer.innerHTML = '';
+      if (minimapContainer) minimapContainer.style.maxHeight = '0';
       resizeHandle.style.display = 'none';
     } else if (focusActive) {
+      if (minimapContainer) minimapContainer.style.maxHeight = '220px';
       resizeHandle.style.display = 'block';
     }
 

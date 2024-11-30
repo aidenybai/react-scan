@@ -17,6 +17,8 @@ import {
 } from './web/inspect-element/inspect-state-machine';
 import { createToolbar } from './web/toolbar';
 import { getType } from './instrumentation/utils';
+import { throttle } from './web/utils';
+import { createMinimapCanvas } from './web/mini-map/canvas';
 
 export interface Options {
   /**
@@ -301,6 +303,7 @@ export const start = () => {
   }
   const ctx = overlayElement.getContext();
   createInspectElementStateMachine();
+  createMinimapCanvas()
 
   const audioContext =
     typeof window !== 'undefined'
@@ -405,3 +408,4 @@ export const getRenderInfo = (type: unknown) => {
   }
   return null;
 };
+

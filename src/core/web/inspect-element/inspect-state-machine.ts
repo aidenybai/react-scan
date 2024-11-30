@@ -1,4 +1,5 @@
 import { type Internals, ReactScanInternals } from '../../index';
+
 import { throttle } from '../utils';
 import { didFiberRender } from '../../instrumentation/fiber';
 import { restoreSizeFromLocalStorage } from '../toolbar';
@@ -35,7 +36,7 @@ export const INSPECT_OVERLAY_CANVAS_ID = 'react-scan-inspect-canvas';
 let lastHoveredElement: HTMLElement;
 let animationId: ReturnType<typeof requestAnimationFrame>;
 
-type Kinds = States['kind'];
+export type Kinds = States['kind'];
 export const createInspectElementStateMachine = () => {
   if (typeof window === 'undefined') {
     return;
