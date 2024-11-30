@@ -137,6 +137,21 @@ export interface Internals {
   inspectState: States;
 }
 
+export interface MeasurementValue {
+  width: number;
+  height: number;
+  pageX: number;
+  pageY: number;
+  x: number;
+  y: number;
+}
+export type Measurement =
+  | { kind: 'dom'; value: DOMRect }
+  | {
+      kind: 'native';
+      value: MeasurementValue;
+    };
+
 type Listener<T> = (value: T) => void;
 
 export interface StoreMethods<T extends object> {
@@ -248,8 +263,8 @@ export const ReactScanInternals = createStore<Internals>({
   },
   isInIframe: typeof window !== 'undefined' && window.self !== window.top,
   isPaused:
-    typeof window === 'undefined'
-      ? true
+    typeof localStorage === 'undefined'
+      ? false // react native
       : tryParse(localStorage.getItem('react-scan-paused') ?? 'false'),
   componentAllowList: null,
   options: {

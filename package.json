@@ -1,6 +1,6 @@
 {
   "name": "react-scan",
-  "version": "0.0.34",
+  "version": "0.0.36-native",
   "description": "Scan your React app for renders",
   "keywords": [
     "react",
@@ -90,14 +90,36 @@
         }
       }
     },
+    "./babel": {
+      "types": "./dist/babel.d.ts",
+      "default": "./dist/babel.js"
+    },
     "./dist/*": "./dist/*.js",
     "./dist/*.js": "./dist/*.js",
-    "./dist/*.mjs": "./dist/*.mjs"
+    "./dist/*.mjs": "./dist/*.mjs",
+    "./native": {
+      "types": "./dist/native.d.ts",
+      "default": "./dist/native.js"
+    }
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "browser": "dist/auto.global.js",
+  "react-native": "dist/native.js",
   "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "native": [
+        "./dist/native.d.ts"
+      ],
+      ".": [
+        "./dist/auto.d.ts"
+      ],
+      "babel": [
+        "./dist/babel.d.ts"
+      ]
+    }
+  },
   "bin": "bin/cli.js",
   "files": [
     "dist",
@@ -105,6 +127,8 @@
     "package.json",
     "README.md",
     "LICENSE",
+    "native.js",
+    "babel.js",
     "auto.d.ts"
   ],
   "scripts": {
@@ -122,6 +146,8 @@
     "playwright": "^1.49.0"
   },
   "devDependencies": {
+    "@shopify/react-native-skia": "*",
+    "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
     "@types/react-reconciler": "^0.28.8",
     "@vercel/style-guide": "^6.0.0",
@@ -130,9 +156,25 @@
     "publint": "^0.2.12",
     "react": "*",
     "react-dom": "*",
+    "react-native": "*",
+    "react-native-reanimated": "*",
     "react-reconciler": "^0.29.2",
     "terser": "^5.36.0",
     "tsup": "^8.2.4"
+  },
+  "peerDependenciesMeta": {
+    "@shopify/react-native-skia": {
+      "optional": true
+    },
+    "babel-preset-expo": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-reanimated": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

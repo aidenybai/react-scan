@@ -1,3 +1,4 @@
 packages:
   - 'extension/**'
   - 'test/**'
+  - 'test-native/**'

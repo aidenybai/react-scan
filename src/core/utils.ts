@@ -1,6 +1,11 @@
+import { ReactScanInternals } from '../index';
 import type { Render } from './instrumentation/index';
 
-export const getLabelText = (renders: Render[]) => {
+export const NO_OP = () => {
+  /**/
+};
+
+export const getLabelText = (renders: Render[], env: 'dom' | 'native') => {
   let labelText = '';
 
   const components = new Map<
@@ -40,7 +45,7 @@ export const getLabelText = (renders: Render[]) => {
       text += ` ×${count}`;
     }
 
-    if (forget) {
+    if (env === 'dom' && forget) {
       text = `${text} ✨`;
     }
     parts.push(text);
@@ -54,3 +59,8 @@ export const getLabelText = (renders: Render[]) => {
   }
   return labelText;
 };
+export const getCopiedActiveOutlines = () => [
+  ...ReactScanInternals.activeOutlines,
+];
+
+export const genId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);

@@ -1,23 +1,38 @@
 import { type Fiber } from 'react-reconciler';
 import { getNearestHostFiber } from '../instrumentation/fiber';
 import type { Render } from '../instrumentation/index';
-import { ReactScanInternals } from '../index';
+import { type Measurement, ReactScanInternals } from '../index';
 import { getLabelText } from '../utils';
 import { isOutlineUnstable, throttle } from './utils';
 
+//todo make more unique
+export const genId = () => {
+  const timeStamp: number = performance.now();
+  const randomNum: number = Math.floor(Math.random() * 1000);
+  return `${timeStamp}-${randomNum}`;
+};
+
+export const assertDom = (measurement: Measurement) => {
+  if (measurement.kind !== 'dom') {
+    throw new Error('dom invariant');
+  }
+  return measurement;
+};
 export interface PendingOutline {
-  rect: DOMRect;
-  domNode: HTMLElement;
+  fiber: Fiber; // todo, weak ref not always available
+  latestMeasurement: Measurement;
   renders: Render[];
 }
 
 export interface ActiveOutline {
   outline: PendingOutline;
+  id: string;
   alpha: number;
   frame: number;
   totalFrames: number;
   resolve: () => void;
   text: string | null;
+  updatedAt: number;
 }
 
 export interface OutlineLabel {
@@ -34,8 +49,8 @@ const DEFAULT_THROTTLE_TIME = 32; // 2 frames
 const START_COLOR = { r: 115, g: 97, b: 230 };
 const END_COLOR = { r: 185, g: 49, b: 115 };
 
-export const getOutlineKey = (outline: PendingOutline): string => {
-  return `${outline.rect.top}-${outline.rect.left}-${outline.rect.width}-${outline.rect.height}`;
+export const getOutlineKey = (rect: DOMRect): string => {
+  return `${rect.top}-${rect.left}-${rect.width}-${rect.height}`;
 };
 
 const rectCache = new Map<HTMLElement, { rect: DOMRect; timestamp: number }>();
@@ -102,9 +117,12 @@ export const getOutline = (
   if (!rect) return null;
 
   return {
-    rect,
-    domNode,
+    fiber: fiber,
     renders: [render],
+    latestMeasurement: {
+      kind: 'dom',
+      value: rect,
+    },
   };
 };
 
@@ -112,7 +130,7 @@ export const mergeOutlines = (outlines: PendingOutline[]) => {
   const mergedOutlines = new Map<string, PendingOutline>();
   for (let i = 0, len = outlines.length; i < len; i++) {
     const outline = outlines[i];
-    const key = getOutlineKey(outline);
+    const key = getOutlineKey(assertDom(outline.latestMeasurement).value);
     const existingOutline = mergedOutlines.get(key);
 
     if (!existingOutline) {
@@ -124,29 +142,42 @@ export const mergeOutlines = (outlines: PendingOutline[]) => {
   return Array.from(mergedOutlines.values());
 };
 
+export const getDomNode = (outline: PendingOutline) => {
+  const fiber = outline.fiber;
+  // if (!fiber) {
+  //   return;
+  // }
+  const domNode = fiber.stateNode;
+  if (!(domNode instanceof HTMLElement)) return null;
+  return domNode;
+};
 export const recalcOutlines = throttle(() => {
   const { scheduledOutlines, activeOutlines } = ReactScanInternals;
 
   for (let i = scheduledOutlines.length - 1; i >= 0; i--) {
     const outline = scheduledOutlines[i];
-    const rect = getRect(outline.domNode);
+    const domNode = getDomNode(outline);
+    if (!domNode) continue;
+    const rect = getRect(domNode);
     if (!rect) {
       scheduledOutlines.splice(i, 1);
       continue;
     }
-    outline.rect = rect;
+    outline.latestMeasurement.value = rect;
   }
 
   for (let i = activeOutlines.length - 1; i >= 0; i--) {
     const activeOutline = activeOutlines[i];
     if (!activeOutline) continue;
     const { outline } = activeOutline;
-    const rect = getRect(outline.domNode);
+    const domNode = getDomNode(outline);
+    if (!domNode) continue;
+    const rect = getRect(domNode);
     if (!rect) {
       activeOutlines.splice(i, 1);
       continue;
     }
-    outline.rect = rect;
+    outline.latestMeasurement.value = rect;
   }
 }, DEFAULT_THROTTLE_TIME);
 
@@ -168,7 +199,7 @@ export const flushOutlines = (
   void paintOutlines(
     ctx,
     scheduledOutlines.filter((outline) => {
-      const key = getOutlineKey(outline);
+      const key = getOutlineKey(assertDom(outline.latestMeasurement).value);
       if (previousOutlines.has(key)) {
         return false;
       }
@@ -201,7 +232,7 @@ export const fadeOutOutline = (
     if (!activeOutline) continue;
     const { outline } = activeOutline;
 
-    const { rect } = outline;
+    const rect = assertDom(outline.latestMeasurement).value;
 
     const key = `${rect.x}-${rect.y}`;
 
@@ -275,7 +306,7 @@ export const fadeOutOutline = (
     //     Math.max(1, totalFrames / divideBy),
     //   );
     // }
-    const { rect } = outline;
+    const rect = assertDom(outline.latestMeasurement).value;
     const unstable = isOutlineUnstable(outline);
 
     if (renderCountThreshold > 0) {
@@ -308,7 +339,7 @@ export const fadeOutOutline = (
     ctx.fill();
 
     if (isImportant) {
-      const text = getLabelText(outline.renders);
+      const text = getLabelText(outline.renders, 'dom');
       pendingLabeledOutlines.push({
         alpha,
         outline,
@@ -322,7 +353,7 @@ export const fadeOutOutline = (
 
   for (let i = 0, len = pendingLabeledOutlines.length; i < len; i++) {
     const { alpha, outline, text, color } = pendingLabeledOutlines[i];
-    const { rect } = outline;
+    const rect = assertDom(outline.latestMeasurement).value;
     ctx.save();
 
     if (text) {
@@ -372,7 +403,9 @@ async function paintOutlines(
         frame,
         totalFrames,
         resolve,
-        text: getLabelText(renders),
+        text: getLabelText(renders, 'dom'),
+        updatedAt: performance.now(),
+        id: genId(),
       };
     });
 

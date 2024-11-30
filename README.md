@@ -114,6 +114,88 @@ export default function RootLayout({
 </details>
 
 <details>
+<summary><b>React Native</b></summary>
+
+<br />
+
+First, install the required dependencies:
+
+```bash
+npm install @shopify/react-native-skia@^1.5.10 react-native-reanimated react-scan
+```
+
+Then, wrap your root component with `ReactScan`:
+
+```jsx
+import { ReactScan } from 'react-scan/native';
+
+// For Expo, in _layout.tsx:
+export default function Layout() {
+  return (
+    <ReactScan
+      options={{
+        animationWhenFlashing: 'fade-out',
+      }}
+    >
+      <Stack>{/* Your app content */}</Stack>
+    </ReactScan>
+  );
+}
+
+// For vanilla React Native, wrap your root component similarly
+```
+
+The React Native version supports most of the [options](#api-reference) described in the API Reference section below, with a few differences:
+
+- **Not Available**: `playSound`, `runInProduction`, `includeChildren`, `onPaintFinish`, and `onPaintStart`
+- **Additional Options**:
+  ```typescript
+  {
+    /**
+     * Controls the animation of the re-render overlay.
+     * When set to "fade-out", the overlay will fade out after appearing.
+     * When false, no animation will be applied.
+     * Note: Enabling animations may impact performance.
+     * @default false
+     */
+    animationWhenFlashing?: 'fade-out' | false;
+  }
+  ```
+
+Example usage with options:
+
+```jsx
+<ReactScan
+  options={{
+    enabled: true,
+    log: true,
+    animationWhenFlashing: false,
+  }}
+>
+  {/* Your app content */}
+</ReactScan>
+```
+
+> [!IMPORTANT]
+> By default, Metro bundler includes React Scan in production builds, which can add [up to 6MB](https://shopify.github.io/react-native-skia/docs/getting-started/installation/#bundle-size) to your bundle size. To prevent this, use our babel plugin:
+
+1. If you are not using expo, install expo-babel-preset (works outside of expo):
+   `npm install babel-preset-expo`
+
+2. Create or modify your `babel.config.js`:
+
+```js
+const { withReactScanTreeShake } = require('react-scan/babel');
+module.exports = withReactScanTreeShake({
+  // Your existing babel options go here
+});
+```
+
+This will automatically remove React Scan from production builds while keeping it available during development.
+
+</details>
+
+<details>
 <summary><b>Vite / Create React App</b></summary>
 
 <br />

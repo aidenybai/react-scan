@@ -26,3 +26,4 @@ declare module globalThis {
     postTask: (cb: any, options: { priority: string }) => void;
   };
 }
+declare function require(path: string): any;

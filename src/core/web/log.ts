@@ -12,7 +12,7 @@ export const log = (renders: Render[]) => {
     if (!render.name) continue;
 
     const changeLog = logMap.get(render.name) ?? [];
-    const labelText = getLabelText([render]);
+    const labelText = getLabelText([render], 'dom');
     if (!labelText) continue;
 
     if (render.type === 'props') {
