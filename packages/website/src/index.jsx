@@ -79,13 +79,13 @@ export const App = () => {
               <AddTaskBar
                 onCreate={(value) => {
                   if (!value) return;
-                  setTasks([...tasks, value]);
+                  setTasks([...tasks, { id: Date.now(), text: value }]);
                 }}
               />
               <TaskList
                 tasks={tasks}
-                onDelete={(value) =>
-                  setTasks(tasks.filter((task) => task !== value))
+                onDelete={(id) =>
+                  setTasks(tasks.filter((task) => task.id !== id))
                 }
               />
             </div>
@@ -118,7 +118,7 @@ export const TaskList = ({ tasks, onDelete }) => {
   return (
     <ul>
       {tasks.map((task) => (
-        <TaskItem key={task} task={task} onDelete={onDelete} />
+        <TaskItem key={task.id} task={task} onDelete={onDelete} />
       ))}
     </ul>
   );
@@ -128,8 +128,8 @@ export const TaskItem = ({ task, onDelete }) => {
   const { tooltip } = React.useContext(TooltipContext);
   return (
     <li className="task-item" tooltip={tooltip}>
-      {task}
-      <Button onClick={() => onDelete(task)}>Delete</Button>
+      {task.text}
+      <Button onClick={() => onDelete(task.id)}>Delete</Button>
     </li>
   );
 };
@@ -148,7 +148,7 @@ export const Button = ({ onClick, children }) => {
 
 export const AddTaskBar = ({ onCreate }) => {
   const [value, setValue] = useState('');
-  const [id, setId] = useState(0);
+
   return (
     <div className="add-task-container">
       <Input
@@ -156,7 +156,6 @@ export const AddTaskBar = ({ onCreate }) => {
         onEnter={(value) => {
           onCreate(`${value} (${id})`);
           setValue('');
-          setId(id + 1);
         }}
         value={value}
       />
