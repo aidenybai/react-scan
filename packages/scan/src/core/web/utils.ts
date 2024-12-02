@@ -12,7 +12,7 @@ export const onIdle = (callback: () => void) => {
   return setTimeout(callback, 0);
 };
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: Array<any>) => any>(
   callback: T,
   delay: number,
 ) => {

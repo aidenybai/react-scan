@@ -1,0 +1,140 @@
+{
+  "name": "react-scan",
+  "version": "0.0.35",
+  "description": "Scan your React app for renders",
+  "keywords": [
+    "react",
+    "react-scan",
+    "react scan",
+    "render",
+    "performance"
+  ],
+  "homepage": "https://react-scan.million.dev",
+  "bugs": {
+    "url": "https://github.com/aidenybai/react-scan/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidenybai/react-scan.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aiden Bai",
+    "email": "aiden@million.dev",
+    "url": "https://million.dev"
+  },
+  "type": "commonjs",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "production": {
+        "import": {
+          "types": "./dist/rsc-shim.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/rsc-shim.mjs"
+        },
+        "require": {
+          "types": "./dist/rsc-shim.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/rsc-shim.js"
+        }
+      },
+      "development": {
+        "import": {
+          "types": "./dist/index.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/index.mjs"
+        },
+        "require": {
+          "types": "./dist/index.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/index.js"
+        }
+      },
+      "default": {
+        "import": {
+          "types": "./dist/index.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/index.mjs"
+        },
+        "require": {
+          "types": "./dist/index.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/index.js"
+        }
+      }
+    },
+    "./auto": {
+      "production": {
+        "import": {
+          "types": "./dist/rsc-shim.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/rsc-shim.mjs"
+        },
+        "require": {
+          "types": "./dist/rsc-shim.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/rsc-shim.js"
+        }
+      },
+      "development": {
+        "import": {
+          "types": "./dist/auto.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/auto.mjs"
+        },
+        "require": {
+          "types": "./dist/auto.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/auto.js"
+        }
+      }
+    },
+    "./dist/*": "./dist/*.js",
+    "./dist/*.js": "./dist/*.js",
+    "./dist/*.mjs": "./dist/*.mjs"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "browser": "dist/auto.global.js",
+  "types": "dist/index.d.ts",
+  "bin": "bin/cli.js",
+  "files": [
+    "dist",
+    "bin",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "auto.d.ts"
+  ],
+  "scripts": {
+    "build": "NODE_ENV=production tsup",
+    "dev": "NODE_ENV=development tsup --watch",
+    "lint": "eslint 'src/**/*.{ts,tsx}' --fix",
+    "prettier": "prettier --config .prettierrc.mjs -w src",
+    "publint": "publint"
+  },
+  "dependencies": {
+    "@clack/core": "^0.3.5",
+    "@clack/prompts": "^0.8.2",
+    "kleur": "^4.1.5",
+    "mri": "^1.2.0",
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-reconciler": "^0.28.8",
+    "@vercel/style-guide": "^6.0.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.3.3",
+    "publint": "^0.2.12",
+    "react": "*",
+    "react-dom": "*",
+    "react-reconciler": "^0.29.2",
+    "terser": "^5.36.0",
+    "tsup": "^8.2.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

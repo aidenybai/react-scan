@@ -92,7 +92,7 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
   const previousProps = fiber.alternate?.memoizedProps || {};
 
   Object.keys(currentProps).forEach((key) => {
-    if (currentProps[key] !== previousProps[key]) {
+    if (currentProps[key] !== previousProps[key] && key !== 'children') {
       changes.add(key);
     }
   });
@@ -273,7 +273,8 @@ export const isCompositeComponent = (fiber: Fiber) => {
     fiber.tag === FunctionComponentTag ||
     fiber.tag === ClassComponentTag ||
     fiber.tag === SimpleMemoComponentTag ||
-    fiber.tag === MemoComponentTag
+    fiber.tag === MemoComponentTag ||
+    fiber.tag === ForwardRefTag
   );
 };
 

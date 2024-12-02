@@ -164,7 +164,7 @@ export const drawStatsPill = (
 ) => {
   const pillHeight = 24;
   const pillPadding = 8;
-  const componentName = getDisplayName(fiber) ?? 'Unknown';
+  const componentName = getDisplayName(fiber?.type) ?? 'Unknown';
   let text = componentName;
   if (stats.count) {
     text += ` • ×${stats.count}`;

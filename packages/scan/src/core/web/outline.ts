@@ -8,7 +8,7 @@ import { isOutlineUnstable, throttle } from './utils';
 export interface PendingOutline {
   rect: DOMRect;
   domNode: HTMLElement;
-  renders: Render[];
+  renders: Array<Render>;
 }
 
 export interface ActiveOutline {
@@ -108,7 +108,7 @@ export const getOutline = (
   };
 };
 
-export const mergeOutlines = (outlines: PendingOutline[]) => {
+export const mergeOutlines = (outlines: Array<PendingOutline>) => {
   const mergedOutlines = new Map<string, PendingOutline>();
   for (let i = 0, len = outlines.length; i < len; i++) {
     const outline = outlines[i];
@@ -239,7 +239,7 @@ export const fadeOutOutline = (
     }
   }
 
-  const pendingLabeledOutlines: OutlineLabel[] = [];
+  const pendingLabeledOutlines: Array<OutlineLabel> = [];
 
   ctx.save();
 
@@ -352,7 +352,7 @@ export const fadeOutOutline = (
 };
 async function paintOutlines(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  outlines: PendingOutline[],
+  outlines: Array<PendingOutline>,
 ): Promise<void> {
   return new Promise<void>((resolve) => {
     const { options } = ReactScanInternals;

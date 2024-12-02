@@ -1,10 +1,10 @@
 import type { Render } from '../instrumentation/index';
 import { getLabelText } from '../utils';
 
-export const log = (renders: Render[]) => {
+export const log = (renders: Array<Render>) => {
   const logMap = new Map<
     string,
-    { prev: unknown; next: unknown; type: string }[]
+    Array<{ prev: unknown; next: unknown; type: string }>
   >();
   for (let i = 0, len = renders.length; i < len; i++) {
     const render = renders[i];

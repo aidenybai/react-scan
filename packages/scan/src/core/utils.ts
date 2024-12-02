@@ -1,6 +1,6 @@
 import type { Render } from './instrumentation/index';
 
-export const getLabelText = (renders: Render[]) => {
+export const getLabelText = (renders: Array<Render>) => {
   let labelText = '';
 
   const components = new Map<
@@ -33,7 +33,7 @@ export const getLabelText = (renders: Render[]) => {
     ([, a], [, b]) => b.count - a.count,
   );
 
-  const parts: string[] = [];
+  const parts: Array<string> = [];
   for (const [name, { count, forget }] of sortedComponents) {
     let text = name;
     if (count > 1) {

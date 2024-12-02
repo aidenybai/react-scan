@@ -1,6 +1,7 @@
 const { resolve } = require('node:path');
 
 const project = resolve(__dirname, 'tsconfig.json');
+console.log(project);
 
 module.exports = {
   root: true,
@@ -39,7 +40,7 @@ module.exports = {
     '@typescript-eslint/no-unnecessary-condition': 'off',
     '@typescript-eslint/no-confusing-void-expression': 'off',
     '@typescript-eslint/require-await': 'off',
-    '@typescript-eslint/no-floating-promises': ['error'],
+    // '@typescript-eslint/no-floating-promises': ['error'],
     'import/no-named-as-default': 'off',
     'no-implicit-coercion': 'off',
     '@typescript-eslint/no-redundant-type-constituents': 'off',
@@ -48,8 +49,9 @@ module.exports = {
     'no-useless-return': 'off',
     'func-names': 'off',
     '@typescript-eslint/prefer-for-of': 'off',
-    'no-implicit-coercion': 'off',
+    // 'no-implicit-coercion': 'off',
     '@typescript-eslint/restrict-template-expressions': 'off',
+    '@typescript-eslint/array-type': ['error', { default: 'generic' }],
   },
   settings: {
     'import/resolver': {

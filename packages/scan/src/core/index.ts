@@ -102,8 +102,8 @@ export interface Options {
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, render: Render) => void;
   onCommitFinish?: () => void;
-  onPaintStart?: (outlines: PendingOutline[]) => void;
-  onPaintFinish?: (outlines: PendingOutline[]) => void;
+  onPaintStart?: (outlines: Array<PendingOutline>) => void;
+  onPaintFinish?: (outlines: Array<PendingOutline>) => void;
 }
 
 export interface Internals {
@@ -112,15 +112,15 @@ export interface Internals {
   isPaused: boolean;
   componentAllowList: WeakMap<React.ComponentType<any>, Options> | null;
   options: Options;
-  scheduledOutlines: PendingOutline[];
-  activeOutlines: ActiveOutline[];
+  scheduledOutlines: Array<PendingOutline>;
+  activeOutlines: Array<ActiveOutline>;
   onRender: ((fiber: Fiber, render: Render) => void) | null;
   reportDataByFiber: WeakMap<
     Fiber,
     {
       count: number;
       time: number;
-      badRenders: Render[];
+      badRenders: Array<Render>;
       displayName: string | null;
     }
   >;
@@ -130,7 +130,7 @@ export interface Internals {
       count: number;
       time: number;
       type: unknown;
-      badRenders: Render[];
+      badRenders: Array<Render>;
     }
   >;
   fiberRoots: WeakSet<Fiber>;
@@ -148,7 +148,7 @@ export interface StoreMethods<T extends object> {
   setState: (state: Partial<T>) => void;
   emit: <K extends keyof T>(key: K, value: T[K]) => void;
   subscribeMultiple: (
-    subscribeTo: (keyof T)[],
+    subscribeTo: Array<keyof T>,
     listener: Listener<T>,
   ) => () => void;
 }
@@ -157,7 +157,7 @@ type Store<T extends object> = T & StoreMethods<T>;
 
 const createStore = <T extends object>(initialData: T): Store<T> => {
   const data: T = { ...initialData };
-  const listeners: { [K in keyof T]?: Listener<T[K]>[] } = {};
+  const listeners: { [K in keyof T]?: Array<Listener<T[K]>> } = {};
 
   const emit = <K extends keyof T>(key: K, value: T[K]): void => {
     listeners[key]?.forEach((listener) => listener(value));
@@ -193,7 +193,7 @@ const createStore = <T extends object>(initialData: T): Store<T> => {
   };
 
   const subscribeMultiple = (
-    subscribeTo: (keyof T)[],
+    subscribeTo: Array<keyof T>,
     listener: (store: typeof data) => void,
   ) => {
     subscribeTo.forEach((key) => {

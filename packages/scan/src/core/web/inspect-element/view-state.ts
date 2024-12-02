@@ -177,7 +177,7 @@ export const renderPropsAndState = (
   const content = document.createElement('div');
   content.className = 'react-scan-content';
 
-  const sections: { element: HTMLElement; hasChanges: boolean }[] = [];
+  const sections: Array<{ element: HTMLElement; hasChanges: boolean }> = [];
 
   if (Object.values(props).length) {
     tryOrElse(() => {
