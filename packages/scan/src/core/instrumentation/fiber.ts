@@ -187,9 +187,13 @@ export const traverseFiber = (
 };
 
 export const getSelfTime = (fiber?: Fiber | null | undefined) => {
-  const totalTime = fiber?.actualDuration ?? 0;
+  // shortcut
+  if (!fiber) {
+    return 0;
+  }
+  const totalTime = fiber.actualDuration ?? 0;
   let selfTime = totalTime;
-  let child = fiber?.child ?? null;
+  let child = fiber.child ?? null;
   // eslint-disable-next-line eqeqeq
   while (totalTime > 0 && child != null) {
     selfTime -= child.actualDuration ?? 0;
