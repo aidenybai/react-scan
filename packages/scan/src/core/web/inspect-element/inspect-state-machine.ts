@@ -32,7 +32,6 @@ export type States =
 
 export const INSPECT_TOGGLE_ID = 'react-scan-inspect-element-toggle';
 export const INSPECT_OVERLAY_CANVAS_ID = 'react-scan-inspect-canvas';
-let lastHoveredElement: HTMLElement;
 let animationId: ReturnType<typeof requestAnimationFrame>;
 
 type Kinds = States['kind'];
@@ -129,17 +128,35 @@ export const createInspectElementStateMachine = () => {
             };
           }
           case 'inspecting': {
+            let lastBoundingRect: DOMRect | null = null;
+
+            const updateOverlay = (element: HTMLElement, type: 'inspecting' | 'locked') => {
+              const newBoundingRect = element.getBoundingClientRect();
+
+              if (lastBoundingRect &&
+                lastBoundingRect.top === newBoundingRect.top &&
+                lastBoundingRect.left === newBoundingRect.left &&
+                lastBoundingRect.width === newBoundingRect.width &&
+                lastBoundingRect.height === newBoundingRect.height) {
+                return;
+              }
+
+              lastBoundingRect = newBoundingRect;
+              drawHoverOverlay(
+                element,
+                canvas,
+                ctx,
+                type,
+              );
+            };
+
             recursiveRaf(() => {
               if (!inspectState.hoveredDomElement) {
                 return;
               }
-              drawHoverOverlay(
-                inspectState.hoveredDomElement,
-                canvas,
-                ctx,
-                'inspecting',
-              );
+              updateOverlay(inspectState.hoveredDomElement, 'inspecting');
             });
+
             // we want to allow the user to be able to inspect clickable things
             const eventCatcher = document.createElement('div');
             eventCatcher.style.cssText = `
@@ -151,8 +168,9 @@ export const createInspectElementStateMachine = () => {
               z-index: ${parseInt(canvas.style.zIndex) - 1};
               pointer-events: auto;
             `;
+
             document.body.insertBefore(eventCatcher, document.body.firstChild);
-            let currentHoveredElement: HTMLElement | null = null;
+
             const mouseMove = throttle((e: MouseEvent) => {
               if (ReactScanInternals.inspectState.kind !== 'inspecting') {
                 return;
@@ -167,11 +185,8 @@ export const createInspectElementStateMachine = () => {
               eventCatcher.style.pointerEvents = 'auto';
 
               if (!el) return;
-              lastHoveredElement = el;
-
-              currentHoveredElement = el;
               inspectState.hoveredDomElement = el;
-              drawHoverOverlay(el, canvas, ctx, 'inspecting');
+              updateOverlay(el, 'inspecting');
             }, 16);
 
             window.addEventListener('mousemove', mouseMove, { capture: true });
@@ -179,23 +194,18 @@ export const createInspectElementStateMachine = () => {
             const pointerDown = (e: MouseEvent) => {
               e.stopPropagation();
 
-              eventCatcher.style.pointerEvents = 'none';
-              const el =
-                currentHoveredElement ??
-                document.elementFromPoint(e.clientX, e.clientY) ??
-                lastHoveredElement;
-              eventCatcher.style.pointerEvents = 'auto';
+              const el = inspectState.hoveredDomElement;
 
               if (!el) {
                 return;
               }
 
-              drawHoverOverlay(el as HTMLElement, canvas, ctx, 'locked');
+              updateOverlay(el, 'locked');
 
               restoreSizeFromLocalStorage(inspectState.propContainer);
               ReactScanInternals.inspectState = {
                 kind: 'focused',
-                focusedDomElement: el as HTMLElement,
+                focusedDomElement: el,
                 propContainer: inspectState.propContainer,
               };
               if (!hasValidParent()) {
@@ -224,22 +234,6 @@ export const createInspectElementStateMachine = () => {
               }
             };
             window.addEventListener('keydown', keyDown, { capture: true });
-            let cleanup = () => {
-              /**/
-            };
-            if (inspectState.hoveredDomElement) {
-              cleanup = trackElementPosition(
-                inspectState.hoveredDomElement,
-                () => {
-                  drawHoverOverlay(
-                    inspectState.hoveredDomElement!,
-                    canvas,
-                    ctx,
-                    'inspecting',
-                  );
-                },
-              );
-            }
 
             return () => {
               window.removeEventListener('pointerdown', pointerDown, {
@@ -250,42 +244,51 @@ export const createInspectElementStateMachine = () => {
               });
               window.removeEventListener('keydown', keyDown, { capture: true });
               eventCatcher.parentNode?.removeChild(eventCatcher);
-              cleanup();
             };
           }
           case 'focused': {
-            recursiveRaf(() => {
+            let lastBoundingRect: DOMRect | null = null;
+
+            const updateOverlay = (element: HTMLElement) => {
+              const newBoundingRect = element.getBoundingClientRect();
+
+              if (lastBoundingRect &&
+                lastBoundingRect.top === newBoundingRect.top &&
+                lastBoundingRect.left === newBoundingRect.left &&
+                lastBoundingRect.width === newBoundingRect.width &&
+                lastBoundingRect.height === newBoundingRect.height) {
+                return;
+              }
+
+              lastBoundingRect = newBoundingRect;
               drawHoverOverlay(
-                inspectState.focusedDomElement,
+                element,
                 canvas,
                 ctx,
-                'locked',
+                'locked'
               );
+            };
+
+            recursiveRaf(() => {
+              if (!document.contains(inspectState.focusedDomElement)) {
+                setTimeout(() => {
+                  clearCanvas();
+                }, 500);
+                inspectState.propContainer.style.maxHeight = '0';
+                inspectState.propContainer.style.width = 'fit-content';
+                inspectState.propContainer.innerHTML = '';
+                ReactScanInternals.inspectState = {
+                  kind: 'inspect-off',
+                  propContainer: inspectState.propContainer,
+                };
+                return;
+              }
+              updateOverlay(inspectState.focusedDomElement);
             });
-            if (!document.contains(inspectState.focusedDomElement)) {
-              setTimeout(() => {
-                // potential race condition solution for some websites
-                clearCanvas();
-              }, 500);
-              inspectState.propContainer.style.maxHeight = '0';
-              inspectState.propContainer.style.width = 'fit-content';
-              inspectState.propContainer.innerHTML = '';
-              ReactScanInternals.inspectState = {
-                kind: 'inspect-off',
-                propContainer: inspectState.propContainer,
-              };
-              return;
-            }
-            drawHoverOverlay(
-              inspectState.focusedDomElement,
-              canvas,
-              ctx,
-              'locked',
-            );
-            const element = inspectState.focusedDomElement;
 
             const { parentCompositeFiber } =
-              getCompositeComponentFromElement(element);
+              getCompositeComponentFromElement(inspectState.focusedDomElement);
+
             if (!parentCompositeFiber) {
               return;
             }
@@ -308,12 +311,8 @@ export const createInspectElementStateMachine = () => {
             const keyDown = (e: KeyboardEvent) => {
               if (e.key === 'Escape') {
                 clearCanvas();
-                drawHoverOverlay(
-                  (e.target as HTMLElement) ?? inspectState.focusedDomElement,
-                  canvas,
-                  ctx,
-                  'inspecting',
-                );
+                updateOverlay((e.target as HTMLElement) ?? inspectState.focusedDomElement);
+
                 inspectState.propContainer.style.maxHeight = '0';
                 inspectState.propContainer.style.width = 'fit-content';
                 inspectState.propContainer.innerHTML = '';
@@ -349,17 +348,14 @@ export const createInspectElementStateMachine = () => {
                 adjustedY >= currentLockIconRect.y &&
                 adjustedY <= currentLockIconRect.y + currentLockIconRect.height
               ) {
+                e.stopPropagation();
+
                 inspectState.propContainer.innerHTML = '';
                 inspectState.propContainer.style.maxHeight = '0';
-                clearCanvas();
 
-                drawHoverOverlay(
-                  e.target as HTMLElement,
-                  canvas,
-                  ctx,
-                  'inspecting',
-                );
-                e.stopPropagation();
+                clearCanvas();
+                updateOverlay(e.target as HTMLElement);
+
                 ReactScanInternals.inspectState = {
                   kind: 'inspecting',
                   hoveredDomElement: e.target as HTMLElement,
@@ -377,21 +373,7 @@ export const createInspectElementStateMachine = () => {
               },
             );
 
-            const cleanup = trackElementPosition(
-              inspectState.focusedDomElement,
-              () => {
-                drawHoverOverlay(
-                  inspectState.focusedDomElement,
-                  canvas,
-                  ctx,
-                  'locked',
-                );
-              },
-            );
-
             return () => {
-              cleanup();
-
               window.removeEventListener('keydown', keyDown, { capture: true });
               window.removeEventListener(
                 'pointerdown',
@@ -403,6 +385,7 @@ export const createInspectElementStateMachine = () => {
             };
           }
         }
+
         inspectState satisfies never;
       })();
 
@@ -414,25 +397,5 @@ export const createInspectElementStateMachine = () => {
 
   return () => {
     /**/
-  };
-};
-type CleanupFunction = () => void;
-type PositionCallback = (element: Element) => void;
-
-const trackElementPosition = (
-  element: Element,
-  callback: PositionCallback,
-): CleanupFunction => {
-  const handleAnyScroll = () => {
-    callback(element);
-  };
-
-  document.addEventListener('scroll', handleAnyScroll, {
-    passive: true,
-    capture: true, // catch all scroll events
-  });
-
-  return () => {
-    document.removeEventListener('scroll', handleAnyScroll, { capture: true });
   };
 };
