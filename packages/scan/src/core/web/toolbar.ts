@@ -5,7 +5,7 @@ import { INSPECT_TOGGLE_ID } from './inspect-element/inspect-state-machine';
 import { getNearestFiberFromElement } from './inspect-element/utils';
 
 let isDragging = false;
-let isResizing = false;
+let resizingHandler: 'left' | 'right' | null = null;
 let initialWidth = 0;
 let initialMouseX = 0;
 
@@ -184,9 +184,18 @@ export const createToolbar = (): (() => void) => {
       ">
         <!-- Props content will be injected here -->
       </div>
-      <div id="react-scan-resize-handle" style="
+      <div id="react-scan-resize-handle-left" style="
         position: absolute;
         left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        cursor: ew-resize;
+        display: none;
+      "></div>
+      <div id="react-scan-resize-handle-right" style="
+        position: absolute;
+        right: 0;
         top: 0;
         bottom: 0;
         width: 4px;
@@ -202,7 +211,6 @@ export const createToolbar = (): (() => void) => {
   #react-scan-toolbar {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
-
 
   .react-scan-inspector {
     font-size: 13px;
@@ -487,8 +495,11 @@ export const createToolbar = (): (() => void) => {
   const toolbarContent = toolbar.querySelector<HTMLElement>(
     '#react-scan-toolbar-content',
   )!;
-  const resizeHandle = toolbar.querySelector<HTMLElement>(
-    '#react-scan-resize-handle',
+  const resizeHandleLeft = toolbar.querySelector<HTMLElement>(
+    '#react-scan-resize-handle-left',
+  )!;
+  const resizeHandleRight = toolbar.querySelector<HTMLElement>(
+    '#react-scan-resize-handle-right',
   )!;
 
   let isActive = !ReactScanInternals.isPaused;
@@ -496,6 +507,7 @@ export const createToolbar = (): (() => void) => {
 
   document.documentElement.appendChild(toolbar);
 
+  let initialResizingX = 0;
   let initialX = 0;
   let initialY = 0;
   let currentX = 0;
@@ -539,7 +551,8 @@ export const createToolbar = (): (() => void) => {
       event.target === inspectBtn ||
       event.target === powerBtn ||
       event.target === nextFocusBtn ||
-      event.target === resizeHandle
+      event.target === resizeHandleLeft ||
+      event.target === resizeHandleRight
     )
       return;
 
@@ -555,8 +568,17 @@ export const createToolbar = (): (() => void) => {
     event.preventDefault();
   });
 
-  resizeHandle.addEventListener('mousedown', (e) => {
-    isResizing = true;
+  resizeHandleLeft.addEventListener('mousedown', (e) => {
+    resizingHandler = 'left';
+    initialResizingX = currentX;
+    initialWidth = propContainer.offsetWidth;
+    initialMouseX = e.clientX;
+    e.preventDefault();
+  });
+
+  resizeHandleRight.addEventListener('mousedown', (e) => {
+    resizingHandler = 'right';
+    initialResizingX = currentX;
     initialWidth = propContainer.offsetWidth;
     initialMouseX = e.clientX;
     e.preventDefault();
@@ -572,9 +594,18 @@ export const createToolbar = (): (() => void) => {
       updateToolbarPosition(x, y);
     }
 
-    if (isResizing) {
-      const width = initialWidth - (e.clientX - initialMouseX);
-      propContainer.style.width = `${Math.max(360, width)}px`;
+    if (resizingHandler !== null) {
+      const resizeSign = resizingHandler === 'left' ? -1 : 1;
+      const width = Math.max(
+        360,
+        initialWidth + resizeSign * (e.clientX - initialMouseX),
+      );
+      if (resizingHandler === 'right') {
+        const x = initialResizingX + (width - initialWidth);
+        currentX = x;
+        updateToolbarPosition(x, currentY);
+      }
+      propContainer.style.width = `${width}px`;
       persistSizeToLocalStorage(width);
     }
   });
@@ -584,8 +615,9 @@ export const createToolbar = (): (() => void) => {
       isDragging = false;
       ensureToolbarInBounds();
     }
-    if (isResizing) {
-      isResizing = false;
+    if (resizingHandler !== null) {
+      resizingHandler = null;
+      ensureToolbarInBounds();
     }
   });
 
@@ -615,9 +647,11 @@ export const createToolbar = (): (() => void) => {
       propContainer.style.maxHeight = '0';
       propContainer.style.width = 'fit-content';
       propContainer.innerHTML = '';
-      resizeHandle.style.display = 'none';
+      resizeHandleLeft.style.display = 'none';
+      resizeHandleRight.style.display = 'none';
     } else if (focusActive) {
-      resizeHandle.style.display = 'block';
+      resizeHandleLeft.style.display = 'block';
+      resizeHandleRight.style.display = 'block';
     }
 
     soundToggleBtn.innerHTML = isSoundOn ? SOUND_ON_SVG : SOUND_OFF_SVG;
@@ -805,7 +839,7 @@ export const createToolbar = (): (() => void) => {
   });
 
   const handleViewportChange = throttle(() => {
-    if (!isDragging && !isResizing) {
+    if (!isDragging && resizingHandler !== null) {
       ensureToolbarInBounds();
     }
   }, 100);
