@@ -7,7 +7,7 @@ export default defineConfig([
     splitting: false,
     sourcemap: false,
     format: ['cjs', 'esm', 'iife'],
-    target: 'esnext',
+    target: 'es2018',
     platform: 'browser',
     treeshake: true,
     dts: true,

@@ -96,7 +96,7 @@
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-  "browser": "dist/auto.global.js",
+  "browser": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": "bin/cli.js",
   "files": [
