@@ -1,8 +1,5 @@
 import type { FiberRoot } from 'react-reconciler';
-
-const NO_OP = () => {
-  /**/
-};
+import { NO_OP } from '../utils';
 
 export const registerDevtoolsHook = ({
   onCommitFiberRoot,

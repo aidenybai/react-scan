@@ -2,6 +2,7 @@ import { type Internals, ReactScanInternals } from '../../index';
 import { throttle } from '../utils';
 import { didFiberRender } from '../../instrumentation/fiber';
 import { restoreSizeFromLocalStorage } from '../toolbar';
+import { NO_OP } from '../../utils';
 import { renderPropsAndState } from './view-state';
 import {
   currentLockIconRect,
@@ -32,7 +33,7 @@ export type States =
 
 export const INSPECT_TOGGLE_ID = 'react-scan-inspect-element-toggle';
 export const INSPECT_OVERLAY_CANVAS_ID = 'react-scan-inspect-canvas';
-let lastHoveredElement: HTMLElement;
+let lastHoveredElement: HTMLElement | undefined
 let animationId: ReturnType<typeof requestAnimationFrame>;
 
 type Kinds = States['kind'];
@@ -40,6 +41,7 @@ export const createInspectElementStateMachine = () => {
   if (typeof window === 'undefined') {
     return;
   }
+
   let canvas = document.getElementById(
     INSPECT_OVERLAY_CANVAS_ID,
   ) as HTMLCanvasElement | null;
@@ -80,6 +82,10 @@ export const createInspectElementStateMachine = () => {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    requestAnimationFrame(() => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
     ctx.restore();
   };
   const unsubscribeFns: Partial<{ [_ in keyof States as Kinds]: () => void }> =
@@ -92,17 +98,28 @@ export const createInspectElementStateMachine = () => {
   };
 
   const recursiveRaf = (cb: () => void) => {
+    let isActive = true;
+
     const helper = () => {
+      if (!isActive) return;
+
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
 
       animationId = requestAnimationFrame(() => {
+        if (!isActive) return;
+
         cb();
         helper();
       });
     };
     helper();
+
+    return () => {
+      isActive = false;
+      cancelAnimationFrame(animationId);
+    };
   };
   ReactScanInternals.subscribeMultiple(
     ['reportDataByFiber', 'inspectState'],
@@ -115,17 +132,15 @@ export const createInspectElementStateMachine = () => {
             return;
           }
           case 'inspect-off': {
+            cancelAnimationFrame(animationId);
+
             clearCanvas();
-            // the canvas doesn't get cleared when the mouse move overlaps with the clear
-            // i can't figure out why this happens, so this is an unfortunate hack
-            const mouseMove = () => {
-              clearCanvas();
-              updateCanvasSize(canvas, ctx);
-            };
-            window.addEventListener('mousemove', mouseMove);
+
+            unsubscribeAll();
+            lastHoveredElement = undefined;
 
             return () => {
-              window.removeEventListener('mousemove', mouseMove);
+              clearCanvas();
             };
           }
           case 'inspecting': {
@@ -224,9 +239,8 @@ export const createInspectElementStateMachine = () => {
               }
             };
             window.addEventListener('keydown', keyDown, { capture: true });
-            let cleanup = () => {
-              /**/
-            };
+            let cleanup = NO_OP;
+
             if (inspectState.hoveredDomElement) {
               cleanup = trackElementPosition(
                 inspectState.hoveredDomElement,
@@ -403,7 +417,6 @@ export const createInspectElementStateMachine = () => {
             };
           }
         }
-        inspectState satisfies never;
       })();
 
       if (unSub) {
@@ -412,9 +425,7 @@ export const createInspectElementStateMachine = () => {
     }, 16),
   );
 
-  return () => {
-    /**/
-  };
+  return NO_OP;
 };
 type CleanupFunction = () => void;
 type PositionCallback = (element: Element) => void;
