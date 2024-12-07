@@ -1,0 +1,41 @@
+name: Publish Any Commit
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [19]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.1.4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        continue-on-error: true
+        run: pnpm build --filter='./packages/scan'
+
+      - name: Publish NPM Package to pkg-pr-new
+        run: pnpx pkg-pr-new publish ./packages/scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
