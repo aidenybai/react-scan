@@ -2,9 +2,9 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "pnpm -r build --filter=!extension",
-    "dev": "pnpm -r dev --filter=!extension",
-    "lint": "pnpm -r lint --filter=!extension",
+    "build": "pnpm -r --filter=!extension build",
+    "dev": "pnpm -r --filter=!extension dev",
+    "lint": "pnpm -r --filter=!extension lint",
     "prettier": "prettier --write packages/*",
     "eslint:fix": "eslint --fix packages/*"
   },

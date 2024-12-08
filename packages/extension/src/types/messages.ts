@@ -1,28 +1,36 @@
 import { z } from 'zod';
 
-/**
- *  Incoming messages (from popup to content)
- */
-export const IncomingMessageSchema = z.object({
-  type: z.enum(['OPEN_PANEL', 'START_SCAN', 'STOP_SCAN']),
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __REACT_DEVTOOLS_GLOBAL_HOOK__: Window['__REACT_DEVTOOLS_GLOBAL_HOOK__'];
+  type TTimer = ReturnType<typeof setTimeout | typeof setInterval>;
+}
 
-export type IncomingMessage = z.infer<typeof IncomingMessageSchema>;
-
-/**
- * Outgoing messages (from content to popup)
- */
-export const OutgoingMessageSchema = z.union([
+export const IncomingMessageSchema = z.discriminatedUnion('type', [
   z.object({
-    type: z.literal('SCAN_UPDATE'),
-    reactVersion: z.string().optional(),
-    componentCount: z.number().optional(),
-    rerenderCount: z.number().optional(),
-    status: z.string().optional(),
+    type: z.literal('PING'),
   }),
   z.object({
-    type: z.literal('SCAN_COMPLETE'),
+    type: z.literal('CSP_RULES_CHANGED'),
+    data: z.object({
+      enabled: z.boolean(),
+      domain: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('IS_CSP_RULES_ENABLED'),
+    data: z.object({
+      domain: z.string(),
+    }),
+  }),
+  z.object({
+    type: z.literal('CHECK_REACT_VERSION'),
   }),
 ]);
 
-export type OutgoingMessage = z.infer<typeof OutgoingMessageSchema>;
+export type IncomingMessage = z.infer<typeof IncomingMessageSchema>;
+
+export type OutgoingMessage = {
+  type: 'SCAN_UPDATE';
+  reactVersion: string;
+};

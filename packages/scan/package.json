@@ -1,6 +1,6 @@
 {
   "name": "react-scan",
-  "version": "0.0.35",
+  "version": "0.0.36",
   "description": "Scan your React app for renders",
   "keywords": [
     "react",
@@ -109,6 +109,7 @@
   ],
   "scripts": {
     "build": "NODE_ENV=production tsup",
+    "build:copy": "NODE_ENV=production tsup && cat dist/auto.global.js | pbcopy",
     "dev": "NODE_ENV=development tsup --watch",
     "lint": "eslint 'src/**/*.{ts,tsx}' --fix",
     "prettier": "prettier --config .prettierrc.mjs -w src",

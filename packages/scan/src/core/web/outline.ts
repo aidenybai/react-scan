@@ -38,9 +38,9 @@ export const getOutlineKey = (outline: PendingOutline): string => {
   return `${outline.rect.top}-${outline.rect.left}-${outline.rect.width}-${outline.rect.height}`;
 };
 
-const rectCache = new Map<HTMLElement, { rect: DOMRect; timestamp: number }>();
+const rectCache = new Map<Element, { rect: DOMRect; timestamp: number }>();
 
-export const getRect = (domNode: HTMLElement): DOMRect | null => {
+export const getRect = (domNode: Element): DOMRect | null => {
   const now = performance.now();
   const cached = rectCache.get(domNode);
 

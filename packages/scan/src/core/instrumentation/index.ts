@@ -153,7 +153,10 @@ export const reportRender = (
     type: getType(fiber.type) || fiber.type,
   };
 };
-export const reportRenderFiber = (fiber: Fiber, renders: Array<Render | null>) => {
+export const reportRenderFiber = (
+  fiber: Fiber,
+  renders: Array<Render | null>,
+) => {
   const [reportFiber, report] = (() => {
     const currentFiberData = ReactScanInternals.reportDataByFiber.get(fiber);
     if (currentFiberData) {

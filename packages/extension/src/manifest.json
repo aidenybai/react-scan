@@ -12,28 +12,70 @@
     "128": "icon/128.png"
   },
   "{{chrome}}.action": {
-    "default_popup": "src/popup/popup.html"
+    "default_icon": {
+      "16": "icon/16.png",
+      "32": "icon/32.png",
+      "48": "icon/48.png",
+      "96": "icon/96.png",
+      "128": "icon/128.png"
+    }
   },
   "{{firefox}}.browser_action": {
-    "default_popup": "src/popup/popup.html"
+    "default_icon": {
+      "16": "icon/16.png",
+      "32": "icon/32.png",
+      "48": "icon/48.png",
+      "96": "icon/96.png",
+      "128": "icon/128.png"
+    }
   },
   "background": {
-    "{{chrome}}.service_worker": "src/background.ts",
-    "{{firefox}}.scripts": ["src/background.ts"]
+    "{{chrome}}.service_worker": "src/background/index.ts",
+    "{{firefox}}.scripts": [
+      "src/background/index.ts"
+    ]
   },
-  "permissions": ["activeTab", "tabs"],
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "declarativeNetRequest",
+    "storage"
+  ],
   "host_permissions": ["<all_urls>"],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "react_scan_csp_rules",
+        "enabled": false,
+        "path": "rules.json"
+      }
+    ]
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/scan-dist.js"],
+      "js": ["src/inject/index.ts"],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content.ts"],
+      "js": [
+        "src/content/index.ts"
+      ],
       "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content.js",
+        "icon/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

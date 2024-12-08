@@ -1,0 +1,60 @@
+.react-scan-default-font {
+  font-family: Menlo, Consolas, Monaco, 'Liberation Mono', 'Lucida Console', monospace;
+}
+
+.react-scan-extension-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 39px;
+  min-width: 39px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 300ms ease-in-out;
+  opacity: 0;
+  animation: fadeIn 300ms 300ms ease-in-out forwards;
+  z-index: 2147483650;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.react-scan-extension-button:hover {
+  color: #fff;
+}
+
+#react-scan-toolbar {
+  flex-direction: row !important;
+  opacity: 0;
+  transition: opacity 300ms ease-in-out, visibility 300ms ease-in-out;
+}
+
+#react-scan-toolbar #react-scan-toolbar-content {
+  transition: opacity 300ms ease-in-out;
+}
+
+#react-scan-toolbar .react-scan-extension-button {
+  position: unset;
+  margin-left: 4px;
+  opacity: 1;
+  animation: none;
+}
+
+#react-scan-toolbar .react-scan-extension-button:hover {
+  background: rgba(0, 0, 0, 0.95);
+}

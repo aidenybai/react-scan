@@ -1,7 +1,6 @@
 const { resolve } = require('node:path');
 
 const project = resolve(__dirname, 'tsconfig.json');
-console.log(project);
 
 module.exports = {
   root: true,

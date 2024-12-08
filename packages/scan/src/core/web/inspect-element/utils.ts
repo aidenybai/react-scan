@@ -41,17 +41,28 @@ export const getFiberFromElement = (element: HTMLElement): Fiber | null => {
   return null;
 };
 
-export const getFirstStateNode = (fiber: Fiber): HTMLElement | null => {
-  let current = fiber;
+export const getFirstStateNode = (fiber: Fiber): Element | null => {
+  let current: Fiber | null = fiber;
   while (current) {
-    if (current.stateNode instanceof HTMLElement) {
+    if (current.stateNode instanceof Element) {
       return current.stateNode;
     }
 
     if (!current.child) {
-      return null;
+      break;
     }
     current = current.child;
+  }
+
+  while (current) {
+    if (current.stateNode instanceof Element) {
+      return current.stateNode;
+    }
+
+    if (!current.return) {
+      break;
+    }
+    current = current.return;
   }
   return null;
 };

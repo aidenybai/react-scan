@@ -151,8 +151,7 @@ export const createInspectElementStateMachine = () => {
               z-index: ${parseInt(canvas.style.zIndex) - 1};
               pointer-events: auto;
             `;
-
-            canvas.parentNode!.insertBefore(eventCatcher, canvas);
+            document.body.insertBefore(eventCatcher, document.body.firstChild);
             let currentHoveredElement: HTMLElement | null = null;
             const mouseMove = throttle((e: MouseEvent) => {
               if (ReactScanInternals.inspectState.kind !== 'inspecting') {
@@ -175,9 +174,9 @@ export const createInspectElementStateMachine = () => {
               drawHoverOverlay(el, canvas, ctx, 'inspecting');
             }, 16);
 
-            window.addEventListener('mousemove', mouseMove);
+            window.addEventListener('mousemove', mouseMove, { capture: true });
 
-            const click = (e: MouseEvent) => {
+            const pointerDown = (e: MouseEvent) => {
               e.stopPropagation();
 
               eventCatcher.style.pointerEvents = 'none';
@@ -211,7 +210,9 @@ export const createInspectElementStateMachine = () => {
                 parentFocusBtn.style.display = 'none';
               }
             };
-            window.addEventListener('click', click);
+            window.addEventListener('pointerdown', pointerDown, {
+              capture: true,
+            });
 
             const keyDown = (e: KeyboardEvent) => {
               if (e.key === 'Escape') {
@@ -222,7 +223,7 @@ export const createInspectElementStateMachine = () => {
                 clearCanvas();
               }
             };
-            window.addEventListener('keydown', keyDown);
+            window.addEventListener('keydown', keyDown, { capture: true });
             let cleanup = () => {
               /**/
             };
@@ -241,9 +242,13 @@ export const createInspectElementStateMachine = () => {
             }
 
             return () => {
-              window.removeEventListener('click', click);
-              window.removeEventListener('mousemove', mouseMove);
-              window.removeEventListener('keydown', keyDown);
+              window.removeEventListener('pointerdown', pointerDown, {
+                capture: true,
+              });
+              window.removeEventListener('mousemove', mouseMove, {
+                capture: true,
+              });
+              window.removeEventListener('keydown', keyDown, { capture: true });
               eventCatcher.parentNode?.removeChild(eventCatcher);
               cleanup();
             };
@@ -320,9 +325,11 @@ export const createInspectElementStateMachine = () => {
                 };
               }
             };
-            window.addEventListener('keydown', keyDown);
+            window.addEventListener('keydown', keyDown, {
+              capture: true,
+            });
 
-            const onClickCanvasLockIcon = (e: MouseEvent) => {
+            const onPointerDownCanvasLockIcon = (e: MouseEvent) => {
               if (!currentLockIconRect) {
                 return;
               }
@@ -362,7 +369,13 @@ export const createInspectElementStateMachine = () => {
                 return;
               }
             };
-            window.addEventListener('click', onClickCanvasLockIcon);
+            window.addEventListener(
+              'pointerdown',
+              onPointerDownCanvasLockIcon,
+              {
+                capture: true,
+              },
+            );
 
             const cleanup = trackElementPosition(
               inspectState.focusedDomElement,
@@ -379,8 +392,14 @@ export const createInspectElementStateMachine = () => {
             return () => {
               cleanup();
 
-              window.removeEventListener('keydown', keyDown);
-              window.removeEventListener('click', onClickCanvasLockIcon);
+              window.removeEventListener('keydown', keyDown, { capture: true });
+              window.removeEventListener(
+                'pointerdown',
+                onPointerDownCanvasLockIcon,
+                {
+                  capture: true,
+                },
+              );
             };
           }
         }

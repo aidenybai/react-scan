@@ -1,0 +1,127 @@
+html.freeze>body {
+  pointer-events: none;
+}
+
+html.freeze {
+  overflow: auto;
+  overscroll-behavior-x: contain;
+}
+
+html.freeze svg {
+  pointer-events: none;
+}
+
+html.freeze #react-scan-toast {
+  pointer-events: auto;
+}
+
+#react-scan-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.01);
+  backdrop-filter: blur(94px) saturate(180%);
+  animation-duration: 300ms;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2147483650;
+}
+
+#react-scan-backdrop.animate-fade-in {
+  opacity: 0;
+  animation: fadeIn 300ms ease-in forwards;
+  pointer-events: bounding-box;
+}
+
+#react-scan-backdrop.animate-fade-out {
+  animation: fadeOut 300ms ease-out forwards;
+}
+
+#react-scan-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  padding: 14px 40px 14px 20px;
+  min-width: 320px;
+  max-width: 480px;
+  color: #fff;
+  font-size: 12px;
+  font-family: Menlo, Consolas, Monaco, 'Liberation Mono', 'Lucida Console', monospace;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -50%);
+  transition: opacity 300ms ease-in-out;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2147483651;
+}
+
+#react-scan-toast .icon {
+  font-size: 16px;
+}
+
+@media (max-width: 320px) {
+  #react-scan-toast {
+    flex-direction: column;
+    min-width: auto;
+    width: calc(100% - 32px);
+  }
+}
+
+@media (max-width: 720px) {
+  br {
+    display: none;
+  }
+}
+
+#react-scan-toast-close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  width: 23px;
+  height: 23px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.01);
+  transition: background-color 300ms ease;
+}
+
+#react-scan-toast-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+html.freeze #react-scan-toast {
+  animation: fadeIn 300ms ease-in forwards;
+}
+
+#react-scan-toast.hide {
+  animation: fadeOut 300ms ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
