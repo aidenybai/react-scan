@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [19]
+        node-version: [18]
 
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +29,14 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --strict-peer-dependencies=false
 
       - name: Build
-        continue-on-error: true
-        run: pnpm build --filter='./packages/scan'
+        run: |
+          cd packages/scan
+          NODE_ENV=production pnpm build
+        env:
+          NODE_ENV: production
 
       - name: Publish NPM Package to pkg-pr-new
         run: pnpx pkg-pr-new publish ./packages/scan
