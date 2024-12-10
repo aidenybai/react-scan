@@ -173,6 +173,9 @@
       "monitoring/remix": [
         "./dist/core/monitor/params/remix.d.ts"
       ],
+      "monitoring/astro": [
+        "./dist/core/monitor/params/astro/index.ts"
+      ],
       "react-component-name/vite": [
         "./dist/react-component-name/vite.d.ts"
       ],
