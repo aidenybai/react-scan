@@ -4,7 +4,7 @@
 import { Analytics } from '@vercel/analytics/react';
 import { useEffect, useMemo, useState } from 'react';
 import ReactDOMClient from 'react-dom/client';
-import { scan } from 'react-scan/dist/index.mjs'; // f
+import { scan } from 'react-scan'; // f
 
 import './styles.css';
 

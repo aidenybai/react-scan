@@ -9,6 +9,7 @@
     "lib": ["esnext", "dom"],
     "types": ["@types/node"],
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "declarationMap": true
   }
 }
