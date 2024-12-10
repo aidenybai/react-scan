@@ -1,0 +1,16 @@
+---
+// @ts-ignore This file will not be packaged, so the file to be imported should be a .mjs file.
+import { AstroMonitor } from './component.mjs';
+
+interface Props {
+  url?: string;
+  apiKey: string;
+}
+
+const { apiKey, url } = Astro.props;
+
+const pathname = Astro.url.pathname;
+const params = Astro.params;
+---
+
+<AstroMonitor apiKey={apiKey} url={url} pathname={pathname} params={params} client:only="react" />

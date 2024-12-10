@@ -7,3 +7,4 @@ packages/extension/build/
 !packages/extension/build/react-scan-extension.zip
 *.log
 build
+playgrounds

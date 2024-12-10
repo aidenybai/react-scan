@@ -38,6 +38,7 @@ export default defineConfig([
       './src/core/monitor/params/react-router-v5.ts',
       './src/core/monitor/params/react-router-v6.ts',
       './src/core/monitor/params/remix.ts',
+      './src/core/monitor/params/astro/component.ts',
     ],
     outDir: DIST_PATH,
     splitting: false,
