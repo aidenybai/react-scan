@@ -24,7 +24,7 @@ export const BaseMonitor = ({
     url,
     apiKey,
     interactions: [],
-    session: getSession(),
+    session: getSession().catch(() => null),
     route,
     path,
   };
@@ -61,7 +61,7 @@ export const Monitoring = ({
     url,
     apiKey,
     interactions: [],
-    session: getSession(),
+    session: getSession().catch(() => null),
     route,
     path,
   };

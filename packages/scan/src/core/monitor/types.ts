@@ -1,5 +1,4 @@
 import { type Fiber } from 'react-reconciler';
-import { type getDevicePerformance } from './benchmark';
 
 export enum Device {
   DESKTOP = 0,
@@ -16,7 +15,6 @@ export interface Session {
   cpu: number;
   gpu: string | null;
   mem: number;
-  performance: Awaited<ReturnType<typeof getDevicePerformance>>;
 }
 
 export interface Interaction {

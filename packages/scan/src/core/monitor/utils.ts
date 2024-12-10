@@ -1,7 +1,6 @@
 import { onIdle } from '../web/utils';
 import { isSSR } from './constants';
 import { Device, type Session } from './types';
-import { getDevicePerformance } from './benchmark';
 
 const getDeviceType = () => {
   const userAgent = navigator.userAgent;
@@ -63,7 +62,6 @@ const getGpuRenderer = () => {
  */
 let cachedSession: Session;
 export const getSession = async () => {
-  console.log('call get session');
 
   if (isSSR) return null;
   if (cachedSession) {
@@ -102,11 +100,7 @@ export const getSession = async () => {
       resolve(getGpuRenderer());
     });
   });
-  const performancePromise = getDevicePerformance();
-  const [gpuRenderer, performance] = await Promise.all([
-    gpuRendererPromise,
-    performancePromise,
-  ]);
+ 
   const session = {
     id,
     url,
@@ -114,11 +108,9 @@ export const getSession = async () => {
     wifi,
     cpu,
     mem,
-    gpu: gpuRenderer,
+    gpu: await gpuRendererPromise,
     agent: navigator.userAgent,
-    performance,
   };
-  console.log('session', session);
   cachedSession = session;
   return session;
 };

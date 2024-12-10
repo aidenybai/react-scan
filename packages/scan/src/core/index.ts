@@ -314,29 +314,33 @@ let flushInterval: any | undefined;
 
 export const start = () => {
   if (typeof window === 'undefined') return;
-
-  const existingOverlay = document.querySelector('react-scan-overlay');
-  if (existingOverlay) {
-    return;
-  }
-  initReactScanOverlay();
-  const overlayElement = document.createElement('react-scan-overlay') as any;
-
-  document.documentElement.appendChild(overlayElement);
-
   const options = ReactScanInternals.options.value;
 
-  const ctx = overlayElement.getContext();
-  createInspectElementStateMachine();
-  const audioContext =
-    typeof window !== 'undefined'
-      ? new (window.AudioContext ||
-          // @ts-expect-error -- This is a fallback for Safari
-          window.webkitAudioContext)()
-      : null;
-  createPerfObserver();
+  let ctx: CanvasRenderingContext2D;
+  let audioContext: any;
 
-  logIntro();
+  if (!Store.monitor.value) {
+    const existingOverlay = document.querySelector('react-scan-overlay');
+    if (existingOverlay) {
+      return;
+    }
+    initReactScanOverlay();
+    const overlayElement = document.createElement('react-scan-overlay') as any;
+
+    document.documentElement.appendChild(overlayElement);
+
+    ctx = overlayElement.getContext();
+    createInspectElementStateMachine();
+    audioContext =
+      typeof window !== 'undefined'
+        ? new (window.AudioContext ||
+            // @ts-expect-error -- This is a fallback for Safari
+            window.webkitAudioContext)()
+        : null;
+    createPerfObserver();
+
+    logIntro();
+  }
 
   globalThis.__REACT_SCAN__ = {
     ReactScanInternals,
@@ -432,7 +436,7 @@ export const start = () => {
 
   ReactScanInternals.instrumentation = instrumentation;
 
-  if (options.showToolbar) {
+  if (options.showToolbar && !Store.monitor.value) {
     createToolbar();
   }
 };

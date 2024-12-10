@@ -100,7 +100,7 @@ export const flush = async (): Promise<void> => {
     return;
   }
   // idempotent
-  const session = await getSession();
+  const session = await getSession().catch(() => null);
 
   if (!session) return;
   // nisarg do not add this back fix it on your side
