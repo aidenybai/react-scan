@@ -27,8 +27,6 @@ export interface OutlineLabel {
   color: { r: number; g: number; b: number };
 }
 
-export const MONO_FONT =
-  'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 const DEFAULT_THROTTLE_TIME = 32; // 2 frames
 
 const START_COLOR = { r: 115, g: 97, b: 230 };
@@ -327,7 +325,7 @@ export const fadeOutOutline = (
     ctx.save();
 
     if (text) {
-      ctx.font = `11px ${MONO_FONT}`;
+      ctx.font = `11px Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace`;
       const textMetrics = ctx.measureText(text);
       const textWidth = textMetrics.width;
       const textHeight = 11;

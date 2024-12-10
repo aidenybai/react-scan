@@ -45,3 +45,12 @@ export const createElement = (htmlString: string): HTMLElement => {
   template.innerHTML = htmlString.trim();
   return template.content.firstElementChild as HTMLElement;
 };
+
+
+export const tryOrElse = <T, E>(cb: () => T, val: E) => {
+  try {
+    return cb();
+  } catch (e) {
+    return val;
+  }
+};

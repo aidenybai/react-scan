@@ -1,5 +1,14 @@
 import { type Fiber } from 'react-reconciler';
+import {
+  type ClassValue,
+  clsx,
+} from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import type { Render } from './instrumentation';
+
+export const cn = (...inputs: Array<ClassValue>): string => {
+  return twMerge(clsx(inputs));
+};
 
 export const getLabelText = (renders: Array<Render>) => {
   let labelText = '';

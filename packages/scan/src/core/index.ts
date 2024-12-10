@@ -8,6 +8,7 @@ import {
   isCompositeFiber,
   traverseFiber,
 } from 'bippy';
+import styles from './web/assets/css/styles.css';
 import { createInstrumentation, type Render } from './instrumentation';
 import {
   type ActiveOutline,
@@ -28,6 +29,7 @@ import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
 import { addFiberToSet } from './utils';
 import { playGeigerClickSound } from './web/geiger';
+import { ICONS } from './web/assets/svgs/svgs';
 
 export interface Options {
   /**
@@ -239,6 +241,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
 
   if (prevRenderData) {
     prevRenderData.renders.push(...renders);
+    prevRenderData.count += renders.length;
   } else {
     const { selfTime } = getTimings(fiber);
 
@@ -258,6 +261,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
 
     if (prevLegacyRenderData) {
       prevLegacyRenderData.renders.push(...renders);
+      prevLegacyRenderData.count += renders.length;
     } else {
       const { selfTime } = getTimings(fiber);
 
@@ -314,29 +318,67 @@ let flushInterval: any | undefined;
 
 export const start = () => {
   if (typeof window === 'undefined') return;
+
+  const existingRoot = document.querySelector('react-scan-root');
+  if (existingRoot) {
+    return;
+  }
+
+  // Create container for shadow DOM
+  const container = document.createElement('div');
+  container.id = 'react-scan-root';
+
+  const shadow = container.attachShadow({ mode: 'open' });
+
+  const fragment = document.createDocumentFragment();
+
+  // add styles
+  const cssStyles = document.createElement('style');
+  cssStyles.textContent = styles;
+
+  // Create SVG sprite sheet node directly
+  const iconSprite = new DOMParser().parseFromString(ICONS, 'image/svg+xml').documentElement;
+  shadow.appendChild(iconSprite);
+
+
+  // add toolbar root
+  const root = document.createElement('div');
+  root.id = 'react-scan-toolbar-root';
+  root.className = 'absolute z-2147483647';
+
+  fragment.appendChild(cssStyles);
+  fragment.appendChild(root);
+
+  shadow.appendChild(fragment);
+
+  // Add container to document first (so shadow DOM is available)
+  document.documentElement.appendChild(container);
+
   const options = ReactScanInternals.options.value;
 
-  let ctx: CanvasRenderingContext2D;
-  let audioContext: any;
+  const ctx = initReactScanOverlay();
+  if (!ctx) return;
+
+  createInspectElementStateMachine(shadow);
+
+  const audioContext =
+    typeof window !== 'undefined'
+      ? new (window.AudioContext ||
+        // @ts-expect-error -- This is a fallback for Safari
+        window.webkitAudioContext)()
+      : null;
+
+  createPerfObserver();
 
   if (!Store.monitor.value) {
     const existingOverlay = document.querySelector('react-scan-overlay');
     if (existingOverlay) {
       return;
     }
-    initReactScanOverlay();
     const overlayElement = document.createElement('react-scan-overlay') as any;
 
     document.documentElement.appendChild(overlayElement);
 
-    ctx = overlayElement.getContext();
-    createInspectElementStateMachine();
-    audioContext =
-      typeof window !== 'undefined'
-        ? new (window.AudioContext ||
-            // @ts-expect-error -- This is a fallback for Safari
-            window.webkitAudioContext)()
-        : null;
     createPerfObserver();
 
     logIntro();
@@ -436,8 +478,9 @@ export const start = () => {
 
   ReactScanInternals.instrumentation = instrumentation;
 
-  if (options.showToolbar && !Store.monitor.value) {
-    createToolbar();
+
+  if (options.showToolbar) {
+    createToolbar(shadow);
   }
 };
 
