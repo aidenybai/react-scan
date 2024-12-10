@@ -87,10 +87,17 @@ export const fastSerialize = (value: unknown) => {
 export const getPropsRender = (fiber: Fiber, type: Function): Render | null => {
   const changes: Array<Change> = [];
 
-  const prevProps = fiber.alternate?.memoizedProps;
-  const nextProps = fiber.memoizedProps;
+  const prevProps = fiber.alternate?.memoizedProps || {};
+  const nextProps = fiber.memoizedProps || {};
 
-  for (const propName in { ...prevProps, ...nextProps }) {
+  // Get union props
+  // TODO needs faster solution
+  const props = new Set([
+    ...Object.keys(prevProps),
+    ...Object.keys(nextProps),
+  ]);
+
+  for (const propName in props) {
     const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
@@ -122,7 +129,6 @@ export const getPropsRender = (fiber: Fiber, type: Function): Render | null => {
 
     change.unstable = true;
   }
-  const { selfTime } = getTimings(fiber);
 
   return {
     type: 'props',
@@ -130,10 +136,11 @@ export const getPropsRender = (fiber: Fiber, type: Function): Render | null => {
     trigger: false,
     changes,
     name: getDisplayName(type),
-    time: selfTime,
+    time: getTimings(fiber).selfTime,
     forget: hasMemoCache(fiber),
   };
 };
+
 
 export const getContextRender = (
   fiber: Fiber,
@@ -181,17 +188,19 @@ export const getContextRender = (
   };
 };
 
+interface InstrumentationOptions {
+  onCommitStart: () => void;
+  isValidFiber: (fiber: Fiber) => boolean;
+  onRender: (fiber: Fiber, renders: Array<Render>) => void;
+  onCommitFinish: () => void;
+}
+
 export const createInstrumentation = ({
   onCommitStart,
   isValidFiber,
   onRender,
   onCommitFinish,
-}: {
-  onCommitStart: () => void;
-  isValidFiber: (fiber: Fiber) => boolean;
-  onRender: (fiber: Fiber, renders: Array<Render>) => void;
-  onCommitFinish: () => void;
-}) => {
+}: InstrumentationOptions) => {
   const instrumentation = {
     isPaused: signal(false),
     fiberRoots: new Set<FiberRoot>(),
