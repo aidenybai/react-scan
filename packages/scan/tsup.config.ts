@@ -45,7 +45,7 @@ export default defineConfig([
     clean: true,
     sourcemap: false,
     format: ['cjs', 'esm', 'iife'],
-    target: 'esnext',
+    target: 'es2018',
     platform: 'browser',
     treeshake: true,
     dts: true,
