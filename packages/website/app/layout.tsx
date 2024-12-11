@@ -1,6 +1,8 @@
 import './globals.css';
 import localFont from 'next/font/local';
 import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Header from '../components/header';
 import Footer from '../components/footer';
 
@@ -80,6 +82,8 @@ export default function RootLayout({
           {children}
         </div>
         <Footer />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
