@@ -10,18 +10,16 @@ import {
 
 const EXPANDED_PATHS = new Set<string>();
 const fadeOutTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
-const disabledButtons = new Set<HTMLButtonElement>();
 
 export const renderPropsAndState = (
   didRender: boolean,
   fiber: any,
-  reportDataFiber: any,
-  propsContainer: HTMLDivElement,
 ) => {
-  const { overrideProps } = getOverrideMethods();
-  const canEdit = !!overrideProps;
+  const propContainer = Store.inspectState.value.propContainer;
 
-  const scrollTop = propsContainer.scrollTop;
+  if (!propContainer) {
+    return;
+  }
 
   const fiberContext = tryOrElse(
     () => Array.from(getAllFiberContexts(fiber).entries()).map((x) => x[1]),
@@ -33,150 +31,12 @@ export const renderPropsAndState = (
   const props = fiber.memoizedProps || {};
   const state = getStateFromFiber(fiber) || {};
 
-  const renderCount = reportDataFiber?.count || 0;
-  const renderTime = reportDataFiber?.time?.toFixed(2) || '0';
-
   const changedProps = new Set(getChangedProps(fiber));
   const changedState = new Set(getChangedState(fiber));
-  propsContainer.innerHTML = '';
+  propContainer.innerHTML = '';
 
   const inspector = document.createElement('div');
   inspector.className = 'react-scan-inspector';
-
-  const header = document.createElement('div');
-  header.className = 'react-scan-header';
-  header.innerHTML = `
-    <div class="react-scan-header-left">
-      <span class="react-scan-component-name">${componentName}</span>
-      <span class="react-scan-metrics">
-        ${renderCount > 0 ? `${renderCount} renders` : ''}
-        ${renderCount > 0 && renderTime > 0 ? ' • ' : ''}
-        ${renderTime > 0 ? `${renderTime}ms` : ''}
-      </span>
-    </div>
-    <div class="react-scan-header-right">
-      ${
-        canEdit
-          ? `
-        <button class="react-scan-replay-button" title="Replay component">
-         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgb(203, 182, 242)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-eye"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="1"/><path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/></svg>
-        </button>
-      `
-          : ''
-      }
-      <button class="react-scan-close-button" title="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-  `;
-  inspector.appendChild(header);
-
-  const closeButton = header.querySelector<HTMLButtonElement>(
-    '.react-scan-close-button',
-  )!;
-  closeButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused') return;
-
-    propsContainer.style.maxHeight = '0';
-    propsContainer.style.width = 'fit-content';
-    propsContainer.innerHTML = '';
-
-    Store.inspectState.value = {
-      kind: 'inspect-off',
-      propContainer: currentState.propContainer,
-    };
-  });
-
-  if (canEdit) {
-    const replayButton = header.querySelector<HTMLButtonElement>(
-      '.react-scan-replay-button',
-    )!;
-
-    if (disabledButtons.has(replayButton)) {
-      replayButton.classList.add('disabled');
-    }
-
-    replayButton.addEventListener('click', (e: MouseEvent) => {
-      e.stopPropagation();
-      if (disabledButtons.has(replayButton)) return;
-
-      const { overrideProps, overrideHookState } = getOverrideMethods();
-      if (!overrideProps || !overrideHookState) return;
-
-      disabledButtons.add(replayButton);
-      replayButton.classList.add('disabled');
-
-      void (async () => {
-        try {
-          await replayComponent(fiber);
-        } finally {
-          setTimeout(() => {
-            disabledButtons.delete(replayButton);
-            replayButton.classList.remove('disabled');
-          }, 300);
-        }
-      })();
-    });
-  }
-
-  const styleElement = document.createElement('style');
-  styleElement.textContent = `
-    .react-scan-header-right {
-      display: flex;
-      gap: 4px;
-    }
-    .react-scan-replay-button,
-    .react-scan-close-button {
-      display: flex;
-      align-items: center;
-      padding: 4px;
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      cursor: pointer;
-      transition: opacity 150ms ease;
-      position: relative;
-      overflow: hidden;
-      isolation: isolate;
-    }
-    .react-scan-close-button {
-      background: rgba(255, 255, 255, 0.01);
-    }
-    .react-scan-close-button:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-    .react-scan-replay-button {
-      background: rgba(142, 97, 227, 0.5) !important;
-    }
-    .react-scan-replay-button.disabled {
-      opacity: 0.5;
-      pointer-events: none;
-    }
-    .react-scan-replay-button:hover {
-      background: rgba(142, 97, 227, 0.25);
-    }
-    .react-scan-replay-button::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      transform: translateX(-100%);
-      animation: shimmer 2s infinite;
-      background: linear-gradient(
-        to right,
-        transparent,
-        rgba(142, 97, 227, 0.3),
-        transparent
-      );
-    }
-    @keyframes shimmer {
-      100% {
-        transform: translateX(100%);
-      }
-    }
-  `;
-  document.head.appendChild(styleElement);
 
   const content = document.createElement('div');
   content.className = 'react-scan-content';
@@ -190,7 +50,7 @@ export const renderPropsAndState = (
           componentName,
           didRender,
           fiber,
-          propsContainer,
+          propContainer,
           'Props',
           props,
           changedProps,
@@ -242,7 +102,7 @@ export const renderPropsAndState = (
           componentName,
           didRender,
           fiber,
-          propsContainer,
+          propContainer,
           'Context',
           contextObj,
           changedKeys,
@@ -272,7 +132,7 @@ export const renderPropsAndState = (
           componentName,
           didRender,
           fiber,
-          propsContainer,
+          propContainer,
           'State',
           stateObj,
           changedState,
@@ -291,13 +151,8 @@ export const renderPropsAndState = (
   sections.forEach((section) => content.appendChild(section.element));
 
   inspector.appendChild(content);
-  propsContainer.appendChild(inspector);
 
-  requestAnimationFrame(() => {
-    const contentHeight = inspector.getBoundingClientRect().height;
-    propsContainer.style.maxHeight = `${contentHeight}px`;
-    propsContainer.scrollTop = scrollTop;
-  });
+  propContainer.appendChild(inspector);
 };
 
 const lastChangedAt = new Map<string, number>();
@@ -311,9 +166,10 @@ const renderSection = (
   data: any,
   changedKeys: Set<string> = new Set(),
 ) => {
+
   const section = document.createElement('div');
   section.className = 'react-scan-section';
-  section.textContent = title;
+  section.dataset.section = title;
 
   const entries = Object.entries(data).sort(([keyA], [keyB]) => {
     const pathA = getPath(componentName, title.toLowerCase(), '', keyA);
@@ -456,11 +312,14 @@ export const createPropertyElement = (
       preview.className = 'react-scan-preview-line';
       preview.dataset.key = key;
       preview.dataset.section = section;
+
+
       preview.innerHTML = `
+        <span style="width: 8px; display: inline-block"></span>
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
         <span class="react-scan-key">${key}:&nbsp;</span><span class="${getValueClassName(
           value,
-        )}">${getValuePreview(value)}</span>
+        )} react-scan-value with-data-text" data-text='${getValuePreview(value)}'></span>
       `;
 
       const content = document.createElement('div');
@@ -581,14 +440,6 @@ export const createPropertyElement = (
           container.classList.remove('react-scan-expanded');
           content.classList.add('react-scan-hidden');
         }
-
-        requestAnimationFrame(() => {
-          const inspector = propsContainer.firstElementChild as HTMLElement;
-          if (inspector) {
-            const contentHeight = inspector.getBoundingClientRect().height;
-            propsContainer.style.maxHeight = `${contentHeight}px`;
-          }
-        });
       });
     } else {
       const preview = document.createElement('div');
@@ -600,7 +451,7 @@ export const createPropertyElement = (
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
         <span class="react-scan-key">${key}:&nbsp;</span><span class="${getValueClassName(
           value,
-        )} react-scan-value">${getValuePreview(value)}</span>
+        )} react-scan-value with-data-text" data-text='${getValuePreview(value)}'></span>
       `;
       container.appendChild(preview);
 
@@ -629,7 +480,7 @@ export const createPropertyElement = (
             const updateValue = () => {
               const newValue = input.value;
               value = typeof value === 'number' ? Number(newValue) : newValue;
-              valueElement.textContent = getValuePreview(value);
+              (valueElement as HTMLElement).dataset.text = getValuePreview(value);
 
               tryOrElse(() => {
                 input.replaceWith(valueElement);
@@ -731,7 +582,7 @@ export const getValuePreview = (value: any) => {
   if (value === undefined) return 'undefined';
   switch (typeof value) {
     case 'string':
-      return `"${value}"`;
+      return `&quot;${value}&quot;`;
     case 'number':
       return value.toString();
     case 'boolean':
@@ -748,7 +599,7 @@ export const getValuePreview = (value: any) => {
   }
 };
 
-const replayComponent = async (fiber: any) => {
+export const replayComponent = async (fiber: any) => {
   try {
     const { overrideProps, overrideHookState } = getOverrideMethods();
     if (!overrideProps || !overrideHookState || !fiber) return;

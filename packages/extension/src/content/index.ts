@@ -1,3 +1,5 @@
+import './graph';
+
 import styles from '../assets/css/styles.css?inline';
 import { BroadcastSchema } from '../types/messages';
 import { loadCss, broadcast } from '../utils/helpers';

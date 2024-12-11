@@ -46,8 +46,13 @@ export default defineConfig([
     format: ['cjs', 'esm', 'iife'],
     target: 'esnext',
     platform: 'browser',
-    treeshake: true,
+    treeshake: {
+      moduleSideEffects: false,
+      propertyReadSideEffects: false,
+      unknownGlobalSideEffects: false
+    },
     dts: true,
+    watch: process.env.NODE_ENV === 'development',
     async onSuccess() {
       await Promise.all([
         addDirectivesToChunkFiles(DIST_PATH),
@@ -68,7 +73,12 @@ export default defineConfig([
       'react-router',
       'react-router-dom',
       '@remix-run/react',
+      'preact',
+      '@preact/signals',
     ],
+    loader: {
+      '.css': 'text',
+    },
   },
   {
     entry: ['./src/cli.mts'],
@@ -79,10 +89,11 @@ export default defineConfig([
     format: ['cjs'],
     target: 'esnext',
     platform: 'node',
-    minify: false,
+    minify: process.env.NODE_ENV === 'production',
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
     },
+    watch: process.env.NODE_ENV === 'development',
   },
   {
     entry: [
@@ -116,13 +127,13 @@ export default defineConfig([
       'vite',
     ],
     dts: true,
-    minify: false,
+    minify: process.env.NODE_ENV === 'production',
     treeshake: true,
     env: {
       NODE_ENV: process.env.NODE_ENV || 'development',
     },
-    outExtension: ({ format }) => ({
-      js: format === 'esm' ? '.mjs' : '.js',
+    outExtension: (ctx) => ({
+      js: ctx.format === 'esm' ? '.mjs' : '.js',
     }),
     esbuildOptions: (options, context) => {
       options.mainFields = ['module', 'main'];
@@ -130,5 +141,6 @@ export default defineConfig([
       options.format = context.format === 'esm' ? 'esm' : 'cjs';
       options.preserveSymlinks = true;
     },
+    watch: process.env.NODE_ENV === 'development',
   },
 ]);

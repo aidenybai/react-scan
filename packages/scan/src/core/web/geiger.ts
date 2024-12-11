@@ -22,29 +22,46 @@
 
 // Taken from: https://github.com/kristiandupont/react-geiger/blob/main/src/Geiger.tsx
 
+// Simple throttle for high-frequency calls
+let lastPlayTime = 0;
+const MIN_INTERVAL = 32; // ~30fps throttle
+
+/**
+ * Plays a Geiger counter-like click sound
+ * Optimized for render tracking with minimal changes
+ */
 export const playGeigerClickSound = (
   audioContext: AudioContext,
   amplitude: number,
 ) => {
+  // Simple throttle to prevent audio overlap
+  const now = performance.now();
+  if (now - lastPlayTime < MIN_INTERVAL) {
+    return;
+  }
+  lastPlayTime = now;
+
+  // Cache currentTime for consistent timing
+  const currentTime = audioContext.currentTime;
   const volume = Math.max(0.5, amplitude);
   const duration = 0.001;
   const startFrequency = 440 + amplitude * 200;
 
   const oscillator = audioContext.createOscillator();
   oscillator.type = 'sine';
-  oscillator.frequency.setValueAtTime(startFrequency, audioContext.currentTime);
+  oscillator.frequency.setValueAtTime(startFrequency, currentTime);
   oscillator.frequency.exponentialRampToValueAtTime(
     220,
-    audioContext.currentTime + duration,
+    currentTime + duration,
   );
 
   const gainNode = audioContext.createGain();
-  gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+  gainNode.gain.setValueAtTime(volume, currentTime);
   gainNode.gain.exponentialRampToValueAtTime(0.01, duration / 2);
 
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
 
   oscillator.start();
-  oscillator.stop(audioContext.currentTime + duration);
+  oscillator.stop(currentTime + duration);
 };

@@ -16,6 +16,6 @@ export const createPerfObserver = () => {
   observer.observe({ entryTypes: ['longtask'] });
 
   return () => {
-    
+    /**/
   }
 };
