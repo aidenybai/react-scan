@@ -1,0 +1,21 @@
+{
+  "private": "true",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.4.0",
+    "babel-plugin-react-compiler": "19.0.0-beta-a7bf2bd-20241110",
+    "react": "19.0.0-rc.1",
+    "react-dom": "19.0.0-rc.1",
+    "react-scan": "workspace:*",
+    "sugar-high": "^0.7.5",
+    "vite-plugin-inspect": "^0.8.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.3"
+  }
+}
