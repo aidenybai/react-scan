@@ -59,6 +59,8 @@ export interface Options {
   /**
    * Show toolbar bar
    *
+   * If you set this to true, and set {@link enabled} to false, the toolbar will still show, but scanning will be disabled.
+   *
    * @default true
    */
   showToolbar?: boolean;
@@ -202,11 +204,12 @@ export const getReport = (type?: React.ComponentType<any>) => {
   return Store.legacyReportData;
 };
 
-export const  setOptions = (options: Options) => {
+export const setOptions = (options: Options) => {
   const { instrumentation } = ReactScanInternals;
   if (instrumentation) {
     instrumentation.isPaused.value = options.enabled === false;
   }
+
   ReactScanInternals.options.value = {
     ...ReactScanInternals.options.value,
     ...options,
@@ -355,7 +358,8 @@ export const withScan = <T>(
   setOptions(options);
   const isInIframe = Store.isInIframe.value;
   const componentAllowList = ReactScanInternals.componentAllowList;
-  if (isInIframe || options.enabled === false) return component;
+  if (isInIframe || (options.enabled === false && options.showToolbar !== true))
+    return component;
   if (!componentAllowList) {
     ReactScanInternals.componentAllowList = new WeakMap<
       React.ComponentType<any>,
@@ -374,12 +378,13 @@ export const withScan = <T>(
 export const scan = (options: Options = {}) => {
   setOptions(options);
   const isInIframe = Store.isInIframe.value;
-  if (isInIframe || options.enabled === false) return;
+  if (isInIframe || (options.enabled === false && options.showToolbar !== true))
+    return;
 
   start();
 };
 
-export const useScan = (options: Options={}) => {
+export const useScan = (options: Options = {}) => {
   setOptions(options);
   start();
 };
