@@ -11,6 +11,7 @@ import {
   getType,
 } from 'bippy';
 import { signal } from '@preact/signals';
+import { ReactScanInternals } from '.';
 
 export interface Change {
   name: string;
@@ -213,7 +214,7 @@ export const createInstrumentation = (params: {
   kind: 'devtool' | 'monitoring';
 }) => {
   const instrumentation = {
-    isPaused: signal(false),
+    isPaused: signal(!ReactScanInternals.options.value.enabled), // this will typically be false, but in cases where a user provides showToolbar: true, this will be true
     fiberRoots: new Set<FiberRoot>(),
     onCommitFiberRoot: (_rendererID: number, _root: FiberRoot) => {
       /**/
