@@ -6,19 +6,20 @@ import {
   MAX_PENDING_REQUESTS,
 } from './constants';
 import { getSession } from './utils';
-import type { Interaction, IngestRequest, InternalInteraction } from './types';
+import type { Interaction, IngestRequest, InternalInteraction, Component } from './types';
 
 const getInteractionId = (interaction: InternalInteraction) =>
-  `${interaction.performanceEntry.type}::<REPLACED_PATH>::${interaction.url}`; // We replace the path with <REPLACED_PATH> in production
+  `${interaction.performanceEntry.type}::<REPLACED_PATH>::${interaction.url}`; // We replace the path with <REPLACED_PATH> on ingest with the component path joined by `.`
 
 const INTERACTION_TIME_TILL_COMPLETED = 4000;
 
 const splitInteractions = (interactions: Array<InternalInteraction>) => {
   const now = performance.now();
-  const pendingInteractions: typeof interactions = [];
-  const completedInteractions: typeof interactions = [];
+  const pendingInteractions = new Array<InternalInteraction>();
+  const completedInteractions = new Array<InternalInteraction>();
 
-  interactions.forEach((interaction) => {
+  for (let i = 0; i < interactions.length; i++) {
+    const interaction = interactions[i];
     if (
       now - interaction.performanceEntry.startTime <=
       INTERACTION_TIME_TILL_COMPLETED
@@ -27,20 +28,13 @@ const splitInteractions = (interactions: Array<InternalInteraction>) => {
     } else {
       completedInteractions.push(interaction);
     }
-  });
+  }
 
   return { pendingInteractions, completedInteractions };
 };
 
 const aggregateComponents = (interactions: Array<InternalInteraction>) => {
-  const aggregatedComponents: Array<{
-    interactionId: string;
-    name: string;
-    renders: number;
-    instances: number;
-    totalTime?: number;
-    selfTime?: number;
-  }> = [];
+  const aggregatedComponents = new Array<Component>();
 
   for (const interaction of interactions) {
     for (const [name, component] of Array.from(
