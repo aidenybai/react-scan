@@ -14,6 +14,7 @@ import { addFiberToSet, isValidFiber, updateFiberRenderData } from '../utils';
 import { initPerformanceMonitoring } from './performance';
 import { getSession } from './utils';
 import { flush } from './network';
+import { computeRoute } from './params/utils';
 
 // max retries before the set of components do not get reported (avoid memory leaks of the set of fibers stored on the component aggregation)
 const MAX_RETRIES_BEFORE_COMPONENT_GC = 7;
@@ -21,10 +22,18 @@ const MAX_RETRIES_BEFORE_COMPONENT_GC = 7;
 export interface MonitoringProps {
   url?: string;
   apiKey: string;
-  path: string;
-  route: string | null;
-  commit: string | null;
-  branch: string | null;
+
+  // For Session and Interaction
+  path?: string | null; // pathname (i.e /foo/bar)
+  route?: string | null; // computed from path and params
+
+  // To compute Route when using Monitoring without framework
+  // Only used to compute the route
+  params?: Record<string, string>;
+
+  // Tracking regressions across commits and branches
+  commit?: string | null;
+  branch?: string | null;
 }
 
 export interface MonitoringWithoutRouteProps
@@ -33,10 +42,11 @@ export interface MonitoringWithoutRouteProps
 export const Monitoring = ({
   url,
   apiKey,
-  path,
-  route,
-  commit,
-  branch,
+  path = null, // path passed down would be reactive
+  params,
+  route = null,
+  commit = null,
+  branch = null,
 }: MonitoringProps) => {
   if (!apiKey)
     throw new Error('Please provide a valid API key for React Scan monitoring');
@@ -44,17 +54,23 @@ export const Monitoring = ({
 
   Store.monitor.value ??= {
     pendingRequests: 0,
+    interactions: [],
+    session: getSession({ commit, branch }).catch(() => null),
     url,
     apiKey,
-    interactions: [],
-    session: getSession().catch(() => null),
     route,
     path,
     commit,
     branch,
   };
-  Store.monitor.value.route = route;
-  Store.monitor.value.path = path;
+  // When using Monitoring without framework, we need to compute the route from the path and params
+  if (!route && path && params) {
+    Store.monitor.value.route = computeRoute(path, params);
+  } else {
+    Store.monitor.value.route = route ?? new URL(window.location.toString()).pathname;
+  }
+
+  Store.monitor.value.path = path ?? new URL(window.location.toString()).pathname;
 
   // eslint-disable-next-line import/no-named-as-default-member
   React.useEffect(() => {

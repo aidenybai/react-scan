@@ -61,7 +61,13 @@ const getGpuRenderer = () => {
  * DO NOT CALL THIS EVERYTIME
  */
 let cachedSession: Session;
-export const getSession = async () => {
+export const getSession = async ({
+  commit = null,
+  branch = null,
+}: {
+  commit?: string | null;
+  branch?: string | null;
+}) => {
   if (isSSR) return null;
   if (cachedSession) {
     return cachedSession;
@@ -102,12 +108,15 @@ export const getSession = async () => {
   const session = {
     id,
     url,
+    route: null,
     device: getDeviceType(),
     wifi,
     cpu,
     mem,
     gpu: await gpuRendererPromise,
     agent: navigator.userAgent,
+    commit,
+    branch,
   };
   cachedSession = session;
   return session;

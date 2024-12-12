@@ -75,8 +75,10 @@ const toPayloadInteraction = (interactions: Array<InternalInteraction>) =>
         time: interaction.performanceEntry.duration,
         timestamp: interaction.performanceEntry.timestamp,
         type: interaction.performanceEntry.type,
-        route: interaction.route,
         url: interaction.url,
+        route: interaction.route,
+        commit: interaction.commit,
+        branch: interaction.branch,
         uniqueInteractionId: interaction.uniqueInteractionId,
       }) satisfies Interaction,
   );
@@ -100,7 +102,10 @@ export const flush = async (): Promise<void> => {
     return;
   }
   // idempotent
-  const session = await getSession().catch(() => null);
+  const session = await getSession({
+    commit: monitor.commit,
+    branch: monitor.branch,
+  }).catch(() => null);
 
   if (!session) return;
 
@@ -111,6 +116,8 @@ export const flush = async (): Promise<void> => {
     components: aggregatedComponents,
     session: {
       ...session,
+      url: window.location.toString(),
+      route: monitor.route, // this might be inaccurate but used to caculate which paths all the unique sessions are coming from without having to join on the interactions table (expensive)
     },
   };
 

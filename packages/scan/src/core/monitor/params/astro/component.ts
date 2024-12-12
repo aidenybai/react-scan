@@ -5,10 +5,10 @@ import { computeRoute } from '../utils';
 export function AstroMonitor(props: {
   url?: string;
   apiKey: string;
-  pathname: string;
+  path: string;
   params: Record<string, string>;
 } & MonitoringWithoutRouteProps) {
-  const path = props.pathname;
+  const path = props.path;
   const route = computeRoute(path, props.params);
 
   return createElement(BaseMonitoring, {

@@ -9,8 +9,8 @@ interface Props {
 
 const { apiKey, url } = Astro.props;
 
-const pathname = Astro.url.pathname;
+const path = Astro.url.path;
 const params = Astro.params;
 ---
 
-<AstroMonitor apiKey={apiKey} url={url} pathname={pathname} params={params} client:only="react" />
+<AstroMonitor apiKey={apiKey} url={url} path={pathname} params={params} client:only="react" />

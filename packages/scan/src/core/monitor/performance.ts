@@ -195,8 +195,10 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
       componentPath: path,
       performanceEntry: entry,
       components: new Map(),
-      route: Store.monitor.value?.route ?? null,
       url: window.location.toString(),
+      route: Store.monitor.value?.route ?? null,
+      commit: Store.monitor.value?.commit ?? null,
+      branch: Store.monitor.value?.branch ?? null,
       uniqueInteractionId: entry.id,
     });
   });

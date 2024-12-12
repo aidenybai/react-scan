@@ -15,6 +15,10 @@ export interface Session {
   cpu: number;
   gpu: string | null;
   mem: number;
+  url: string;
+  route: string | null;
+  commit: string | null;
+  branch: string | null;
 }
 
 export interface Interaction {
@@ -23,8 +27,13 @@ export interface Interaction {
   type: string; // type of interaction i.e pointer
   time: number; // time of interaction in ms
   timestamp: number;
-  route: string | null; // the computed route that handles dynamic params
   url: string;
+  route: string | null; // the computed route that handles dynamic params
+
+  // Regression tracking
+  commit: string | null;
+  branch: string | null;
+
   // clickhouse + ingest specific types
   projectId?: string;
   sessionId?: string;
@@ -51,6 +60,8 @@ export interface InternalInteraction {
   componentName: string;
   url: string;
   route: string | null;
+  commit: string | null;
+  branch: string | null;
   uniqueInteractionId: string;
   componentPath: string;
   performanceEntry: PerformanceInteraction;
