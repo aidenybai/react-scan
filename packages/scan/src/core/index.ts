@@ -136,6 +136,8 @@ interface Monitor {
   route: string | null;
   session: ReturnType<typeof getSession>;
   path: string | null;
+  commit: string | null;
+  branch: string | null;
 }
 
 interface StoreType {

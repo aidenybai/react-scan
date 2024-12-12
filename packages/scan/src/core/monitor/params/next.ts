@@ -4,7 +4,7 @@
 import { useParams, usePathname, useSearchParams } from 'next/navigation.js';
 // import React from 'react';
 import { createElement, Suspense } from 'react';
-import { Monitoring as BaseMonitoring } from '..';
+import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps } from '..';
 import { computeRoute } from './utils';
 // import { computeRoute } from '../utils';
 // does this work in pages and app router? Idk
@@ -26,7 +26,7 @@ const useRoute = (): {
     : Object.fromEntries(searchParams.entries());
   return { route: computeRoute(path, finalParams), path };
 };
-export function MonitoringInner(props: { url?: string; apiKey: string }) {
+export function MonitoringInner(props: MonitoringWithoutRouteProps) {
   const { route, path } = useRoute();
 
   // we need to fix build so this doesn't get compiled to preact jsx
@@ -37,7 +37,7 @@ export function MonitoringInner(props: { url?: string; apiKey: string }) {
   });
 }
 
-export function Monitoring(props: { url?: string; apiKey: string }) {
+export function Monitoring(props: MonitoringWithoutRouteProps) {
   return createElement(
     Suspense,
     { fallback: null },

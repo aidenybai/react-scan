@@ -18,16 +18,26 @@ import { flush } from './network';
 // max retries before the set of components do not get reported (avoid memory leaks of the set of fibers stored on the component aggregation)
 const MAX_RETRIES_BEFORE_COMPONENT_GC = 7;
 
+export interface MonitoringProps {
+  url?: string;
+  apiKey: string;
+  path: string;
+  route: string | null;
+  commit: string | null;
+  branch: string | null;
+}
+
+export interface MonitoringWithoutRouteProps
+  extends Omit<MonitoringProps, 'route' | 'path'> {}
+
 export const Monitoring = ({
   url,
   apiKey,
   path,
   route,
-}: { url?: string; apiKey: string } & {
-  // todo: ask for path + params so we can compute route for them
-  path: string;
-  route: string | null;
-}) => {
+  commit,
+  branch,
+}: MonitoringProps) => {
   if (!apiKey)
     throw new Error('Please provide a valid API key for React Scan monitoring');
   url ??= 'https://monitoring.react-scan.com/api/v1/ingest';
@@ -40,15 +50,15 @@ export const Monitoring = ({
     session: getSession().catch(() => null),
     route,
     path,
+    commit,
+    branch,
   };
   Store.monitor.value.route = route;
   Store.monitor.value.path = path;
 
   // eslint-disable-next-line import/no-named-as-default-member
   React.useEffect(() => {
-    scanMonitoring({
-      enabled: true,
-    });
+    scanMonitoring({ enabled: true });
     return initPerformanceMonitoring();
   }, []);
 

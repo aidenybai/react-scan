@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { useRouteMatch, useLocation } from 'react-router';
-import { Monitoring as BaseMonitoring} from '..';
+import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps} from '..';
 import { computeRoute } from './utils';
 import type { RouteInfo } from './types';
 
@@ -19,7 +19,7 @@ const useRoute = (): RouteInfo => {
   };
 };
 
-function ReactRouterV5Monitor(props: { url?: string; apiKey: string }) {
+function ReactRouterV5Monitor(props: MonitoringWithoutRouteProps) {
   const { route, path } = useRoute();
   return createElement(BaseMonitoring, {
     ...props,
