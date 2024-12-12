@@ -24,11 +24,10 @@ export interface MonitoringProps {
   apiKey: string;
 
   // For Session and Interaction
-  path?: string | null; // pathname (i.e /foo/bar)
-  route?: string | null; // computed from path and params
+  path?: string | null; // pathname (i.e /foo/2/bar/3)
+  route?: string | null; // computed from path and params (i.e /foo/:fooId/bar/:barId)
 
-  // To compute Route when using Monitoring without framework
-  // Only used to compute the route
+  // Only used / should be provided to compute the route when using Monitoring without supported framework
   params?: Record<string, string>;
 
   // Tracking regressions across commits and branches
