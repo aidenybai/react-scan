@@ -117,6 +117,7 @@ export const getSession = async ({
     agent: navigator.userAgent,
     commit,
     branch,
+    version: process.env.NPM_PACKAGE_VERSION,
   };
   cachedSession = session;
   return session;

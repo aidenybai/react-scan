@@ -195,7 +195,8 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
       performanceEntry: entry,
       components: new Map(),
       url: window.location.toString(),
-      route: Store.monitor.value?.route ?? null,
+      route:
+        Store.monitor.value?.route ?? new URL(window.location.href).pathname,
       commit: Store.monitor.value?.commit ?? null,
       branch: Store.monitor.value?.branch ?? null,
       uniqueInteractionId: entry.id,

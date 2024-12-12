@@ -22,9 +22,9 @@ export interface Session {
 }
 
 export interface Interaction {
-  id: string; // a hashed unique id for interaction (groupable across sessions)
+  id: string | number; // index of the interaction in the batch at ingest | server converts to a hashed string from route, type, name, path
   path: Array<string>; // the path of the interaction
-  name: string; // name of interaction (i.e nav#top-menu.sc-601d0142-19.gHiJkL) or something useful
+  name: string; // name of interaction
   type: string; // type of interaction i.e pointer
   time: number; // time of interaction in ms
   timestamp: number;
@@ -42,7 +42,7 @@ export interface Interaction {
 }
 
 export interface Component {
-  interactionId: string; // grouping components by interaction
+  interactionId: string | number; // grouping components by interaction
   name: string;
   renders: number; // how many times it re-rendered / instances (normalized)
   instances: number; // instances which will be used to get number of total renders by * by renders

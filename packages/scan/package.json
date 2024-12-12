@@ -214,7 +214,7 @@
     "auto.d.ts"
   ],
   "scripts": {
-    "build": "NODE_ENV=production tsup",
+    "build": "NODE_ENV=production tsup && echo '\\n\\x1b[43m\\x1b[30m⚠️  WARNING: MAKE SURE TO BUMP VERSION BEFORE BUILDING OR REBUILD AFTER BUMPING VERSION ⚠️\\x1b[0m\\n\\n'",
     "postbuild": "pnpm copy-astro",
     "build:copy": "NODE_ENV=production tsup && cat dist/auto.global.js | pbcopy",
     "copy-astro": "cp -R src/core/monitor/params/astro dist/core/monitor/params",

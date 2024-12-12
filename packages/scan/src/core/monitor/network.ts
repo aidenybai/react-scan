@@ -8,16 +8,25 @@ import {
 import { getSession } from './utils';
 import type { Interaction, IngestRequest, InternalInteraction, Component } from './types';
 
-const getInteractionId = (interaction: InternalInteraction) =>
-  `${interaction.performanceEntry.type}::<REPLACED_PATH>::${interaction.url}`; // We replace the path with <REPLACED_PATH> on ingest with the component path joined by `.`
-
 const INTERACTION_TIME_TILL_COMPLETED = 4000;
 
-const splitInteractions = (interactions: Array<InternalInteraction>) => {
+export const flush = async (): Promise<void> => {
+  const monitor = Store.monitor.value;
+  if (
+    !monitor ||
+    !navigator.onLine ||
+    !monitor.url ||
+    !monitor.interactions.length
+  ) {
+    return;
+  }
   const now = performance.now();
+  // We might trigger flush before the interaction is completed,
+  // so we need to split them into pending and completed by an arbitrary time.
   const pendingInteractions = new Array<InternalInteraction>();
   const completedInteractions = new Array<InternalInteraction>();
 
+  const interactions = monitor.interactions;
   for (let i = 0; i < interactions.length; i++) {
     const interaction = interactions[i];
     if (
@@ -30,72 +39,9 @@ const splitInteractions = (interactions: Array<InternalInteraction>) => {
     }
   }
 
-  return { pendingInteractions, completedInteractions };
-};
-
-const aggregateComponents = (interactions: Array<InternalInteraction>) => {
-  const aggregatedComponents = new Array<Component>();
-
-  for (const interaction of interactions) {
-    for (const [name, component] of Array.from(
-      interaction.components.entries(),
-    )) {
-      aggregatedComponents.push({
-        name,
-        instances: component.fibers.size,
-        interactionId: getInteractionId(interaction),
-        renders: component.renders,
-        totalTime: component.totalTime,
-      });
-
-      if (component.retiresAllowed === 0) {
-        // otherwise there will be a memory leak if the user loses internet or our server goes down
-        // we decide to skip the collection if this is the case
-        interaction.components.delete(name);
-      }
-
-      component.retiresAllowed -= 1;
-    }
-  }
-  return aggregatedComponents;
-};
-
-const toPayloadInteraction = (interactions: Array<InternalInteraction>) =>
-  interactions.map(
-    (interaction) =>
-      ({
-        id: getInteractionId(interaction),
-        path: interaction.componentPath,
-        name: interaction.componentName,
-        time: interaction.performanceEntry.duration,
-        timestamp: interaction.performanceEntry.timestamp,
-        type: interaction.performanceEntry.type,
-        url: interaction.url,
-        route: interaction.route,
-        commit: interaction.commit,
-        branch: interaction.branch,
-        uniqueInteractionId: interaction.uniqueInteractionId,
-      }) satisfies Interaction,
-  );
-
-export const flush = async (): Promise<void> => {
-  const monitor = Store.monitor.value;
-  if (
-    !monitor ||
-    !navigator.onLine ||
-    !monitor.url ||
-    !monitor.interactions.length
-  ) {
-    return;
-  }
-  const { completedInteractions, pendingInteractions } = splitInteractions(
-    monitor.interactions,
-  );
-
   // nothing to flush
-  if (!completedInteractions.length) {
-    return;
-  }
+  if (!completedInteractions.length) return;
+
   // idempotent
   const session = await getSession({
     commit: monitor.commit,
@@ -104,10 +50,40 @@ export const flush = async (): Promise<void> => {
 
   if (!session) return;
 
-  const aggregatedComponents = aggregateComponents(monitor.interactions);
+  const aggregatedComponents = new Array<Component>();
+  const aggregatedInteractions = new Array<Interaction>();
+  for (let i = 0; i < completedInteractions.length; i++) {
+    const interaction = completedInteractions[i];
+
+    aggregatedInteractions.push({
+      id: i,
+      path: interaction.componentPath,
+      name: interaction.componentName,
+      time: interaction.performanceEntry.duration,
+      timestamp: interaction.performanceEntry.timestamp,
+      type: interaction.performanceEntry.type,
+      url: interaction.url,
+      route: interaction.route,
+      commit: interaction.commit,
+      branch: interaction.branch,
+      uniqueInteractionId: interaction.uniqueInteractionId,
+    });
+
+    const components = Array.from(interaction.components.entries());
+    for (let j = 0; j < components.length; j++) {
+      const [name, component] = components[j];
+      aggregatedComponents.push({
+        name,
+        instances: component.fibers.size,
+        interactionId: i,
+        renders: component.renders,
+        totalTime: component.totalTime,
+      });
+    }
+  }
 
   const payload: IngestRequest = {
-    interactions: toPayloadInteraction(completedInteractions),
+    interactions: aggregatedInteractions,
     components: aggregatedComponents,
     session: {
       ...session,
@@ -117,14 +93,7 @@ export const flush = async (): Promise<void> => {
   };
 
   monitor.pendingRequests++;
-  // remove all completed interactions from batch
-  monitor.interactions = monitor.interactions.filter((interaction) =>
-    completedInteractions.some(
-      (completedInteraction) =>
-        completedInteraction.performanceEntry.id !==
-        interaction.performanceEntry.id,
-    ),
-  );
+  monitor.interactions = pendingInteractions;
   try {
     transport(monitor.url, payload)
       .then(() => {

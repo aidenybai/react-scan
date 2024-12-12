@@ -1,4 +1,5 @@
-import fs from 'node:fs/promises';
+import fsPromise from 'node:fs/promises';
+import * as fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'tsup';
 
@@ -6,16 +7,16 @@ const DIST_PATH = './dist';
 
 const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
   try {
-    const files = await fs.readdir(readPath);
+    const files = await fsPromise.readdir(readPath);
     for (const file of files) {
       if (file.endsWith('.mjs') || file.endsWith('.js')) {
         const filePath = path.join(readPath, file);
 
-        const data = await fs.readFile(filePath, 'utf8');
+        const data = await fsPromise.readFile(filePath, 'utf8');
 
         const updatedContent = `'use client';\n${data}`;
 
-        await fs.writeFile(filePath, updatedContent, 'utf8');
+        await fsPromise.writeFile(filePath, updatedContent, 'utf8');
 
         // eslint-disable-next-line no-console
         console.log(`Directive has been added to ${file}`);
@@ -84,6 +85,11 @@ export default defineConfig([
     minify: false,
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
+      NPM_PACKAGE_VERSION: JSON.parse(fs.readFileSync(
+        path.join(__dirname, '../scan', 'package.json'),
+          'utf8',
+        ),
+      ).version,
     },
     external: [
       'react',
