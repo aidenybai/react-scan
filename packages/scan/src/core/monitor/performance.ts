@@ -98,8 +98,8 @@ const isMinified = (name: string): boolean => {
 export function getInteractionPath(
   fiber: Fiber | null,
   filters: PathFilters = DEFAULT_FILTERS,
-): string {
-  if (!fiber) return '';
+): Array<string> {
+  if (!fiber) return [];
 
   const fullPath: Array<string> = [];
 
@@ -119,8 +119,7 @@ export function getInteractionPath(
     current = current.return;
   }
 
-  const normalized = normalizePath(fullPath);
-  return normalized;
+  return fullPath;
 }
 
 let currentMouseOver: Element;
@@ -132,7 +131,7 @@ function getCleanComponentName(component: any): string {
   return name.replace(/^(Memo|Forward(Ref)?|With.*?)\((.*?)\)$/, '$3');
 }
 
-function normalizePath(path: Array<string>): string {
+export function normalizePath(path: Array<string>): string {
   const cleaned = path.filter(Boolean);
 
   const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);

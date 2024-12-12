@@ -36,8 +36,10 @@ export interface MonitoringProps {
   branch?: string | null;
 }
 
-export interface MonitoringWithoutRouteProps
-  extends Omit<MonitoringProps, 'route' | 'path'> {}
+export type MonitoringWithoutRouteProps = Omit<
+  MonitoringProps,
+  'route' | 'path'
+>;
 
 export const Monitoring = ({
   url,

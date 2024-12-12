@@ -23,6 +23,7 @@ export interface Session {
 
 export interface Interaction {
   id: string; // a hashed unique id for interaction (groupable across sessions)
+  path: Array<string>; // the path of the interaction
   name: string; // name of interaction (i.e nav#top-menu.sc-601d0142-19.gHiJkL) or something useful
   type: string; // type of interaction i.e pointer
   time: number; // time of interaction in ms
@@ -63,7 +64,7 @@ export interface InternalInteraction {
   commit: string | null;
   branch: string | null;
   uniqueInteractionId: string;
-  componentPath: string;
+  componentPath: Array<string>;
   performanceEntry: PerformanceInteraction;
   components: Map<string, InternalComponentCollection>;
 }

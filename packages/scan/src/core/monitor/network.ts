@@ -9,7 +9,7 @@ import { getSession } from './utils';
 import type { Interaction, IngestRequest, InternalInteraction } from './types';
 
 const getInteractionId = (interaction: InternalInteraction) =>
-  `${interaction.performanceEntry.type}::${interaction.componentPath}::${interaction.url}`;
+  `${interaction.performanceEntry.type}::<REPLACED_PATH>::${interaction.url}`; // We replace the path with <REPLACED_PATH> in production
 
 const INTERACTION_TIME_TILL_COMPLETED = 4000;
 
@@ -71,6 +71,7 @@ const toPayloadInteraction = (interactions: Array<InternalInteraction>) =>
     (interaction) =>
       ({
         id: getInteractionId(interaction),
+        path: interaction.componentPath,
         name: interaction.componentName,
         time: interaction.performanceEntry.duration,
         timestamp: interaction.performanceEntry.timestamp,
