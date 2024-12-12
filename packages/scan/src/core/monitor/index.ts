@@ -42,8 +42,8 @@ export interface MonitoringWithoutRouteProps
 export const Monitoring = ({
   url,
   apiKey,
-  path = null, // path passed down would be reactive
   params,
+  path = null, // path passed down would be reactive
   route = null,
   commit = null,
   branch = null,
@@ -59,18 +59,17 @@ export const Monitoring = ({
     url,
     apiKey,
     route,
-    path,
     commit,
     branch,
   };
+
   // When using Monitoring without framework, we need to compute the route from the path and params
   if (!route && path && params) {
     Store.monitor.value.route = computeRoute(path, params);
   } else {
-    Store.monitor.value.route = route ?? new URL(window.location.toString()).pathname;
+    Store.monitor.value.route =
+      route ?? path ?? new URL(window.location.toString()).pathname; // this is inaccurate on vanilla react if the path is not provided but used for session route
   }
-
-  Store.monitor.value.path = path ?? new URL(window.location.toString()).pathname;
 
   // eslint-disable-next-line import/no-named-as-default-member
   React.useEffect(() => {

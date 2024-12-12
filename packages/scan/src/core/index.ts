@@ -133,9 +133,8 @@ interface Monitor {
   interactions: Array<InternalInteraction>;
   session: ReturnType<typeof getSession>;
   url: string | null;
-  apiKey: string | null;
   route: string | null;
-  path: string | null;
+  apiKey: string | null;
   commit: string | null;
   branch: string | null;
 }
