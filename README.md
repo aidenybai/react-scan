@@ -20,7 +20,7 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 ### [**Try it out! →**](https://react-scan.million.dev)
 
-![React Scan in action](https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/demo.gif?token=GHSAT0AAAAAAB4IOFACRC6P6E45TB2FPYFCZZV2AYA)
+![React Scan in action](https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/demo.gif)
 
 > [!IMPORTANT]
 > Want to monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!

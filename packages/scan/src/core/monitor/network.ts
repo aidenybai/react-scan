@@ -6,80 +6,9 @@ import {
   MAX_PENDING_REQUESTS,
 } from './constants';
 import { getSession } from './utils';
-import type { Interaction, IngestRequest, InternalInteraction } from './types';
-
-const getInteractionId = (interaction: InternalInteraction) =>
-  `${interaction.performanceEntry.type}::${interaction.componentPath}::${interaction.url}`;
+import type { Interaction, IngestRequest, InternalInteraction, Component } from './types';
 
 const INTERACTION_TIME_TILL_COMPLETED = 4000;
-
-const splitInteractions = (interactions: Array<InternalInteraction>) => {
-  const now = performance.now();
-  const pendingInteractions: typeof interactions = [];
-  const completedInteractions: typeof interactions = [];
-
-  interactions.forEach((interaction) => {
-    if (
-      now - interaction.performanceEntry.startTime <=
-      INTERACTION_TIME_TILL_COMPLETED
-    ) {
-      pendingInteractions.push(interaction);
-    } else {
-      completedInteractions.push(interaction);
-    }
-  });
-
-  return { pendingInteractions, completedInteractions };
-};
-
-const aggregateComponents = (interactions: Array<InternalInteraction>) => {
-  const aggregatedComponents: Array<{
-    interactionId: string;
-    name: string;
-    renders: number;
-    instances: number;
-    totalTime?: number;
-    selfTime?: number;
-  }> = [];
-
-  for (const interaction of interactions) {
-    for (const [name, component] of Array.from(
-      interaction.components.entries(),
-    )) {
-      aggregatedComponents.push({
-        name,
-        instances: component.fibers.size,
-        interactionId: getInteractionId(interaction),
-        renders: component.renders,
-        totalTime: component.totalTime,
-      });
-
-      if (component.retiresAllowed === 0) {
-        // otherwise there will be a memory leak if the user loses internet or our server goes down
-        // we decide to skip the collection if this is the case
-        interaction.components.delete(name);
-      }
-
-      component.retiresAllowed -= 1;
-    }
-  }
-  return aggregatedComponents;
-};
-
-const toPayloadInteraction = (interactions: Array<InternalInteraction>) =>
-  interactions.map(
-    (interaction) =>
-      ({
-        id: getInteractionId(interaction),
-        name: interaction.componentName,
-        time: interaction.performanceEntry.duration,
-        timestamp: interaction.performanceEntry.timestamp,
-        type: interaction.performanceEntry.type,
-        route: interaction.route,
-        url: interaction.url,
-        uniqueInteractionId: interaction.uniqueInteractionId
-      }) satisfies Interaction,
-  );
 
 export const flush = async (): Promise<void> => {
   const monitor = Store.monitor.value;
@@ -91,41 +20,80 @@ export const flush = async (): Promise<void> => {
   ) {
     return;
   }
-  const { completedInteractions, pendingInteractions } = splitInteractions(
-    monitor.interactions,
-  );
+  const now = performance.now();
+  // We might trigger flush before the interaction is completed,
+  // so we need to split them into pending and completed by an arbitrary time.
+  const pendingInteractions = new Array<InternalInteraction>();
+  const completedInteractions = new Array<InternalInteraction>();
+
+  const interactions = monitor.interactions;
+  for (let i = 0; i < interactions.length; i++) {
+    const interaction = interactions[i];
+    if (
+      now - interaction.performanceEntry.startTime <=
+      INTERACTION_TIME_TILL_COMPLETED
+    ) {
+      pendingInteractions.push(interaction);
+    } else {
+      completedInteractions.push(interaction);
+    }
+  }
 
   // nothing to flush
-  if (!completedInteractions.length) {
-    return;
-  }
+  if (!completedInteractions.length) return;
+
   // idempotent
-  const session = await getSession();
+  const session = await getSession({
+    commit: monitor.commit,
+    branch: monitor.branch,
+  }).catch(() => null);
 
   if (!session) return;
-  // nisarg do not add this back fix it on your side
-  // session.route = monitor.route;
-  // session.url = window.location.toString();
 
-  const aggregatedComponents = aggregateComponents(monitor.interactions);
+  const aggregatedComponents = new Array<Component>();
+  const aggregatedInteractions = new Array<Interaction>();
+  for (let i = 0; i < completedInteractions.length; i++) {
+    const interaction = completedInteractions[i];
+
+    aggregatedInteractions.push({
+      id: i,
+      path: interaction.componentPath,
+      name: interaction.componentName,
+      time: interaction.performanceEntry.duration,
+      timestamp: interaction.performanceEntry.timestamp,
+      type: interaction.performanceEntry.type,
+      url: interaction.url,
+      route: interaction.route,
+      commit: interaction.commit,
+      branch: interaction.branch,
+      uniqueInteractionId: interaction.uniqueInteractionId,
+    });
+
+    const components = Array.from(interaction.components.entries());
+    for (let j = 0; j < components.length; j++) {
+      const [name, component] = components[j];
+      aggregatedComponents.push({
+        name,
+        instances: component.fibers.size,
+        interactionId: i,
+        renders: component.renders,
+        totalTime: component.totalTime,
+      });
+    }
+  }
 
   const payload: IngestRequest = {
-    interactions: toPayloadInteraction(completedInteractions),
+    interactions: aggregatedInteractions,
     components: aggregatedComponents,
     session: {
       ...session,
+      url: window.location.toString(),
+      route: monitor.route, // this might be inaccurate but used to caculate which paths all the unique sessions are coming from without having to join on the interactions table (expensive)
     },
   };
 
   monitor.pendingRequests++;
-  // remove all completed interactions from batch
-  monitor.interactions = monitor.interactions.filter((interaction) =>
-    completedInteractions.some(
-      (completedInteraction) =>
-        completedInteraction.performanceEntry.id !==
-        interaction.performanceEntry.id,
-    ),
-  );
+  monitor.interactions = pendingInteractions;
   try {
     transport(monitor.url, payload)
       .then(() => {

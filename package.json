@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "pnpm --parallel --filter=!extension build",
+    "build": "pnpm --parallel --filter=!extension build && echo '\\n\\x1b[43m\\x1b[30m⚠️  WARNING: MAKE SURE TO BUMP VERSION BEFORE BUILDING OR REBUILD AFTER BUMPING VERSION IF PUBLISHING ⚠️\\x1b[0m\\n\\n'",
     "dev": "pnpm --parallel --filter=!extension dev",
     "pack": "pnpm --parallel --filter=!extension pack",
     "pack:bump": "pnpm --filter scan pack:bump",

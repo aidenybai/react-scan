@@ -1,5 +1,4 @@
 import { type Fiber } from 'react-reconciler';
-import { type getDevicePerformance } from './benchmark';
 
 export enum Device {
   DESKTOP = 0,
@@ -16,17 +15,26 @@ export interface Session {
   cpu: number;
   gpu: string | null;
   mem: number;
-  performance: Awaited<ReturnType<typeof getDevicePerformance>>;
+  url: string;
+  route: string | null;
+  commit: string | null;
+  branch: string | null;
 }
 
 export interface Interaction {
-  id: string; // a hashed unique id for interaction (groupable across sessions)
-  name: string; // name of interaction (i.e nav#top-menu.sc-601d0142-19.gHiJkL) or something useful
+  id: string | number; // index of the interaction in the batch at ingest | server converts to a hashed string from route, type, name, path
+  path: Array<string>; // the path of the interaction
+  name: string; // name of interaction
   type: string; // type of interaction i.e pointer
   time: number; // time of interaction in ms
   timestamp: number;
-  route: string | null; // the computed route that handles dynamic params
   url: string;
+  route: string | null; // the computed route that handles dynamic params
+
+  // Regression tracking
+  commit: string | null;
+  branch: string | null;
+
   // clickhouse + ingest specific types
   projectId?: string;
   sessionId?: string;
@@ -34,7 +42,7 @@ export interface Interaction {
 }
 
 export interface Component {
-  interactionId: string; // grouping components by interaction
+  interactionId: string | number; // grouping components by interaction
   name: string;
   renders: number; // how many times it re-rendered / instances (normalized)
   instances: number; // instances which will be used to get number of total renders by * by renders
@@ -53,8 +61,10 @@ export interface InternalInteraction {
   componentName: string;
   url: string;
   route: string | null;
+  commit: string | null;
+  branch: string | null;
   uniqueInteractionId: string;
-  componentPath: string;
+  componentPath: Array<string>;
   performanceEntry: PerformanceInteraction;
   components: Map<string, InternalComponentCollection>;
 }

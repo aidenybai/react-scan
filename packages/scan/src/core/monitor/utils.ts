@@ -1,7 +1,6 @@
 import { onIdle } from '../web/utils';
 import { isSSR } from './constants';
 import { Device, type Session } from './types';
-import { getDevicePerformance } from './benchmark';
 
 const getDeviceType = () => {
   const userAgent = navigator.userAgent;
@@ -62,9 +61,13 @@ const getGpuRenderer = () => {
  * DO NOT CALL THIS EVERYTIME
  */
 let cachedSession: Session;
-export const getSession = async () => {
-  console.log('call get session');
-
+export const getSession = async ({
+  commit = null,
+  branch = null,
+}: {
+  commit?: string | null;
+  branch?: string | null;
+}) => {
   if (isSSR) return null;
   if (cachedSession) {
     return cachedSession;
@@ -95,30 +98,27 @@ export const getSession = async () => {
    */
   // @ts-expect-error - deviceMemory is still experimental
   const mem = navigator.deviceMemory; // GiB ram
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
 
   const gpuRendererPromise = new Promise<string | null>((resolve) => {
     onIdle(() => {
       resolve(getGpuRenderer());
     });
   });
-  const performancePromise = getDevicePerformance();
-  const [gpuRenderer, performance] = await Promise.all([
-    gpuRendererPromise,
-    performancePromise,
-  ]);
+
   const session = {
     id,
     url,
+    route: null,
     device: getDeviceType(),
     wifi,
     cpu,
     mem,
-    gpu: gpuRenderer,
+    gpu: await gpuRendererPromise,
     agent: navigator.userAgent,
-    performance,
+    commit,
+    branch,
+    version: process.env.NPM_PACKAGE_VERSION,
   };
-  console.log('session', session);
   cachedSession = session;
   return session;
 };

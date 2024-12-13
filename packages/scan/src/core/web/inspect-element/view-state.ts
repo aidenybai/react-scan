@@ -737,6 +737,9 @@ export const getValuePreview = (value: any) => {
     case 'boolean':
       return value.toString();
     case 'object': {
+      if (value instanceof Promise) {
+        return 'Promise';
+      }
       const keys = Object.keys(value);
       if (keys.length <= 3) {
         return `{${keys.join(', ')}}`;

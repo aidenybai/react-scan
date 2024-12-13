@@ -3,8 +3,8 @@
 // adapted from vercel analytics <remember to put link here>
 import { useParams, usePathname, useSearchParams } from 'next/navigation.js';
 // import React from 'react';
-import { createElement } from 'react';
-import { BaseMonitor } from '..';
+import { createElement, Suspense } from 'react';
+import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps } from '..';
 import { computeRoute } from './utils';
 // import { computeRoute } from '../utils';
 // does this work in pages and app router? Idk
@@ -26,14 +26,21 @@ const useRoute = (): {
     : Object.fromEntries(searchParams.entries());
   return { route: computeRoute(path, finalParams), path };
 };
-
-export function Monitoring(props: { url?: string; apiKey: string }) {
+export function MonitoringInner(props: MonitoringWithoutRouteProps) {
   const { route, path } = useRoute();
 
   // we need to fix build so this doesn't get compiled to preact jsx
-  return createElement(BaseMonitor, {
+  return createElement(BaseMonitoring, {
     ...props,
     route,
     path,
   });
+}
+
+export function Monitoring(props: MonitoringWithoutRouteProps) {
+  return createElement(
+    Suspense,
+    { fallback: null },
+    createElement(MonitoringInner, props),
+  );
 }
