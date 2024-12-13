@@ -74,4 +74,9 @@ export class SmolWorker<T, R> {
 		this.worker.postMessage(data, options);
 		return deferred.promise as Promise<R>;
 	}
+	
+	destroy(): void {
+		this.deferredMap.clear();
+		this.worker.terminate();
+	}
 }
