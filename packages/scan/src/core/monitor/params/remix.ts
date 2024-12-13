@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { useParams, useLocation } from '@remix-run/react';
-import { BaseMonitor } from '..';
+import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps} from '..';
 import { computeReactRouterRoute } from './utils';
 import type { RouteInfo } from './types';
 
@@ -20,9 +20,9 @@ const useRoute = (): RouteInfo => {
   };
 };
 
-function RemixMonitor(props: { url?: string; apiKey: string }) {
+function RemixMonitor(props: MonitoringWithoutRouteProps) {
   const { route, path } = useRoute();
-  return createElement(BaseMonitor, {
+  return createElement(BaseMonitoring, {
     ...props,
     route,
     path,

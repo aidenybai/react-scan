@@ -61,8 +61,13 @@ const getGpuRenderer = () => {
  * DO NOT CALL THIS EVERYTIME
  */
 let cachedSession: Session;
-export const getSession = async () => {
-
+export const getSession = async ({
+  commit = null,
+  branch = null,
+}: {
+  commit?: string | null;
+  branch?: string | null;
+}) => {
   if (isSSR) return null;
   if (cachedSession) {
     return cachedSession;
@@ -93,23 +98,26 @@ export const getSession = async () => {
    */
   // @ts-expect-error - deviceMemory is still experimental
   const mem = navigator.deviceMemory; // GiB ram
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
 
   const gpuRendererPromise = new Promise<string | null>((resolve) => {
     onIdle(() => {
       resolve(getGpuRenderer());
     });
   });
- 
+
   const session = {
     id,
     url,
+    route: null,
     device: getDeviceType(),
     wifi,
     cpu,
     mem,
     gpu: await gpuRendererPromise,
     agent: navigator.userAgent,
+    commit,
+    branch,
+    version: process.env.NPM_PACKAGE_VERSION,
   };
   cachedSession = session;
   return session;

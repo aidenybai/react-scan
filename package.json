@@ -7,7 +7,6 @@
 		"pack": "pnpm --parallel --filter=!extension pack",
 		"pack:bump": "pnpm --filter scan pack:bump",
 		"lint": "pnpm --parallel --filter=!extension lint",
-		"prettier": "prettier --write packages/*",
 		"eslint:fix": "eslint --fix packages/*"
 	},
 	"devDependencies": {

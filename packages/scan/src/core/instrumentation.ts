@@ -1,5 +1,5 @@
 import type { Fiber, FiberRoot } from 'react-reconciler';
-import * as React from 'react';
+import type * as React from 'react';
 import {
   getTimings,
   hasMemoCache,
@@ -11,6 +11,7 @@ import {
   getType,
 } from 'bippy';
 import { signal } from '@preact/signals';
+import { ReactScanInternals } from '.';
 
 export interface Change {
   name: string;
@@ -32,6 +33,16 @@ export interface Render {
 
 const unstableTypes = ['function', 'object'];
 
+export const isValidElement = (value: unknown): value is React.ReactElement => {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '$$typeof' in value &&
+    typeof value.$$typeof === 'symbol' &&
+    String(value.$$typeof) === 'Symbol(react.element)'
+  );
+};
+
 export const fastSerialize = (value: unknown) => {
   switch (typeof value) {
     case 'function':
@@ -45,12 +56,7 @@ export const fastSerialize = (value: unknown) => {
       if (Array.isArray(value)) {
         return value.length > 0 ? '[…]' : '[]';
       }
-      if (
-        React.isValidElement(value) &&
-        '$$typeof' in value &&
-        typeof value.$$typeof === 'symbol' &&
-        String(value.$$typeof) === 'Symbol(react.element)'
-      ) {
+      if (isValidElement(value)) {
         // attempt to extract some name from the component
         return `<${getDisplayName(value.type) ?? ''}${
           Object.keys(value.props || {}).length > 0 ? ' …' : ''
@@ -103,8 +109,8 @@ export const getPropsRender = (fiber: Fiber, type: Function): Render | null => {
 
     if (
       Object.is(prevValue, nextValue) ||
-      React.isValidElement(prevValue) ||
-      React.isValidElement(nextValue)
+      isValidElement(prevValue) ||
+      isValidElement(nextValue)
     ) {
       continue;
     }
@@ -195,80 +201,113 @@ interface InstrumentationOptions {
   onCommitFinish: () => void;
 }
 
-export const createInstrumentation = ({
-  onCommitStart,
-  isValidFiber,
-  onRender,
-  onCommitFinish,
-}: InstrumentationOptions) => {
+/**
+ * We need to explicitly keep track of both devtool & monitoring handlers because:
+ * - we do not have an unsubscribe api, so we cannot have a set of handlers running at once
+ * - by keeping track of the handlers for each type of instrumentation, we can allow the user to run both
+ * monitoring and devtools, without them conflicting
+ * - we need to explicitly decouple the functionality, meaning we will never run monitoring specific code in
+ * devtool instrumentation, and vice versa
+ */
+
+type InstrumentationKind = 'devtool' | 'monitoring';
+
+const currentHandlers: Record<
+  InstrumentationKind,
+  Parameters<typeof createInstrumentation>[0] | null
+> = {
+  devtool: null,
+  monitoring: null,
+};
+
+export const createInstrumentation = (params: {
+  onCommitStart: () => void;
+  isValidFiber: (fiber: Fiber) => boolean;
+  onRender: (fiber: Fiber, renders: Array<Render>) => void;
+  onCommitFinish: () => void;
+  kind: 'devtool' | 'monitoring';
+}) => {
   const instrumentation = {
-    isPaused: signal(false),
+    isPaused: signal(!ReactScanInternals.options.value.enabled), // this will typically be false, but in cases where a user provides showToolbar: true, this will be true
     fiberRoots: new Set<FiberRoot>(),
     onCommitFiberRoot: (_rendererID: number, _root: FiberRoot) => {
       /**/
     },
   };
 
-  const handleRender = (fiber: Fiber) => {
-    const type = getType(fiber.type);
-    if (!type) return null;
-    if (!isValidFiber(fiber)) return null;
+  currentHandlers[params.kind] = params;
 
-    const propsRender = getPropsRender(fiber, type);
-    const contextRender = getContextRender(fiber, type);
+  const createHandleRender =
+    (handler: Parameters<typeof createInstrumentation>[0]) =>
+    (fiber: Fiber) => {
+      const type = getType(fiber.type);
+      if (!type) return null;
+      if (!handler.isValidFiber(fiber)) return null;
 
-    let trigger = false;
-    if (fiber.alternate) {
-      const didStateChange = traverseState(fiber, (prevState, nextState) => {
-        return !Object.is(prevState.memoizedState, nextState.memoizedState);
-      });
-      if (didStateChange) {
-        trigger = true;
+      const propsRender = getPropsRender(fiber, type);
+      const contextRender = getContextRender(fiber, type);
+
+      let trigger = false;
+      if (fiber.alternate) {
+        const didStateChange = traverseState(fiber, (prevState, nextState) => {
+          return !Object.is(prevState.memoizedState, nextState.memoizedState);
+        });
+        if (didStateChange) {
+          trigger = true;
+        }
       }
-    }
-    const name = getDisplayName(type);
-    if (name === 'Million(Profiler)') return;
+      const name = getDisplayName(type);
+      if (name === 'Million(Profiler)') return;
 
-    if (!propsRender && !contextRender) return null;
+      if (!propsRender && !contextRender) return null;
 
-    const renders: Array<Render> = [];
-    if (propsRender) {
-      propsRender.trigger = trigger;
-      renders.push(propsRender);
+      const renders: Array<Render> = [];
+      if (propsRender) {
+        propsRender.trigger = trigger;
+        renders.push(propsRender);
+      }
+      if (contextRender) {
+        contextRender.trigger = trigger;
+        renders.push(contextRender);
+      }
+      const { selfTime } = getTimings(fiber);
+      if (trigger) {
+        renders.push({
+          type: 'state',
+          count: 1,
+          trigger,
+          changes: [],
+          name: getDisplayName(type),
+          time: selfTime,
+          forget: hasMemoCache(fiber),
+        });
+      }
+      if (!propsRender && !contextRender && !trigger) {
+        renders.push({
+          type: 'misc',
+          count: 1,
+          trigger,
+          changes: [],
+          name: getDisplayName(type),
+          time: selfTime,
+          forget: hasMemoCache(fiber),
+        });
+      }
+      handler.onRender(fiber, renders);
+    };
+  const handler = currentHandlers[params.kind];
+  if (!handler) {
+    // todo: make a dev invariant abstraction
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error(
+        'Invariant: Handler for supplied kind must be defined at this point in the program',
+      );
     }
-    if (contextRender) {
-      contextRender.trigger = trigger;
-      renders.push(contextRender);
-    }
-    const { selfTime } = getTimings(fiber);
-    if (trigger) {
-      renders.push({
-        type: 'state',
-        count: 1,
-        trigger,
-        changes: [],
-        name: getDisplayName(type),
-        time: selfTime,
-        forget: hasMemoCache(fiber),
-      });
-    }
-    if (!propsRender && !contextRender && !trigger) {
-      renders.push({
-        type: 'misc',
-        count: 1,
-        trigger,
-        changes: [],
-        name: getDisplayName(type),
-        time: selfTime,
-        forget: hasMemoCache(fiber),
-      });
-    }
-    onRender(fiber, renders);
-  };
-
+  }
   const visitor = createFiberVisitor({
-    onRender: handleRender,
+    onRender: createHandleRender(handler!),
     onError: (error) => {
+      // todo(Rob): don't log errors if this is instrumentation for monitoring
       // eslint-disable-next-line no-console
       console.error('[React Scan] Error instrumenting: ', error);
     },
@@ -276,13 +315,15 @@ export const createInstrumentation = ({
 
   const onCommitFiberRoot = (rendererID: number, root: FiberRoot) => {
     if (instrumentation.isPaused.value) return;
-    onCommitStart();
+    currentHandlers.devtool?.onCommitStart();
+    currentHandlers.monitoring?.onCommitStart();
     if (root) {
       instrumentation.fiberRoots.add(root);
     }
     visitor(rendererID, root);
 
-    onCommitFinish();
+    currentHandlers.devtool?.onCommitFinish();
+    currentHandlers.monitoring?.onCommitFinish();
   };
 
   instrument({ onCommitFiberRoot });

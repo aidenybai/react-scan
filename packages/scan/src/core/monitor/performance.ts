@@ -1,3 +1,4 @@
+/* eslint-disable prefer-named-capture-group */
 import { type Fiber } from 'react-reconciler';
 import { getDisplayName } from 'bippy';
 import { Store } from '../..';
@@ -50,7 +51,7 @@ function shouldIncludeInPath(
   name: string,
   filters: PathFilters = DEFAULT_FILTERS,
 ): boolean {
-  const patternsToCheck: RegExp[] = [];
+  const patternsToCheck: Array<RegExp> = [];
 
   if (filters.skipProviders) patternsToCheck.push(...FILTER_PATTERNS.providers);
   if (filters.skipHocs) patternsToCheck.push(...FILTER_PATTERNS.hocs);
@@ -82,6 +83,7 @@ const isMinified = (name: string): boolean => {
   const hasNoVowels = !/[aeiou]/i.test(name);
   const hasMostlyNumbers = (name.match(/\d/g)?.length ?? 0) > name.length / 2;
   const isSingleWordLowerCase = /^[a-z]+$/.test(name);
+  // eslint-disable-next-line no-useless-escape
   const hasRandomLookingChars = /[\$_]{2,}/.test(name);
 
   const suspiciousTraits = [
@@ -96,10 +98,10 @@ const isMinified = (name: string): boolean => {
 export function getInteractionPath(
   fiber: Fiber | null,
   filters: PathFilters = DEFAULT_FILTERS,
-): string {
-  if (!fiber) return '';
+): Array<string> {
+  if (!fiber) return [];
 
-  const fullPath: string[] = [];
+  const fullPath: Array<string> = [];
 
   const currentName = getDisplayName(fiber.type);
   if (currentName) {
@@ -117,8 +119,7 @@ export function getInteractionPath(
     current = current.return;
   }
 
-  const normalized = normalizePath(fullPath);
-  return normalized;
+  return fullPath;
 }
 
 let currentMouseOver: Element;
@@ -130,7 +131,7 @@ function getCleanComponentName(component: any): string {
   return name.replace(/^(Memo|Forward(Ref)?|With.*?)\((.*?)\)$/, '$3');
 }
 
-function normalizePath(path: string[]): string {
+export function normalizePath(path: Array<string>): string {
   const cleaned = path.filter(Boolean);
 
   const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);
@@ -170,13 +171,13 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
 
   document.addEventListener('mouseover', handleMouseover);
   const disconnectPerformanceListener = setupPerformanceListener((entry) => {
-    let target =
+    const target =
       entry.target ?? (entry.type === 'pointer' ? currentMouseOver : null);
     if (!target) {
       // most likely an invariant that we should log if its violated
       return;
     }
-    let parentCompositeFiber = getFirstNamedAncestorCompositeFiber(target);
+    const parentCompositeFiber = getFirstNamedAncestorCompositeFiber(target);
     if (!parentCompositeFiber) {
       return;
     }
@@ -193,8 +194,11 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
       componentPath: path,
       performanceEntry: entry,
       components: new Map(),
-      route: Store.monitor.value?.route ?? null,
       url: window.location.toString(),
+      route:
+        Store.monitor.value?.route ?? new URL(window.location.href).pathname,
+      commit: Store.monitor.value?.commit ?? null,
+      branch: Store.monitor.value?.branch ?? null,
       uniqueInteractionId: entry.id,
     });
   });
@@ -208,7 +212,7 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
 const setupPerformanceListener = (
   onEntry: (interaction: PerformanceInteraction) => void,
 ) => {
-  const longestInteractionList: PerformanceInteraction[] = [];
+  const longestInteractionList: Array<PerformanceInteraction> = [];
   const longestInteractionMap = new Map<string, PerformanceInteraction>();
   const interactionTargetMap = new Map<string, Element>();
 

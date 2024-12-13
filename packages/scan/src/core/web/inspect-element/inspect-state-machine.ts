@@ -9,7 +9,7 @@ import {
   OVERLAY_DPR,
   updateCanvasSize,
 } from './overlay';
-import { getCompositeComponentFromElement, hasValidParent } from './utils';
+import { getCompositeComponentFromElement } from './utils';
 
 export type States =
   | {
@@ -205,17 +205,6 @@ export const createInspectElementStateMachine = () => {
               focusedDomElement: el as HTMLElement,
               propContainer: inspectState.propContainer,
             };
-            if (!hasValidParent()) {
-              const previousFocusBtn = document.getElementById(
-                'react-scan-previous-focus',
-              )!;
-              const parentFocusBtn = document.getElementById(
-                'react-scan-next-focus',
-              )!;
-
-              previousFocusBtn.style.display = 'none';
-              parentFocusBtn.style.display = 'none';
-            }
           };
           window.addEventListener('pointerdown', pointerdown, {
             capture: true,

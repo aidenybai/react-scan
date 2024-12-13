@@ -1,13 +1,7 @@
 import type { Fiber } from 'react-reconciler';
-import * as React from 'react';
+import type * as React from 'react';
 import { type Signal, signal } from '@preact/signals';
-import {
-  getDisplayName,
-  getTimings,
-  getType,
-  isCompositeFiber,
-  traverseFiber,
-} from 'bippy';
+import { getDisplayName, getTimings, getType, isCompositeFiber } from 'bippy';
 import { createInstrumentation, type Render } from './instrumentation';
 import {
   type ActiveOutline,
@@ -16,17 +10,19 @@ import {
   type PendingOutline,
 } from './web/outline';
 import { logIntro } from './web/log';
-import { createPerfObserver } from './web/perf-observer';
 import { initReactScanOverlay } from './web/overlay';
 import {
   createInspectElementStateMachine,
   type States,
 } from './web/inspect-element/inspect-state-machine';
 import { createToolbar } from './web/toolbar';
-import { flush } from './monitor/network';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
-import { addFiberToSet } from './utils';
+import {
+  isValidFiber,
+  type RenderData,
+  updateFiberRenderData,
+} from './utils';
 import { playGeigerClickSound } from './web/geiger';
 
 export interface Options {
@@ -62,6 +58,8 @@ export interface Options {
 
   /**
    * Show toolbar bar
+   *
+   * If you set this to true, and set {@link enabled} to false, the toolbar will still show, but scanning will be disabled.
    *
    * @default true
    */
@@ -110,10 +108,6 @@ export interface Options {
    */
   animationSpeed?: 'slow' | 'fast' | 'off';
 
-  monitor?: {
-    url: string;
-  };
-
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
@@ -121,14 +115,28 @@ export interface Options {
   onPaintFinish?: (outlines: Array<PendingOutline>) => void;
 }
 
+export type MonitoringOptions = Pick<
+  Options,
+  | 'includeChildren'
+  | 'enabled'
+  | 'renderCountThreshold'
+  | 'resetCountTimeout'
+  | 'onCommitStart'
+  | 'onCommitFinish'
+  | 'onPaintStart'
+  | 'onPaintFinish'
+  | 'onRender'
+>;
+
 interface Monitor {
   pendingRequests: number;
-  url: string | null;
-  apiKey: string | null;
   interactions: Array<InternalInteraction>;
-  route: string | null;
   session: ReturnType<typeof getSession>;
-  path: string | null;
+  url: string | null;
+  route: string | null;
+  apiKey: string | null;
+  commit: string | null;
+  branch: string | null;
 }
 
 interface StoreType {
@@ -141,14 +149,6 @@ interface StoreType {
   lastReportTime: Signal<number>;
 }
 
-interface RenderData {
-  count: number;
-  time: number;
-  renders: Array<Render>;
-  displayName: string | null;
-  type: React.ComponentType<any> | null;
-}
-
 export interface Internals {
   instrumentation: ReturnType<typeof createInstrumentation> | null;
   componentAllowList: WeakMap<React.ComponentType<any>, Options> | null;
@@ -156,6 +156,7 @@ export interface Internals {
   scheduledOutlines: Array<PendingOutline>;
   activeOutlines: Array<ActiveOutline>;
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
+  Store: StoreType;
 }
 
 export const Store: StoreType = {
@@ -170,7 +171,6 @@ export const Store: StoreType = {
   reportData: new WeakMap<Fiber, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
-  // instanceTracker: new Map<string, Set<Fiber>>(),
 };
 
 export const ReactScanInternals: Internals = {
@@ -190,6 +190,7 @@ export const ReactScanInternals: Internals = {
   onRender: null,
   scheduledOutlines: [],
   activeOutlines: [],
+  Store,
 };
 
 export const getReport = (type?: React.ComponentType<any>) => {
@@ -209,6 +210,7 @@ export const setOptions = (options: Options) => {
   if (instrumentation) {
     instrumentation.isPaused.value = options.enabled === false;
   }
+
   ReactScanInternals.options.value = {
     ...ReactScanInternals.options.value,
     ...options,
@@ -271,163 +273,75 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
       Store.legacyReportData.set(displayName, reportData);
     }
   }
-
-  const monitor = Store.monitor.value;
-  if (monitor && monitor.interactions && monitor.interactions.length > 0) {
-    const latestInteraction =
-      monitor.interactions[monitor.interactions.length - 1];
-
-    let totalTime = 0;
-    for (const render of renders) {
-      totalTime += render.time;
-    }
-
-    const displayName = getDisplayName(fiber.type);
-    if (!displayName) {
-      // it may be useful to somehow report the first ancestor with a display name instead of completely ignoring
-      return;
-    }
-    let component = latestInteraction.components.get(displayName);
-    if (!component) {
-      component = {
-        fibers: new Set(),
-        name: displayName,
-        renders: 0,
-        totalTime,
-        retiresAllowed: 7, // allow max 7 retries before the set of components do not get reported (avoid memory leaks)
-        uniqueInteractionId: latestInteraction.uniqueInteractionId,
-      };
-      latestInteraction.components.set(displayName, component);
-    }
-    addFiberToSet(fiber, component.fibers);
-
-    component.renders += renders.length;
-    if (!component.totalTime) {
-      component.totalTime = 0;
-    }
-    component.totalTime += component.totalTime
-      ? component.totalTime + totalTime
-      : totalTime;
-  }
 };
-let flushInterval: any | undefined;
 
 export const start = () => {
   if (typeof window === 'undefined') return;
   const options = ReactScanInternals.options.value;
 
-  let ctx: CanvasRenderingContext2D;
-  let audioContext: any;
-
-  if (!Store.monitor.value) {
-    const existingOverlay = document.querySelector('react-scan-overlay');
-    if (existingOverlay) {
-      return;
-    }
-    initReactScanOverlay();
-    const overlayElement = document.createElement('react-scan-overlay') as any;
-
-    document.documentElement.appendChild(overlayElement);
-
-    ctx = overlayElement.getContext();
-    createInspectElementStateMachine();
-    audioContext =
-      typeof window !== 'undefined'
-        ? new (window.AudioContext ||
-            // @ts-expect-error -- This is a fallback for Safari
-            window.webkitAudioContext)()
-        : null;
-    createPerfObserver();
-
-    logIntro();
+  const existingOverlay = document.querySelector('react-scan-overlay');
+  if (existingOverlay) {
+    return;
   }
+  initReactScanOverlay();
+  const overlayElement = document.createElement('react-scan-overlay') as any;
+
+  document.documentElement.appendChild(overlayElement);
+
+  const ctx = overlayElement.getContext();
+  createInspectElementStateMachine();
+  const audioContext =
+    typeof window !== 'undefined'
+      ? new (window.AudioContext ||
+          // @ts-expect-error -- This is a fallback for Safari
+          window.webkitAudioContext)()
+      : null;
+
+  logIntro();
 
   globalThis.__REACT_SCAN__ = {
     ReactScanInternals,
   };
 
-  if (Store.monitor.value) {
-    if (flushInterval) {
-      clearInterval(flushInterval);
-    }
-
-    flushInterval = setInterval(() => {
-      void flush();
-    }, 2000);
-  }
-
   // TODO: dynamic enable, and inspect-off check
   const instrumentation = createInstrumentation({
+    kind: 'devtool',
     onCommitStart() {
       ReactScanInternals.options.value.onCommitStart?.();
     },
     isValidFiber(fiber) {
-      if (ignoredProps.has(fiber.memoizedProps)) {
-        return false;
-      }
-
-      const allowList = ReactScanInternals.componentAllowList;
-      const shouldAllow =
-        allowList?.has(fiber.type) ?? allowList?.has(fiber.elementType);
-
-      if (shouldAllow) {
-        const parent = traverseFiber(
-          fiber,
-          (node) => {
-            const options =
-              allowList?.get(node.type) ?? allowList?.get(node.elementType);
-            return options?.includeChildren;
-          },
-          true,
-        );
-        if (!parent && !shouldAllow) return false;
-      }
-      return true;
+      return isValidFiber(fiber);
     },
     onRender(fiber, renders) {
       if (ReactScanInternals.instrumentation?.isPaused.value) {
         // don't draw if it's paused
         return;
       }
+      updateFiberRenderData(fiber, renders);
+
       if (isCompositeFiber(fiber)) {
         reportRender(fiber, renders);
       }
 
       ReactScanInternals.options.value.onRender?.(fiber, renders);
 
-      const type = getType(fiber.type) || fiber.type;
-      if (type && typeof type === 'function' && typeof type === 'object') {
-        const renderData = (type.renderData || {
-          count: 0,
-          time: 0,
-          renders: [],
-        }) as RenderData;
-        const firstRender = renders[0];
-        renderData.count += firstRender.count;
-        renderData.time += firstRender.time;
-        renderData.renders.push(firstRender);
-        type.renderData = renderData;
-      }
+      for (let i = 0, len = renders.length; i < len; i++) {
+        const render = renders[i];
+        const outline = getOutline(fiber, render);
+        if (!outline) continue;
+        ReactScanInternals.scheduledOutlines.push(outline);
 
-      if (!Store.monitor.value) {
-        for (let i = 0, len = renders.length; i < len; i++) {
-          const render = renders[i];
-          const outline = getOutline(fiber, render);
-          if (!outline) continue;
-          ReactScanInternals.scheduledOutlines.push(outline);
-
-          // audio context can take up an insane amount of cpu, todo: figure out why
-          if (ReactScanInternals.options.value.playSound && audioContext) {
-            const renderTimeThreshold = 10;
-            const amplitude = Math.min(
-              1,
-              (render.time - renderTimeThreshold) / (renderTimeThreshold * 2),
-            );
-            playGeigerClickSound(audioContext, amplitude);
-          }
+        // audio context can take up an insane amount of cpu, todo: figure out why
+        if (ReactScanInternals.options.value.playSound && audioContext) {
+          const renderTimeThreshold = 10;
+          const amplitude = Math.min(
+            1,
+            (render.time - renderTimeThreshold) / (renderTimeThreshold * 2),
+          );
+          playGeigerClickSound(audioContext, amplitude);
         }
-        flushOutlines(ctx, new Map());
       }
+      flushOutlines(ctx, new Map());
     },
     onCommitFinish() {
       ReactScanInternals.options.value.onCommitFinish?.();
@@ -436,7 +350,7 @@ export const start = () => {
 
   ReactScanInternals.instrumentation = instrumentation;
 
-  if (options.showToolbar && !Store.monitor.value) {
+  if (options.showToolbar) {
     createToolbar();
   }
 };
@@ -448,7 +362,8 @@ export const withScan = <T>(
   setOptions(options);
   const isInIframe = Store.isInIframe.value;
   const componentAllowList = ReactScanInternals.componentAllowList;
-  if (isInIframe || options.enabled === false) return component;
+  if (isInIframe || (options.enabled === false && options.showToolbar !== true))
+    return component;
   if (!componentAllowList) {
     ReactScanInternals.componentAllowList = new WeakMap<
       React.ComponentType<any>,
@@ -467,15 +382,15 @@ export const withScan = <T>(
 export const scan = (options: Options = {}) => {
   setOptions(options);
   const isInIframe = Store.isInIframe.value;
-  if (isInIframe || options.enabled === false) return;
+  if (isInIframe || (options.enabled === false && options.showToolbar !== true))
+    return;
 
   start();
 };
 
-export const useScan = (options: Options) => {
-  React.useEffect(() => {
-    scan(options);
-  }, []);
+export const useScan = (options: Options = {}) => {
+  setOptions(options);
+  start();
 };
 
 export const onRender = (
