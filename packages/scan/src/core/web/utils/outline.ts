@@ -369,7 +369,7 @@ export const fadeOutOutline = (
 
   ctx.restore();
 
-  const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines, ctx);
+  const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines);
 
   for (let i = 0, len = mergedLabels.length; i < len; i++) {
     const { alpha, outline, color, reasons } = mergedLabels[i];
