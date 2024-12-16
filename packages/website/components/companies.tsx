@@ -3,12 +3,12 @@ import Image from 'next/image';
 export default function Companies() {
   return (
     <div>
-      <div className="text-sm text-neutral-500 mb-2">
+      <div className="mb-2 text-sm text-neutral-500">
         Trusted by engineering teams at:
       </div>
 
-      <div className="flex gap-6 items-center">
-        <div className="grayscale hover:grayscale-0 transition-all">
+      <div className="flex items-center gap-6">
+        <div className="grayscale transition-all hover:grayscale-0">
           <Image
             src="/perplexity-logo.png"
             alt="Perplexity"
@@ -16,7 +16,7 @@ export default function Companies() {
             height={30}
           />
         </div>
-        <div className="grayscale hover:grayscale-0 transition-all">
+        <div className="grayscale transition-all hover:grayscale-0">
           <Image
             src="/shopify-logo.png"
             alt="Shopify"
@@ -24,7 +24,7 @@ export default function Companies() {
             height={30}
           />
         </div>
-        <div className="grayscale hover:grayscale-0 transition-all">
+        <div className="grayscale transition-all hover:grayscale-0">
           <Image src="/faire-logo.svg" alt="Faire" width={120} height={30} />
         </div>
       </div>

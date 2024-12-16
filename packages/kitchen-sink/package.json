@@ -1,6 +1,9 @@
 {
+  "name": "@react-scan/kitchen-sink",
+  "version": "0.0.0",
   "scripts": {
     "build": "vite build",
+    "postbuild": "node ../../scripts/version-warning.mjs",
     "dev": "vite",
     "preview": "vite preview"
   },

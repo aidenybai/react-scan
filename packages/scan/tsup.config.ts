@@ -2,8 +2,14 @@ import fsPromise from 'node:fs/promises';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'tsup';
+import { TsconfigPathsPlugin } from '@esbuild-plugins/tsconfig-paths';
+import { init, parse } from 'es-module-lexer';
 
 const DIST_PATH = './dist';
+
+if (!fs.existsSync(DIST_PATH)) {
+  fs.mkdirSync(DIST_PATH, { recursive: true });
+}
 
 const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
   try {
@@ -17,9 +23,6 @@ const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
         const updatedContent = `'use client';\n${data}`;
 
         await fsPromise.writeFile(filePath, updatedContent, 'utf8');
-
-        // eslint-disable-next-line no-console
-        console.log(`Directive has been added to ${file}`);
       }
     }
   } catch (err) {
@@ -47,9 +50,42 @@ const banner = `/**
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */`;
 
+void (async () => {
+  await init;
+
+  const code = fs.readFileSync('./src/core/index.ts', 'utf8');
+  const [_, allExports] = parse(code);
+  const names: Array<string> = [];
+  for (const exportItem of allExports) {
+    names.push(exportItem.n);
+  }
+
+  const createFn = (name: string) =>
+    `let ${name}=()=>{console.error('Do not use ${name} directly in a Server Component module. It should only be used in a Client Component.');return undefined}`;
+  const createVar = (name: string) => `let ${name}=undefined`;
+
+  let script = '';
+  for (const name of names) {
+    if (name[0].toLowerCase() === name[0]) {
+      script += `${createFn(name)}\n`;
+      continue;
+    }
+    script += `${createVar(name)}\n`;
+  }
+
+  setTimeout(() => {
+    for (const ext of ['js', 'mjs', 'global.js']) {
+      fs.writeFileSync(`./dist/rsc-shim.${ext}`, script);
+    }
+    for (const ext of ['d.mts', 'd.ts']) {
+      fs.writeFileSync(`./dist/rsc-shim.${ext}`, `export {}`);
+    }
+  }, 500); // for some reason it clears the file if we don't wait
+})();
+
 export default defineConfig([
   {
-    entry: ['./src/auto.ts'],
+    entry: ['./src/auto.ts', './src/install-hook.ts'],
     outDir: DIST_PATH,
     banner: {
       js: banner,
@@ -76,11 +112,14 @@ export default defineConfig([
       'react-router-dom',
       '@remix-run/react',
     ],
+    loader: {
+      '.css': 'text',
+    },
   },
   {
     entry: [
       './src/index.ts',
-      './src/rsc-shim.ts',
+      './src/install-hook.ts',
       './src/core/monitor/index.ts',
       './src/core/monitor/params/next.ts',
       './src/core/monitor/params/react-router-v5.ts',
@@ -98,8 +137,11 @@ export default defineConfig([
     format: ['cjs', 'esm'],
     target: 'esnext',
     platform: 'browser',
-    treeshake: true,
+    // FIXME: tree shaking removes use client directive
+    // Info: vercel analytics does the same thing- https://github.com/vercel/analytics/blob/main/packages/web/tsup.config.js
+    treeshake: false,
     dts: true,
+    watch: process.env.NODE_ENV === 'development',
     async onSuccess() {
       await Promise.all([
         addDirectivesToChunkFiles(DIST_PATH),
@@ -107,11 +149,12 @@ export default defineConfig([
         addDirectivesToChunkFiles(`${DIST_PATH}/core/monitor`),
       ]);
     },
-    minify: false,
+    minify: process.env.NODE_ENV === 'production' ? 'terser' : false,
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
-      NPM_PACKAGE_VERSION: JSON.parse(fs.readFileSync(
-        path.join(__dirname, '../scan', 'package.json'),
+      NPM_PACKAGE_VERSION: JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, '../scan', 'package.json'),
           'utf8',
         ),
       ).version,
@@ -125,14 +168,22 @@ export default defineConfig([
       'react-router',
       'react-router-dom',
       '@remix-run/react',
+      'preact',
+      '@preact/signals',
+    ],
+    loader: {
+      '.css': 'text',
+    },
+    esbuildPlugins: [
+      TsconfigPathsPlugin({ tsconfig: path.resolve(__dirname, './tsconfig.json') })
     ],
   },
   {
     entry: ['./src/cli.mts'],
+    outDir: DIST_PATH,
     banner: {
       js: banner,
     },
-    outDir: './dist',
     splitting: false,
     clean: true,
     sourcemap: false,
@@ -143,6 +194,7 @@ export default defineConfig([
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
     },
+    watch: process.env.NODE_ENV === 'development',
   },
   {
     entry: [
@@ -155,7 +207,7 @@ export default defineConfig([
       './src/react-component-name/rollup.ts',
       './src/react-component-name/astro.ts',
     ],
-    outDir: './dist/react-component-name',
+    outDir: `${DIST_PATH}/react-component-name`,
     splitting: false,
     sourcemap: false,
     clean: true,

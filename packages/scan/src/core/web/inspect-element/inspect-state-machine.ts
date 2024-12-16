@@ -1,7 +1,6 @@
 import { didFiberRender } from 'bippy';
 import { Store } from '../../index';
-import { throttle } from '../utils';
-import { restoreSizeFromLocalStorage } from '../toolbar';
+import { throttle } from '../utils/helpers';
 import { renderPropsAndState } from './view-state';
 import {
   currentLockIconRect,
@@ -38,10 +37,11 @@ let animationId: ReturnType<typeof requestAnimationFrame>;
 
 type Kinds = States['kind'];
 
-export const createInspectElementStateMachine = () => {
+export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
   if (typeof window === 'undefined') {
     return;
   }
+
   let canvas = document.getElementById(
     INSPECT_OVERLAY_CANVAS_ID,
   ) as HTMLCanvasElement | null;
@@ -58,7 +58,7 @@ export const createInspectElementStateMachine = () => {
     pointer-events: none;
     z-index: 214748367;
   `;
-    document.documentElement.appendChild(canvas);
+    shadow.appendChild(canvas);
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) {
       return;
@@ -126,6 +126,7 @@ export const createInspectElementStateMachine = () => {
             clearCanvas();
             updateCanvasSize(canvas, ctx);
           };
+
           window.addEventListener('mousemove', mouseMove, { capture: true });
 
           return () => {
@@ -199,7 +200,6 @@ export const createInspectElementStateMachine = () => {
 
             drawHoverOverlay(el as HTMLElement, canvas, ctx, 'locked');
 
-            inspectState.propContainer.style.width = `${restoreSizeFromLocalStorage()}px`;
             Store.inspectState.value = {
               kind: 'focused',
               focusedDomElement: el as HTMLElement,
@@ -228,7 +228,7 @@ export const createInspectElementStateMachine = () => {
               inspectState.hoveredDomElement,
               () => {
                 drawHoverOverlay(
-                  inspectState.hoveredDomElement!,
+                  inspectState.hoveredDomElement,
                   canvas,
                   ctx,
                   'inspecting',
@@ -263,9 +263,7 @@ export const createInspectElementStateMachine = () => {
               // potential race condition solution for some websites
               clearCanvas();
             }, 500);
-            inspectState.propContainer.style.maxHeight = '0';
-            inspectState.propContainer.style.width = 'fit-content';
-            inspectState.propContainer.innerHTML = '';
+
             Store.inspectState.value = {
               kind: 'inspect-off',
               propContainer: inspectState.propContainer,
@@ -278,27 +276,20 @@ export const createInspectElementStateMachine = () => {
             ctx,
             'locked',
           );
+
           const element = inspectState.focusedDomElement;
 
-          const { parentCompositeFiber } =
-            getCompositeComponentFromElement(element);
+          const { parentCompositeFiber } = getCompositeComponentFromElement(element);
+
           if (!parentCompositeFiber) {
             return;
           }
-
-          const reportDataFiber =
-            Store.reportData.get(parentCompositeFiber) ??
-            (parentCompositeFiber.alternate
-              ? Store.reportData.get(parentCompositeFiber.alternate)
-              : null);
 
           const didRender = didFiberRender(parentCompositeFiber); // because we react to any change, not just this fibers change, we need this check to know if the current fiber re-rendered for this publish
 
           renderPropsAndState(
             didRender,
             parentCompositeFiber,
-            reportDataFiber,
-            inspectState.propContainer,
           );
 
           const keyDown = (e: KeyboardEvent) => {
@@ -310,8 +301,7 @@ export const createInspectElementStateMachine = () => {
                 ctx,
                 'inspecting',
               );
-              inspectState.propContainer.style.maxHeight = '0';
-              inspectState.propContainer.style.width = 'fit-content';
+
               inspectState.propContainer.innerHTML = '';
               Store.inspectState.value = {
                 kind: 'inspecting',
@@ -343,7 +333,6 @@ export const createInspectElementStateMachine = () => {
               adjustedY <= currentLockIconRect.y + currentLockIconRect.height
             ) {
               inspectState.propContainer.innerHTML = '';
-              inspectState.propContainer.style.maxHeight = '0';
               clearCanvas();
 
               drawHoverOverlay(
@@ -362,6 +351,7 @@ export const createInspectElementStateMachine = () => {
               return;
             }
           };
+
           window.addEventListener('pointerdown', onpointerdownCanvasLockIcon, {
             capture: true,
           });

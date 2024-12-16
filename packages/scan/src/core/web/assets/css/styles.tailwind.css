@@ -1,0 +1,392 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  outline: none !important;
+}
+
+button {
+  @apply hover:bg-none;
+  @apply outline-none;
+  @apply border-none;
+  @apply transition-colors duration-150 ease-linear;
+  @apply cursor-pointer;
+}
+
+/*
+  Using CSS content with data attributes is more performant than:
+  1. React re-renders with JSX text content
+  2. Direct DOM manipulation methods:
+     - element.textContent (creates/updates text nodes, triggers repaint)
+     - element.innerText (triggers reflow by computing styles & layout)
+     - element.innerHTML (heavy parsing, triggers reflow, security risks)
+  3. Multiple data attributes with complex CSS concatenation
+
+  This approach:
+  - Avoids React reconciliation
+  - Uses browser's native CSS engine (optimized content updates)
+  - Minimizes main thread work
+  - Reduces DOM operations
+  - Avoids forced reflows (layout recalculation)
+  - Only triggers necessary repaints
+  - Keeps pseudo-element updates in render layer
+*/
+.with-data-text {
+  overflow: hidden;
+  &::before {
+    content: attr(data-text);
+    display: block;
+    @apply truncate;
+  }
+}
+
+/* Default scrollbar styles for all elements in shadow DOM */
+:host *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+:host *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:host *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+:host *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* For Firefox */
+:host * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+/* We will refactor this later */
+.react-scan-header-right {
+  display: flex;
+  gap: 4px;
+}
+
+.react-scan-replay-button,
+.react-scan-close-button {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.react-scan-close-button {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.react-scan-close-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.react-scan-replay-button {
+  background: rgba(142, 97, 227, 0.5) !important;
+}
+
+.react-scan-replay-button.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.react-scan-replay-button:hover {
+  background: rgba(142, 97, 227, 0.25);
+}
+
+.react-scan-replay-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(142, 97, 227, 0.3),
+    transparent
+  );
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+#react-scan-toolbar {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  z-index: 2147483651;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+
+  max-width: calc(100vw - 48px); /* 48px = SAFE_AREA * 2 */
+  max-height: calc(100vh - 48px);
+}
+
+.react-scan-inspector {
+  font-size: 13px;
+  color: #fff;
+  width: 100%;
+}
+
+.react-scan-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  background: #000;
+}
+
+.react-scan-header-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.react-scan-header-right {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.react-scan-replay-button {
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 150ms ease;
+  outline: none;
+}
+
+.react-scan-replay-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.react-scan-component-name {
+  font-weight: 500;
+  color: #fff;
+  @apply truncate;
+}
+
+.react-scan-metrics {
+  color: #888;
+  font-size: 12px;
+  @apply truncate;
+}
+
+.react-scan-section {
+  @apply flex flex-col py-1;
+  @apply py-2 px-4;
+  @apply bg-black text-[#888];
+  @apply before:content-[attr(data-section)] before:text-gray-500;
+
+  > div {
+    @apply min-h-6 ml-2;
+  }
+}
+
+.react-scan-property {
+  @apply relative;
+  @apply flex flex-col;
+  @apply pt-1 pl-6;
+  @apply border-l-1 border-transparent;
+  @apply overflow-hidden;
+}
+
+.react-scan-key {
+  color: #fff;
+}
+
+.react-scan-warning {
+  padding-right: 4px;
+}
+
+.react-scan-string {
+  color: #9ecbff;
+}
+
+.react-scan-number {
+  color: #79c7ff;
+}
+
+.react-scan-boolean {
+  color: #56b6c2;
+}
+
+.react-scan-input {
+  background: #000;
+  border: none;
+  color: #fff;
+}
+
+.react-scan-object-key {
+  color: #fff;
+}
+
+.react-scan-array {
+  color: #fff;
+}
+
+.react-scan-expandable {
+  display: flex;
+  align-items: flex-start;
+}
+
+.react-scan-arrow {
+  @apply absolute top-2 left-6;
+  @apply cursor-pointer;
+  @apply w-6 h-6;
+  @apply -translate-x-full;
+  @apply z-10;
+
+  &:before {
+    content: '▶';
+    @apply absolute inset-0;
+    @apply flex items-center justify-center;
+    @apply text-[#888];
+    @apply text-[8px];
+    @apply origin-center;
+    @apply transition-transform duration-150;
+  }
+}
+
+.react-scan-expanded > .react-scan-arrow:before {
+  transform: rotate(90deg);
+}
+
+.react-scan-property-content {
+  @apply flex-1 flex flex-col;
+  @apply pt-1;
+  @apply max-w-full;
+  @apply overflow-hidden;
+}
+
+.react-scan-hidden {
+  display: none;
+}
+
+.react-scan-array-container {
+  overflow-y: auto;
+  @apply ml-5;
+  margin-top: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 8px;
+}
+
+.react-scan-nested-object {
+  /* @apply ml-5; */
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.react-scan-preview-line {
+  @apply relative;
+  @apply flex items-center min-h-6;
+}
+
+.react-scan-flash-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(142, 97, 227, 1);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 999999;
+  mix-blend-mode: multiply;
+  transition: opacity 150ms ease-in;
+  border-radius: 4px;
+}
+
+.react-scan-flash-active {
+  opacity: 0.4;
+  transition: opacity 300ms ease-in-out;
+}
+
+#react-scan-toolbar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#react-scan-toolbar button:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+#react-scan-toolbar button:focus-visible {
+  outline: 2px solid #0070f3;
+  outline-offset: -2px;
+}
+
+.react-scan-props::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.react-scan-props::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.react-scan-props::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.react-scan-props::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#react-scan-toolbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+#react-scan-toolbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+#react-scan-toolbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+#react-scan-toolbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* For Firefox */
+#react-scan-toolbar * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+.nav-button {
+  opacity: var(--nav-opacity, 1);
+}
+
+.react-scan-toolbar {
+  border: 1px solid blue;
+}

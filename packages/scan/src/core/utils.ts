@@ -1,6 +1,6 @@
 import { type Fiber } from 'react-reconciler';
-import { getType, traverseFiber } from 'bippy';
-import { ignoredProps, ReactScanInternals } from '..';
+import { getType } from 'bippy';
+import { ReactScanInternals } from '..';
 import type { Render } from './instrumentation';
 
 export const getLabelText = (renders: Array<Render>) => {
@@ -10,7 +10,6 @@ export const getLabelText = (renders: Array<Render>) => {
     string,
     {
       count: number;
-      trigger: boolean;
       forget: boolean;
       time: number;
     }
@@ -18,83 +17,75 @@ export const getLabelText = (renders: Array<Render>) => {
 
   for (let i = 0, len = renders.length; i < len; i++) {
     const render = renders[i];
-    const name = render.name;
+    const name = render.componentName;
+
     if (!name?.trim()) continue;
 
-    const { count, trigger, forget, time } = components.get(name) ?? {
+    const { count, forget, time } = components.get(name) ?? {
       count: 0,
-      trigger: false,
       forget: false,
       time: 0,
     };
     components.set(name, {
       count: count + render.count,
-      trigger: trigger || render.trigger,
       forget: forget || render.forget,
-      time: time + render.time,
+      time: time + (render.time ?? 0),
     });
   }
 
-  const sortedComponents = Array.from(components.entries()).sort(
-    ([, a], [, b]) => b.count - a.count,
+  const componentsByCount = new Map<
+    number,
+    Array<{ name: string; forget: boolean; time: number }>
+  >();
+
+  for (const [name, data] of Array.from(components.entries())) {
+    const { count, forget, time } = data;
+    if (!componentsByCount.has(count)) {
+      componentsByCount.set(count, []);
+    }
+    componentsByCount.get(count)!.push({ name, forget, time });
+  }
+
+  const sortedCounts = Array.from(componentsByCount.keys()).sort(
+    (a, b) => b - a,
   );
 
   const parts: Array<string> = [];
-  for (const [name, { count, forget, time }] of sortedComponents) {
-    let text = name;
+  let cumulativeTime = 0;
+  for (const count of sortedCounts) {
+    const componentGroup = componentsByCount.get(count)!;
+    const names = componentGroup.map(({ name }) => name).join(', ');
+    let text = names;
+
+    const totalTime = componentGroup.reduce((sum, { time }) => sum + time, 0);
+    const hasForget = componentGroup.some(({ forget }) => forget);
+
+    cumulativeTime += totalTime;
+
     if (count > 1) {
       text += ` ×${count}`;
     }
-    if (time >= 0.01 && count > 0) {
-      text += ` (${time.toFixed(2)}ms)`;
+
+    if (hasForget) {
+      text = `✨${text}`;
     }
 
-    if (forget) {
-      text = `${text} ✨`;
-    }
     parts.push(text);
   }
 
-  labelText = parts.join(' ');
+  labelText = parts.join(', ');
 
   if (!labelText.length) return null;
+
   if (labelText.length > 40) {
     labelText = `${labelText.slice(0, 40)}…`;
   }
+
+  if (cumulativeTime >= 0.01) {
+    labelText += ` (${Number(cumulativeTime.toFixed(2))}ms)`;
+  }
+
   return labelText;
-};
-
-export const addFiberToSet = (fiber: Fiber, set: Set<Fiber>) => {
-  if (fiber.alternate && set.has(fiber.alternate)) {
-    // then the alternate tree fiber exists in the weakset, don't double count the instance
-    return;
-  }
-
-  set.add(fiber);
-};
-
-export const isValidFiber = (fiber: Fiber) => {
-  if (ignoredProps.has(fiber.memoizedProps)) {
-    return false;
-  }
-
-  const allowList = ReactScanInternals.componentAllowList;
-  const shouldAllow =
-    allowList?.has(fiber.type) ?? allowList?.has(fiber.elementType);
-
-  if (shouldAllow) {
-    const parent = traverseFiber(
-      fiber,
-      (node) => {
-        const options =
-          allowList?.get(node.type) ?? allowList?.get(node.elementType);
-        return options?.includeChildren;
-      },
-      true,
-    );
-    if (!parent && !shouldAllow) return false;
-  }
-  return true;
 };
 
 export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
@@ -108,7 +99,7 @@ export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
     }) as RenderData;
     const firstRender = renders[0];
     renderData.count += firstRender.count;
-    renderData.time += firstRender.time;
+    renderData.time += firstRender.time ?? 0;
     renderData.renders.push(firstRender);
     type.renderData = renderData;
   }

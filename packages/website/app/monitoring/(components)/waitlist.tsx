@@ -10,7 +10,7 @@ export default function Waitlist() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('loading');
-    
+
     try {
       const response = await fetch('/api/waitlist', {
         method: 'POST',
@@ -36,29 +36,29 @@ export default function Waitlist() {
   return (
     <div className="space-y-2">
       {/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
-      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
+      <form onSubmit={handleSubmit} className="mt-4 flex w-full flex-col gap-2 sm:flex-row">
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
-          className="border-2 border-black px-2 py-2 w-full"
+          className="w-full border-2 border-black p-2"
           disabled={status === 'loading'}
           required
         />
         <button
           type="submit"
           disabled={status === 'loading'}
-          className="inline-block px-5 py-2 font-medium text-white bg-black text-center whitespace-nowrap disabled:opacity-50"
+          className="inline-block whitespace-nowrap bg-black px-5 py-2 text-center font-medium text-white disabled:opacity-50"
         >
           {status === 'loading' ? 'Joining...' : 'Join waitlist'}
         </button>
       </form>
       {status === 'error' && (
-        <p className="text-red-500 text-sm">{errorMessage}</p>
+        <p className="text-sm text-red-500">{errorMessage}</p>
       )}
       {status === 'success' && (
-        <p className="text-green-500 text-sm">Successfully joined waitlist!</p>
+        <p className="text-sm text-green-500">Successfully joined waitlist!</p>
       )}
     </div>
   );

@@ -6,7 +6,7 @@ export default function Code({
   className?: string;
 }) {
   return (
-    <code className={`bg-neutral-100 p-1 rounded-md text-sm ${className}`}>
+    <code className={`rounded-md bg-neutral-100 p-1 text-sm ${className}`}>
       {children}
     </code>
   );

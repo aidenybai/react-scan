@@ -1,9 +1,9 @@
 import { type Fiber } from 'react-reconciler';
 import { getNearestHostFiber } from 'bippy';
-import type { Render } from '../instrumentation';
-import { ReactScanInternals } from '../index';
-import { getLabelText } from '../utils';
-import { isOutlineUnstable, throttle } from './utils';
+import { throttle } from '@web-utils/helpers';
+import { getLabelText } from '../../utils';
+import { isElementInViewport, type Render } from '../../instrumentation';
+import { ReactScanInternals } from '../../index';
 
 export interface PendingOutline {
   rect: DOMRect;
@@ -23,53 +23,52 @@ export interface ActiveOutline {
 export interface OutlineLabel {
   alpha: number;
   outline: PendingOutline;
-  text: string | null;
   color: { r: number; g: number; b: number };
+  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  labelText: string;
+  textWidth: number;
 }
 
-export const MONO_FONT =
-  'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 const DEFAULT_THROTTLE_TIME = 32; // 2 frames
 
 const START_COLOR = { r: 115, g: 97, b: 230 };
 const END_COLOR = { r: 185, g: 49, b: 115 };
+const MONO_FONT =
+  'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
 export const getOutlineKey = (outline: PendingOutline): string => {
   return `${outline.rect.top}-${outline.rect.left}-${outline.rect.width}-${outline.rect.height}`;
 };
 
-const rectCache = new Map<Element, { rect: DOMRect; timestamp: number }>();
+let currentFrameId = 0;
 
-export const getRect = (domNode: Element): DOMRect | null => {
-  const now = performance.now();
-  const cached = rectCache.get(domNode);
+function incrementFrameId() {
+  currentFrameId++;
+  requestAnimationFrame(incrementFrameId);
+}
 
-  if (cached && now - cached.timestamp < DEFAULT_THROTTLE_TIME) {
+incrementFrameId();
+
+interface CachedRect {
+  rect: DOMRect;
+  frameId: number;
+}
+
+const rectCache = new Map<Element, CachedRect>();
+
+export const getRect = (el: Element): DOMRect | null => {
+  const cached = rectCache.get(el);
+
+  if (cached && cached.frameId === currentFrameId) {
     return cached.rect;
   }
 
-  const style = window.getComputedStyle(domNode);
-  if (
-    style.display === 'none' ||
-    style.visibility === 'hidden' ||
-    style.opacity === '0'
-  ) {
+  const rect = el.getBoundingClientRect();
+  if (!isElementInViewport(el, rect)) {
     return null;
   }
 
-  const rect = domNode.getBoundingClientRect();
-
-  const isVisible =
-    rect.bottom > 0 &&
-    rect.right > 0 &&
-    rect.top < window.innerHeight &&
-    rect.left < window.innerWidth;
-
-  if (!isVisible || !rect.width || !rect.height) {
-    return null;
-  }
-
-  rectCache.set(domNode, { rect, timestamp: now });
+  rectCache.set(el, { rect, frameId: currentFrameId });
 
   return rect;
 };
@@ -127,9 +126,28 @@ export const mergeOutlines = (outlines: Array<PendingOutline>) => {
 export const recalcOutlines = throttle(() => {
   const { scheduledOutlines, activeOutlines } = ReactScanInternals;
 
+  const domNodes = new Set<HTMLElement>();
+
   for (let i = scheduledOutlines.length - 1; i >= 0; i--) {
     const outline = scheduledOutlines[i];
-    const rect = getRect(outline.domNode);
+    domNodes.add(outline.domNode);
+  }
+
+  for (let i = activeOutlines.length - 1; i >= 0; i--) {
+    const activeOutline = activeOutlines[i];
+    if (!activeOutline) continue;
+    domNodes.add(activeOutline.outline.domNode);
+  }
+
+  const rectMap = new Map<HTMLElement, DOMRect | null>();
+  domNodes.forEach((domNode) => {
+    const rect = getRect(domNode);
+    rectMap.set(domNode, rect);
+  });
+
+  for (let i = scheduledOutlines.length - 1; i >= 0; i--) {
+    const outline = scheduledOutlines[i];
+    const rect = rectMap.get(outline.domNode);
     if (!rect) {
       scheduledOutlines.splice(i, 1);
       continue;
@@ -140,13 +158,12 @@ export const recalcOutlines = throttle(() => {
   for (let i = activeOutlines.length - 1; i >= 0; i--) {
     const activeOutline = activeOutlines[i];
     if (!activeOutline) continue;
-    const { outline } = activeOutline;
-    const rect = getRect(outline.domNode);
+    const rect = rectMap.get(activeOutline.outline.domNode);
     if (!rect) {
       activeOutlines.splice(i, 1);
       continue;
     }
-    outline.rect = rect;
+    activeOutline.outline.rect = rect;
   }
 }, DEFAULT_THROTTLE_TIME);
 
@@ -228,10 +245,8 @@ export const fadeOutOutline = (
     activeOutline.frame++;
 
     const progress = activeOutline.frame / activeOutline.totalFrames;
-    const isImportant =
-      isOutlineUnstable(activeOutline.outline) || options.alwaysShowLabels;
 
-    const alphaScalar = isImportant ? 0.8 : 0.2;
+    const alphaScalar = 0.8;
     activeOutline.alpha = alphaScalar * (1 - progress);
 
     if (activeOutline.frame >= activeOutline.totalFrames) {
@@ -248,36 +263,69 @@ export const fadeOutOutline = (
   for (const activeOutline of Array.from(groupedOutlines.values())) {
     const { outline, frame, totalFrames } = activeOutline;
 
-    let count = 0;
-    let time = 0;
+    let totalTime = 0;
+    let totalCount = 0;
+    let totalFps = 0;
     for (let i = 0, len = outline.renders.length; i < len; i++) {
       const render = outline.renders[i];
-      count += render.count;
-      time += render.time;
+      totalTime += render.time ?? 0;
+      totalCount += render.count;
+      totalFps += render.fps;
     }
 
-    const maxRenders = ReactScanInternals.options.value.maxRenders ?? 100;
-    const t = Math.min((count * (time || 1)) / maxRenders, 1);
+    const THRESHOLD_FPS = 60;
+    const averageScore = Math.max(
+      (THRESHOLD_FPS -
+        Math.min(totalFps / outline.renders.length, THRESHOLD_FPS)) /
+        THRESHOLD_FPS,
+      totalTime / totalCount / 16, // long task
+    );
+
+    const t = Math.min(averageScore, 1);
 
     const r = Math.round(START_COLOR.r + t * (END_COLOR.r - START_COLOR.r));
     const g = Math.round(START_COLOR.g + t * (END_COLOR.g - START_COLOR.g));
     const b = Math.round(START_COLOR.b + t * (END_COLOR.b - START_COLOR.b));
 
-    const color = { r, g, b };
+    let color = { r, g, b };
 
-    // const _totalTime = getMainThreadTaskTime();
-    // if (totalTime) {
-    //   console.log(totalTime);
-    //   let divideBy = 1;
-    //   for (let i = 0; i < Math.floor(totalTime / 50); i++) {
-    //     divideBy += 0.1;
-    //   }
-    //   activeOutline.totalFrames = Math.floor(
-    //     Math.max(1, totalFrames / divideBy),
-    //   );
-    // }
+    const phases = new Set();
+
+    const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
+
+    let didCommit = false;
+    let isUnstable = false;
+    let isUnnecessary = false;
+    for (let i = 0, len = outline.renders.length; i < len; i++) {
+      const render = outline.renders[i];
+      phases.add(render.phase);
+      if (render.didCommit) {
+        didCommit = true;
+      }
+      for (let j = 0, len2 = render.changes?.length ?? 0; j < len2; j++) {
+        const change = render.changes![j];
+        if (change.unstable) {
+          isUnstable = true;
+        }
+      }
+      if (render.unnecessary) {
+        isUnnecessary = true;
+      }
+    }
+    if (didCommit) {
+      reasons.push('commit');
+    }
+    if (isUnstable) {
+      reasons.push('unstable');
+    }
+    if (isUnnecessary) {
+      reasons.push('unnecessary');
+      if (reasons.length === 1) {
+        color = { r: 128, g: 128, b: 128 };
+      }
+    }
+
     const { rect } = outline;
-    const unstable = isOutlineUnstable(outline);
 
     if (renderCountThreshold > 0) {
       let count = 0;
@@ -290,13 +338,11 @@ export const fadeOutOutline = (
       }
     }
 
-    const isImportant = unstable || options.alwaysShowLabels;
-
-    const alphaScalar = isImportant ? 0.8 : 0.2;
+    const alphaScalar = 0.8;
     activeOutline.alpha = alphaScalar * (1 - frame / totalFrames);
 
     const alpha = activeOutline.alpha;
-    const fillAlpha = isImportant ? activeOutline.alpha * 0.1 : 0;
+    const fillAlpha = activeOutline.alpha * 0.1;
 
     const rgb = `${color.r},${color.g},${color.b}`;
     ctx.strokeStyle = `rgba(${rgb},${alpha})`;
@@ -308,21 +354,31 @@ export const fadeOutOutline = (
     ctx.stroke();
     ctx.fill();
 
-    if (isImportant) {
-      const text = getLabelText(outline.renders);
+    const labelText = getLabelText(outline.renders) ?? '';
+    if (reasons.length && labelText && !(phases.has('mount') && phases.size === 1)) {
       pendingLabeledOutlines.push({
         alpha,
         outline,
-        text,
         color,
+        reasons,
+        labelText,
+        textWidth: measureTextCached(labelText, ctx).width,
       });
     }
   }
 
   ctx.restore();
 
-  for (let i = 0, len = pendingLabeledOutlines.length; i < len; i++) {
-    const { alpha, outline, text, color } = pendingLabeledOutlines[i];
+  const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines, ctx);
+
+  for (let i = 0, len = mergedLabels.length; i < len; i++) {
+    const { alpha, outline, color, reasons } = mergedLabels[i];
+    const labelText = getLabelText(outline.renders);
+    const text =
+      reasons.includes('unstable') &&
+      (reasons.includes('commit') || reasons.includes('unnecessary'))
+        ? `⚠️${labelText}`
+        : `${labelText}`;
     const { rect } = outline;
     ctx.save();
 
@@ -383,3 +439,109 @@ async function paintOutlines(
     }
   });
 }
+
+// FIXME: slow
+export const mergeOverlappingLabels = (
+  labels: Array<OutlineLabel>,
+): Array<OutlineLabel> => {
+  // Precompute labelRects
+  const labelRects = labels.map(label => ({
+    label,
+    rect: getLabelRect(label),
+  }));
+
+  // Sort labels by x-coordinate
+  labelRects.sort((a, b) => a.rect.x - b.rect.x);
+
+  const mergedLabels: Array<OutlineLabel> = [];
+
+  for (let i = 0; i < labelRects.length; i++) {
+    const { label, rect } = labelRects[i];
+    let isMerged = false;
+
+    // Only compare with labels that might overlap
+    for (
+      let j = i + 1;
+      j < labelRects.length && labelRects[j].rect.x <= rect.x + rect.width;
+      j++
+    ) {
+      const nextLabel = labelRects[j].label;
+      const nextRect = labelRects[j].rect;
+
+      const overlapArea = getOverlapArea(rect, nextRect);
+
+      if (overlapArea > 0) {
+        // Merge labels
+        const combinedOutline: PendingOutline = {
+          rect: getOutermostOutline(nextLabel.outline, label.outline).rect,
+          domNode: getOutermostOutline(nextLabel.outline, label.outline).domNode,
+          renders: [...label.outline.renders, ...nextLabel.outline.renders],
+        };
+
+        nextLabel.alpha = Math.max(nextLabel.alpha, label.alpha);
+        nextLabel.outline = combinedOutline;
+        nextLabel.reasons = Array.from(
+          new Set(nextLabel.reasons.concat(label.reasons)),
+        );
+
+        isMerged = true;
+        break;
+      }
+    }
+
+    if (!isMerged) {
+      mergedLabels.push(label);
+    }
+  }
+
+  return mergedLabels;
+};
+
+export const getLabelRect = (
+  label: OutlineLabel,
+): DOMRect => {
+  const { rect } = label.outline;
+  const textHeight = 11;
+
+  const labelX = rect.x;
+  const labelY = rect.y - textHeight - 4;
+
+  return new DOMRect(labelX, labelY, label.textWidth + 4, textHeight + 4);
+};
+
+const textMeasurementCache = new Map<string, TextMetrics>();
+
+export const measureTextCached = (
+  text: string,
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+): TextMetrics => {
+  if (textMeasurementCache.has(text)) {
+    return textMeasurementCache.get(text)!;
+  }
+  ctx.font = `11px ${MONO_FONT}`;
+  const metrics = ctx.measureText(text);
+  textMeasurementCache.set(text, metrics);
+  return metrics;
+};
+
+export const getOverlapArea = (rect1: DOMRect, rect2: DOMRect): number => {
+  const xOverlap = Math.max(
+    0,
+    Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left),
+  );
+  const yOverlap = Math.max(
+    0,
+    Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top),
+  );
+  return xOverlap * yOverlap;
+};
+
+export const getOutermostOutline = (
+  outline1: PendingOutline,
+  outline2: PendingOutline,
+): PendingOutline => {
+  const area1 = outline1.rect.width * outline1.rect.height;
+  const area2 = outline2.rect.width * outline2.rect.height;
+
+  return area1 >= area2 ? outline1 : outline2;
+};

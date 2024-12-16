@@ -4,10 +4,10 @@ import Image from 'next/image';
 
 export default function Header() {
   return (
-    <nav className="flex justify-between items-center">
+    <nav className="flex items-center justify-between">
       <Link
         href="/"
-        className="flex items-center gap-3 no-underline text-inherit"
+        className="flex items-center gap-3 text-inherit no-underline"
       >
         <Image src="/logo.svg" alt="react-scan-logo" width={30} height={30} />
         <h3>

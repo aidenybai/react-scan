@@ -1,13 +1,16 @@
 'use client';
 
-// adapted from vercel analytics <remember to put link here>
 import { useParams, usePathname, useSearchParams } from 'next/navigation.js';
-// import React from 'react';
 import { createElement, Suspense } from 'react';
 import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps } from '..';
 import { computeRoute } from './utils';
-// import { computeRoute } from '../utils';
-// does this work in pages and app router? Idk
+
+/**
+ * This hook works in both Next.js Pages and App Router:
+ * - App Router: Uses the new useParams() hook directly
+ * - Pages Router: useParams() returns empty object, falls back to searchParams
+ * This fallback behavior ensures compatibility across both routing systems
+ */
 const useRoute = (): {
   route: string | null;
   path: string;
@@ -37,10 +40,24 @@ export function MonitoringInner(props: MonitoringWithoutRouteProps) {
   });
 }
 
-export function Monitoring(props: MonitoringWithoutRouteProps) {
-  return createElement(
-    Suspense,
-    { fallback: null },
-    createElement(MonitoringInner, props),
-  );
-}
+/**
+ * The double 'use client' directive pattern is intentional:
+ * 1. Top-level directive marks the entire module as client-side
+ * 2. IIFE-wrapped component with its own directive ensures:
+ *    - Component is properly tree-shaken (via @__PURE__)
+ *    - Component maintains client context when code-split
+ *    - Execution scope is preserved
+ *
+ * This pattern is particularly important for Next.js's module
+ * system and its handling of Server/Client Components.
+ */
+export const Monitoring = /* @__PURE__ */ (() => {
+  'use client';
+  return function Monitoring(props: { url?: string; apiKey: string }) {
+    return createElement(
+      Suspense,
+      { fallback: null },
+      createElement(MonitoringInner, props),
+    );
+  };
+})();

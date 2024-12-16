@@ -26,7 +26,7 @@ export let isRSC = !React.useRef;
 export let isSSR = typeof window === 'undefined' || isRSC;
 
 export let isTest =
-  (window &&
+  (typeof window !== 'undefined' &&
     /**
      * @see https://docs.cypress.io/faq/questions/using-cypress-faq#Is-there-any-way-to-detect-if-my-app-is-running-under-Cypress
      */

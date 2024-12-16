@@ -1,17 +1,21 @@
 const { resolve } = require('node:path');
 
-const project = resolve(__dirname, 'tsconfig.json');
-
 module.exports = {
   root: true,
   extends: [
     require.resolve('@vercel/style-guide/eslint/node'),
     require.resolve('@vercel/style-guide/eslint/browser'),
     require.resolve('@vercel/style-guide/eslint/typescript'),
+    'plugin:tailwindcss/recommended',
   ],
-  ignorePatterns: ['**/dist/*', '**/test/*'],
+  ignorePatterns: ['**/dist/**', '**/node_modules/**', '**/test/**'],
   parserOptions: {
-    project,
+    project: [
+      resolve(__dirname, 'tsconfig.json'), // Root tsconfig
+      resolve(__dirname, 'packages/scan/tsconfig.json'), // Scan package tsconfig
+    ],
+    ecmaVersion: 2020,
+    sourceType: 'module',
   },
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'off',
@@ -39,7 +43,6 @@ module.exports = {
     '@typescript-eslint/no-unnecessary-condition': 'off',
     '@typescript-eslint/no-confusing-void-expression': 'off',
     '@typescript-eslint/require-await': 'off',
-    // '@typescript-eslint/no-floating-promises': ['error'],
     'import/no-named-as-default': 'off',
     'no-implicit-coercion': 'off',
     '@typescript-eslint/no-redundant-type-constituents': 'off',
@@ -48,15 +51,35 @@ module.exports = {
     'no-useless-return': 'off',
     'func-names': 'off',
     '@typescript-eslint/prefer-for-of': 'off',
-    // 'no-implicit-coercion': 'off',
     '@typescript-eslint/restrict-template-expressions': 'off',
     '@typescript-eslint/array-type': ['error', { default: 'generic' }],
   },
   settings: {
     'import/resolver': {
       typescript: {
-        project,
+        project: [
+          resolve(__dirname, 'tsconfig.json'), // Root tsconfig
+          resolve(__dirname, 'packages/**/tsconfig.json'), // Scan package tsconfig
+        ],
       },
     },
   },
+  overrides: [
+    {
+      files: ['*.json'],
+      parser: 'jsonc-eslint-parser',
+      plugins: ['jsonc'],
+      rules: {
+        'jsonc/no-comments': 'off',
+      },
+    },
+    {
+      files: ['*.tsx', '*.ts', '*.js'],
+      plugins: ['tailwindcss'],
+    },
+    {
+      files: ['*.mts'],
+      parser: '@typescript-eslint/parser',
+    }
+  ],
 };

@@ -8,3 +8,6 @@ packages/extension/build/
 *.log
 build
 playgrounds
+# SSL Certificates
+bin/certs/*.pem
+bin/certs/*.key

@@ -1,15 +1,32 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "esModuleInterop": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact",
-    "strictNullChecks": true,
-    "strict": true,
-    "lib": ["esnext", "dom"],
-    "types": ["@types/node"],
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "declarationMap": true
-  }
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@web-utils/*": [
+        "src/core/web/utils/*"
+      ],
+      "@web-assets/*": [
+        "src/core/web/assets/*"
+      ],
+      "@web-components/*": [
+        "src/core/web/components/*"
+      ],
+      "@web-inspect-element/*": [
+        "src/core/web/inspect-element/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

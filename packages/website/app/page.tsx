@@ -21,8 +21,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="max-w-xl mx-auto">
-      <div className="space-y-4 mt-8">
+    <div className="mx-auto max-w-xl">
+      <div className="mt-8 space-y-4">
         <div>
           React Scan automatically detects performance issues in your React app{' '}
           <div className={`flex ${!isMobile ? 'visible' : 'hidden'}`}>
@@ -42,7 +42,7 @@ export default function Home() {
 
         <div>
           Instead, React Scan:
-          <ul className="list-disc list-inside pl-2 space-y-2 pt-2">
+          <ul className="list-inside list-disc space-y-2 pl-2 pt-2">
             <li>Requires no code changes – just drop it in</li>
             <li>Highlights exactly the components you need to optimize</li>
             <li>Available via script tag, npm, CLI, you name it!</li>
@@ -51,16 +51,16 @@ export default function Home() {
 
         <CLI command="npx react-scan@latest <URL>" />
 
-        <div className="flex gap-2 mt-4 !mb-8">
+        <div className="!mb-8 mt-4 flex gap-2">
           <Link
             href="https://github.com/aidenybai/react-scan#install"
-            className="inline-block px-5 py-2 font-medium text-white bg-black"
+            className="inline-block bg-black px-5 py-2 font-medium text-white"
           >
             Get started {'»'}
           </Link>
           <Link
             href="/monitoring"
-            className="inline-block px-5 py-2 font-medium border-2 border-black"
+            className="inline-block border-2 border-black px-5 py-2 font-medium"
           >
             React Scan Monitoring
           </Link>
@@ -68,13 +68,13 @@ export default function Home() {
 
         {showDemo && isMobile && (
           <div className="mt-4">
-            <TodoDemo onClose={() => setShowDemo(false)} />
+            <TodoDemo closeAction={() => setShowDemo(false)} />
           </div>
         )}
 
         <Companies />
       </div>
-      {showDemo && !isMobile && <TodoDemo onClose={() => setShowDemo(false)} />}
+      {showDemo && !isMobile && <TodoDemo closeAction={() => setShowDemo(false)} />}
     </div>
   );
 }

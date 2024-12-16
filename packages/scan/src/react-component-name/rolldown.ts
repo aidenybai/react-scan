@@ -1,4 +1,4 @@
-import { reactComponentNamePlugin } from './index'
+import { reactComponentNamePlugin } from ".";
 
 
-export default reactComponentNamePlugin.rolldown
+export default reactComponentNamePlugin.rolldown;
