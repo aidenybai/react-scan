@@ -47,7 +47,9 @@ export class SmolWorker<T, R> {
 
 	private count = 0;
 
-	constructor(callback: SmolWorkerCallback<T, R>) {
+	private setup?: (arg: T) => Promise<R>;
+
+	constructor(private callback: SmolWorkerCallback<T, R>) {
 		this.worker = createWorker(callback);
 
 		this.worker.addEventListener(
@@ -68,13 +70,27 @@ export class SmolWorker<T, R> {
 		);
 	}
 
-	async call(data: T, options?: StructuredSerializeOptions): Promise<R> {
+	async call(
+		data: T,
+		options?: {
+			transfer?: Array<Transferable>;
+			sync?: boolean;
+		},
+	): Promise<R> {
+		if (options?.sync) {
+			if (!this.setup) {
+				this.setup = this.callback();
+			}
+			return this.setup(data);
+		}
 		const deferred = createDeferred();
 		this.deferredMap.set(this.count++, deferred);
-		this.worker.postMessage(data, options);
+		this.worker.postMessage(data, {
+			transfer: options?.transfer,
+		});
 		return deferred.promise as Promise<R>;
 	}
-	
+
 	destroy(): void {
 		this.deferredMap.clear();
 		this.worker.terminate();

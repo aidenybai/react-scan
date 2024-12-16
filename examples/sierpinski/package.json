@@ -10,7 +10,7 @@
 		"babel-plugin-react-compiler": "19.0.0-beta-a7bf2bd-20241110",
 		"react": "19.0.0-rc.1",
 		"react-dom": "19.0.0-rc.1",
-		"react-scan": "^0.0.34",
+		"react-scan": "workspace:*",
 		"sugar-high": "^0.7.5",
 		"vite-plugin-inspect": "^0.8.7"
 	},

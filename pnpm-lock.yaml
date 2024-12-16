@@ -37,8 +37,8 @@ importers:
         specifier: 19.0.0-rc.1
         version: 19.0.0-rc.1(react@19.0.0-rc.1)
       react-scan:
-        specifier: ^0.0.34
-        version: 0.0.34
+        specifier: workspace:*
+        version: link:../../packages/scan
       sugar-high:
         specifier: ^0.7.5
         version: 0.7.5
