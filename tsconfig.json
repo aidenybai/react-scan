@@ -1,6 +1,4 @@
 {
-  "exclude": ["node_modules"],
-  "include": ["packages"],
   "compilerOptions": {
     "module": "CommonJS",
     "target": "ES2018",
@@ -19,5 +17,11 @@
     "types": [
       "node"
     ]
-  }
+  },
+  "include": [
+    "packages",
+  ],
+  "exclude": [
+    "node_modules"
+  ],
 }
