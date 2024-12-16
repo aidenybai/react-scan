@@ -13,7 +13,6 @@ import {
   flushOutlines,
   getOutline,
   type PendingOutline,
-
 } from '@web-utils/outline';
 import { log, logIntro } from '@web-utils/log';
 import {
@@ -22,13 +21,15 @@ import {
 } from '@web-inspect-element/inspect-state-machine';
 import { playGeigerClickSound } from '@web-utils/geiger';
 import { ICONS } from '@web-assets/svgs/svgs';
-import {  updateFiberRenderData, type RenderData } from 'src/core/utils';
+import { updateFiberRenderData, type RenderData } from 'src/core/utils';
 import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
 import styles from './web/assets/css/styles.css';
+
+let toolbarContainer: HTMLElement | null = null;
 
 export interface Options {
   /**
@@ -146,6 +147,7 @@ interface Monitor {
 }
 
 interface StoreType {
+  wasDetailsOpen: Signal<boolean>;
   isInIframe: Signal<boolean>;
   inspectState: Signal<States>;
   monitor: Signal<Monitor | null>;
@@ -166,6 +168,7 @@ export interface Internals {
 }
 
 export const Store: StoreType = {
+  wasDetailsOpen: signal(true),
   isInIframe: signal(
     typeof window !== 'undefined' && window.self !== window.top,
   ),
@@ -217,10 +220,19 @@ export const setOptions = (options: Options) => {
     instrumentation.isPaused.value = options.enabled === false;
   }
 
+  const previousOptions = ReactScanInternals.options.value;
+
   ReactScanInternals.options.value = {
     ...ReactScanInternals.options.value,
     ...options,
   };
+
+  if (previousOptions.showToolbar && !options.showToolbar) {
+    if (toolbarContainer) {
+      toolbarContainer.remove();
+      toolbarContainer = null;
+    }
+  }
 };
 
 export const getOptions = () => ReactScanInternals.options;
@@ -240,8 +252,10 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
     type: null,
   };
 
-  currentFiberData.count = Number(currentFiberData.count || 0) + Number(renders.length);
-  currentFiberData.time = Number(currentFiberData.time || 0) + Number(selfTime || 0);
+  currentFiberData.count =
+    Number(currentFiberData.count || 0) + Number(renders.length);
+  currentFiberData.time =
+    Number(currentFiberData.time || 0) + Number(selfTime || 0);
   currentFiberData.renders = renders;
 
   Store.reportData.set(reportFiber, currentFiberData);
@@ -255,8 +269,10 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
       type: getType(fiber.type) || fiber.type,
     };
 
-    existingLegacyData.count = Number(existingLegacyData.count || 0) + Number(renders.length);
-    existingLegacyData.time = Number(existingLegacyData.time || 0) + Number(selfTime || 0);
+    existingLegacyData.count =
+      Number(existingLegacyData.count || 0) + Number(renders.length);
+    existingLegacyData.time =
+      Number(existingLegacyData.time || 0) + Number(selfTime || 0);
     existingLegacyData.renders = renders;
 
     Store.legacyReportData.set(displayName, existingLegacyData);
@@ -308,7 +324,10 @@ export const start = () => {
   cssStyles.textContent = styles;
 
   // Create SVG sprite sheet node directly
-  const iconSprite = new DOMParser().parseFromString(ICONS, 'image/svg+xml').documentElement;
+  const iconSprite = new DOMParser().parseFromString(
+    ICONS,
+    'image/svg+xml',
+  ).documentElement;
   shadow.appendChild(iconSprite);
 
   // add toolbar root
@@ -334,8 +353,8 @@ export const start = () => {
   const audioContext =
     typeof window !== 'undefined'
       ? new (window.AudioContext ||
-        // @ts-expect-error -- This is a fallback for Safari
-        window.webkitAudioContext)()
+          // @ts-expect-error -- This is a fallback for Safari
+          window.webkitAudioContext)()
       : null;
 
   if (!Store.monitor.value) {
@@ -408,7 +427,7 @@ export const start = () => {
   ReactScanInternals.instrumentation = instrumentation;
 
   if (options.showToolbar) {
-    createToolbar(shadow);
+    toolbarContainer = createToolbar(shadow);
   }
 
   // Add this right after creating the container

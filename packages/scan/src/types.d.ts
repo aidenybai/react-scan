@@ -23,3 +23,8 @@ declare module '*.css' {
   const content: string;
   export default content;
 }
+
+interface StoreType {
+  // ... existing properties ...
+  wasDetailsOpen?: boolean;
+}

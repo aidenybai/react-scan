@@ -41,7 +41,6 @@ button {
   }
 }
 
-
 /* Default scrollbar styles for all elements in shadow DOM */
 :host *::-webkit-scrollbar {
   width: 6px;
@@ -114,10 +113,12 @@ button {
   inset: 0;
   transform: translateX(-100%);
   animation: shimmer 2s infinite;
-  background: linear-gradient(to right,
-      transparent,
-      rgba(142, 97, 227, 0.3),
-      transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(142, 97, 227, 0.3),
+    transparent
+  );
 }
 
 @keyframes shimmer {
@@ -126,12 +127,12 @@ button {
   }
 }
 
-
 #react-scan-toolbar {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  z-index: 999999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  z-index: 2147483651;
   text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   backface-visibility: hidden;
 
@@ -197,7 +198,6 @@ button {
   @apply truncate;
 }
 
-
 .react-scan-section {
   @apply flex flex-col py-1;
   @apply py-2 px-4;
@@ -226,15 +226,15 @@ button {
 }
 
 .react-scan-string {
-  color: #9ECBFF;
+  color: #9ecbff;
 }
 
 .react-scan-number {
-  color: #79C7FF;
+  color: #79c7ff;
 }
 
 .react-scan-boolean {
-  color: #56B6C2;
+  color: #56b6c2;
 }
 
 .react-scan-input {
@@ -272,10 +272,9 @@ button {
     @apply origin-center;
     @apply transition-transform duration-150;
   }
-
 }
 
-.react-scan-expanded>.react-scan-arrow:before {
+.react-scan-expanded > .react-scan-arrow:before {
   transform: rotate(90deg);
 }
 
@@ -337,7 +336,7 @@ button {
 }
 
 #react-scan-toolbar button:focus-visible {
-  outline: 2px solid #0070F3;
+  outline: 2px solid #0070f3;
   outline-offset: -2px;
 }
 
@@ -362,7 +361,6 @@ button {
 #react-scan-toolbar::-webkit-scrollbar {
   width: 4px;
   height: 4px;
-
 }
 
 #react-scan-toolbar::-webkit-scrollbar-track {

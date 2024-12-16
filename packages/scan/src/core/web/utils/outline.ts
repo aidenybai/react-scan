@@ -5,8 +5,6 @@ import { getLabelText } from '../../utils';
 import { isElementInViewport, type Render } from '../../instrumentation';
 import { ReactScanInternals } from '../../index';
 
-
-
 export interface PendingOutline {
   rect: DOMRect;
   domNode: HTMLElement;
@@ -27,13 +25,16 @@ export interface OutlineLabel {
   outline: PendingOutline;
   color: { r: number; g: number; b: number };
   reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  labelText: string;
+  textWidth: number;
 }
 
 const DEFAULT_THROTTLE_TIME = 32; // 2 frames
 
 const START_COLOR = { r: 115, g: 97, b: 230 };
 const END_COLOR = { r: 185, g: 49, b: 115 };
-const MONO_FONT = 'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
+const MONO_FONT =
+  'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
 export const getOutlineKey = (outline: PendingOutline): string => {
   return `${outline.rect.top}-${outline.rect.left}-${outline.rect.width}-${outline.rect.height}`;
@@ -353,16 +354,15 @@ export const fadeOutOutline = (
     ctx.stroke();
     ctx.fill();
 
-    if (
-      reasons.length &&
-      getLabelText(outline.renders) &&
-      !(phases.has('mount') && phases.size === 1)
-    ) {
+    const labelText = getLabelText(outline.renders) ?? '';
+    if (reasons.length && labelText && !(phases.has('mount') && phases.size === 1)) {
       pendingLabeledOutlines.push({
         alpha,
         outline,
         color,
         reasons,
+        labelText,
+        textWidth: measureTextCached(labelText, ctx).width,
       });
     }
   }
@@ -443,56 +443,49 @@ async function paintOutlines(
 // FIXME: slow
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ): Array<OutlineLabel> => {
+  // Precompute labelRects
+  const labelRects = labels.map(label => ({
+    label,
+    rect: getLabelRect(label),
+  }));
+
+  // Sort labels by x-coordinate
+  labelRects.sort((a, b) => a.rect.x - b.rect.x);
+
   const mergedLabels: Array<OutlineLabel> = [];
-  const labelRects = new Map<OutlineLabel, DOMRect>();
 
-  for (let i = 0, len = labels.length; i < len; i++) {
-    const label = labels[i];
-    const labelRect = getLabelRect(label, ctx);
-    labelRects.set(label, labelRect);
-  }
-
-  for (let i = 0, len = labels.length; i < len; i++) {
-    const label = labels[i];
-    const labelRect = labelRects.get(label)!;
-
+  for (let i = 0; i < labelRects.length; i++) {
+    const { label, rect } = labelRects[i];
     let isMerged = false;
 
-    for (let j = 0, len2 = mergedLabels.length; j < len2; j++) {
-      const mergedLabel = mergedLabels[j];
-      const mergedLabelRect = getLabelRect(mergedLabel, ctx);
+    // Only compare with labels that might overlap
+    for (
+      let j = i + 1;
+      j < labelRects.length && labelRects[j].rect.x <= rect.x + rect.width;
+      j++
+    ) {
+      const nextLabel = labelRects[j].label;
+      const nextRect = labelRects[j].rect;
 
-      const overlapArea = getOverlapArea(labelRect, mergedLabelRect);
+      const overlapArea = getOverlapArea(rect, nextRect);
 
       if (overlapArea > 0) {
-        const labelArea = labelRect.width * labelRect.height;
-        const mergedLabelArea = mergedLabelRect.width * mergedLabelRect.height;
+        // Merge labels
+        const combinedOutline: PendingOutline = {
+          rect: getOutermostOutline(nextLabel.outline, label.outline).rect,
+          domNode: getOutermostOutline(nextLabel.outline, label.outline).domNode,
+          renders: [...label.outline.renders, ...nextLabel.outline.renders],
+        };
 
-        const overlapPercentageLabel = overlapArea / labelArea;
-        const overlapPercentageMergedLabel = overlapArea / mergedLabelArea;
+        nextLabel.alpha = Math.max(nextLabel.alpha, label.alpha);
+        nextLabel.outline = combinedOutline;
+        nextLabel.reasons = Array.from(
+          new Set(nextLabel.reasons.concat(label.reasons)),
+        );
 
-        if (
-          overlapPercentageLabel > 0.25 ||
-          overlapPercentageMergedLabel > 0.25
-        ) {
-          const combinedOutline: PendingOutline = {
-            rect: getOutermostOutline(mergedLabel.outline, label.outline).rect,
-            domNode: getOutermostOutline(mergedLabel.outline, label.outline)
-              .domNode,
-            renders: [...mergedLabel.outline.renders, ...label.outline.renders],
-          };
-
-          mergedLabel.alpha = Math.max(mergedLabel.alpha, label.alpha);
-          mergedLabel.outline = combinedOutline;
-          mergedLabel.reasons = Array.from(
-            new Set(mergedLabel.reasons.concat(label.reasons)),
-          );
-
-          isMerged = true;
-          break;
-        }
+        isMerged = true;
+        break;
       }
     }
 
@@ -506,19 +499,14 @@ export const mergeOverlappingLabels = (
 
 export const getLabelRect = (
   label: OutlineLabel,
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ): DOMRect => {
   const { rect } = label.outline;
-  const text = getLabelText(label.outline.renders) ?? '';
-
-  const textMetrics = measureTextCached(text, ctx);
-  const textWidth = textMetrics.width;
   const textHeight = 11;
 
   const labelX = rect.x;
   const labelY = rect.y - textHeight - 4;
 
-  return new DOMRect(labelX, labelY, textWidth + 4, textHeight + 4);
+  return new DOMRect(labelX, labelY, label.textWidth + 4, textHeight + 4);
 };
 
 const textMeasurementCache = new Map<string, TextMetrics>();

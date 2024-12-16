@@ -11,10 +11,13 @@ import {
 const EXPANDED_PATHS = new Set<string>();
 const fadeOutTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-export const renderPropsAndState = (
-  didRender: boolean,
-  fiber: any,
-) => {
+export const cumulativeChanges = {
+  props: new Map<string, number>(),
+  state: new Map<string, number>(),
+  context: new Map<string, number>(),
+};
+
+export const renderPropsAndState = (didRender: boolean, fiber: any) => {
   const propContainer = Store.inspectState.value.propContainer;
 
   if (!propContainer) {
@@ -33,7 +36,119 @@ export const renderPropsAndState = (
 
   const changedProps = new Set(getChangedProps(fiber));
   const changedState = new Set(getChangedState(fiber));
+  const changedContext = new Set<string>();
+
+  changedProps.forEach((key) => {
+    cumulativeChanges.props.set(
+      key,
+      (cumulativeChanges.props.get(key) ?? 0) + 1,
+    );
+  });
+
+  changedState.forEach((key) => {
+    cumulativeChanges.state.set(
+      key,
+      (cumulativeChanges.state.get(key) ?? 0) + 1,
+    );
+  });
+
+  changedContext.forEach((key) => {
+    cumulativeChanges.context.set(
+      key,
+      (cumulativeChanges.context.get(key) ?? 0) + 1,
+    );
+  });
+
   propContainer.innerHTML = '';
+
+  const changedItems: Array<string> = [];
+
+  if (cumulativeChanges.props.size > 0) {
+    cumulativeChanges.props.forEach((count, key) => {
+      changedItems.push(`Prop: ${key} ×${count}`);
+    });
+  }
+
+  if (cumulativeChanges.state.size > 0) {
+    cumulativeChanges.state.forEach((count, key) => {
+      changedItems.push(`State: ${key} ×${count}`);
+    });
+  }
+
+  if (cumulativeChanges.context.size > 0) {
+    cumulativeChanges.context.forEach((count, key) => {
+      changedItems.push(`Context: ${key} ×${count}`);
+    });
+  }
+
+  const whatChangedSection = document.createElement('details');
+  whatChangedSection.className = 'react-scan-what-changed';
+  whatChangedSection.style.backgroundColor = '#b8860b';
+  whatChangedSection.style.color = '#ffff00';
+  whatChangedSection.style.padding = '5px';
+  whatChangedSection.open = Store.wasDetailsOpen.value;
+
+  const summary = document.createElement('summary');
+  summary.textContent = 'What changes?';
+  summary.className = 'font-bold';
+  whatChangedSection.appendChild(summary);
+
+  if (cumulativeChanges.props.size > 0) {
+    const propsHeader = document.createElement('div');
+    propsHeader.textContent = 'Props:';
+    const propsList = document.createElement('ul');
+    propsList.style.listStyleType = 'disc';
+    propsList.style.paddingLeft = '20px';
+
+    cumulativeChanges.props.forEach((count, key) => {
+      const li = document.createElement('li');
+      li.textContent = `${key} ×${count}`;
+      propsList.appendChild(li);
+    });
+
+    whatChangedSection.appendChild(propsHeader);
+    whatChangedSection.appendChild(propsList);
+  }
+
+  if (cumulativeChanges.state.size > 0) {
+    const stateHeader = document.createElement('div');
+    stateHeader.textContent = 'State:';
+    const stateList = document.createElement('ul');
+    stateList.style.listStyleType = 'disc';
+    stateList.style.paddingLeft = '20px';
+
+    cumulativeChanges.state.forEach((count, key) => {
+      const li = document.createElement('li');
+      li.textContent = `${key} ×${count}`;
+      stateList.appendChild(li);
+    });
+
+    whatChangedSection.appendChild(stateHeader);
+    whatChangedSection.appendChild(stateList);
+  }
+
+  if (cumulativeChanges.context.size > 0) {
+    const contextHeader = document.createElement('div');
+    contextHeader.textContent = 'Context:';
+    const contextList = document.createElement('ul');
+    contextList.style.listStyleType = 'disc';
+    contextList.style.paddingLeft = '20px';
+
+    cumulativeChanges.context.forEach((count, key) => {
+      const li = document.createElement('li');
+      li.textContent = `${key} ×${count}`;
+      contextList.appendChild(li);
+    });
+
+    whatChangedSection.appendChild(contextHeader);
+    whatChangedSection.appendChild(contextList);
+  }
+
+  whatChangedSection.addEventListener('toggle', () => {
+    Store.wasDetailsOpen.value = whatChangedSection.open;
+  });
+
+  propContainer.appendChild(whatChangedSection);
 
   const inspector = document.createElement('div');
   inspector.className = 'react-scan-inspector';
@@ -142,20 +257,12 @@ export const renderPropsAndState = (
     }, null);
   }
 
-  sections.sort((a, b) => {
-    if (a.hasChanges && !b.hasChanges) return -1;
-    if (!a.hasChanges && b.hasChanges) return 1;
-    return 0;
-  });
-
   sections.forEach((section) => content.appendChild(section.element));
 
   inspector.appendChild(content);
 
   propContainer.appendChild(inspector);
 };
-
-const lastChangedAt = new Map<string, number>();
 
 const renderSection = (
   componentName: string,
@@ -166,33 +273,11 @@ const renderSection = (
   data: any,
   changedKeys: Set<string> = new Set(),
 ) => {
-
   const section = document.createElement('div');
   section.className = 'react-scan-section';
   section.dataset.section = title;
 
-  const entries = Object.entries(data).sort(([keyA], [keyB]) => {
-    const pathA = getPath(componentName, title.toLowerCase(), '', keyA);
-    const pathB = getPath(componentName, title.toLowerCase(), '', keyB);
-
-    if (
-      changedKeys.has(keyA) ||
-      (changedAt.has(pathA) && Date.now() - changedAt.get(pathA)! < 450)
-    ) {
-      lastChangedAt.set(pathA, Date.now());
-    }
-    if (
-      changedKeys.has(keyB) ||
-      (changedAt.has(pathB) && Date.now() - changedAt.get(pathB)! < 450)
-    ) {
-      lastChangedAt.set(pathB, Date.now());
-    }
-
-    const aLastChanged = lastChangedAt.get(pathA) ?? 0;
-    const bLastChanged = lastChangedAt.get(pathB) ?? 0;
-
-    return bLastChanged - aLastChanged;
-  });
+  const entries = Object.entries(data);
 
   entries.forEach(([key, value]) => {
     const el = createPropertyElement(
@@ -241,9 +326,10 @@ const tryOrElse = <T, E>(cb: () => T, val: E) => {
 };
 
 const isPromise = (value: any): value is Promise<unknown> => {
-  return value &&
-    (value instanceof Promise ||
-      (typeof value === 'object' && 'then' in value));
+  return (
+    value &&
+    (value instanceof Promise || (typeof value === 'object' && 'then' in value))
+  );
 };
 
 export const createPropertyElement = (
@@ -273,10 +359,11 @@ export const createPropertyElement = (
     container.className = 'react-scan-property';
 
     const isExpandable =
-      !isPromise(value) && (
-        (Array.isArray(value) && value.length > 0) ||
-        (typeof value === 'object' && value !== null && Object.keys(value).length > 0)
-      );
+      !isPromise(value) &&
+      ((Array.isArray(value) && value.length > 0) ||
+        (typeof value === 'object' &&
+          value !== null &&
+          Object.keys(value).length > 0));
 
     const currentPath = getPath(componentName, section, parentPath, key);
     const prevValue = lastRendered.get(currentPath);
@@ -321,7 +408,6 @@ export const createPropertyElement = (
       preview.className = 'react-scan-preview-line';
       preview.dataset.key = key;
       preview.dataset.section = section;
-
 
       preview.innerHTML = `
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
@@ -482,7 +568,8 @@ export const createPropertyElement = (
             const updateValue = () => {
               const newValue = input.value;
               value = typeof value === 'number' ? Number(newValue) : newValue;
-              (valueElement as HTMLElement).dataset.text = getValuePreview(value);
+              (valueElement as HTMLElement).dataset.text =
+                getValuePreview(value);
 
               tryOrElse(() => {
                 input.replaceWith(valueElement);
