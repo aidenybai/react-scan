@@ -152,14 +152,8 @@ export const getPropsChanges = (fiber: Fiber) => {
   const prevProps = fiber.alternate?.memoizedProps || {};
   const nextProps = fiber.memoizedProps || {};
 
-  // Get union props
-  // TODO needs faster solution
-  const props = new Set([
-    ...Object.keys(prevProps),
-    ...Object.keys(nextProps),
-  ]);
-
-  for (const propName in props) {
+  // eslint-disable-next-line prefer-object-spread
+  for (const propName in Object.assign({}, prevProps, nextProps)) {
     const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
