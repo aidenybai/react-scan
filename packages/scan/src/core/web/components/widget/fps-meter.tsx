@@ -1,39 +1,52 @@
-import { useState, useEffect } from 'preact/hooks';
-import { cn } from '@web-utils/helpers';
+import { useEffect, useRef } from 'preact/hooks';
+import { cn, toggleMultipleClasses } from '@web-utils/helpers';
 import { getFPS } from '../../../instrumentation';
 
 export const FpsMeter = () => {
-  const [fps, setFps] = useState(getFPS());
+  const refContainer = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setFps(getFPS());
-    }, 100);
+    let rafId: number;
+    let lastUpdate = performance.now();
+    const UPDATE_INTERVAL = 100;
 
-    return () => clearInterval(interval);
+    const updateFPS = () => {
+      const now = performance.now();
+      if (now - lastUpdate >= UPDATE_INTERVAL) {
+        if (!refContainer.current) return;
+        const fps = getFPS();
+        refContainer.current.dataset.text = fps.toString();
+        if (fps < 10) {
+          toggleMultipleClasses(refContainer.current, 'text-white', 'bg-red-500', 'text-black', 'bg-yellow-300');
+        } else if (fps < 30) {
+          toggleMultipleClasses(refContainer.current, 'text-white', 'bg-red-500', 'text-black', 'bg-yellow-300');
+        }
+
+        lastUpdate = now;
+      }
+      rafId = requestAnimationFrame(updateFPS);
+    };
+
+    rafId = requestAnimationFrame(updateFPS);
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
-  let textColor = 'text-white';
-  let bgColor = 'bg-neutral-700';
-
-  if (fps < 10) {
-    textColor = 'text-white';
-    bgColor = 'bg-red-500';
-  } else if (fps < 30) {
-    textColor = 'text-black';
-    bgColor = 'bg-yellow-300';
-  }
 
   return (
     <span
+      ref={refContainer}
+      data-text="120"
       className={cn(
-        'flex gap-1 items-center ml-2 px-2 py-1 rounded-full text-xs font-mono',
-        bgColor,
-        textColor,
-        'whitespace-nowrap',
+        'with-data-text',
+        'flex gap-1 items-center',
+        'ml-2 px-2',
+        'h-full',
+        'text-white text-xs font-mono whitespace-nowrap',
+        'bg-neutral-700',
+        'rounded-full',
       )}
     >
-      {fps} <span className="text-[0.5rem]">FPS</span>
+      <span className="text-xxs">FPS</span>
     </span>
   );
 };

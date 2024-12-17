@@ -8,7 +8,6 @@ export const signalRefContainer = signal<HTMLDivElement | null>(null);
 const getInitialWidgetConfig = (): WidgetConfig => {
   if (typeof window === 'undefined') {
     return {
-      isResizing: false,
       corner: 'top-left' as Corner,
       dimensions: {
         isFullWidth: false,
@@ -30,7 +29,6 @@ const getInitialWidgetConfig = (): WidgetConfig => {
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
   if (!stored) {
     const defaultConfig: WidgetConfig = {
-      isResizing: false,
       corner: 'top-left' as Corner,
       dimensions: {
         isFullWidth: false,
@@ -58,7 +56,6 @@ const getInitialWidgetConfig = (): WidgetConfig => {
   }
 
   return {
-    isResizing: false,
     corner: stored.corner,
     dimensions: stored.dimensions,
     lastDimensions: stored.lastDimensions

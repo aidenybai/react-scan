@@ -30,8 +30,7 @@ export type States =
       propContainer?: HTMLDivElement;
     };
 
-export const INSPECT_TOGGLE_ID = 'react-scan-inspect-element-toggle';
-export const INSPECT_OVERLAY_CANVAS_ID = 'react-scan-inspect-canvas';
+const INSPECT_OVERLAY_CANVAS_ID = 'react-scan-inspect-canvas';
 let lastHoveredElement: HTMLElement;
 let animationId: ReturnType<typeof requestAnimationFrame>;
 
@@ -302,7 +301,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
                 'inspecting',
               );
 
-              inspectState.propContainer.innerHTML = '';
+              // inspectState.propContainer.innerHTML = '';
               Store.inspectState.value = {
                 kind: 'inspecting',
                 hoveredDomElement:

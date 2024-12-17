@@ -51,24 +51,8 @@ export const Header = () => {
 
     const unsubscribe = Store.lastReportTime.subscribe(updateMetrics);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && inspectState.kind === 'focused') {
-        if (Store.inspectState.value.propContainer) {
-          Store.inspectState.value.propContainer.innerHTML = '';
-          Store.inspectState.value = {
-            kind: 'inspecting',
-            hoveredDomElement: inspectState.focusedDomElement,
-            propContainer: Store.inspectState.value.propContainer,
-          };
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-
     return () => {
       unsubscribe();
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
   }, [inspectState]);
 
@@ -115,9 +99,6 @@ export const Header = () => {
         "min-h-9",
         'whitespace-nowrap',
         "overflow-hidden",
-        {
-          'hidden': inspectState.kind !== 'focused'
-        }
       )}
     >
       <div className="react-scan-header-left overflow-hidden">

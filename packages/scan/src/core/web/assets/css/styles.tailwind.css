@@ -147,13 +147,11 @@ button {
 }
 
 .react-scan-header {
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-  background: #000;
+  @apply flex items-center justify-between gap-x-4;
+  @apply rounded-t-lg;
+  @apply overflow-hidden;
+  @apply py-2 px-4;
+  @apply border-b-1 border-white/10;
 }
 
 .react-scan-header-left {

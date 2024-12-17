@@ -23,7 +23,6 @@ export interface WidgetDimensions {
 }
 
 export interface WidgetConfig {
-  isResizing: boolean;
   corner: Corner;
   dimensions: WidgetDimensions;
   lastDimensions: WidgetDimensions;
