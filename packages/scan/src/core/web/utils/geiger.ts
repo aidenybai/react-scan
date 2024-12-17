@@ -39,10 +39,10 @@ const storedVolume = Math.max(0, Math.min(1, readLocalStorage<number>('react-sca
 const config = {
   firefox: {
     duration: 0.02,
-    oscillatorType: 'square' as const,
-    startFreq: 880,
-    endFreq: 220,
-    attack: 0.002,
+    oscillatorType: 'sine' as const,
+    startFreq: 220,
+    endFreq: 110,
+    attack: 0.0005,
     volumeMultiplier: storedVolume,
   },
   default: {
