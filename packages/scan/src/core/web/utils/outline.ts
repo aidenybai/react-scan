@@ -47,7 +47,9 @@ function incrementFrameId() {
   requestAnimationFrame(incrementFrameId);
 }
 
-incrementFrameId();
+if (typeof window !== "undefined") {
+  incrementFrameId();
+}
 
 interface CachedRect {
   rect: DOMRect;
