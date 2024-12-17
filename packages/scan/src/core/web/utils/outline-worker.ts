@@ -19,7 +19,7 @@ export interface SerializedOutlineLabel {
   labelText: string;
 }
 
-export type CanvasWorkerAction =
+export type OutlineWorkerAction =
   | { type: 'set-canvas'; payload: OffscreenCanvas }
   | {
       type: 'fade-out-outline';
@@ -38,12 +38,12 @@ export type CanvasWorkerAction =
       };
     };
 
-function setupCanvasWorker(): (action: CanvasWorkerAction) => Promise<void> {
+function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
   const MONO_FONT =
     'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
   let ctx: OffscreenCanvasRenderingContext2D | undefined;
 
-  return async (action: CanvasWorkerAction): Promise<void> => {
+  return async (action: OutlineWorkerAction): Promise<void> => {
     switch (action.type) {
       case 'set-canvas':
         {
@@ -118,4 +118,4 @@ function setupCanvasWorker(): (action: CanvasWorkerAction) => Promise<void> {
   };
 }
 
-export const outlineWorker = new SmolWorker(setupCanvasWorker);
+export const outlineWorker = new SmolWorker(setupOutlineWorker);
