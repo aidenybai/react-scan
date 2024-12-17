@@ -149,10 +149,11 @@ export const fastSerialize = (value: unknown, depth = 0) => {
 export const getPropsChanges = (fiber: Fiber) => {
   const changes: Array<Change> = [];
 
-  const prevProps = fiber.alternate?.memoizedProps;
-  const nextProps = fiber.memoizedProps;
+  const prevProps = fiber.alternate?.memoizedProps || {};
+  const nextProps = fiber.memoizedProps || {};
 
-  for (const propName in { ...prevProps, ...nextProps }) {
+  // eslint-disable-next-line prefer-object-spread
+  for (const propName in Object.assign({}, prevProps, nextProps)) {
     const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
@@ -197,6 +198,7 @@ export const getStateChanges = (fiber: Fiber) => {
 
   return changes;
 };
+
 
 export const getContextChanges = (fiber: Fiber) => {
   const changes: Array<Change> = [];

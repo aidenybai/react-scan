@@ -8,7 +8,6 @@
     "pack": "pnpm --parallel pack",
     "pack:bump": "pnpm --filter scan pack:bump",
     "lint": "pnpm --parallel lint",
-    "prettier": "prettier --write packages/*",
     "eslint:fix": "eslint --fix packages/*"
   },
   "devDependencies": {
@@ -22,7 +21,7 @@
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-jsonc": "^2.18.2",
     "eslint-plugin-tailwindcss": "^3.17.5",
-    "prettier": "^3.3.3",
+		"@biomejs/biome": "^1.9.4",
     "typescript": "5.4.5"
   },
   "packageManager": "pnpm@9.1.0",
