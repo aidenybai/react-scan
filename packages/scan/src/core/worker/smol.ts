@@ -5,8 +5,6 @@ export type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
 function setupWorker<T, R>(setup: () => (arg: T) => R) {
   const callback = setup();
 
-  console.log('WORKER SETUP');
-
   function success(id: number, data: unknown) {
     self.postMessage([id, true, data]);
   }
