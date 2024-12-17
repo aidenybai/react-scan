@@ -228,7 +228,7 @@ export const setOptions = (options: Options) => {
     ...options,
   };
 
-  if (previousOptions.showToolbar && !options.showToolbar) {
+  if (previousOptions.showToolbar && options.showToolbar === false) {
     if (toolbarContainer) {
       toolbarContainer.remove();
       toolbarContainer = null;
