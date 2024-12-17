@@ -1,27 +1,214 @@
 import { type JSX } from 'preact';
-import { useRef, useCallback, useEffect, useMemo } from 'preact/hooks';
-import { cn, debounce, saveLocalStorage } from '@web-utils/helpers';
+import { useRef, useCallback, useEffect } from 'preact/hooks';
+import { cn, debounce, saveLocalStorage, toggleMultipleClasses } from '@web-utils/helpers';
 import { getCompositeComponentFromElement } from '@web-inspect-element/utils';
 import { Store } from 'src/core';
 import { signalWidget, signalRefContainer, updateDimensions } from '../../state';
-import { SAFE_AREA, LOCALSTORAGE_KEY } from '../../constants';
+import { SAFE_AREA, LOCALSTORAGE_KEY, MIN_SIZE } from '../../constants';
 import { Header } from './header';
-import { type Corner } from './types'
 import Toolbar from './toolbar';
 import { ResizeHandle } from './resize-handle';
-import { calculatePosition } from './helpers';
+import { calculatePosition, calculateBoundedSize, getBestCorner } from './helpers';
 
 export const Widget = () => {
-  const inspectState = Store.inspectState.value;
 
-  const isInspectFocused = inspectState.kind === 'focused';
+  const refShouldExpand = useRef<boolean>(false);
 
   const refContainer = useRef<HTMLDivElement | null>(null);
+  const refContent = useRef<HTMLDivElement>(null);
   const refPropContainer = useRef<HTMLDivElement>(null);
   const refFooter = useRef<HTMLDivElement>(null);
 
   const refInitialMinimizedWidth = useRef<number>(0);
   const refInitialMinimizedHeight = useRef<number>(0);
+
+  const updateWidgetPosition = useCallback((shouldSave = true) => {
+    if (!refContainer.current) return;
+
+    const inspectState = Store.inspectState.value;
+    const isInspectFocused = inspectState.kind === 'focused';
+
+    const { corner } = signalWidget.value;
+    let newWidth, newHeight;
+
+    if (isInspectFocused) {
+      const lastDims = signalWidget.value.lastDimensions;
+      newWidth = calculateBoundedSize(lastDims.width, 0, true);
+      newHeight = calculateBoundedSize(lastDims.height, 0, false);
+    } else {
+      if (signalWidget.value.dimensions.width !== refInitialMinimizedWidth.current) {
+        signalWidget.value = {
+          ...signalWidget.value,
+          lastDimensions: {
+            ...signalWidget.value.dimensions
+          }
+        };
+      }
+      newWidth = refInitialMinimizedWidth.current;
+      newHeight = refInitialMinimizedHeight.current;
+    }
+
+    const newPosition = calculatePosition(corner, newWidth, newHeight);
+
+    if (newWidth < MIN_SIZE.width || newHeight < MIN_SIZE.height * 5) {
+      shouldSave = false;
+    }
+
+    const container = refContainer.current;
+    const containerStyle = container.style;
+
+    const onTransitionEnd = () => {
+      containerStyle.transition = 'none';
+
+      updateDimensions();
+      container.removeEventListener('transitionend', onTransitionEnd);
+    };
+
+    container.addEventListener('transitionend', onTransitionEnd);
+
+    containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    requestAnimationFrame(() => {
+      containerStyle.width = `${newWidth}px`;
+      containerStyle.height = `${newHeight}px`;
+      containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
+    });
+
+    signalWidget.value = {
+      corner,
+      dimensions: {
+        isFullWidth: newWidth >= window.innerWidth - (SAFE_AREA * 2),
+        isFullHeight: newHeight >= window.innerHeight - (SAFE_AREA * 2),
+        width: newWidth,
+        height: newHeight,
+        position: newPosition
+      },
+      lastDimensions: signalWidget.value.lastDimensions
+    };
+
+    if (shouldSave) {
+      saveLocalStorage(LOCALSTORAGE_KEY, {
+        corner: signalWidget.value.corner,
+        dimensions: signalWidget.value.dimensions,
+        lastDimensions: signalWidget.value.lastDimensions
+      });
+    }
+
+    updateDimensions();
+  }, []);
+
+
+  const handleMouseDown = useCallback((e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    if (!refContainer.current || (e.target as HTMLElement).closest('button')) return;
+
+    const container = refContainer.current;
+    const containerStyle = container.style;
+    const { dimensions } = signalWidget.value;
+
+    const initialMouseX = e.clientX;
+    const initialMouseY = e.clientY;
+
+    const initialX = dimensions.position.x;
+    const initialY = dimensions.position.y;
+
+    let currentX = initialX;
+    let currentY = initialY;
+    let rafId: number | null = null;
+    let hasMoved = false;
+    let lastMouseX = initialMouseX;
+    let lastMouseY = initialMouseY;
+
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
+      if (rafId) return;
+
+      hasMoved = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+
+      rafId = requestAnimationFrame(() => {
+        const deltaX = lastMouseX - initialMouseX;
+        const deltaY = lastMouseY - initialMouseY;
+
+        currentX = Number(initialX) + deltaX;
+        currentY = Number(initialY) + deltaY;
+
+        containerStyle.transition = 'none';
+        containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        rafId = null;
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (!container) return;
+      if (rafId) cancelAnimationFrame(rafId);
+
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+
+      if (!hasMoved) return;
+
+      const newCorner = getBestCorner(
+        lastMouseX,
+        lastMouseY,
+        initialMouseX,
+        initialMouseY,
+        Store.inspectState.value.kind === 'focused' ? 80 : 40
+      );
+
+      if (newCorner === signalWidget.value.corner) {
+        containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        const currentPosition = signalWidget.value.dimensions.position;
+        requestAnimationFrame(() => {
+          containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
+        });
+        return;
+      }
+
+      const snappedPosition = calculatePosition(newCorner, dimensions.width, dimensions.height);
+
+      if (currentX === initialX && currentY === initialY) return;
+
+      const onTransitionEnd = () => {
+        containerStyle.transition = '';
+        updateDimensions();
+        container.removeEventListener('transitionend', onTransitionEnd);
+      };
+
+      container.addEventListener('transitionend', onTransitionEnd);
+
+      containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      requestAnimationFrame(() => {
+        containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;
+      });
+
+      signalWidget.value = {
+        corner: newCorner,
+        dimensions: {
+          isFullWidth: dimensions.isFullWidth,
+          isFullHeight: dimensions.isFullHeight,
+          width: dimensions.width,
+          height: dimensions.height,
+          position: snappedPosition
+        },
+        lastDimensions: signalWidget.value.lastDimensions
+      };
+
+      const shouldSave = !(dimensions.width < MIN_SIZE.width || dimensions.height < MIN_SIZE.height * 5);
+      if (shouldSave) {
+        saveLocalStorage(LOCALSTORAGE_KEY, {
+          corner: signalWidget.value.corner,
+          dimensions: signalWidget.value.dimensions,
+          lastDimensions: signalWidget.value.lastDimensions
+        });
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   useEffect(() => {
     if (!refContainer.current || !refFooter.current) return;
@@ -40,181 +227,63 @@ export const Widget = () => {
     };
 
     signalRefContainer.value = refContainer.current;
-  }, []);
 
-  const shouldExpand = useMemo(() => {
-    if (isInspectFocused && inspectState.focusedDomElement) {
-      const { parentCompositeFiber } = getCompositeComponentFromElement(inspectState.focusedDomElement);
-      if (!parentCompositeFiber) {
-        setTimeout(() => {
-          Store.inspectState.value = {
-            kind: 'inspect-off',
-            propContainer: refPropContainer.current!,
-          };
-        }, 16);
-
-        return false;
-      }
-    }
-
-    return true;
-  }, [isInspectFocused]);
-
-  const handleMouseDown = useCallback((e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    if (!refContainer.current) return;
-
-    e.preventDefault();
-
-    const container = refContainer.current;
-    const { dimensions } = signalWidget.value;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const initialX = dimensions.position.x;
-    const initialY = dimensions.position.y;
-
-    let currentX = initialX;
-    let currentY = initialY;
-    let rafId: number | null = null;
-
-    const handleMouseMove = (e: globalThis.MouseEvent) => {
-      if (rafId) return;
-
-      container.style.transition = 'none';
-
-      rafId = requestAnimationFrame(() => {
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-
-        currentX = initialX + deltaX;
-        currentY = initialY + deltaY;
-
-        container.style.transform = `translate(${currentX}px, ${currentY}px)`;
-        rafId = null;
-      });
-    };
-
-    const handleMouseUp = () => {
-      if (!container) return;
-      if (rafId) cancelAnimationFrame(rafId);
-
-      requestAnimationFrame(() => {
-        container.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-
-        const newCorner = `${currentY < window.innerHeight / 2 ? 'top' : 'bottom'}-${currentX < window.innerWidth / 2 ? 'left' : 'right'}` as Corner;
-        const snappedPosition = calculatePosition(newCorner, dimensions.width, dimensions.height);
-
-        if (currentX === initialX && currentY === initialY) return;
-
-        container.style.transform = `translate(${snappedPosition.x}px, ${snappedPosition.y}px)`;
-
-        signalWidget.value = {
-          isResizing: false,
-          corner: newCorner,
-          dimensions: {
-            isFullWidth: dimensions.isFullWidth,
-            isFullHeight: dimensions.isFullHeight,
-            width: dimensions.width,
-            height: dimensions.height,
-            position: snappedPosition
-          },
-          lastDimensions: signalWidget.value.lastDimensions
-        };
-
-        saveLocalStorage(LOCALSTORAGE_KEY, {
-          corner: signalWidget.value.corner,
-          dimensions: signalWidget.value.dimensions,
-          lastDimensions: signalWidget.value.lastDimensions
-        });
-
-        updateDimensions();
-      });
-
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseup', handleMouseUp);
-  }, []);
-
-  useEffect(() => {
-    if (!refContainer.current || !shouldExpand) {
-      return;
-    }
-
-    let resizeTimeout: number;
-    let isInitialUpdate = true;
-
-    const updateWidgetPosition = () => {
+    const unsubscribeSignalWidget = signalWidget.subscribe(widget => {
       if (!refContainer.current) return;
 
-      const { corner } = signalWidget.value;
-      let newWidth, newHeight;
+      const { x, y } = widget.dimensions.position;
+      const { width, height } = widget.dimensions;
+      const container = refContainer.current;
 
-      if (isInspectFocused) {
-        const lastDims = signalWidget.value.lastDimensions;
-        newWidth = lastDims.width;
-        newHeight = lastDims.height;
-      } else {
-        if (signalWidget.value.dimensions.width !== refInitialMinimizedWidth.current) {
-          signalWidget.value = {
-            ...signalWidget.value,
-            lastDimensions: {
-              ...signalWidget.value.dimensions
-            }
-          };
+      requestAnimationFrame(() => {
+        container.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        container.style.width = `${width}px`;
+        container.style.height = `${height}px`;
+      });
+    });
+
+    const unsubscribeStoreInspectState = Store.inspectState.subscribe(state => {
+      if (!refContent.current || !refPropContainer.current) return;
+
+      refShouldExpand.current = state.kind === 'focused';
+
+      if (state.kind === 'focused') {
+        const { parentCompositeFiber } = getCompositeComponentFromElement(state.focusedDomElement);
+        if (!parentCompositeFiber) {
+          setTimeout(() => {
+            Store.inspectState.value = {
+              kind: 'inspect-off',
+              propContainer: refPropContainer.current!,
+            };
+          }, 16);
         }
-        newWidth = refInitialMinimizedWidth.current;
-        newHeight = refInitialMinimizedHeight.current;
+      } else {
+        toggleMultipleClasses(refContent.current, 'opacity-0', 'duration-0', 'delay-0');
       }
+      updateWidgetPosition();
+    });
 
-      const newPosition = calculatePosition(corner, newWidth, newHeight);
-
-      refContainer.current.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-      refContainer.current.style.width = `${newWidth}px`;
-      refContainer.current.style.height = `${newHeight}px`;
-      refContainer.current.style.transform = `translate(${newPosition.x}px, ${newPosition.y}px)`;
-
-      signalWidget.value = {
-        isResizing: false,
-        corner,
-        dimensions: {
-          isFullWidth: newWidth >= window.innerWidth - (SAFE_AREA * 2),
-          isFullHeight: newHeight >= window.innerHeight - (SAFE_AREA * 2),
-          width: newWidth,
-          height: newHeight,
-          position: newPosition
-        },
-        lastDimensions: signalWidget.value.lastDimensions
-      };
-
-      if (!isInitialUpdate) {
-        saveLocalStorage(LOCALSTORAGE_KEY, {
-          corner: signalWidget.value.corner,
-          dimensions: signalWidget.value.dimensions,
-          lastDimensions: signalWidget.value.lastDimensions
-        });
-      }
-      isInitialUpdate = false;
-
-      updateDimensions();
-    };
+    let resizeTimeout: number;
 
     const handleWindowResize = debounce(() => {
-      if (resizeTimeout) window.cancelAnimationFrame(resizeTimeout);
-      resizeTimeout = window.requestAnimationFrame(updateWidgetPosition);
-    }, 16);
-
-    updateWidgetPosition();
+      if (resizeTimeout) cancelAnimationFrame(resizeTimeout);
+      resizeTimeout = requestAnimationFrame(() => {
+        const container = refContainer.current;
+        if (!container) return;
+        updateWidgetPosition();
+      });
+    }, 32);
 
     window.addEventListener('resize', handleWindowResize);
 
+    updateWidgetPosition(false);
+
     return () => {
       window.removeEventListener('resize', handleWindowResize);
-      if (resizeTimeout) window.cancelAnimationFrame(resizeTimeout);
+      unsubscribeStoreInspectState();
+      unsubscribeSignalWidget();
     };
-  }, [isInspectFocused, shouldExpand]);
+  }, []);
 
   return (
     <div
@@ -231,9 +300,11 @@ export const Widget = () => {
         'cursor-move',
         'z-[124124124124]',
         'animate-fade-in animation-duration-300 animation-delay-300',
+        'will-change-transform',
       )}
     >
       <div
+        ref={refContent}
         className={cn(
           "flex-1",
           "flex flex-col",
@@ -241,9 +312,6 @@ export const Widget = () => {
           "overflow-hidden",
           'opacity-100',
           'transition-opacity duration-150',
-          {
-            'opacity-0 duration-0 delay-0': !isInspectFocused,
-          }
         )}
       >
         <Header />
@@ -255,9 +323,6 @@ export const Widget = () => {
             "text-white",
             "transition-opacity duration-150 delay-150",
             "overflow-y-auto overflow-x-hidden",
-            {
-              'opacity-0 duration-0 delay-0': !isInspectFocused,
-            }
           )}
         />
       </div>
@@ -275,21 +340,15 @@ export const Widget = () => {
         <Toolbar refPropContainer={refPropContainer} />
       </div>
 
-      {
-        isInspectFocused && shouldExpand && (
-          <>
-            <ResizeHandle position="top" />
-            <ResizeHandle position="bottom" />
-            <ResizeHandle position="left" />
-            <ResizeHandle position="right" />
+      <ResizeHandle position="top" />
+      <ResizeHandle position="bottom" />
+      <ResizeHandle position="left" />
+      <ResizeHandle position="right" />
 
-            <ResizeHandle position="top-left" />
-            <ResizeHandle position="top-right" />
-            <ResizeHandle position="bottom-left" />
-            <ResizeHandle position="bottom-right" />
-          </>
-        )
-      }
+      <ResizeHandle position="top-left" />
+      <ResizeHandle position="top-right" />
+      <ResizeHandle position="bottom-left" />
+      <ResizeHandle position="bottom-right" />
     </div>
   );
 };

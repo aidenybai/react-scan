@@ -1,7 +1,7 @@
 'use client';
 import { getDisplayName, isCompositeFiber } from 'bippy';
 import { type Fiber } from 'react-reconciler';
-import { useEffect } from 'preact/hooks';
+import { useEffect } from 'react';
 import {
   type MonitoringOptions,
   ReactScanInternals,

@@ -1,5 +1,4 @@
 // MIT License
-
 // Copyright (c) 2024 Kristian Dupont
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,19 +21,52 @@
 
 // Taken from: https://github.com/kristiandupont/react-geiger/blob/main/src/Geiger.tsx
 
+import { isFirefox, readLocalStorage } from "@web-utils/helpers";
+
 // Simple throttle for high-frequency calls
 let lastPlayTime = 0;
 const MIN_INTERVAL = 32; // ~30fps throttle
 
+// Pre-calculate common values
+const BASE_VOLUME = 0.5;
+const FREQ_MULTIPLIER = 200;
+const DEFAULT_VOLUME = 0.5;
+
+// Ensure volume is between 0 and 1
+const storedVolume = Math.max(0, Math.min(1, readLocalStorage<number>('react-scan-volume') ?? DEFAULT_VOLUME));
+
+// Audio configurations for different browsers
+const config = {
+  firefox: {
+    duration: 0.02,
+    oscillatorType: 'sine' as const,
+    startFreq: 220,
+    endFreq: 110,
+    attack: 0.0005,
+    volumeMultiplier: storedVolume,
+  },
+  default: {
+    duration: 0.001,
+    oscillatorType: 'sine' as const,
+    startFreq: 440,
+    endFreq: 220,
+    attack: 0.0005,
+    volumeMultiplier: storedVolume,
+  }
+} as const; // Make entire config readonly
+
+// Cache the selected config
+const audioConfig = isFirefox ? config.firefox : config.default;
+
 /**
  * Plays a Geiger counter-like click sound
- * Optimized for render tracking with minimal changes
+ * Cross-browser compatible version (Firefox, Chrome, Safari)
  */
 export const playGeigerClickSound = (
   audioContext: AudioContext,
   amplitude: number,
 ) => {
-  // Simple throttle to prevent audio overlap
+
   const now = performance.now();
   if (now - lastPlayTime < MIN_INTERVAL) {
     return;
@@ -43,25 +75,30 @@ export const playGeigerClickSound = (
 
   // Cache currentTime for consistent timing
   const currentTime = audioContext.currentTime;
-  const volume = Math.max(0.5, amplitude);
-  const duration = 0.001;
-  const startFrequency = 440 + amplitude * 200;
+  const { duration, oscillatorType, startFreq, endFreq, attack } = audioConfig;
 
-  const oscillator = audioContext.createOscillator();
-  oscillator.type = 'sine';
-  oscillator.frequency.setValueAtTime(startFrequency, currentTime);
-  oscillator.frequency.exponentialRampToValueAtTime(
-    220,
-    currentTime + duration,
-  );
+  // Pre-calculate volume once
+  const volume = Math.max(BASE_VOLUME, amplitude) * audioConfig.volumeMultiplier;
 
-  const gainNode = audioContext.createGain();
-  gainNode.gain.setValueAtTime(volume, currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, duration / 2);
+  // Create and configure nodes in one go
+  const oscillator = new OscillatorNode(audioContext, {
+    type: oscillatorType,
+    frequency: startFreq + amplitude * FREQ_MULTIPLIER
+  });
 
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
+  const gainNode = new GainNode(audioContext, {
+    gain: 0
+  });
 
-  oscillator.start();
+  // Schedule all parameters
+  oscillator.frequency.exponentialRampToValueAtTime(endFreq, currentTime + duration);
+  gainNode.gain.linearRampToValueAtTime(volume, currentTime + attack);
+
+  // Connect and schedule playback
+  oscillator
+    .connect(gainNode)
+    .connect(audioContext.destination);
+
+  oscillator.start(currentTime);
   oscillator.stop(currentTime + duration);
 };
