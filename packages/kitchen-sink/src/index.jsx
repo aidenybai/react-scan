@@ -59,8 +59,8 @@ export const App = () => {
 export const TaskList = ({ tasks, onDelete }) => {
   return (
     <ul>
-      {tasks.map((task) => (
-        <TaskItem key={task} task={task} onDelete={onDelete} />
+      {tasks.map((task, i) => (
+        <TaskItem key={`${task}_${i}`} task={task} onDelete={onDelete} />
       ))}
     </ul>
   );
@@ -123,6 +123,7 @@ export const Input = ({ onChange, onEnter, value }) => {
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
+          if (e.target.value.length === 0) return;
           onEnter(e.target.value);
         }
       }}
