@@ -204,9 +204,7 @@ export const flushOutlines = (
 
 let animationFrameId: number | null = null;
 
-export const fadeOutOutline = (
-  canvas: OffscreenCanvas,
-) => {
+export const fadeOutOutline = (canvas: OffscreenCanvas) => {
   const { activeOutlines } = ReactScanInternals;
   const options = ReactScanInternals.options.value;
 
@@ -255,7 +253,7 @@ export const fadeOutOutline = (
 
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
 
-  const drawingQueue: Array<DrawingQueue> = []; 
+  const drawingQueue: Array<DrawingQueue> = [];
 
   const renderCountThreshold = options.renderCountThreshold ?? 0;
   for (const activeOutline of Array.from(groupedOutlines.values())) {
@@ -347,17 +345,21 @@ export const fadeOutOutline = (
       color,
       alpha,
       fillAlpha,
-    })
+    });
 
     const labelText = getLabelText(outline.renders) ?? '';
-    if (reasons.length && labelText && !(phases.has('mount') && phases.size === 1)) {
+    if (
+      reasons.length &&
+      labelText &&
+      !(phases.has('mount') && phases.size === 1)
+    ) {
       pendingLabeledOutlines.push({
         alpha,
         outline,
         color,
         reasons,
         labelText,
-        textWidth: measureTextCached(labelText, new OffscreenCanvas(canvas.width, canvas.height).getContext('2d')!).width,
+        textWidth: measureTextCached(labelText).width,
       });
     }
   }
@@ -423,7 +425,7 @@ export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
 ): Array<OutlineLabel> => {
   // Precompute labelRects
-  const labelRects = labels.map(label => ({
+  const labelRects = labels.map((label) => ({
     label,
     rect: getLabelRect(label),
   }));
@@ -452,7 +454,8 @@ export const mergeOverlappingLabels = (
         // Merge labels
         const combinedOutline: PendingOutline = {
           rect: getOutermostOutline(nextLabel.outline, label.outline).rect,
-          domNode: getOutermostOutline(nextLabel.outline, label.outline).domNode,
+          domNode: getOutermostOutline(nextLabel.outline, label.outline)
+            .domNode,
           renders: [...label.outline.renders, ...nextLabel.outline.renders],
         };
 
@@ -475,9 +478,7 @@ export const mergeOverlappingLabels = (
   return mergedLabels;
 };
 
-export const getLabelRect = (
-  label: OutlineLabel,
-): DOMRect => {
+export const getLabelRect = (label: OutlineLabel): DOMRect => {
   const { rect } = label.outline;
   const textHeight = 11;
 
@@ -489,12 +490,18 @@ export const getLabelRect = (
 
 const textMeasurementCache = new Map<string, TextMetrics>();
 
-export const measureTextCached = (
-  text: string,
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-): TextMetrics => {
+export const measureTextCached = (text: string): TextMetrics => {
   if (textMeasurementCache.has(text)) {
     return textMeasurementCache.get(text)!;
+  }
+  const dpi = window.devicePixelRatio || 1;
+  const canvas = new OffscreenCanvas(
+    dpi * window.innerWidth,
+    dpi * window.innerHeight,
+  );
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('unreachable');
   }
   ctx.font = `11px ${MONO_FONT}`;
   const metrics = ctx.measureText(text);
