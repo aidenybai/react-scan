@@ -169,7 +169,6 @@ export const recalcOutlines = throttle(() => {
 }, DEFAULT_THROTTLE_TIME);
 
 export const flushOutlines = (
-  canvas: OffscreenCanvas,
   previousOutlines: Map<string, PendingOutline> = new Map(),
 ) => {
   if (!ReactScanInternals.scheduledOutlines.length) {
@@ -184,7 +183,6 @@ export const flushOutlines = (
   const newPreviousOutlines = new Map<string, PendingOutline>();
 
   void paintOutlines(
-    canvas,
     scheduledOutlines.filter((outline) => {
       const key = getOutlineKey(outline);
       if (previousOutlines.has(key)) {
@@ -197,14 +195,14 @@ export const flushOutlines = (
 
   if (ReactScanInternals.scheduledOutlines.length) {
     requestAnimationFrame(() => {
-      flushOutlines(canvas, newPreviousOutlines);
+      flushOutlines(newPreviousOutlines);
     });
   }
 };
 
 let animationFrameId: number | null = null;
 
-export const fadeOutOutline = (canvas: OffscreenCanvas) => {
+export const fadeOutOutline = () => {
   const { activeOutlines } = ReactScanInternals;
   const options = ReactScanInternals.options.value;
 
@@ -382,13 +380,12 @@ export const fadeOutOutline = (canvas: OffscreenCanvas) => {
   });
 
   if (activeOutlines.length) {
-    animationFrameId = requestAnimationFrame(() => fadeOutOutline(canvas));
+    animationFrameId = requestAnimationFrame(() => fadeOutOutline());
   } else {
     animationFrameId = null;
   }
 };
 async function paintOutlines(
-  canvas: OffscreenCanvas,
   outlines: Array<PendingOutline>,
 ): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -415,7 +412,7 @@ async function paintOutlines(
 
     ReactScanInternals.activeOutlines.push(...newActiveOutlines);
     if (!animationFrameId) {
-      animationFrameId = requestAnimationFrame(() => fadeOutOutline(canvas));
+      animationFrameId = requestAnimationFrame(() => fadeOutOutline());
     }
   });
 }

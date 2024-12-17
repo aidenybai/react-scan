@@ -417,7 +417,7 @@ export const start = () => {
           playGeigerClickSound(audioContext, amplitude);
         }
       }
-      flushOutlines(canvas, new Map());
+      flushOutlines(new Map());
     },
     onCommitFinish() {
       ReactScanInternals.options.value.onCommitFinish?.();
