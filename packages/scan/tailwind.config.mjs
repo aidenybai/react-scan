@@ -9,6 +9,9 @@ export default {
       fontFamily: {
         mono: ['Menlo', 'Consolas', 'Monaco', 'Liberation Mono', 'Lucida Console', 'monospace'],
       },
+      fontSize: {
+        'xxs': '0.5rem',
+      },
       cursor: {
         'nwse-resize': 'nwse-resize',
         'nesw-resize': 'nesw-resize',

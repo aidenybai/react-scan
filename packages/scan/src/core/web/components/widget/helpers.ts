@@ -1,52 +1,57 @@
 import { SAFE_AREA, MIN_SIZE } from '../../constants';
 import { type Corner, type Position, type ResizeHandleProps, type Size } from './types';
 
-interface WindowDimensionsCache {
-  width: number;
-  height: number;
-  dimensions: {
+export const getWindowDimensions = (() => {
+  let cache: {
+    width: number;
+    height: number;
     maxWidth: number;
     maxHeight: number;
     rightEdge: (width: number) => number;
     bottomEdge: (height: number) => number;
     isFullWidth: (width: number) => boolean;
     isFullHeight: (height: number) => boolean;
-  } | null;
-}
+  } | null = null;
 
-const windowDimensionsCache: WindowDimensionsCache = {
-  width: 0,
-  height: 0,
-  dimensions: null
-};
+  return () => {
+    const currentWidth = window.innerWidth;
+    const currentHeight = window.innerHeight;
 
-export const getWindowDimensions = () => {
-  const maxWidth = window.innerWidth - (SAFE_AREA * 2);
-  const maxHeight = window.innerHeight - (SAFE_AREA * 2);
+    if (cache && cache.width === currentWidth && cache.height === currentHeight) {
+      return {
+        maxWidth: cache.maxWidth,
+        maxHeight: cache.maxHeight,
+        rightEdge: cache.rightEdge,
+        bottomEdge: cache.bottomEdge,
+        isFullWidth: cache.isFullWidth,
+        isFullHeight: cache.isFullHeight
+      };
+    }
 
-  if (
-    windowDimensionsCache.width === window.innerWidth &&
-    windowDimensionsCache.height === window.innerHeight &&
-    windowDimensionsCache.dimensions
-  ) {
-    return windowDimensionsCache.dimensions;
-  }
+    const maxWidth = currentWidth - (SAFE_AREA * 2);
+    const maxHeight = currentHeight - (SAFE_AREA * 2);
 
-  const dimensions = {
-    maxWidth,
-    maxHeight,
-    rightEdge: (width: number) => window.innerWidth - width - SAFE_AREA,
-    bottomEdge: (height: number) => window.innerHeight - height - SAFE_AREA,
-    isFullWidth: (width: number) => width >= maxWidth,
-    isFullHeight: (height: number) => height >= maxHeight
+    cache = {
+      width: currentWidth,
+      height: currentHeight,
+      maxWidth,
+      maxHeight,
+      rightEdge: (width: number) => currentWidth - width - SAFE_AREA,
+      bottomEdge: (height: number) => currentHeight - height - SAFE_AREA,
+      isFullWidth: (width: number) => width >= maxWidth,
+      isFullHeight: (height: number) => height >= maxHeight
+    };
+
+    return {
+      maxWidth: cache.maxWidth,
+      maxHeight: cache.maxHeight,
+      rightEdge: cache.rightEdge,
+      bottomEdge: cache.bottomEdge,
+      isFullWidth: cache.isFullWidth,
+      isFullHeight: cache.isFullHeight
+    };
   };
-
-  windowDimensionsCache.width = window.innerWidth;
-  windowDimensionsCache.height = window.innerHeight;
-  windowDimensionsCache.dimensions = dimensions;
-
-  return dimensions;
-};
+})();
 
 export const getOppositeCorner = (
   position: ResizeHandleProps['position'],
@@ -85,60 +90,87 @@ export const getOppositeCorner = (
 };
 
 export const calculatePosition = (corner: Corner, width: number, height: number): Position => {
-  const { rightEdge, bottomEdge } = getWindowDimensions();
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
 
+  // Calculate base positions
   switch (corner) {
     case 'top-right':
-      return { x: rightEdge(width), y: SAFE_AREA };
+      return {
+        x: windowWidth - width - SAFE_AREA,
+        y: SAFE_AREA
+      };
     case 'bottom-right':
-      return { x: rightEdge(width), y: bottomEdge(height) };
+      return {
+        x: windowWidth - width - SAFE_AREA,
+        y: windowHeight - height - SAFE_AREA
+      };
     case 'bottom-left':
-      return { x: SAFE_AREA, y: bottomEdge(height) };
+      return {
+        x: SAFE_AREA,
+        y: windowHeight - height - SAFE_AREA
+      };
     case 'top-left':
     default:
-      return { x: SAFE_AREA, y: SAFE_AREA };
+      return {
+        x: SAFE_AREA,
+        y: SAFE_AREA
+      };
   }
 };
 
-export const getPositionClasses = (position: ResizeHandleProps['position']) => {
-  return {
-    'top-0 left-0 w-full -translate-y-1/2': position === 'top',
-    'bottom-0 left-0 w-full translate-y-1/2': position === 'bottom',
-    'left-0 top-0 h-full -translate-x-1/2': position === 'left',
-    'right-0 top-0 h-full translate-x-1/2': position === 'right',
-
-    'top-0 left-0 -translate-x-1/2 -translate-y-1/2': position === 'top-left',
-    'top-0 right-0 translate-x-1/2 -translate-y-1/2': position === 'top-right',
-    'bottom-0 left-0 -translate-x-1/2 translate-y-1/2': position === 'bottom-left',
-    'bottom-0 right-0 translate-x-1/2 translate-y-1/2': position === 'bottom-right',
-  };
+export const getPositionClasses = (position: ResizeHandleProps['position']): string => {
+  switch (position) {
+    case 'top': return 'top-0 left-0 right-0 -translate-y-3/4';
+    case 'bottom': return 'right-0 bottom-0 left-0 translate-y-3/4';
+    case 'left': return 'top-0 bottom-0 left-0 -translate-x-3/4';
+    case 'right': return 'top-0 right-0 bottom-0 translate-x-3/4';
+    case 'top-left': return 'top-0 left-0 -translate-x-3/4 -translate-y-3/4';
+    case 'top-right': return 'top-0 right-0 translate-x-3/4 -translate-y-3/4';
+    case 'bottom-left': return 'bottom-0 left-0 -translate-x-3/4 translate-y-3/4';
+    case 'bottom-right': return 'bottom-0 right-0 translate-x-3/4 translate-y-3/4';
+    default: return '';
+  }
 };
 
 export const getInteractionClasses = (
   position: ResizeHandleProps['position'],
   isLine: boolean,
-  isDiabled: boolean
-) => {
-  return {
-    'hover:opacity-100': !isDiabled,
-    'pointer-events-none': isDiabled,
-    'w-6 h-6': !isLine,
-    'w-5 h-full': isLine && (position === 'left' || position === 'right'),
-    'w-full h-5': isLine && (position === 'top' || position === 'bottom'),
-    'rounded-tl': !isLine && position === 'top-left',
-    'rounded-tr': !isLine && position === 'top-right',
-    'rounded-bl': !isLine && position === 'bottom-left',
-    'rounded-br': !isLine && position === 'bottom-right',
-    'cursor-ew-resize': isLine && (position === 'left' || position === 'right'),
-    'cursor-ns-resize': isLine && (position === 'top' || position === 'bottom'),
-  };
+): Array<string> => {
+  // Common classes for both line and corner handles
+  const commonClasses = [
+    'transition-[transform,opacity]',
+    'duration-300',
+    'delay-500',
+    'group-hover:delay-0',
+    'group-active:delay-0',
+  ];
+
+  // Line handles
+  if (isLine) {
+    return [
+      ...commonClasses,
+      // Size classes
+      position === 'left' || position === 'right' ? 'w-6' : 'w-full',
+      position === 'left' || position === 'right' ? 'h-full' : 'h-6',
+      // Cursor classes
+      position === 'left' || position === 'right' ? 'cursor-ew-resize' : 'cursor-ns-resize'
+    ];
+  }
+
+  // Corner handles only
+  return [
+    ...commonClasses,
+    'w-6',
+    'h-6',
+    position === 'top-left' || position === 'bottom-right' ? 'cursor-nwse-resize' : 'cursor-nesw-resize',
+    `rounded-${position.split('-').join('')}`
+  ];
 };
 
 const positionMatchesCorner = (position: ResizeHandleProps['position'], corner: Corner): boolean => {
-  if (position === corner) return true;
-
   const [vertical, horizontal] = corner.split('-');
-  return position === vertical || position === horizontal;
+  return position !== vertical && position !== horizontal;
 };
 
 export const getHandleVisibility = (
@@ -149,30 +181,34 @@ export const getHandleVisibility = (
   isFullHeight: boolean
 ): boolean => {
   if (isFullWidth && isFullHeight) {
-    return false;
+    return true;
   }
 
   // Normal state
   if (!isFullWidth && !isFullHeight) {
-    return isLine
-      ? positionMatchesCorner(position, corner)
-      : position === corner ||
-      (corner.includes(position.split('-')[0]) || corner.includes(position.split('-')[1]));
+    if (isLine) {
+      return positionMatchesCorner(position, corner);
+    }
+    return position === getOppositeCorner(corner, corner, true);
   }
 
   // Full width state
   if (isFullWidth) {
-    return isLine
-      ? position === 'top' && corner.startsWith('top') ||
-      position === 'bottom' && corner.startsWith('bottom')
-      : corner.startsWith(position.split('-')[0]);
+    if (isLine) {
+      return position !== corner.split('-')[0];
+    }
+    return !position.startsWith(corner.split('-')[0]);
   }
 
   // Full height state
-  return isLine
-    ? position === 'left' && corner.endsWith('left') ||
-    position === 'right' && corner.endsWith('right')
-    : corner.endsWith(position.split('-')[1]);
+  if (isFullHeight) {
+    if (isLine) {
+      return position !== corner.split('-')[1];
+    }
+    return !position.endsWith(corner.split('-')[1]);
+  }
+
+  return false;
 };
 
 
@@ -181,10 +217,13 @@ export const calculateBoundedSize = (
   delta: number,
   isWidth: boolean
 ): number => {
-  const min = isWidth ? MIN_SIZE.width : MIN_SIZE.height;
-  const max = isWidth ? getWindowDimensions().maxWidth : getWindowDimensions().maxHeight;
+  const min = isWidth ? MIN_SIZE.width : MIN_SIZE.height * 5;
+  const max = isWidth
+    ? getWindowDimensions().maxWidth
+    : getWindowDimensions().maxHeight;
 
-  return Math.min(Math.max(min, currentSize + delta), max);
+  const newSize = currentSize + delta;
+  return Math.min(Math.max(min, newSize), max);
 }
 
 export const calculateNewSizeAndPosition = (
@@ -204,22 +243,30 @@ export const calculateNewSizeAndPosition = (
 
   // horizontal resize
   if (position.includes('right')) {
-    const proposedWidth = initialSize.width + deltaX;
+    // Check if we have enough space on the right
+    const availableWidth = window.innerWidth - initialPosition.x - SAFE_AREA;
+    const proposedWidth = Math.min(initialSize.width + deltaX, availableWidth);
     newWidth = Math.min(maxWidth, Math.max(MIN_SIZE.width, proposedWidth));
   }
   if (position.includes('left')) {
-    const proposedWidth = initialSize.width - deltaX;
+    // Check if we have enough space on the left
+    const availableWidth = initialPosition.x + initialSize.width - SAFE_AREA;
+    const proposedWidth = Math.min(initialSize.width - deltaX, availableWidth);
     newWidth = Math.min(maxWidth, Math.max(MIN_SIZE.width, proposedWidth));
     newX = initialPosition.x - (newWidth - initialSize.width);
   }
 
   // vertical resize
   if (position.includes('bottom')) {
-    const proposedHeight = initialSize.height + deltaY;
+    // Check if we have enough space at the bottom
+    const availableHeight = window.innerHeight - initialPosition.y - SAFE_AREA;
+    const proposedHeight = Math.min(initialSize.height + deltaY, availableHeight);
     newHeight = Math.min(maxHeight, Math.max(MIN_SIZE.height * 5, proposedHeight));
   }
   if (position.includes('top')) {
-    const proposedHeight = initialSize.height - deltaY;
+    // Check if we have enough space at the top
+    const availableHeight = initialPosition.y + initialSize.height - SAFE_AREA;
+    const proposedHeight = Math.min(initialSize.height - deltaY, availableHeight);
     newHeight = Math.min(maxHeight, Math.max(MIN_SIZE.height * 5, proposedHeight));
     newY = initialPosition.y - (newHeight - initialSize.height);
   }
@@ -247,4 +294,46 @@ export const getClosestCorner = (position: Position): Corner => {
   return Object.entries(distances).reduce<Corner>((closest, [corner, distance]) => {
     return distance < distances[closest] ? corner as Corner : closest;
   }, 'top-left');
+};
+
+// Helper to determine best corner based on cursor position, widget size, and movement
+export const getBestCorner = (
+  mouseX: number,
+  mouseY: number,
+  initialMouseX?: number,
+  initialMouseY?: number,
+  threshold = 100
+): Corner => {
+  const deltaX = initialMouseX !== undefined ? mouseX - initialMouseX : 0;
+  const deltaY = initialMouseY !== undefined ? mouseY - initialMouseY : 0;
+
+  const windowCenterX = window.innerWidth / 2;
+  const windowCenterY = window.innerHeight / 2;
+
+  // Determine movement direction
+  const movingRight = deltaX > threshold;
+  const movingLeft = deltaX < -threshold;
+  const movingDown = deltaY > threshold;
+  const movingUp = deltaY < -threshold;
+
+  // If horizontal movement
+  if (movingRight || movingLeft) {
+    const isBottom = mouseY > windowCenterY;
+    return movingRight
+      ? (isBottom ? 'bottom-right' : 'top-right')
+      : (isBottom ? 'bottom-left' : 'top-left');
+  }
+
+  // If vertical movement
+  if (movingDown || movingUp) {
+    const isRight = mouseX > windowCenterX;
+    return movingDown
+      ? (isRight ? 'bottom-right' : 'bottom-left')
+      : (isRight ? 'top-right' : 'top-left');
+  }
+
+  // If no significant movement, use quadrant-based position
+  return mouseX > windowCenterX
+    ? (mouseY > windowCenterY ? 'bottom-right' : 'top-right')
+    : (mouseY > windowCenterY ? 'bottom-left' : 'top-left');
 };

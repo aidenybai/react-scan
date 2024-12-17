@@ -100,3 +100,7 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
     // Silently fail
   }
 };
+
+export const toggleMultipleClasses = (element: HTMLElement, ...classes: Array<string>) => {
+  classes.forEach(cls => element.classList.toggle(cls));
+};
