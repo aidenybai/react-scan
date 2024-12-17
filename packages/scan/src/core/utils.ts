@@ -112,3 +112,8 @@ export interface RenderData {
   displayName: string | null;
   type: React.ComponentType<any> | null;
 }
+
+export function isEqual(a: unknown, b: unknown): boolean {
+  // eslint-disable-next-line no-self-compare
+  return a === b || (a !== a && b !== b);
+}

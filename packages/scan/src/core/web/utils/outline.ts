@@ -1,9 +1,9 @@
-import { type Fiber } from 'react-reconciler';
-import { getNearestHostFiber } from 'bippy';
 import { throttle } from '@web-utils/helpers';
-import { getLabelText } from '../../utils';
-import { isElementInViewport, type Render } from '../../instrumentation';
+import { getNearestHostFiber } from 'bippy';
+import { type Fiber } from 'react-reconciler';
 import { ReactScanInternals } from '../../index';
+import { isElementInViewport, type Render } from '../../instrumentation';
+import { getLabelText } from '../../utils';
 
 export interface PendingOutline {
   rect: DOMRect;
@@ -16,7 +16,6 @@ export interface ActiveOutline {
   alpha: number;
   frame: number;
   totalFrames: number;
-  resolve: () => void;
   text: string | null;
 }
 
@@ -140,10 +139,10 @@ export const recalcOutlines = throttle(() => {
   }
 
   const rectMap = new Map<HTMLElement, DOMRect | null>();
-  domNodes.forEach((domNode) => {
-    const rect = getRect(domNode);
-    rectMap.set(domNode, rect);
-  });
+
+  for (const domNode of domNodes) {
+    rectMap.set(domNode, getRect(domNode));
+  }
 
   for (let i = scheduledOutlines.length - 1; i >= 0; i--) {
     const outline = scheduledOutlines[i];
@@ -182,7 +181,7 @@ export const flushOutlines = (
 
   const newPreviousOutlines = new Map<string, PendingOutline>();
 
-  void paintOutlines(
+  paintOutlines(
     ctx,
     scheduledOutlines.filter((outline) => {
       const key = getOutlineKey(outline);
@@ -250,7 +249,6 @@ export const fadeOutOutline = (
     activeOutline.alpha = alphaScalar * (1 - progress);
 
     if (activeOutline.frame >= activeOutline.totalFrames) {
-      activeOutline.resolve();
       activeOutlines.splice(i, 1);
     }
   }
@@ -407,55 +405,71 @@ export const fadeOutOutline = (
     animationFrameId = null;
   }
 };
-async function paintOutlines(
+
+function paintOutlines(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   outlines: Array<PendingOutline>,
-): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const { options } = ReactScanInternals;
-    const totalFrames = options.value.alwaysShowLabels ? 60 : 30;
-    const alpha = 0.8;
+): void {
+  const { options } = ReactScanInternals;
+  const totalFrames = options.value.alwaysShowLabels ? 60 : 30;
+  const alpha = 0.8;
 
-    options.value.onPaintStart?.(outlines);
+  options.value.onPaintStart?.(outlines);
 
-    const newActiveOutlines = outlines.map((outline) => {
-      const renders = outline.renders;
+  const newActiveOutlines = outlines.map((outline) => {
+    const renders = outline.renders;
 
-      const frame = 0;
+    const frame = 0;
 
-      return {
-        outline,
-        alpha,
-        frame,
-        totalFrames,
-        resolve,
-        text: getLabelText(renders),
-      };
-    });
-
-    ReactScanInternals.activeOutlines.push(...newActiveOutlines);
-    if (!animationFrameId) {
-      animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
-    }
+    return {
+      outline,
+      alpha,
+      frame,
+      totalFrames,
+      text: getLabelText(renders),
+    };
   });
+
+  ReactScanInternals.activeOutlines.push(...newActiveOutlines);
+  if (!animationFrameId) {
+    animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
+  }
 }
 
-// FIXME: slow
+
+interface LabelRect {
+  label: OutlineLabel;
+  rect: DOMRect;
+}
+
+function getLabelRects(labels: Array<OutlineLabel>): Array<LabelRect> {
+  const labelRects: Array<LabelRect> = [];
+  for (let i = 0, len = labels.length; i < len; i++) {
+    labelRects.push({
+      label: labels[i],
+      rect: getLabelRect(labels[i]),
+    });
+  }
+  return labelRects;
+}
+
+function sortLabelRects(a: LabelRect, b: LabelRect) {
+  return a.rect.x - b.rect.x;
+}
+
+// (Alexis): maybe slow nested iterations
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
 ): Array<OutlineLabel> => {
   // Precompute labelRects
-  const labelRects = labels.map(label => ({
-    label,
-    rect: getLabelRect(label),
-  }));
+  const labelRects = getLabelRects(labels);
 
   // Sort labels by x-coordinate
-  labelRects.sort((a, b) => a.rect.x - b.rect.x);
+  labelRects.sort(sortLabelRects);
 
   const mergedLabels: Array<OutlineLabel> = [];
 
-  for (let i = 0; i < labelRects.length; i++) {
+  for (let i = 0, len = labelRects.length; i < len; i++) {
     const { label, rect } = labelRects[i];
     let isMerged = false;
 
@@ -475,7 +489,7 @@ export const mergeOverlappingLabels = (
         const combinedOutline: PendingOutline = {
           rect: getOutermostOutline(nextLabel.outline, label.outline).rect,
           domNode: getOutermostOutline(nextLabel.outline, label.outline).domNode,
-          renders: [...label.outline.renders, ...nextLabel.outline.renders],
+          renders: ([] as Array<Render>).concat(label.outline.renders, nextLabel.outline.renders),
         };
 
         nextLabel.alpha = Math.max(nextLabel.alpha, label.alpha);
