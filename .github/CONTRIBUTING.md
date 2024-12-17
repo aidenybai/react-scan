@@ -14,11 +14,6 @@ pnpm install
 pnpm run dev
 ```
 
-## 3. Run test environment
+## 3. Navigate to the test environment.
 
-```bash
-cd packages/kitchen-sink
-pnpm run dev
-```
-
-Go to http://localhost:5175 to see the test environment.
+Go to http://localhost:5173 to see the test environment.
