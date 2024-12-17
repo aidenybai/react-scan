@@ -236,6 +236,7 @@ type OnCommitStartHandler = () => void;
 type OnCommitFinishHandler = () => void;
 type OnErrorHandler = (error: unknown) => void;
 type IsValidFiberHandler = (fiber: Fiber) => boolean;
+type OnActiveHandler = () => void;
 
 interface InstrumentationConfig {
   onCommitStart: OnCommitStartHandler;
@@ -243,6 +244,7 @@ interface InstrumentationConfig {
   onRender: OnRenderHandler;
   onCommitFinish: OnCommitFinishHandler;
   onError: OnErrorHandler;
+  onActive?: OnActiveHandler;
 }
 
 interface InstrumentationInstance {
@@ -361,7 +363,8 @@ export const createInstrumentation = (
     });
     instrument({
       name: 'react-scan',
-      onCommitFiberRoot: (rendererID, root) => {
+      onActive: config.onActive,
+      onCommitFiberRoot(rendererID, root) {
         const allInstances = getAllInstances();
         for (const instance of allInstances) {
           instance.config.onCommitStart();

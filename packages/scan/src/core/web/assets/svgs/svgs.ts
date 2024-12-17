@@ -74,22 +74,13 @@ export const ICONS = `
     <path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/>
   </symbol>
 
-  <symbol id="icon-grip-horizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="9" r="1"/>
-    <circle cx="19" cy="9" r="1"/>
-    <circle cx="5" cy="9" r="1"/>
-    <circle cx="12" cy="15" r="1"/>
-    <circle cx="19" cy="15" r="1"/>
-    <circle cx="5" cy="15" r="1"/>
+  <symbol id="icon-chevrons-up-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m7 15 5 5 5-5"/>
+    <path d="m7 9 5-5 5 5"/>
   </symbol>
 
-  <symbol id="icon-grip-vertical" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="9" cy="12" r="1"/>
-    <circle cx="9" cy="5" r="1"/>
-    <circle cx="9" cy="19" r="1"/>
-    <circle cx="15" cy="12" r="1"/>
-    <circle cx="15" cy="5" r="1"/>
-    <circle cx="15" cy="19" r="1"/>
+  <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 9 6 6 6-6"/>
   </symbol>
 </svg>
 `;
