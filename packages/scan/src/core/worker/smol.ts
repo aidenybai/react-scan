@@ -5,7 +5,7 @@ export type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
 function setupWorker<T, R>(setup: () => (arg: T) => R) {
   const callback = setup();
 
-	console.log('WORKER SETUP');
+  console.log('WORKER SETUP');
 
   function success(id: number, data: unknown) {
     self.postMessage([id, true, data]);
@@ -49,8 +49,7 @@ export class SmolWorker<T, R> {
 
   private setup?: (arg: T) => Promise<R>;
 
-  constructor(private callback: SmolWorkerCallback<T, R>) {
-  }
+  constructor(private callback: SmolWorkerCallback<T, R>) {}
 
   setupWorker(worker: Worker): void {
     worker.addEventListener(
@@ -89,7 +88,7 @@ export class SmolWorker<T, R> {
       this.setupWorker(this.worker);
     }
     const deferred = createDeferred();
-		const id = this.count++;
+    const id = this.count++;
     this.deferredMap.set(id, deferred);
     this.worker.postMessage([id, data], {
       transfer: options?.transfer,
