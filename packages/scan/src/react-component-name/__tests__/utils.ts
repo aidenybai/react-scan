@@ -1,4 +1,4 @@
-import { reactComponentNamePlugin } from '../index';
+import { reactComponentNamePlugin } from "..";
 
 export const transform = async (code: string) => {
   const plugin = reactComponentNamePlugin.vite({}) as any;

@@ -15,17 +15,6 @@ const TooltipContext = createContext({ tooltip: '' });
 
 export const App = () => {
   const [tasks, setTasks] = useState([]);
-  const [isMobile, setIsMobile] = useState(false);
-
-  React.useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   return (
     <TooltipContext.Provider value={{ tooltip: 'Hello' }}>
@@ -45,71 +34,22 @@ export const App = () => {
                 </strong>
               </h3>
             </a>
-            <div className="navbar-links">
-              <a
-                href="https://github.com/aidenybai/react-scan#readme"
-                className="navbar-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                install
-              </a>
-              <a
-                href="https://github.com/aidenybai/react-scan"
-                className="navbar-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                github
-              </a>
-            </div>
           </nav>
 
-          <p>
-            React Scan "scans" your React app for slow renders. It's just
-            JavaScript, so you drop it in anywhere – script tag, npm, you name
-            it!
-          </p>
-
-          {isMobile ? (
-            <div className="demo-section">
-              <img src="/demo.gif" alt="React Scan Demo" className="demo-gif" />
-            </div>
-          ) : (
-            <div className="task-section">
-              <p>Try interacting with this input to see it in action:</p>
-              <AddTaskBar
-                onCreate={(value) => {
-                  if (!value) return;
-                  setTasks([...tasks, value]);
-                }}
-              />
-              <TaskList
-                tasks={tasks}
-                onDelete={(value) =>
-                  setTasks(tasks.filter((task) => task !== value))
-                }
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="sticky-footer">
-          <br />
-          <a
-            href="https://github.com/aidenybai/react-scan#readme"
-            className="cta-button"
-          >
-            Get started →
-          </a>
-          <p>
-            <small>
-              Psst... need something more advanced? Check out:{' '}
-              <a href="https://million.dev" className="navbar-link">
-                Million Lint
-              </a>
-            </small>
-          </p>
+          <div className="task-section">
+            <AddTaskBar
+              onCreate={(value) => {
+                if (!value) return;
+                setTasks([...tasks, value]);
+              }}
+            />
+            <TaskList
+              tasks={tasks}
+              onDelete={(value) =>
+                setTasks(tasks.filter((task) => task !== value))
+              }
+            />
+          </div>
         </div>
       </div>
     </TooltipContext.Provider>

@@ -1,4 +1,4 @@
-import { onIdle } from '../web/utils';
+import { onIdle } from '../web/utils/helpers';
 import { isSSR } from './constants';
 import { Device, type Session } from './types';
 

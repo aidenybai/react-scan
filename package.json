@@ -2,18 +2,28 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "pnpm --parallel --filter=!extension build && echo '\\n\\x1b[43m\\x1b[30m⚠️  WARNING: MAKE SURE TO BUMP VERSION BEFORE BUILDING OR REBUILD AFTER BUMPING VERSION IF PUBLISHING ⚠️\\x1b[0m\\n\\n'",
-    "dev": "pnpm --parallel --filter=!extension dev",
-    "pack": "pnpm --parallel --filter=!extension pack",
+    "build": "WORKSPACE_BUILD=true pnpm --parallel build",
+    "postbuild": "node scripts/version-warning.mjs",
+    "dev": "pnpm --parallel dev",
+    "pack": "pnpm --parallel pack",
     "pack:bump": "pnpm --filter scan pack:bump",
-    "lint": "pnpm --parallel --filter=!extension lint",
+    "lint": "pnpm --parallel lint",
     "prettier": "prettier --write packages/*",
     "eslint:fix": "eslint --fix packages/*"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "@vercel/style-guide": "^6.0.0",
+    "boxen": "^8.0.1",
+    "chalk": "^5.3.0",
     "eslint": "^8.57.1",
-    "prettier": "^3.3.3"
+    "eslint-import-resolver-typescript": "^3.7.0",
+    "eslint-plugin-jsonc": "^2.18.2",
+    "eslint-plugin-tailwindcss": "^3.17.5",
+    "prettier": "^3.3.3",
+    "typescript": "5.4.5"
   },
   "packageManager": "pnpm@9.1.0",
   "dependencies": {

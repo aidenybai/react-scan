@@ -44,30 +44,30 @@ export default function CLI({ command }: { command: string }) {
   };
 
   return (
-    <div className="mt-4 relative bg-[#171717] p-4 rounded-lg flex flex-col min-h-[160px]">
-      <div className="bg-[#1e1e1e] text-white overflow-hidden border border-[#373737]">
-        <div className="flex items-center justify-between px-4 py-1 bg-[#1e1e1e] border-b border-[#333]">
+    <div className="relative mt-4 flex min-h-[160px] flex-col rounded-lg bg-[#171717] p-4">
+      <div className="overflow-hidden border border-[#373737] bg-[#1e1e1e] text-white">
+        <div className="flex items-center justify-between border-b border-[#333] bg-[#1e1e1e] px-4 py-1">
           <div className="flex items-center gap-1">
-            <span className="h-2 w-2 bg-[#858585]/30 rounded-full"></span>
-            <span className="h-2 w-2 bg-[#858585]/30 rounded-full"></span>
-            <span className="h-2 w-2 bg-[#858585]/30 rounded-full"></span>
+            <span className="size-2 rounded-full bg-[#858585]/30"></span>
+            <span className="size-2 rounded-full bg-[#858585]/30"></span>
+            <span className="size-2 rounded-full bg-[#858585]/30"></span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[#858585]">~</span>
           </div>
         </div>
-        <pre className="group p-4 text-sm font-mono whitespace-pre-wrap break-words bg-[#171717] relative">
+        <pre className="group relative whitespace-pre-wrap break-words bg-[#171717] p-4 font-mono text-sm">
           <span className="text-white">$ {command}</span>
           <button
             onClick={() => {
               void copyToClipboard();
             }}
-            className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity bg-[#333] hover:bg-[#444] p-1.5 rounded"
+            className="absolute right-4 top-4 rounded bg-[#333] p-1.5 opacity-0 transition-opacity hover:bg-[#444] group-hover:opacity-100"
           >
             {copied ? (
-              <CheckIcon className="h-4 w-4 text-green-500" />
+              <CheckIcon className="size-4 text-green-500" />
             ) : (
-              <ClipboardIcon className="h-4 w-4 text-white" />
+                <ClipboardIcon className="size-4 text-white" />
             )}
           </button>
         </pre>

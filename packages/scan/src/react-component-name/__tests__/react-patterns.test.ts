@@ -24,10 +24,10 @@ describe('modern React patterns', () => {
       const SearchResults = () => {
         const { data, loading, error } = useQuery(SEARCH_QUERY)
         const { formatResult } = useSearchFormatter()
-        
+
         if (loading) return <div>Loading...</div>
         if (error) return <div>Error!</div>
-        
+
         return (
           <ul>
             {data.map(item => (
@@ -60,11 +60,11 @@ describe('modern React patterns', () => {
     const input = `
       class ErrorBoundary extends React.Component {
         state = { hasError: false }
-        
+
         static getDerivedStateFromError(error) {
           return { hasError: true }
         }
-        
+
         render() {
           if (this.state.hasError) {
             return <div>Something went wrong</div>

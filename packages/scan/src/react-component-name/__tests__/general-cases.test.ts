@@ -30,7 +30,7 @@ describe('edge cases', () => {
             ))}
           </div>
         ), [data])
-        
+
         return (
           <>
             {isLoading ? <Spinner /> : content}
@@ -168,10 +168,10 @@ describe('edge cases', () => {
         }
       };
 
-      const TernaryComponent = ({ condition, value }) => 
+      const TernaryComponent = ({ condition, value }) =>
         condition
           ? value
-          : value 
+          : value
             ? <span>{value}</span>
             : null;
 
@@ -290,7 +290,7 @@ describe('edge cases', () => {
         const [sortField, setSortField] = useState(null);
         const [sortDirection, setSortDirection] = useState('asc');
         const [filters, setFilters] = useState({});
-        
+
         const sortedData = useMemo(() => {
           if (!sortField) return data;
           return [...data].sort((a, b) => {
@@ -380,7 +380,7 @@ describe('edge cases', () => {
       const Field = React.forwardRef((props, ref) => {
         const [value, setValue] = useState('');
         const internalRef = useRef(null);
-        
+
         useImperativeHandle(ref, () => ({
           focus: () => internalRef.current?.focus(),
           reset: () => setValue('')
@@ -437,7 +437,7 @@ describe('edge cases', () => {
         </ul>
       ), (prevProps, nextProps) => prevProps.items === nextProps.items);
 
-      
+
       // memo with type annotations
       const TypedButton = React.memo<ButtonProps>(props => (
         <button {...props} />
@@ -511,7 +511,7 @@ describe('edge cases', () => {
 
         // Custom function returning JSX
         const renderItem = (item) => <div>{item.text}</div>;
-        
+
         // Method chaining with JSX returns
         const processed = items
           .slice(0, 5)
@@ -541,10 +541,10 @@ describe('edge cases', () => {
         // Direct function calls returning JSX
         const list = renderList(items);
         const wrapped = createWrapper(<span>Content</span>);
-        
+
         // Function composition
         const content = createWrapper(renderList(items));
-        
+
         // HOC usage
         const WrappedComponent = withLayout(({ text }) => <div>{text}</div>);
 
@@ -561,13 +561,13 @@ describe('edge cases', () => {
       // Promise/async function returns
       const AsyncComponent = ({ id }) => {
         const [data, setData] = useState(null);
-        
+
         useEffect(() => {
           const fetchData = async () => {
             const result = await api.get(id);
             return <div>{result.data}</div>;
           };
-          
+
           fetchData().then(setData);
         }, [id]);
 
@@ -593,7 +593,7 @@ describe('edge cases', () => {
 
       // Functional composition
       const compose = (...fns) => x => fns.reduceRight((v, f) => f(v), x);
-      
+
       const withData = Component => props => {
         const data = useData();
         return <Component {...props} data={data} />;
@@ -642,7 +642,7 @@ describe('edge cases', () => {
           {...props}
         />
       ));
-      
+
       // With variants using cva
       const button = cva(
         "rounded-lg px-4",
@@ -792,14 +792,14 @@ describe('edge cases', () => {
         static contextTypes = {
           theme: PropTypes.object
         };
-        
+
         render() {
           return <div>{this.context.theme}</div>
         }
       }
 
       // Partial application component creation
-      const createPartialComponent = (defaultProps) => 
+      const createPartialComponent = (defaultProps) =>
         function PartialComponent(props) {
           return <div {...defaultProps} {...props} />;
         };

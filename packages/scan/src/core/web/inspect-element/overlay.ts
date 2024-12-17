@@ -34,13 +34,17 @@ const linearInterpolation = (start: number, end: number, t: number) => {
 };
 
 export const drawHoverOverlay = (
-  overlayElement: HTMLElement,
-  canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
+  overlayElement: HTMLElement | null,
+  canvas: HTMLCanvasElement | null,
+  ctx: CanvasRenderingContext2D | null,
   kind: 'locked' | 'inspecting',
 ) => {
-  const { parentCompositeFiber, targetRect } =
-    getCompositeComponentFromElement(overlayElement);
+  if (!overlayElement || !canvas || !ctx) {
+    return;
+  }
+
+  const { parentCompositeFiber, targetRect } = getCompositeComponentFromElement(overlayElement);
+
   if (!parentCompositeFiber || !targetRect) {
     return;
   }

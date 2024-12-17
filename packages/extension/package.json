@@ -1,11 +1,12 @@
 {
-  "name": "react-scanner-extension",
+  "name": "@react-scan/extension",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist",
     "build": "vite build",
+    "postbuild": "node ../../scripts/version-warning.mjs",
     "dev": "pnpm dev:chrome",
     "dev:chrome": "cross-env BROWSER=chrome vite",
     "dev:firefox": "cross-env BROWSER=firefox vite",
@@ -29,7 +30,6 @@
     "@vitejs/plugin-react": "^4.2.1",
     "bestzip": "^2.2.1",
     "cross-env": "^7.0.3",
-    "typescript": "~5.6.3",
     "vite": "^5.4.3",
     "vite-plugin-web-extension": "^4.3.1",
     "webextension-polyfill": "^0.10.0"

@@ -1,0 +1,36 @@
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+export type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+export interface ResizeHandleProps {
+  position: Corner | 'top' | 'bottom' | 'left' | 'right';
+}
+
+export interface WidgetDimensions {
+  isFullWidth: boolean;
+  isFullHeight: boolean;
+  width: number;
+  height: number;
+  position: Position;
+}
+
+export interface WidgetConfig {
+  isResizing: boolean;
+  corner: Corner;
+  dimensions: WidgetDimensions;
+  lastDimensions: WidgetDimensions;
+}
+
+export interface WidgetSettings {
+  corner: Corner;
+  dimensions: WidgetDimensions;
+  lastDimensions: WidgetDimensions;
+}

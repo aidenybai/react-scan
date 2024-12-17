@@ -18,13 +18,13 @@ function TodoInput({
   onAdd: () => void;
 }) {
   return (
-    <div className="flex gap-2 mb-4">
+    <div className="mb-4 flex gap-2">
       <input
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && addTodo()}
-        className="border p-2 flex-1"
+        className="flex-1 border p-2"
         placeholder="Add task..."
       />
       <AddButton onClick={addTodo} />
@@ -36,7 +36,7 @@ function AddButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="px-4 py-2 bg-black text-white"
+      className="bg-black px-4 py-2 text-white"
     >
       Add +
     </button>
@@ -65,7 +65,7 @@ function TodoItem({ todo, onDelete }: {
   onDelete: () => void;
 }) {
   return (
-    <li className="p-2 border flex justify-between items-center group">
+    <li className="group flex items-center justify-between border p-2">
       <div>
         <div>{todo.text}</div>
         <div className="text-xs text-gray-500">
@@ -74,7 +74,7 @@ function TodoItem({ todo, onDelete }: {
       </div>
       <button
         onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 text-red-500 px-2"
+        className="px-2 text-red-500 opacity-0 group-hover:opacity-100"
       >
         ×
       </button>
@@ -82,7 +82,7 @@ function TodoItem({ todo, onDelete }: {
   );
 }
 
-export default function TodoDemo({ onClose }: { onClose: () => void }) {
+export default function TodoDemo({ closeAction }: { closeAction: () => void }) {
   const [todos, setTodos] = useState<Array<Todo>>([]);
   const [input, setInput] = useState('');
   const [isMobile, setIsMobile] = useState(false);
@@ -113,16 +113,16 @@ export default function TodoDemo({ onClose }: { onClose: () => void }) {
 
   return (
     <div className={isMobile ? mobileClasses : desktopClasses}>
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">Demo</h2>
         <button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 text-2xl"
+          onClick={closeAction}
+          className="text-2xl text-gray-500 hover:text-gray-700"
         >
           ×
         </button>
       </div>
-      <div className="text-sm text-gray-600 mb-4">
+      <div className="mb-4 text-sm text-gray-600">
         {todos.length} task{todos.length !== 1 ? 's' : ''}
       </div>
       <TodoInput

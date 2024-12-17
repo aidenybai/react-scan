@@ -10,7 +10,12 @@ import {
   isCompositeFiber,
 } from 'bippy';
 import { ReactScanInternals, Store } from '../../index';
-import { getRect } from '../outline';
+import { getRect } from '../utils/outline';
+
+interface OverrideMethods {
+  overrideProps: ((fiber: Fiber, path: Array<string>, value: any) => void) | null;
+  overrideHookState: ((fiber: Fiber, id: string, path: Array<any>, value: any) => void) | null;
+}
 
 export const getFiberFromElement = (element: Element): Fiber | null => {
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
@@ -18,6 +23,7 @@ export const getFiberFromElement = (element: Element): Fiber | null => {
     if (!renderers) return null;
     for (const [_, renderer] of Array.from(renderers)) {
       try {
+        // @ts-expect-error - renderer.findFiberByHostInstance is not typed
         const fiber = renderer.findFiberByHostInstance(element);
         if (fiber) return fiber;
       } catch (e) {
@@ -284,7 +290,7 @@ export const hasValidParent = () => {
   return hasValidParent;
 };
 
-export const getOverrideMethods = () => {
+export const getOverrideMethods = (): OverrideMethods => {
   let overrideProps = null;
   let overrideHookState = null;
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
@@ -296,9 +302,11 @@ export const getOverrideMethods = () => {
             const prevOverrideProps = overrideProps;
             overrideProps = (fiber: Fiber, key: string, value: any) => {
               prevOverrideProps(fiber, key, value);
+              // @ts-expect-error - renderer.overrideProps is not typed
               renderer.overrideProps(fiber, key, value);
             };
           } else {
+            // @ts-expect-error - renderer.overrideProps is not typed
             overrideProps = renderer.overrideProps;
           }
 
@@ -306,9 +314,11 @@ export const getOverrideMethods = () => {
             const prevOverrideHookState = overrideHookState;
             overrideHookState = (fiber: Fiber, key: string, value: any) => {
               prevOverrideHookState(fiber, key, value);
+              // @ts-expect-error - renderer.overrideHookState is not typed
               renderer.overrideHookState(fiber, key, value);
             };
           } else {
+            // @ts-expect-error - renderer.overrideHookState is not typed
             overrideHookState = renderer.overrideHookState;
           }
         } catch (e) {
@@ -317,5 +327,6 @@ export const getOverrideMethods = () => {
       }
     }
   }
+
   return { overrideProps, overrideHookState };
 };

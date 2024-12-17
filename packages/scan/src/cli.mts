@@ -1,4 +1,9 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import mri from 'mri';
+import { intro, confirm, isCancel, cancel, spinner } from '@clack/prompts';
+import { bgMagenta, dim, red } from 'kleur';
 import {
   chromium,
   firefox,
@@ -7,11 +12,6 @@ import {
   type Browser,
   type BrowserContext,
 } from 'playwright';
-import mri from 'mri';
-import { intro, confirm, isCancel, cancel, spinner } from '@clack/prompts';
-import { bgMagenta, dim, red } from 'kleur';
-import fs from 'node:fs';
-import path from 'node:path';
 
 const truncateString = (str: string, maxLength: number) => {
   str = str.replace('http://', '').replace('https://', '').replace('www.', '');
@@ -22,7 +22,7 @@ const truncateString = (str: string, maxLength: number) => {
     const half = Math.floor(maxLength / 2);
     const start = str.slice(0, half);
     const end = str.slice(str.length - (maxLength - half));
-    return start + '…' + end;
+    return `${start}…${end}`;
   }
   return str;
 };
@@ -88,8 +88,8 @@ const applyStealthScripts = async (context: BrowserContext) => {
     window.navigator.permissions.query = (parameters: any) =>
       parameters.name === 'notifications'
         ? Promise.resolve({
-            state: Notification.permission,
-          } as PermissionStatus)
+          state: Notification.permission,
+        } as PermissionStatus)
         : originalQuery(parameters);
   });
 };
@@ -136,32 +136,38 @@ const init = async () => {
     try {
       browser = await browserType.launch({ headless: false });
     } catch {
-      await new Promise<void>(async (resolve, reject) => {
-        const shouldInstall = await confirm({
-          message:
-            'No drivers found. Install Playwright Chromium driver to continue?',
-        });
-        if (isCancel(shouldInstall)) {
-          cancel('Operation cancelled.');
-          process.exit(0);
-        }
-        if (!shouldInstall) return process.exit(0);
+      const installPromise = new Promise<void>((resolve, reject) => {
+        const runInstall = () => {
+          confirm({
+            message: 'No drivers found. Install Playwright Chromium driver to continue?',
+          }).then((shouldInstall) => {
+            if (isCancel(shouldInstall)) {
+              cancel('Operation cancelled.');
+              process.exit(0);
+            }
+            if (!shouldInstall) {
+              process.exit(0);
+            }
 
-        const installProcess = spawn(
-          'npx',
-          ['playwright@latest', 'install', 'chromium'],
-          { stdio: 'inherit' },
-        );
+            const installProcess = spawn(
+              'npx',
+              ['playwright@latest', 'install', 'chromium'],
+              { stdio: 'inherit' },
+            );
 
-        installProcess.on('close', (code) => {
-          if (!code) return resolve();
-          reject(new Error(`Installation process exited with code ${code}`));
-        });
+            installProcess.on('close', (code) => {
+              if (!code) resolve();
+              else reject(new Error(`Installation process exited with code ${code}`));
+            });
 
-        installProcess.on('error', (err) => {
-          reject(err);
-        });
+            installProcess.on('error', reject);
+          });
+        };
+
+        runInstall();
       });
+
+      await installPromise;
 
       try {
         browser = await chromium.launch({ headless: false });
@@ -238,6 +244,7 @@ const init = async () => {
       const reportData = globalHook.ReactScanInternals.Store.reportData;
       if (!Object.keys(reportData).length) return;
 
+      // eslint-disable-next-line no-console
       console.log('REACT_SCAN_REPORT', count);
     });
   };

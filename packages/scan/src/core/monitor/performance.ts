@@ -1,4 +1,4 @@
-/* eslint-disable prefer-named-capture-group */
+ 
 import { type Fiber } from 'react-reconciler';
 import { getDisplayName } from 'bippy';
 import { Store } from '../..';
@@ -29,9 +29,9 @@ const DEFAULT_FILTERS: PathFilters = {
 const FILTER_PATTERNS = {
   providers: [/Provider$/, /^Provider$/, /^Context$/],
 
-  hocs: [/^with[A-Z]/, /^forward(Ref)?$/i, /^Forward(Ref)?\(/],
+  hocs: [/^with[A-Z]/, /^forward(?:Ref)?$/i, /^Forward(?:Ref)?\(/],
 
-  containers: [/^(App)?Container$/, /^Root$/, /^ReactDev/],
+  containers: [/^(?:App)?Container$/, /^Root$/, /^ReactDev/],
 
   utilities: [
     /^Fragment$/,
@@ -83,8 +83,7 @@ const isMinified = (name: string): boolean => {
   const hasNoVowels = !/[aeiou]/i.test(name);
   const hasMostlyNumbers = (name.match(/\d/g)?.length ?? 0) > name.length / 2;
   const isSingleWordLowerCase = /^[a-z]+$/.test(name);
-  // eslint-disable-next-line no-useless-escape
-  const hasRandomLookingChars = /[\$_]{2,}/.test(name);
+  const hasRandomLookingChars = /[$_]{2,}/.test(name);
 
   const suspiciousTraits = [
     hasNoVowels,
@@ -128,7 +127,7 @@ function getCleanComponentName(component: any): string {
   const name = getDisplayName(component);
   if (!name) return '';
 
-  return name.replace(/^(Memo|Forward(Ref)?|With.*?)\((.*?)\)$/, '$3');
+  return name.replace(/^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/, '$<inner>');
 }
 
 export function normalizePath(path: Array<string>): string {

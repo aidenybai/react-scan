@@ -1,29 +1,35 @@
 import type { Fiber } from 'react-reconciler';
 import type * as React from 'react';
 import { type Signal, signal } from '@preact/signals';
-import { getDisplayName, getTimings, getType, isCompositeFiber } from 'bippy';
-import { createInstrumentation, type Render } from './instrumentation';
+import {
+  getDisplayName,
+  getTimings,
+  getType,
+  isCompositeFiber,
+  traverseFiber,
+} from 'bippy';
 import {
   type ActiveOutline,
   flushOutlines,
   getOutline,
   type PendingOutline,
-} from './web/outline';
-import { logIntro } from './web/log';
-import { initReactScanOverlay } from './web/overlay';
+} from '@web-utils/outline';
+import { log, logIntro } from '@web-utils/log';
 import {
   createInspectElementStateMachine,
   type States,
-} from './web/inspect-element/inspect-state-machine';
+} from '@web-inspect-element/inspect-state-machine';
+import { playGeigerClickSound } from '@web-utils/geiger';
+import { ICONS } from '@web-assets/svgs/svgs';
+import { updateFiberRenderData, type RenderData } from 'src/core/utils';
+import { initReactScanOverlay } from './web/overlay';
+import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
-import {
-  isValidFiber,
-  type RenderData,
-  updateFiberRenderData,
-} from './utils';
-import { playGeigerClickSound } from './web/geiger';
+import styles from './web/assets/css/styles.css';
+
+let toolbarContainer: HTMLElement | null = null;
 
 export interface Options {
   /**
@@ -84,6 +90,7 @@ export interface Options {
    * Maximum number of renders for red indicator
    *
    * @default 20
+   * @deprecated
    */
   maxRenders?: number;
 
@@ -140,6 +147,7 @@ interface Monitor {
 }
 
 interface StoreType {
+  wasDetailsOpen: Signal<boolean>;
   isInIframe: Signal<boolean>;
   inspectState: Signal<States>;
   monitor: Signal<Monitor | null>;
@@ -160,6 +168,7 @@ export interface Internals {
 }
 
 export const Store: StoreType = {
+  wasDetailsOpen: signal(true),
   isInIframe: signal(
     typeof window !== 'undefined' && window.self !== window.top,
   ),
@@ -211,85 +220,136 @@ export const setOptions = (options: Options) => {
     instrumentation.isPaused.value = options.enabled === false;
   }
 
+  const previousOptions = ReactScanInternals.options.value;
+
   ReactScanInternals.options.value = {
     ...ReactScanInternals.options.value,
     ...options,
   };
+
+  if (previousOptions.showToolbar && !options.showToolbar) {
+    if (toolbarContainer) {
+      toolbarContainer.remove();
+      toolbarContainer = null;
+    }
+  }
 };
 
 export const getOptions = () => ReactScanInternals.options;
 
 export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
-  let reportFiber: Fiber;
-  let prevRenderData: RenderData | undefined;
-
-  const currentFiberData = Store.reportData.get(fiber);
-  if (currentFiberData) {
-    reportFiber = fiber;
-    prevRenderData = currentFiberData;
-  } else if (!fiber.alternate) {
-    reportFiber = fiber;
-    prevRenderData = undefined;
-  } else {
-    reportFiber = fiber.alternate;
-    prevRenderData = Store.reportData.get(fiber.alternate);
-  }
-
+  const reportFiber = fiber;
+  const { selfTime } = getTimings(fiber);
   const displayName = getDisplayName(fiber.type);
 
   Store.lastReportTime.value = performance.now();
 
-  if (prevRenderData) {
-    prevRenderData.renders.push(...renders);
-  } else {
-    const { selfTime } = getTimings(fiber);
+  const currentFiberData = Store.reportData.get(reportFiber) ?? {
+    count: 0,
+    time: 0,
+    renders: [],
+    displayName,
+    type: null,
+  };
 
-    const reportData = {
-      count: renders.length,
-      time: selfTime,
-      renders,
-      displayName,
-      type: null,
-    };
+  currentFiberData.count =
+    Number(currentFiberData.count || 0) + Number(renders.length);
+  currentFiberData.time =
+    Number(currentFiberData.time || 0) + Number(selfTime || 0);
+  currentFiberData.renders = renders;
 
-    Store.reportData.set(reportFiber, reportData);
-  }
+  Store.reportData.set(reportFiber, currentFiberData);
 
   if (displayName && ReactScanInternals.options.value.report) {
-    const prevLegacyRenderData = Store.legacyReportData.get(displayName);
+    const existingLegacyData = Store.legacyReportData.get(displayName) ?? {
+      count: 0,
+      time: 0,
+      renders: [],
+      displayName: null,
+      type: getType(fiber.type) || fiber.type,
+    };
 
-    if (prevLegacyRenderData) {
-      prevLegacyRenderData.renders.push(...renders);
-    } else {
-      const { selfTime } = getTimings(fiber);
+    existingLegacyData.count =
+      Number(existingLegacyData.count || 0) + Number(renders.length);
+    existingLegacyData.time =
+      Number(existingLegacyData.time || 0) + Number(selfTime || 0);
+    existingLegacyData.renders = renders;
 
-      const reportData = {
-        count: renders.length,
-        time: selfTime,
-        renders,
-        displayName: null,
-        type: getType(fiber.type) || fiber.type,
-      };
-      Store.legacyReportData.set(displayName, reportData);
-    }
+    Store.legacyReportData.set(displayName, existingLegacyData);
   }
+};
+
+export const isValidFiber = (fiber: Fiber) => {
+  if (ignoredProps.has(fiber.memoizedProps)) {
+    return false;
+  }
+
+  const allowList = ReactScanInternals.componentAllowList;
+  const shouldAllow =
+    allowList?.has(fiber.type) ?? allowList?.has(fiber.elementType);
+
+  if (shouldAllow) {
+    const parent = traverseFiber(
+      fiber,
+      (node) => {
+        const options =
+          allowList?.get(node.type) ?? allowList?.get(node.elementType);
+        return options?.includeChildren;
+      },
+      true,
+    );
+    if (!parent && !shouldAllow) return false;
+  }
+  return true;
 };
 
 export const start = () => {
   if (typeof window === 'undefined') return;
-  const options = ReactScanInternals.options.value;
 
-  const existingOverlay = document.querySelector('react-scan-overlay');
-  if (existingOverlay) {
+  const existingRoot = document.querySelector('react-scan-root');
+  if (existingRoot) {
     return;
   }
-  initReactScanOverlay();
-  const overlayElement = document.createElement('react-scan-overlay') as any;
 
-  document.documentElement.appendChild(overlayElement);
+  // Create container for shadow DOM
+  const container = document.createElement('div');
+  container.id = 'react-scan-root';
 
-  const ctx = overlayElement.getContext();
-  createInspectElementStateMachine();
+  const shadow = container.attachShadow({ mode: 'open' });
+
+  const fragment = document.createDocumentFragment();
+
+  // add styles
+  const cssStyles = document.createElement('style');
+  cssStyles.textContent = styles;
+
+  // Create SVG sprite sheet node directly
+  const iconSprite = new DOMParser().parseFromString(
+    ICONS,
+    'image/svg+xml',
+  ).documentElement;
+  shadow.appendChild(iconSprite);
+
+  // add toolbar root
+  const root = document.createElement('div');
+  root.id = 'react-scan-toolbar-root';
+  root.className = 'absolute z-2147483647';
+
+  fragment.appendChild(cssStyles);
+  fragment.appendChild(root);
+
+  shadow.appendChild(fragment);
+
+  // Add container to document first (so shadow DOM is available)
+  document.documentElement.appendChild(container);
+
+  const options = ReactScanInternals.options.value;
+
+  const ctx = initReactScanOverlay();
+  if (!ctx) return;
+
+  createInspectElementStateMachine(shadow);
+
   const audioContext =
     typeof window !== 'undefined'
       ? new (window.AudioContext ||
@@ -297,21 +357,32 @@ export const start = () => {
           window.webkitAudioContext)()
       : null;
 
-  logIntro();
+  if (!Store.monitor.value) {
+    const existingOverlay = document.querySelector('react-scan-overlay');
+    if (existingOverlay) {
+      return;
+    }
+    const overlayElement = document.createElement('react-scan-overlay') as any;
+
+    document.documentElement.appendChild(overlayElement);
+
+    logIntro();
+  }
 
   globalThis.__REACT_SCAN__ = {
     ReactScanInternals,
   };
 
   // TODO: dynamic enable, and inspect-off check
-  const instrumentation = createInstrumentation({
-    kind: 'devtool',
+  const instrumentation = createInstrumentation('devtools', {
     onCommitStart() {
       ReactScanInternals.options.value.onCommitStart?.();
     },
-    isValidFiber(fiber) {
-      return isValidFiber(fiber);
+    onError(error) {
+      // eslint-disable-next-line no-console
+      console.error('[React Scan] Error instrumenting:', error);
     },
+    isValidFiber,
     onRender(fiber, renders) {
       if (ReactScanInternals.instrumentation?.isPaused.value) {
         // don't draw if it's paused
@@ -321,6 +392,10 @@ export const start = () => {
 
       if (isCompositeFiber(fiber)) {
         reportRender(fiber, renders);
+      }
+
+      if (ReactScanInternals.options.value.log) {
+        log(renders);
       }
 
       ReactScanInternals.options.value.onRender?.(fiber, renders);
@@ -336,7 +411,8 @@ export const start = () => {
           const renderTimeThreshold = 10;
           const amplitude = Math.min(
             1,
-            (render.time - renderTimeThreshold) / (renderTimeThreshold * 2),
+            ((render.time ?? 0) - renderTimeThreshold) /
+              (renderTimeThreshold * 2),
           );
           playGeigerClickSound(audioContext, amplitude);
         }
@@ -351,8 +427,24 @@ export const start = () => {
   ReactScanInternals.instrumentation = instrumentation;
 
   if (options.showToolbar) {
-    createToolbar();
+    toolbarContainer = createToolbar(shadow);
   }
+
+  // Add this right after creating the container
+  container.setAttribute('part', 'scan-root');
+
+  // Add this before creating the Shadow DOM
+  const mainStyles = document.createElement('style');
+  mainStyles.textContent = `
+    html[data-theme="light"] react-scan-root::part(scan-root) {
+      --icon-color: rgba(0, 0, 0, 0.8);
+    }
+
+    html[data-theme="dark"] react-scan-root::part(scan-root) {
+      --icon-color: rgba(255, 255, 255, 0.8);
+    }
+  `;
+  document.head.appendChild(mainStyles);
 };
 
 export const withScan = <T>(
