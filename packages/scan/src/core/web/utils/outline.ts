@@ -40,15 +40,8 @@ export const getOutlineKey = (outline: PendingOutline): string => {
   return `${outline.rect.top}-${outline.rect.left}-${outline.rect.width}-${outline.rect.height}`;
 };
 
-let currentFrameId = 0;
-
-function incrementFrameId() {
-  currentFrameId++;
-  requestAnimationFrame(incrementFrameId);
-}
-
-if (typeof window !== "undefined") {
-  incrementFrameId();
+const getCurrentFrame = () => {
+  return typeof window !== 'undefined' ? Math.floor(performance.now()) : 0;
 }
 
 interface CachedRect {
@@ -60,8 +53,9 @@ const rectCache = new Map<Element, CachedRect>();
 
 export const getRect = (el: Element): DOMRect | null => {
   const cached = rectCache.get(el);
+  const currentFrame = getCurrentFrame();
 
-  if (cached && cached.frameId === currentFrameId) {
+  if (cached && cached.frameId === currentFrame) {
     return cached.rect;
   }
 
@@ -70,7 +64,7 @@ export const getRect = (el: Element): DOMRect | null => {
     return null;
   }
 
-  rectCache.set(el, { rect, frameId: currentFrameId });
+  rectCache.set(el, { rect, frameId: currentFrame });
 
   return rect;
 };
