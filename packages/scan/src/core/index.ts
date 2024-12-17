@@ -27,7 +27,6 @@ import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
-// @ts-expect-error CSS import
 import styles from './web/assets/css/styles.css';
 
 let toolbarContainer: HTMLElement | null = null;

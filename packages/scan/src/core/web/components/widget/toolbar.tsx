@@ -4,7 +4,7 @@ import { ReactScanInternals, setOptions, Store } from '../../../..';
 import { INSPECT_TOGGLE_ID } from '../../inspect-element/inspect-state-machine';
 import { getNearestFiberFromElement } from '../../inspect-element/utils';
 import { Icon } from '../icon';
-import { FpsMeter } from './FpsMeter';
+import { FpsMeter } from './fps-meter';
 
 interface ToolbarProps {
   refPropContainer: preact.RefObject<HTMLDivElement>;

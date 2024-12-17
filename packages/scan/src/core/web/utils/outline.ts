@@ -47,7 +47,9 @@ function incrementFrameId() {
   requestAnimationFrame(incrementFrameId);
 }
 
-incrementFrameId();
+if (typeof window !== "undefined") {
+  incrementFrameId();
+}
 
 interface CachedRect {
   rect: DOMRect;
@@ -369,7 +371,7 @@ export const fadeOutOutline = (
 
   ctx.restore();
 
-  const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines, ctx);
+  const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines);
 
   for (let i = 0, len = mergedLabels.length; i < len; i++) {
     const { alpha, outline, color, reasons } = mergedLabels[i];
