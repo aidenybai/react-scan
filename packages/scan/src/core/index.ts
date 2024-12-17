@@ -345,8 +345,8 @@ export const start = () => {
 
   const options = ReactScanInternals.options.value;
 
-  const ctx = initReactScanOverlay();
-  if (!ctx) return;
+  const canvas = initReactScanOverlay();
+  if (!canvas) return;
 
   createInspectElementStateMachine(shadow);
 
@@ -417,7 +417,7 @@ export const start = () => {
           playGeigerClickSound(audioContext, amplitude);
         }
       }
-      flushOutlines(ctx, new Map());
+      flushOutlines(canvas, new Map());
     },
     onCommitFinish() {
       ReactScanInternals.options.value.onCommitFinish?.();

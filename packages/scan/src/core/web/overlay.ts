@@ -1,3 +1,4 @@
+import { outlineWorker } from '@web-utils/outline-worker';
 import { recalcOutlines } from './utils/outline';
 
 export const initReactScanOverlay = () => {
@@ -22,31 +23,40 @@ export const initReactScanOverlay = () => {
 
   shadow.appendChild(overlayElement);
 
-  const ctx = overlayElement.getContext('2d');
-  if (!ctx) return null;
+  const dpi = window.devicePixelRatio || 1;
+  overlayElement.width = dpi * window.innerWidth;
+  overlayElement.height = dpi * window.innerHeight;
 
   let resizeScheduled = false;
 
   const updateCanvasSize = () => {
     const dpi = window.devicePixelRatio || 1;
-    overlayElement.width = dpi * window.innerWidth;
-    overlayElement.height = dpi * window.innerHeight;
-    overlayElement.style.width = `${window.innerWidth}px`;
-    overlayElement.style.height = `${window.innerHeight}px`;
 
-    ctx.resetTransform();
-    ctx.scale(dpi, dpi);
-
-    resizeScheduled = false;
+    outlineWorker
+      .call({
+        type: 'resize',
+        payload: {
+          width: dpi * window.innerWidth,
+          height: dpi * window.innerHeight,
+          dpi,
+        },
+      })
+      .then(
+        () => {
+          resizeScheduled = false;
+        },
+        () => {
+          resizeScheduled = false;
+        },
+      );
   };
 
   window.addEventListener('resize', () => {
     recalcOutlines();
+
     if (!resizeScheduled) {
       resizeScheduled = true;
-      requestAnimationFrame(() => {
-        updateCanvasSize();
-      });
+      updateCanvasSize();
     }
   });
 
@@ -54,7 +64,21 @@ export const initReactScanOverlay = () => {
     recalcOutlines();
   });
 
+  const offscreen = overlayElement.transferControlToOffscreen();
+
+  outlineWorker
+    .call(
+      {
+        type: 'set-canvas',
+        payload: offscreen,
+      },
+      {
+        transfer: [offscreen],
+      },
+    )
+    .then(console.log, console.error);
+
   updateCanvasSize();
 
-  return ctx;
+  return offscreen;
 };

@@ -5,6 +5,8 @@ export type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
 function setupWorker<T, R>(setup: () => (arg: T) => R) {
   const callback = setup();
 
+	console.log('WORKER SETUP');
+
   function success(id: number, data: unknown) {
     self.postMessage([id, true, data]);
   }
@@ -31,9 +33,7 @@ function createWorker<T, R>(callback: SmolWorkerCallback<T, R>): Worker {
 
   const url = URL.createObjectURL(new Blob([template]));
 
-  const worker = new Worker(url, {
-    type: 'module',
-  });
+  const worker = new Worker(url);
 
   return worker;
 }
@@ -50,7 +50,6 @@ export class SmolWorker<T, R> {
   private setup?: (arg: T) => Promise<R>;
 
   constructor(private callback: SmolWorkerCallback<T, R>) {
-    this.worker = createWorker(callback);
   }
 
   setupWorker(worker: Worker): void {
@@ -90,8 +89,9 @@ export class SmolWorker<T, R> {
       this.setupWorker(this.worker);
     }
     const deferred = createDeferred();
-    this.deferredMap.set(this.count++, deferred);
-    this.worker.postMessage(data, {
+		const id = this.count++;
+    this.deferredMap.set(id, deferred);
+    this.worker.postMessage([id, data], {
       transfer: options?.transfer,
     });
     return deferred.promise as Promise<R>;
