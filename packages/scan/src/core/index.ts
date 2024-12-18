@@ -298,10 +298,10 @@ export const getReport = (type?: React.ComponentType<any>) => {
 const initializeScanOptions = (userOptions?: Partial<Options>) => {
   const options = ReactScanInternals.options.value;
 
-  const localstorageOptions = readLocalStorage<LocalStorageOptions>('react-scan-options');
-  if (localstorageOptions) {
-    (Object.keys(localstorageOptions) as Array<keyof LocalStorageOptions>).forEach(key => {
-      const value = localstorageOptions[key];
+  const localStorageOptions = readLocalStorage<LocalStorageOptions>('react-scan-options');
+  if (localStorageOptions) {
+    (Object.keys(localStorageOptions) as Array<keyof LocalStorageOptions>).forEach(key => {
+      const value = localStorageOptions[key];
       if (key in options && value !== null) {
         (options as any)[key] = value;
       }
