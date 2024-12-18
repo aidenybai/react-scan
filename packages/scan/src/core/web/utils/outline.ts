@@ -1,6 +1,6 @@
 import { getNearestHostFiber } from 'bippy';
+import type { Fiber } from 'react-reconciler';
 import { throttle } from '@web-utils/helpers';
-import { type Fiber } from 'react-reconciler';
 import { type DrawingQueue, outlineWorker } from '@web-utils/outline-worker';
 import { ReactScanInternals } from '../../index';
 import { type Render, isElementInViewport } from '../../instrumentation';
@@ -48,7 +48,7 @@ function incrementFrameId() {
   requestAnimationFrame(incrementFrameId);
 }
 
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   incrementFrameId();
 }
 
@@ -387,9 +387,7 @@ export const fadeOutOutline = () => {
     animationFrameId = null;
   }
 };
-async function paintOutlines(
-  outlines: Array<PendingOutline>,
-): Promise<void> {
+async function paintOutlines(outlines: Array<PendingOutline>): Promise<void> {
   return new Promise<void>((resolve) => {
     const { options } = ReactScanInternals;
     const totalFrames = options.value.alwaysShowLabels ? 60 : 30;
