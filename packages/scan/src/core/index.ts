@@ -277,7 +277,6 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
   if (errors.length > 0) {
     // eslint-disable-next-line no-console
     console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
-    return {};
   }
 
   return validOptions;
@@ -295,49 +294,47 @@ export const getReport = (type?: React.ComponentType<any>) => {
   return Store.legacyReportData;
 };
 
-const initializeScanOptions = (userOptions?: Partial<Options>) => {
-  const options = ReactScanInternals.options.value;
-
-  const localStorageOptions = readLocalStorage<LocalStorageOptions>('react-scan-options');
-  if (localStorageOptions) {
-    (Object.keys(localStorageOptions) as Array<keyof LocalStorageOptions>).forEach(key => {
-      const value = localStorageOptions[key];
-      if (key in options && value !== null) {
-        (options as any)[key] = value;
-      }
-    });
-  }
-
-  ReactScanInternals.options.value = validateOptions({
-    ...options,
-    ...userOptions,
-  });
-
-  saveLocalStorage('react-scan-options', ReactScanInternals.options.value);
-
-  return ReactScanInternals.options.value;
-};
-
 export const setOptions = (userOptions: Partial<Options>) => {
+  // Validate user options first
   const validOptions = validateOptions(userOptions);
 
+  // Skip if no valid options
   if (Object.keys(validOptions).length === 0) {
     return;
   }
 
+  // Special handling for sound + enabled state
+  if ('playSound' in validOptions && validOptions.playSound) {
+    validOptions.enabled = true;
+  }
+
+  // Update options with validated values
+  const newOptions = {
+    ...ReactScanInternals.options.value,
+    ...validOptions
+  };
+
+  // Update instrumentation state if needed
   const { instrumentation } = ReactScanInternals;
-  if (instrumentation) {
+  if (instrumentation && 'enabled' in validOptions) {
     instrumentation.isPaused.value = validOptions.enabled === false;
   }
 
-  const newOptions = initializeScanOptions(validOptions);
+  // Update options
+  ReactScanInternals.options.value = newOptions;
 
-  if (toolbarContainer && !newOptions.showToolbar) {
-    toolbarContainer.remove();
-  }
+  // Save to localStorage
+  saveLocalStorage('react-scan-options', newOptions);
 
-  if (newOptions.showToolbar && toolbarContainer && shadowRoot) {
-    toolbarContainer = createToolbar(shadowRoot);
+  // Handle toolbar visibility only if showToolbar changed
+  if ('showToolbar' in validOptions) {
+    if (toolbarContainer && !newOptions.showToolbar) {
+      toolbarContainer.remove();
+    }
+
+    if (newOptions.showToolbar && toolbarContainer && shadowRoot) {
+      toolbarContainer = createToolbar(shadowRoot);
+    }
   }
 };
 
@@ -420,6 +417,18 @@ const startFlushOutlineInterval = (ctx: CanvasRenderingContext2D) => {
 };
 export const start = () => {
   if (typeof window === 'undefined') return;
+
+  // Load options from localStorage first
+  const localStorageOptions = readLocalStorage<LocalStorageOptions>('react-scan-options');
+  if (localStorageOptions) {
+    const validLocalOptions = validateOptions(localStorageOptions);
+    if (Object.keys(validLocalOptions).length > 0) {
+      ReactScanInternals.options.value = {
+        ...ReactScanInternals.options.value,
+        ...validLocalOptions
+      };
+    }
+  }
 
   const audioContext =
     typeof window !== 'undefined'
