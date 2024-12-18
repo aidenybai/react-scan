@@ -93,22 +93,20 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
                 ? `⚠️${labelText}`
                 : labelText;
             ctx.save();
+  
+            ctx.font = `11px ${MONO_FONT}`;
+            const textMetrics = ctx.measureText(text);
+            const textWidth = textMetrics.width;
+            const textHeight = 11;
 
-            if (text) {
-              ctx.font = `11px ${MONO_FONT}`;
-              const textMetrics = ctx.measureText(text);
-              const textWidth = textMetrics.width;
-              const textHeight = 11;
+            const labelX: number = rect.x;
+            const labelY: number = rect.y - textHeight - 4;
 
-              const labelX: number = rect.x;
-              const labelY: number = rect.y - textHeight - 4;
+            ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
+            ctx.fillRect(labelX, labelY, textWidth + 4, textHeight + 4);
 
-              ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
-              ctx.fillRect(labelX, labelY, textWidth + 4, textHeight + 4);
-
-              ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-              ctx.fillText(text, labelX + 2, labelY + textHeight);
-            }
+            ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+            ctx.fillText(text, labelX + 2, labelY + textHeight);
 
             ctx.restore();
           }
