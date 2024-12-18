@@ -25,6 +25,7 @@ import {
 import { playGeigerClickSound } from '@web-utils/geiger';
 import { ICONS } from '@web-assets/svgs/svgs';
 import { updateFiberRenderData, type RenderData } from 'src/core/utils';
+import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
 import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
@@ -33,6 +34,7 @@ import { type getSession } from './monitor/utils';
 import styles from './web/assets/css/styles.css';
 
 let toolbarContainer: HTMLElement | null = null;
+let shadowRoot: ShadowRoot | null = null;
 
 export interface Options {
   /**
@@ -213,6 +215,74 @@ export const ReactScanInternals: Internals = {
   Store,
 };
 
+type LocalStorageOptions = Omit<Options,
+  | 'onCommitStart'
+  | 'onRender'
+  | 'onCommitFinish'
+  | 'onPaintStart'
+  | 'onPaintFinish'
+>;
+
+const validateOptions = (options: Partial<Options>): Partial<Options> => {
+  const errors: Array<string> = [];
+  const validOptions: Partial<Options> = {};
+
+  Object.entries(options).forEach(([key, value]) => {
+    switch (key) {
+      case 'enabled':
+      case 'includeChildren':
+      case 'playSound':
+      case 'log':
+      case 'showToolbar':
+      case 'report':
+      case 'alwaysShowLabels':
+      case 'dangerouslyForceRunInProduction':
+        if (typeof value !== 'boolean') {
+          errors.push(`- ${key} must be a boolean. Got "${value}"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      case 'renderCountThreshold':
+      case 'resetCountTimeout':
+        if (typeof value !== 'number' || value < 0) {
+          errors.push(`- ${key} must be a non-negative number. Got "${value}"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      case 'animationSpeed':
+        if (!['slow', 'fast', 'off'].includes(value as string)) {
+          errors.push(`- Invalid animation speed "${value}". Using default "fast"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      case 'onCommitStart':
+      case 'onCommitFinish':
+      case 'onRender':
+      case 'onPaintStart':
+      case 'onPaintFinish':
+        if (typeof value !== 'function') {
+          errors.push(`- ${key} must be a function. Got "${value}"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      default:
+        errors.push(`- Unknown option "${key}"`);
+    }
+  });
+
+  if (errors.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
+    return {};
+  }
+
+  return validOptions;
+};
+
 export const getReport = (type?: React.ComponentType<any>) => {
   if (type) {
     for (const reportData of Array.from(Store.legacyReportData.values())) {
@@ -225,24 +295,49 @@ export const getReport = (type?: React.ComponentType<any>) => {
   return Store.legacyReportData;
 };
 
-export const setOptions = (options: Options) => {
-  const { instrumentation } = ReactScanInternals;
-  if (instrumentation) {
-    instrumentation.isPaused.value = options.enabled === false;
+const initializeScanOptions = (userOptions?: Partial<Options>) => {
+  const options = ReactScanInternals.options.value;
+
+  const localstorageOptions = readLocalStorage<LocalStorageOptions>('react-scan-options');
+  if (localstorageOptions) {
+    (Object.keys(localstorageOptions) as Array<keyof LocalStorageOptions>).forEach(key => {
+      const value = localstorageOptions[key];
+      if (key in options && value !== null) {
+        (options as any)[key] = value;
+      }
+    });
   }
 
-  const previousOptions = ReactScanInternals.options.value;
-
-  ReactScanInternals.options.value = {
-    ...ReactScanInternals.options.value,
+  ReactScanInternals.options.value = validateOptions({
     ...options,
-  };
+    ...userOptions,
+  });
 
-  if (previousOptions.showToolbar && !options.showToolbar) {
-    if (toolbarContainer) {
-      toolbarContainer.remove();
-      toolbarContainer = null;
-    }
+  saveLocalStorage('react-scan-options', ReactScanInternals.options.value);
+
+  return ReactScanInternals.options.value;
+};
+
+export const setOptions = (userOptions: Partial<Options>) => {
+  const validOptions = validateOptions(userOptions);
+
+  if (Object.keys(validOptions).length === 0) {
+    return;
+  }
+
+  const { instrumentation } = ReactScanInternals;
+  if (instrumentation) {
+    instrumentation.isPaused.value = validOptions.enabled === false;
+  }
+
+  const newOptions = initializeScanOptions(validOptions);
+
+  if (toolbarContainer && !newOptions.showToolbar) {
+    toolbarContainer.remove();
+  }
+
+  if (newOptions.showToolbar && toolbarContainer && shadowRoot) {
+    toolbarContainer = createToolbar(shadowRoot);
   }
 };
 
@@ -250,7 +345,7 @@ export const getOptions = () => ReactScanInternals.options;
 
 export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
   const reportFiber = fiber;
-  const { selfTime } = getTimings(fiber);
+  const { selfTime } = getTimings(fiber.type);
   const displayName = getDisplayName(fiber.type);
 
   Store.lastReportTime.value = performance.now();
@@ -354,6 +449,11 @@ export const start = () => {
           !ReactScanInternals.options.value.dangerouslyForceRunInProduction
         ) {
           setOptions({ enabled: false, showToolbar: false });
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[React Scan] Running in production mode is not recommended.\n' +
+            'If you really need this, set dangerouslyForceRunInProduction: true in options.'
+          );
           return;
         }
 
@@ -365,7 +465,7 @@ export const start = () => {
         const container = document.createElement('div');
         container.id = 'react-scan-root';
 
-        const shadow = container.attachShadow({ mode: 'open' });
+        shadowRoot = container.attachShadow({ mode: 'open' });
 
         const fragment = document.createDocumentFragment();
 
@@ -376,7 +476,7 @@ export const start = () => {
           ICONS,
           'image/svg+xml',
         ).documentElement;
-        shadow.appendChild(iconSprite);
+        shadowRoot.appendChild(iconSprite);
 
         const root = document.createElement('div');
         root.id = 'react-scan-toolbar-root';
@@ -385,7 +485,7 @@ export const start = () => {
         fragment.appendChild(cssStyles);
         fragment.appendChild(root);
 
-        shadow.appendChild(fragment);
+        shadowRoot.appendChild(fragment);
 
         document.documentElement.appendChild(container);
 
@@ -393,14 +493,14 @@ export const start = () => {
         if (!ctx) return;
         startFlushOutlineInterval(ctx);
 
-        createInspectElementStateMachine(shadow);
+        createInspectElementStateMachine(shadowRoot);
 
         globalThis.__REACT_SCAN__ = {
           ReactScanInternals,
         };
 
         if (ReactScanInternals.options.value.showToolbar) {
-          toolbarContainer = createToolbar(shadow);
+          toolbarContainer = createToolbar(shadowRoot);
         }
 
         container.setAttribute('part', 'scan-root');

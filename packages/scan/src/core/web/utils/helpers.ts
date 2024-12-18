@@ -69,13 +69,11 @@ export const isOutlineUnstable = (outline: PendingOutline) => {
   return false;
 };
 
-
 export const createElement = (htmlString: string): HTMLElement => {
   const template = document.createElement('template');
   template.innerHTML = htmlString.trim();
   return template.content.firstElementChild as HTMLElement;
 };
-
 
 export const tryOrElse = <T, E>(cb: () => T, val: E) => {
   try {
