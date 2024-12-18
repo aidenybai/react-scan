@@ -112,6 +112,8 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     const handleMouseMove = (e: MouseEvent) => {
       if (rafId) return;
 
+      containerStyle.transition = 'none';
+
       rafId = requestAnimationFrame(() => {
         const { newSize, newPosition } = calculateNewSizeAndPosition(
           position,

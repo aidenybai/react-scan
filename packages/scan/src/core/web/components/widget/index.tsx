@@ -171,8 +171,9 @@ export const Widget = () => {
       if (currentX === initialX && currentY === initialY) return;
 
       const onTransitionEnd = () => {
-        containerStyle.transition = '';
+        containerStyle.transition = 'none';
         updateDimensions();
+
         container.removeEventListener('transitionend', onTransitionEnd);
       };
 
@@ -256,6 +257,7 @@ export const Widget = () => {
               propContainer: refPropContainer.current!,
             };
           }, 16);
+          return;
         }
       } else {
         toggleMultipleClasses(refContent.current, 'opacity-0', 'duration-0', 'delay-0');
@@ -294,24 +296,25 @@ export const Widget = () => {
         "fixed inset-0 rounded-lg shadow-lg",
         "flex flex-col",
         "bg-black",
-        'font-mono text-[13px]',
-        'user-select-none',
-        'opacity-0',
-        'cursor-move',
-        'z-[124124124124]',
-        'animate-fade-in animation-duration-300 animation-delay-300',
-        'will-change-transform',
+        "font-mono text-[13px]",
+        "user-select-none",
+        "opacity-0",
+        "cursor-move",
+        "z-[124124124124]",
+        "animate-fade-in animation-duration-300 animation-delay-300",
+        "will-change-transform",
       )}
     >
       <div
         ref={refContent}
         className={cn(
+          "relative",
           "flex-1",
           "flex flex-col",
           "rounded-t-lg",
           "overflow-hidden",
-          'opacity-100',
-          'transition-opacity duration-150',
+          "opacity-100",
+          "transition-opacity duration-150",
         )}
       >
         <Header />
@@ -334,7 +337,7 @@ export const Widget = () => {
           "flex items-center justify-between",
           "transition-colors duration-200",
           "overflow-hidden",
-          "rounded-lg"
+          "rounded-lg",
         )}
       >
         <Toolbar refPropContainer={refPropContainer} />
