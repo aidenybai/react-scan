@@ -221,6 +221,7 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
       branch: Store.monitor.value?.branch ?? null,
       uniqueInteractionId: entry.id,
     });
+    console.log("New Interaction", entry);
   });
 
   return () => {
