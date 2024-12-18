@@ -69,13 +69,11 @@ export const isOutlineUnstable = (outline: PendingOutline) => {
   return false;
 };
 
-
 export const createElement = (htmlString: string): HTMLElement => {
   const template = document.createElement('template');
   template.innerHTML = htmlString.trim();
   return template.content.firstElementChild as HTMLElement;
 };
-
 
 export const tryOrElse = <T, E>(cb: () => T, val: E) => {
   try {
@@ -86,6 +84,8 @@ export const tryOrElse = <T, E>(cb: () => T, val: E) => {
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
+  if (typeof window === 'undefined') return null;
+
   try {
     const stored = localStorage.getItem(storageKey);
     return stored ? JSON.parse(stored) : null;
@@ -96,6 +96,7 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
 
 export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
   if (typeof window === 'undefined') return;
+
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {

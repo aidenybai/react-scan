@@ -3,7 +3,7 @@ import { useCallback, useRef, useEffect } from 'preact/hooks';
 import { cn, saveLocalStorage, toggleMultipleClasses } from '@web-utils/helpers';
 import { Store } from 'src/core';
 import { signalWidget, signalRefContainer } from '../../state';
-import { SAFE_AREA, LOCALSTORAGE_KEY, MIN_SIZE } from '../../constants';
+import { LOCALSTORAGE_KEY, MIN_SIZE } from '../../constants';
 import { Icon } from '../icon';
 import { type Corner, type ResizeHandleProps } from './types';
 import {
@@ -90,7 +90,6 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     e.preventDefault();
     e.stopPropagation();
 
-
     const container = signalRefContainer.value;
     if (!container) return;
 
@@ -99,18 +98,28 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     const initialX = e.clientX;
     const initialY = e.clientY;
 
-    const initialWidth = dimensions.isFullWidth
-      ? window.innerWidth - (SAFE_AREA * 2)
-      : dimensions.width;
-    const initialHeight = dimensions.isFullHeight
-      ? window.innerHeight - (SAFE_AREA * 2)
-      : dimensions.height;
+    const initialWidth = dimensions.width;
+    const initialHeight = dimensions.height;
     const initialPosition = dimensions.position;
+
+    signalWidget.value = {
+      ...signalWidget.value,
+      dimensions: {
+        ...dimensions,
+        isFullWidth: false,
+        isFullHeight: false,
+        width: initialWidth,
+        height: initialHeight,
+        position: initialPosition
+      }
+    };
 
     let rafId: number | null = null;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (rafId) return;
+
+      containerStyle.transition = 'none';
 
       rafId = requestAnimationFrame(() => {
         const { newSize, newPosition } = calculateNewSizeAndPosition(
@@ -128,7 +137,8 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         signalWidget.value = {
           ...signalWidget.value,
           dimensions: {
-            ...signalWidget.value.dimensions,
+            isFullWidth: false,
+            isFullHeight: false,
             width: newSize.width,
             height: newSize.height,
             position: newPosition

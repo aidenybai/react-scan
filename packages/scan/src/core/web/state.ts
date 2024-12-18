@@ -57,8 +57,14 @@ const getInitialWidgetConfig = (): WidgetConfig => {
 
   return {
     corner: stored.corner,
-    dimensions: stored.dimensions,
-    lastDimensions: stored.lastDimensions
+    dimensions: {
+      isFullWidth: false,
+      isFullHeight: false,
+      width: MIN_SIZE.width,
+      height: MIN_SIZE.height,
+      position: stored.dimensions.position
+    },
+    lastDimensions: stored.dimensions
   };
 };
 

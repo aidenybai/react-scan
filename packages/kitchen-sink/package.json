@@ -2,14 +2,15 @@
   "name": "@react-scan/kitchen-sink",
   "version": "0.0.0",
   "scripts": {
-    "build": "vite build",
+    "build": "rm -rf node_modules/.vite && vite build",
     "postbuild": "node ../../scripts/version-warning.mjs",
-    "dev": "vite",
+    "dev": "rm -rf node_modules/.vite && vite",
     "preview": "vite preview"
   },
   "dependencies": {
     "@vercel/analytics": "^1.4.0",
     "babel-plugin-react-compiler": "19.0.0-beta-a7bf2bd-20241110",
+    "bippy": "^0.0.21",
     "react": "19.0.0-rc.1",
     "react-dom": "19.0.0-rc.1",
     "react-scan": "^0.0.34",

@@ -12,9 +12,9 @@
     "dev:firefox": "cross-env BROWSER=firefox vite",
     "dev:brave": "cross-env BROWSER=brave vite",
     "mkdir": "mkdir -p build",
-    "pack:chrome": "pnpm clean && pnpm build && pnpm mkdir && bestzip build/chrome-$npm_package_name-v$npm_package_version.zip dist/*",
-    "pack:firefox": "pnpm clean && BROWSER=firefox vite build && pnpm mkdir && bestzip build/firefox-$npm_package_name-v$npm_package_version.zip dist/*",
-    "pack:brave": "pnpm clean && BROWSER=brave vite build && pnpm mkdir && bestzip build/brave-$npm_package_name-v$npm_package_version.zip dist/*",
+    "pack:chrome": "pnpm clean && pnpm build && pnpm mkdir && cd dist && zip -r \"../build/chrome-extension-v$npm_package_version.zip\" .",
+    "pack:firefox": "pnpm clean && BROWSER=firefox pnpm build && pnpm mkdir && cd dist && zip -r \"../build/firefox-extension-v$npm_package_version.zip\" .",
+    "pack:brave": "pnpm clean && BROWSER=brave pnpm build && pnpm mkdir && cd dist && zip -r \"../build/brave-extension-v$npm_package_version.zip\" .",
     "pack:all": "rm -rf build && pnpm pack:chrome && pnpm pack:firefox && pnpm pack:brave"
   },
   "dependencies": {

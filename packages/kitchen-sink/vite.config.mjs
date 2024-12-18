@@ -13,7 +13,7 @@ export default defineConfig({
     Inspect(),
   ],
   resolve:
-    process.env.NODE_ENV === 'production'
+    process.env.NODE_ENV === 'production' && !process.env.TEST
       ? {}
       : {
           alias: {

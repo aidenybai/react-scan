@@ -11,4 +11,9 @@ export default defineConfig({
     }),
     Inspect(),
   ],
+  build: {
+    rollupOptions: {
+      external: ['react-scan'],
+    },
+  },
 });

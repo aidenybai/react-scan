@@ -4,7 +4,40 @@
 
 * {
   outline: none !important;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+
+  /* WebKit (Chrome, Safari, Edge) specific scrollbar styles */
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    border-radius: 10px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, .4);
+  }
 }
+
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+    scrollbar-width: 6px;
+  }
+}
+
 
 button {
   @apply hover:bg-none;
@@ -36,89 +69,78 @@ button {
   overflow: hidden;
   &::before {
     content: attr(data-text);
-    display: block;
+    @apply block;
     @apply truncate;
   }
 }
 
-/* Default scrollbar styles for all elements in shadow DOM */
-:host *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+#react-scan-toolbar {
+  @apply fixed left-0 top-0;
+  @apply flex flex-col;
+  @apply rounded-lg shadow-lg;
+  @apply font-mono text-[13px] text-white;
+  @apply bg-black;
+  @apply select-none;
+  @apply cursor-move;
+  @apply opacity-0;
+  @apply z-[999999999];
+  @apply animate-fade-in animation-duration-300 animation-delay-300;
+  @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
 }
 
-:host *::-webkit-scrollbar-track {
-  background: transparent;
-}
 
-:host *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-:host *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* For Firefox */
-:host * {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
-}
-
-/* We will refactor this later */
-.react-scan-header-right {
-  display: flex;
-  gap: 4px;
+/* HEADER */
+.react-scan-header {
+  @apply flex items-center gap-x-2;
+  @apply pl-3 pr-2;
+  @apply min-h-9;
+  @apply rounded-t-lg;
+  @apply border-b-1 border-white/10;
+  @apply whitespace-nowrap overflow-hidden;
 }
 
 .react-scan-replay-button,
 .react-scan-close-button {
-  display: flex;
-  align-items: center;
-  padding: 4px;
-  border: none;
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 150ms ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.react-scan-close-button {
-  background: rgba(255, 255, 255, 0.01);
-}
-
-.react-scan-close-button:hover {
-  background: rgba(255, 255, 255, 0.15);
+  @apply flex items-center;
+  @apply p-1;
+  @apply min-w-fit;
+  @apply rounded;
+  @apply transition-colors duration-150;
 }
 
 .react-scan-replay-button {
-  background: rgba(142, 97, 227, 0.5) !important;
+  @apply relative;
+  @apply overflow-hidden;
+  @apply !bg-purple-500/50;
+
+  &:hover {
+    @apply bg-purple-500/25;
+  }
+
+  &.disabled {
+    @apply opacity-50;
+    @apply pointer-events-none;
+  }
+
+  &:before {
+    content: '';
+    @apply absolute;
+    @apply inset-0;
+    @apply -translate-x-full;
+    animation: shimmer 2s infinite;
+    background: linear-gradient(to right,
+      transparent,
+      rgba(142, 97, 227, 0.3),
+      transparent);
+  }
 }
 
-.react-scan-replay-button.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
+.react-scan-close-button {
+  @apply bg-white/10;
 
-.react-scan-replay-button:hover {
-  background: rgba(142, 97, 227, 0.25);
-}
-
-.react-scan-replay-button::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  animation: shimmer 2s infinite;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(142, 97, 227, 0.3),
-    transparent
-  );
+  &:hover {
+    @apply bg-white/15;
+  }
 }
 
 @keyframes shimmer {
@@ -127,73 +149,10 @@ button {
   }
 }
 
-#react-scan-toolbar {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  z-index: 2147483651;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  backface-visibility: hidden;
-
-  max-width: calc(100vw - 48px); /* 48px = SAFE_AREA * 2 */
-  max-height: calc(100vh - 48px);
-}
-
 .react-scan-inspector {
   font-size: 13px;
   color: #fff;
   width: 100%;
-}
-
-.react-scan-header {
-  @apply flex items-center justify-between gap-x-4;
-  @apply rounded-t-lg;
-  @apply overflow-hidden;
-  @apply py-2 px-4;
-  @apply border-b-1 border-white/10;
-}
-
-.react-scan-header-left {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.react-scan-header-right {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.react-scan-replay-button {
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-  transition: all 150ms ease;
-  outline: none;
-}
-
-.react-scan-replay-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.react-scan-component-name {
-  font-weight: 500;
-  color: #fff;
-  @apply truncate;
-}
-
-.react-scan-metrics {
-  color: #888;
-  font-size: 12px;
-  @apply truncate;
 }
 
 .react-scan-section {
@@ -336,49 +295,6 @@ button {
 #react-scan-toolbar button:focus-visible {
   outline: 2px solid #0070f3;
   outline-offset: -2px;
-}
-
-.react-scan-props::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.react-scan-props::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.react-scan-props::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.react-scan-props::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-#react-scan-toolbar::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-#react-scan-toolbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-#react-scan-toolbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
-
-#react-scan-toolbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
-}
-
-/* For Firefox */
-#react-scan-toolbar * {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
 }
 
 .nav-button {
