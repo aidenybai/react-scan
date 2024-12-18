@@ -93,7 +93,7 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
                 ? `⚠️${labelText}`
                 : labelText;
             ctx.save();
-  
+
             ctx.font = `11px ${MONO_FONT}`;
             const textMetrics = ctx.measureText(text);
             const textWidth = textMetrics.width;

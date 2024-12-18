@@ -1,7 +1,7 @@
-import { throttle } from "@web-utils/helpers";
-import { ReactScanInternals } from "../../index";
-import { type Render } from "../../instrumentation";
-import { getLabelText } from "../../utils";
+import { throttle } from '@web-utils/helpers';
+import { ReactScanInternals } from '../../index';
+import { type Render } from '../../instrumentation';
+import { getLabelText } from '../../utils';
 import { outlineWorker, type DrawingQueue } from './outline-worker';
 
 export interface PendingOutline {
@@ -22,7 +22,7 @@ export interface OutlineLabel {
   alpha: number;
   outline: PendingOutline;
   color: { r: number; g: number; b: number };
-  reasons: Array<"unstable" | "commit" | "unnecessary">;
+  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
   labelText: string;
   textWidth: number;
   rect: DOMRect;
@@ -33,7 +33,7 @@ const DEFAULT_THROTTLE_TIME = 32; // 2 frames
 const START_COLOR = { r: 115, g: 97, b: 230 };
 const END_COLOR = { r: 185, g: 49, b: 115 };
 const MONO_FONT =
-  "Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace";
+  'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
 export const getOutlineKey = (rect: DOMRect): string => {
   return `${rect.top}-${rect.left}-${rect.width}-${rect.height}`;
@@ -82,7 +82,7 @@ const boundingRectCache = new Map<
 const CACHE_LIFETIME = 200;
 
 export const batchGetBoundingRects = (
-  elements: Array<HTMLElement>
+  elements: Array<HTMLElement>,
 ): Promise<Map<HTMLElement, DOMRect>> => {
   idempotent_startBoundingRectGC();
   return new Promise((resolve) => {
@@ -143,7 +143,7 @@ const idempotent_startBoundingRectGC = () => {
 };
 
 export const flushOutlines = async (
-  previousOutlines: Map<string, PendingOutline> = new Map()
+  previousOutlines: Map<string, PendingOutline> = new Map(),
 ) => {
   if (!ReactScanInternals.scheduledOutlines.length) {
     return;
@@ -152,15 +152,13 @@ export const flushOutlines = async (
   const scheduledOutlines = ReactScanInternals.scheduledOutlines;
   const newPreviousOutlines = await activateOutlines(
     scheduledOutlines,
-    previousOutlines
+    previousOutlines,
   );
   ReactScanInternals.scheduledOutlines = [];
 
   recalcOutlines();
 
-  paintOutlines(
-    scheduledOutlines
-  );
+  paintOutlines(scheduledOutlines);
 
   if (ReactScanInternals.scheduledOutlines.length) {
     requestAnimationFrame(() => {
@@ -177,7 +175,7 @@ function getCachedLabelText(outline: PendingOutline): string {
   if (labelTextCache.has(outline)) {
     return labelTextCache.get(outline)!;
   }
-  const text = getLabelText(outline.renders) ?? "";
+  const text = getLabelText(outline.renders) ?? '';
   labelTextCache.set(outline, text);
   return text;
 }
@@ -213,7 +211,7 @@ export const fadeOutOutline = () => {
         existing.frame = Math.min(existing.frame, activeOutline.frame);
         existing.totalFrames = Math.max(
           existing.totalFrames,
-          activeOutline.totalFrames
+          activeOutline.totalFrames,
         );
       }
 
@@ -241,7 +239,7 @@ export const fadeOutOutline = () => {
   const renderCountThreshold = options.renderCountThreshold ?? 0;
 
   const phases = new Set<string>();
-  const reasons: Array<"unstable" | "commit" | "unnecessary"> = [];
+  const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
 
   for (const activeOutline of groupedOutlines.values()) {
     const { outline, frame, totalFrames, rect } = activeOutline;
@@ -261,7 +259,7 @@ export const fadeOutOutline = () => {
     const avgFps = totalFps / renderLen;
     const averageScore = Math.max(
       (THRESHOLD_FPS - Math.min(avgFps, THRESHOLD_FPS)) / THRESHOLD_FPS,
-      totalTime / totalCount / 16
+      totalTime / totalCount / 16,
     );
 
     const t = Math.min(averageScore, 1);
@@ -298,10 +296,10 @@ export const fadeOutOutline = () => {
       }
     }
 
-    if (didCommit) reasons.push("commit");
-    if (isUnstable) reasons.push("unstable");
+    if (didCommit) reasons.push('commit');
+    if (isUnstable) reasons.push('unstable');
     if (isUnnecessary) {
-      reasons.push("unnecessary");
+      reasons.push('unnecessary');
       if (reasons.length === 1) {
         color = { r: 128, g: 128, b: 128 };
       }
@@ -335,7 +333,7 @@ export const fadeOutOutline = () => {
     if (
       reasons.length &&
       labelText &&
-      !(phases.has("mount") && phases.size === 1)
+      !(phases.has('mount') && phases.size === 1)
     ) {
       const measured = measureTextCached(labelText);
       pendingLabeledOutlines.push({
@@ -381,7 +379,7 @@ export interface PendingOutline {
 
 const activateOutlines = async (
   outlines: Array<PendingOutline>,
-  previousOutlines: Map<string, PendingOutline>
+  previousOutlines: Map<string, PendingOutline>,
 ) => {
   const newPreviousOutlines = new Map<string, PendingOutline>();
 
@@ -436,9 +434,7 @@ const activateOutlines = async (
   return newPreviousOutlines;
 };
 
-function paintOutlines(
-  outlines: Array<PendingOutline>
-): void {
+function paintOutlines(outlines: Array<PendingOutline>): void {
   const { options } = ReactScanInternals;
   options.value.onPaintStart?.(outlines); // maybe we should start passing activeOutlines to onPaintStart, since we have the activeOutlines at painStart
 
@@ -466,7 +462,7 @@ export const getLabelRect = (label: OutlineLabel): DOMRect => {
 
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
-  maxMergeOps = 2000
+  maxMergeOps = 2000,
 ): Array<OutlineLabel> => {
   const sortedByX = labels.map((label) => ({
     ...label,
@@ -508,7 +504,7 @@ export const mergeOverlappingLabels = (
         nextLabel.rect = combinedOutline.rect;
         nextLabel.outline = combinedOutline;
         nextLabel.reasons = Array.from(
-          new Set(nextLabel.reasons.concat(label.reasons))
+          new Set(nextLabel.reasons.concat(label.reasons)),
         );
 
         isMerged = true;
@@ -526,9 +522,7 @@ export const mergeOverlappingLabels = (
 
 const textMeasurementCache = new Map<string, TextMetrics>();
 
-export const measureTextCached = (
-  text: string,
-): TextMetrics => {
+export const measureTextCached = (text: string): TextMetrics => {
   if (textMeasurementCache.has(text)) {
     return textMeasurementCache.get(text)!;
   }
@@ -550,18 +544,18 @@ export const measureTextCached = (
 export const getOverlapArea = (rect1: DOMRect, rect2: DOMRect): number => {
   const xOverlap = Math.max(
     0,
-    Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left)
+    Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left),
   );
   const yOverlap = Math.max(
     0,
-    Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top)
+    Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top),
   );
   return xOverlap * yOverlap;
 };
 
 export const getOutermostLabel = (
   label1: OutlineLabel,
-  label2: OutlineLabel
+  label2: OutlineLabel,
 ): OutlineLabel => {
   const area1 = label1.rect.width * label1.rect.height;
   const area2 = label2.rect.width * label2.rect.height;

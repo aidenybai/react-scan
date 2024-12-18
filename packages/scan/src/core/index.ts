@@ -1,37 +1,37 @@
-import type { Fiber } from 'react-reconciler';
-import type * as React from 'react';
-import { type Signal, signal } from '@preact/signals';
-import {
-  getDisplayName,
-  getRDTHook,
-  getNearestHostFiber,
-  getTimings,
-  getType,
-  isCompositeFiber,
-  isInstrumentationActive,
-  traverseFiber,
-  detectReactBuildType,
-} from 'bippy';
-import {
-  type ActiveOutline,
-  flushOutlines,
-  type PendingOutline,
-} from '@web-utils/outline';
-import { log, logIntro } from '@web-utils/log';
+import { signal, type Signal } from '@preact/signals';
+import { ICONS } from '@web-assets/svgs/svgs';
 import {
   createInspectElementStateMachine,
   type States,
 } from '@web-inspect-element/inspect-state-machine';
 import { playGeigerClickSound } from '@web-utils/geiger';
-import { ICONS } from '@web-assets/svgs/svgs';
-import { updateFiberRenderData, type RenderData } from 'src/core/utils';
 import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { initReactScanOverlay } from './web/overlay';
+import { log, logIntro } from '@web-utils/log';
+import {
+  flushOutlines,
+  type ActiveOutline,
+  type PendingOutline,
+} from '@web-utils/outline';
+import {
+  detectReactBuildType,
+  getDisplayName,
+  getNearestHostFiber,
+  getRDTHook,
+  getTimings,
+  getType,
+  isCompositeFiber,
+  isInstrumentationActive,
+  traverseFiber,
+} from 'bippy';
+import type * as React from 'react';
+import type { Fiber } from 'react-reconciler';
+import { updateFiberRenderData, type RenderData } from 'src/core/utils';
 import { createInstrumentation, type Render } from './instrumentation';
-import { createToolbar } from './web/toolbar';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
 import styles from './web/assets/css/styles.css';
+import { initReactScanOverlay } from './web/overlay';
+import { createToolbar } from './web/toolbar';
 
 let toolbarContainer: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -215,7 +215,8 @@ export const ReactScanInternals: Internals = {
   Store,
 };
 
-type LocalStorageOptions = Omit<Options,
+type LocalStorageOptions = Omit<
+  Options,
   | 'onCommitStart'
   | 'onRender'
   | 'onCommitFinish'
@@ -253,7 +254,9 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
         break;
       case 'animationSpeed':
         if (!['slow', 'fast', 'off'].includes(value as string)) {
-          errors.push(`- Invalid animation speed "${value}". Using default "fast"`);
+          errors.push(
+            `- Invalid animation speed "${value}". Using default "fast"`,
+          );
         } else {
           (validOptions as any)[key] = value;
         }
@@ -311,7 +314,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
   // Update options with validated values
   const newOptions = {
     ...ReactScanInternals.options.value,
-    ...validOptions
+    ...validOptions,
   };
 
   // Update instrumentation state if needed
@@ -407,11 +410,11 @@ export const isValidFiber = (fiber: Fiber) => {
 };
 
 let flushInterval: ReturnType<typeof setInterval>;
-const startFlushOutlineInterval = (ctx: CanvasRenderingContext2D) => {
+const startFlushOutlineInterval = () => {
   clearInterval(flushInterval);
   setInterval(() => {
     requestAnimationFrame(() => {
-      flushOutlines(ctx);
+      flushOutlines();
     });
   }, 30);
 };
@@ -419,13 +422,14 @@ export const start = () => {
   if (typeof window === 'undefined') return;
 
   // Load options from localStorage first
-  const localStorageOptions = readLocalStorage<LocalStorageOptions>('react-scan-options');
+  const localStorageOptions =
+    readLocalStorage<LocalStorageOptions>('react-scan-options');
   if (localStorageOptions) {
     const validLocalOptions = validateOptions(localStorageOptions);
     if (Object.keys(validLocalOptions).length > 0) {
       ReactScanInternals.options.value = {
         ...ReactScanInternals.options.value,
-        ...validLocalOptions
+        ...validLocalOptions,
       };
     }
   }
@@ -461,7 +465,7 @@ export const start = () => {
           // eslint-disable-next-line no-console
           console.warn(
             '[React Scan] Running in production mode is not recommended.\n' +
-            'If you really need this, set dangerouslyForceRunInProduction: true in options.'
+              'If you really need this, set dangerouslyForceRunInProduction: true in options.',
           );
           return;
         }
@@ -500,7 +504,7 @@ export const start = () => {
 
         ctx = initReactScanOverlay();
         if (!ctx) return;
-        startFlushOutlineInterval(ctx);
+        startFlushOutlineInterval();
 
         createInspectElementStateMachine(shadowRoot);
 

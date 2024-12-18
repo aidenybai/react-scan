@@ -1,19 +1,19 @@
-import type { Fiber, FiberRoot } from 'react-reconciler';
+import { signal, type Signal } from '@preact/signals';
 import {
-  getTimings,
-  hasMemoCache,
-  traverseContexts,
-  traverseState,
-  instrument,
   createFiberVisitor,
-  getDisplayName,
-  getType,
-  isValidElement,
   didFiberCommit,
+  getDisplayName,
   getMutatedHostFibers,
+  getTimings,
+  getType,
+  hasMemoCache,
+  instrument,
+  isValidElement,
+  traverseContexts,
   traverseProps,
+  traverseState,
 } from 'bippy';
-import { type Signal, signal } from '@preact/signals';
+import type { Fiber, FiberRoot } from 'react-reconciler';
 import { ReactScanInternals } from './index';
 
 let fps = 0;
@@ -164,7 +164,6 @@ export const getPropsChanges = (fiber: Fiber) => {
 
   const prevProps = fiber.alternate?.memoizedProps || {};
   const nextProps = fiber.memoizedProps || {};
-
 
   const allKeys = new Set([
     ...Object.keys(prevProps),
