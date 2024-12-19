@@ -8,7 +8,7 @@ export interface OutlineLabel {
   color: { r: number; g: number; b: number };
   reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
   labelText: string;
-  estimatedTextWidth: number; // this value does not correctly
+  textWidth: number; // this value does not correctly
   activeOutline: Outline;
 }
 
@@ -120,7 +120,7 @@ const idempotent_startBoundingRectGC = () => {
 };
 
 export const flushOutlines = async (
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ) => {
   if (!ReactScanInternals.scheduledOutlines.size) {
     return;
@@ -247,7 +247,7 @@ export const fadeOutOutline = (
         color,
         reasons,
         labelText,
-        estimatedTextWidth: measured.width,
+        textWidth: measured.width,
         activeOutline: invariant_activeOutline,
       });
     }
@@ -278,7 +278,6 @@ export const fadeOutOutline = (
     const { alpha, color, reasons, groupedAggregatedRender, rect } =
       mergedLabels[i];
     const text = getLabelText(groupedAggregatedRender) ?? 'Unknown';
-    // const text = getCachedLabelText(outline);
     const conditionalText =
       reasons.includes('unstable') &&
       (reasons.includes('commit') || reasons.includes('unnecessary'))
@@ -390,7 +389,6 @@ const activateOutlines = async () => {
     // todo: put this behind config to use intersection observer or update speed
     // outlineUpdateSpeed: throttled | synchronous // "using synchronous updates will result in smoother animations, but add more overhead to react-scan"
     const rect = rects.get(outline.domNode);
-    // const rect = outline.domNode.getBoundingClientRect()
     if (!rect) {
       // intersection observer could not get a rect, so we have nothing to paint/activate
       continue;
@@ -477,10 +475,7 @@ export const mergeOverlappingLabels = (
 
   const transformed = labels.map((label) => ({
     original: label,
-    rect: applyLabelTransform(
-      label.activeOutline.rect!,
-      label.estimatedTextWidth!,
-    ),
+    rect: applyLabelTransform(label.activeOutline.rect!, label.textWidth!),
   }));
 
   transformed.sort((a, b) => a.rect.x - b.rect.x);
@@ -526,7 +521,7 @@ function toMergedLabel(
 ): MergedOutlineLabel {
   const rect =
     rectOverride ??
-    applyLabelTransform(label.activeOutline.rect!, label.estimatedTextWidth!);
+    applyLabelTransform(label.activeOutline.rect!, label.textWidth!);
   const groupedArray = Array.from(
     label.activeOutline.groupedAggregatedRender!.values(),
   );
