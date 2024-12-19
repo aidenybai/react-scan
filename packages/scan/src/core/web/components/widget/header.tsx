@@ -1,60 +1,74 @@
-import { useRef, useEffect, useCallback, useState } from "preact/hooks";
+import { useRef, useEffect, useCallback } from "preact/hooks";
 import { getDisplayName } from 'bippy';
-import { cn } from "@web-utils/helpers";
 import { Store } from "../../../..";
 import { getCompositeComponentFromElement, getOverrideMethods } from "../../inspect-element/utils";
 import { replayComponent } from "../../inspect-element/view-state";
 import { Icon } from "../icon";
+import { debounce } from "../../utils/helpers";
 
-export const Header = () => {
-  const inspectState = Store.inspectState.value;
-  const refComponentName = useRef<HTMLSpanElement>(null);
-  const refMetrics = useRef<HTMLSpanElement>(null);
-  const [isReplaying, setIsReplaying] = useState(false);
+const BtnReplay = () => {
+  const refBtnReplay = useRef<HTMLButtonElement>(null);
+  const refIsReplaying = useRef(false);
+  const timeoutRef = useRef<number>();
 
-  useEffect(() => {
-    const updateMetrics = () => {
-      if (!refComponentName.current || !refMetrics.current) return;
-      if (inspectState.kind !== 'focused') return;
+  const { overrideProps, overrideHookState } = getOverrideMethods();
+  const canEdit = !overrideProps;
 
-      if (!document.contains(inspectState.focusedDomElement)) {
-        if (Store.inspectState.value.propContainer) {
-          Store.inspectState.value = {
-            kind: 'inspect-off',
-            propContainer: Store.inspectState.value.propContainer,
-          };
-        }
-        return;
+  const handleReplay = useCallback((e: MouseEvent) => {
+    e.stopPropagation();
+
+    const inspectState = Store.inspectState.value;
+    if (refIsReplaying.current || inspectState.kind !== 'focused') return;
+
+    const { parentCompositeFiber } = getCompositeComponentFromElement(inspectState.focusedDomElement);
+    if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
+
+    refIsReplaying.current = true;
+    refBtnReplay.current?.classList.add('disabled');
+
+    void replayComponent(parentCompositeFiber).finally(() => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
 
+      const cleanup = () => {
+        refIsReplaying.current = false;
+        refBtnReplay.current?.classList.remove('disabled');
+      };
 
-      const { parentCompositeFiber } = getCompositeComponentFromElement(inspectState.focusedDomElement);
+      if (document.hidden) {
+        cleanup();
+      } else {
+        timeoutRef.current = window.setTimeout(cleanup, 300);
+      }
+    });
+  }, []);
 
-      if (!parentCompositeFiber) return;
-
-      const reportDataFiber =
-        Store.reportData.get(parentCompositeFiber) ??
-        (parentCompositeFiber.alternate
-          ? Store.reportData.get(parentCompositeFiber.alternate)
-          : null);
-
-      const componentName = getDisplayName(parentCompositeFiber.type) ?? 'Unknown';
-
-      const renderCount = reportDataFiber?.count ?? 0;
-      const renderTime = reportDataFiber?.time ?? 0;
-
-      refComponentName.current.textContent = componentName;
-      refMetrics.current.textContent = renderCount > 0
-        ? `${renderCount} renders${renderTime > 0 ? ` • ${renderTime.toFixed(2)}ms` : ''}`
-        : '';
-    };
-
-    const unsubscribe = Store.lastReportTime.subscribe(updateMetrics);
-
+  useEffect(() => {
     return () => {
-      unsubscribe();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, [inspectState]);
+  }, []);
+
+  if (!canEdit) return null;
+
+  return (
+    <button
+      ref={refBtnReplay}
+      title="Replay component"
+      className="react-scan-replay-button"
+      onClick={handleReplay}
+    >
+      <Icon name="icon-replay" />
+    </button>
+  );
+};
+
+export const Header = () => {
+  const refComponentName = useRef<HTMLSpanElement>(null);
+  const refMetrics = useRef<HTMLSpanElement>(null);
 
   const handleClose = useCallback(() => {
     if (Store.inspectState.value.propContainer) {
@@ -65,64 +79,79 @@ export const Header = () => {
     }
   }, []);
 
-  const handleReplay = useCallback((e: MouseEvent) => {
-    void (async () => {
-      e.stopPropagation();
-      if (isReplaying || inspectState.kind !== 'focused') return;
+  const updateHeaderContent = useCallback(() => {
+    const inspectState = Store.inspectState.value;
+    if (inspectState.kind !== 'focused') return;
 
-      const { parentCompositeFiber } = getCompositeComponentFromElement(inspectState.focusedDomElement);
-      if (!parentCompositeFiber) return;
+    const focusedDomElement = inspectState.focusedDomElement;
+    if (!refComponentName.current || !refMetrics.current || !focusedDomElement) return;
 
-      const { overrideProps, overrideHookState } = getOverrideMethods();
-      if (!overrideProps || !overrideHookState) return;
+    const { parentCompositeFiber } = getCompositeComponentFromElement(focusedDomElement);
+    if (!parentCompositeFiber) return;
 
-      setIsReplaying(true);
+    const currentComponentName = refComponentName.current.dataset.text;
+    const currentMetrics = refMetrics.current.dataset.text;
 
-      try {
-        await replayComponent(parentCompositeFiber);
-      } finally {
-        setTimeout(() => {
-          setIsReplaying(false);
-        }, 300);
+    const fiber = parentCompositeFiber.alternate ?? parentCompositeFiber;
+    const reportData = Store.reportData.get(fiber);
+    const componentName = getDisplayName(parentCompositeFiber.type) ?? 'Unknown';
+
+    if (componentName === currentComponentName && reportData?.count === 0) {
+      return;
+    }
+
+    const renderCount = reportData?.count ?? 0;
+    const renderTime = reportData?.time ?? 0;
+    const newMetrics = renderCount > 0
+      ? `${renderCount} renders${renderTime > 0 ? ` • ${renderTime.toFixed(2)}ms` : ''}`
+      : '';
+
+    if (componentName !== currentComponentName || newMetrics !== currentMetrics) {
+      requestAnimationFrame(() => {
+        if (!refComponentName.current || !refMetrics.current) return;
+        refComponentName.current.dataset.text = componentName;
+        refMetrics.current.dataset.text = newMetrics;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const debouncedUpdate = debounce(updateHeaderContent, 16, { leading: true });
+
+    const unsubscribeLastReportTime = Store.lastReportTime.subscribe(debouncedUpdate);
+    const unsubscribeStoreInspectState = Store.inspectState.subscribe(state => {
+      if (state.kind === 'focused') {
+        debouncedUpdate();
       }
-    })();
-  }, [inspectState, isReplaying]);
+    });
 
-  const { overrideProps } = getOverrideMethods();
-  const canEdit = !!overrideProps;
+    return () => {
+      unsubscribeLastReportTime();
+      unsubscribeStoreInspectState();
+      debouncedUpdate.cancel?.();
+    };
+  }, [updateHeaderContent]);
 
   return (
-    <div
-      className={cn(
-        "react-scan-header",
-        "flex",
-        "min-h-9",
-        'whitespace-nowrap',
-        "overflow-hidden",
-      )}
-    >
-      <div className="react-scan-header-left overflow-hidden">
-        <span ref={refComponentName} className="react-scan-component-name" />
-        <span ref={refMetrics} className="react-scan-metrics" />
-      </div>
-      <div class="react-scan-header-right">
-        {canEdit && (
-          <button
-            title="Replay component"
-            class={`react-scan-replay-button${isReplaying ? ' disabled' : ''}`}
-            onClick={handleReplay}
-          >
-            <Icon name="icon-replay" />
-          </button>
-        )}
-        <button
-          title="Close"
-          class="react-scan-close-button"
-          onClick={handleClose}
-        >
-          <Icon name="icon-close" />
-        </button>
-      </div>
+    <div className="react-scan-header">
+      <span
+        ref={refComponentName}
+        className="with-data-text"
+      />
+      <span
+        ref={refMetrics}
+        className="with-data-text mr-auto !overflow-visible text-xs text-[#888]"
+      />
+
+      <BtnReplay />
+
+      <button
+        title="Close"
+        class="react-scan-close-button"
+        onClick={handleClose}
+      >
+        <Icon name="icon-close" />
+      </button>
     </div>
   );
 };
