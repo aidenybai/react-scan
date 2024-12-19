@@ -545,8 +545,12 @@ export const start = () => {
     },
     isValidFiber,
     onRender(fiber, renders) {
-      if (Boolean(ReactScanInternals.instrumentation?.isPaused.value) || !ctx) {
-        // don't draw if it's paused
+      if (
+        Boolean(ReactScanInternals.instrumentation?.isPaused.value) ||
+        !ctx ||
+        document.visibilityState !== 'visible'
+      ) {
+        // don't draw if it's paused or tab is not active
         return;
       }
       updateFiberRenderData(fiber, renders);
