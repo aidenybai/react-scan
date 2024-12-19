@@ -298,38 +298,30 @@ export const getReport = (type?: React.ComponentType<any>) => {
 };
 
 export const setOptions = (userOptions: Partial<Options>) => {
-  // Validate user options first
   const validOptions = validateOptions(userOptions);
 
-  // Skip if no valid options
   if (Object.keys(validOptions).length === 0) {
     return;
   }
 
-  // Special handling for sound + enabled state
   if ('playSound' in validOptions && validOptions.playSound) {
     validOptions.enabled = true;
   }
 
-  // Update options with validated values
   const newOptions = {
     ...ReactScanInternals.options.value,
     ...validOptions,
   };
 
-  // Update instrumentation state if needed
   const { instrumentation } = ReactScanInternals;
   if (instrumentation && 'enabled' in validOptions) {
     instrumentation.isPaused.value = validOptions.enabled === false;
   }
 
-  // Update options
   ReactScanInternals.options.value = newOptions;
 
-  // Save to localStorage
   saveLocalStorage('react-scan-options', newOptions);
 
-  // Handle toolbar visibility only if showToolbar changed
   if ('showToolbar' in validOptions) {
     if (toolbarContainer && !newOptions.showToolbar) {
       toolbarContainer.remove();
@@ -421,7 +413,6 @@ const startFlushOutlineInterval = () => {
 export const start = () => {
   if (typeof window === 'undefined') return;
 
-  // Load options from localStorage first
   const localStorageOptions =
     readLocalStorage<LocalStorageOptions>('react-scan-options');
   if (localStorageOptions) {

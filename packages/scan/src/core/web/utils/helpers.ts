@@ -37,23 +37,48 @@ export const throttle = <T extends (...args: Array<any>) => any>(
   };
 };
 
-
-export const debounce = <T extends (...args: Array<any>) => void>(
+export const debounce = <T extends (...args: Array<any>) => any>(
   fn: T,
-  delay: number
+  wait: number,
+  options: { leading?: boolean; trailing?: boolean } = {}
 ) => {
-  let timeoutId: number;
+  let timeoutId: number | undefined;
+  let lastArgs: Parameters<T> | undefined;
+  let isLeadingInvoked = false;
 
   const debounced = (...args: Parameters<T>) => {
-    window.clearTimeout(timeoutId);
-    timeoutId = window.setTimeout(() => fn(...args), delay);
+    lastArgs = args;
+
+    if (options.leading && !isLeadingInvoked) {
+      isLeadingInvoked = true;
+      fn(...args);
+      return;
+    }
+
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+
+    if (options.trailing !== false) {
+      timeoutId = window.setTimeout(() => {
+        isLeadingInvoked = false;
+        timeoutId = undefined;
+        fn(...(lastArgs!));
+      }, wait);
+    }
   };
 
-  debounced.cancel = () => window.clearTimeout(timeoutId);
+  debounced.cancel = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+      isLeadingInvoked = false;
+      lastArgs = undefined;
+    }
+  };
 
   return debounced;
-}
-
+};
 
 export const isOutlineUnstable = (outline: PendingOutline) => {
   for (let i = 0, len = outline.renders.length; i < len; i++) {

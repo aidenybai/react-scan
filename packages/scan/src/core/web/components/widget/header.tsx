@@ -4,10 +4,12 @@ import { Store } from "../../../..";
 import { getCompositeComponentFromElement, getOverrideMethods } from "../../inspect-element/utils";
 import { replayComponent } from "../../inspect-element/view-state";
 import { Icon } from "../icon";
+import { debounce } from "../../utils/helpers";
 
 const BtnReplay = () => {
   const refBtnReplay = useRef<HTMLButtonElement>(null);
   const refIsReplaying = useRef(false);
+  const timeoutRef = useRef<number>();
 
   const { overrideProps, overrideHookState } = getOverrideMethods();
   const canEdit = !overrideProps;
@@ -22,31 +24,47 @@ const BtnReplay = () => {
     if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
 
     refIsReplaying.current = true;
-    refBtnReplay.current?.classList.toggle('disabled');
+    refBtnReplay.current?.classList.add('disabled');
 
     void replayComponent(parentCompositeFiber).finally(() => {
-      setTimeout(() => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      const cleanup = () => {
         refIsReplaying.current = false;
-        refBtnReplay.current?.classList.toggle('disabled');
-      }, 300);
+        refBtnReplay.current?.classList.remove('disabled');
+      };
+
+      if (document.hidden) {
+        cleanup();
+      } else {
+        timeoutRef.current = window.setTimeout(cleanup, 300);
+      }
     });
   }, []);
 
-  if (canEdit) {
-    return (
-      <button
-        ref={refBtnReplay}
-        title="Replay component"
-        className="react-scan-replay-button"
-        onClick={handleReplay}
-      >
-        <Icon name="icon-replay" />
-      </button>
-    )
-  }
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
-  return null;
-}
+  if (!canEdit) return null;
+
+  return (
+    <button
+      ref={refBtnReplay}
+      title="Replay component"
+      className="react-scan-replay-button"
+      onClick={handleReplay}
+    >
+      <Icon name="icon-replay" />
+    </button>
+  );
+};
 
 export const Header = () => {
   const refComponentName = useRef<HTMLSpanElement>(null);
@@ -66,47 +84,53 @@ export const Header = () => {
     if (inspectState.kind !== 'focused') return;
 
     const focusedDomElement = inspectState.focusedDomElement;
-
-    if (!refComponentName.current || !refMetrics.current) return;
+    if (!refComponentName.current || !refMetrics.current || !focusedDomElement) return;
 
     const { parentCompositeFiber } = getCompositeComponentFromElement(focusedDomElement);
     if (!parentCompositeFiber) return;
 
-    const reportDataFiber =
-      Store.reportData.get(parentCompositeFiber) ??
-      (parentCompositeFiber.alternate
-        ? Store.reportData.get(parentCompositeFiber.alternate)
-        : null);
+    const currentComponentName = refComponentName.current.dataset.text;
+    const currentMetrics = refMetrics.current.dataset.text;
 
+    const fiber = parentCompositeFiber.alternate ?? parentCompositeFiber;
+    const reportData = Store.reportData.get(fiber);
     const componentName = getDisplayName(parentCompositeFiber.type) ?? 'Unknown';
-    const renderCount = reportDataFiber?.count ?? 0;
-    const renderTime = reportDataFiber?.time ?? 0;
 
-    // Update both text content and dataset in a single batch
-    requestAnimationFrame(() => {
-      if (!refComponentName.current || !refMetrics.current) return;
+    if (componentName === currentComponentName && reportData?.count === 0) {
+      return;
+    }
 
-      refComponentName.current.dataset.text = componentName;
-      refMetrics.current.dataset.text = renderCount > 0
-        ? `${renderCount} renders${renderTime > 0 ? ` • ${renderTime.toFixed(2)}ms` : ''}`
-        : '';
-    });
+    const renderCount = reportData?.count ?? 0;
+    const renderTime = reportData?.time ?? 0;
+    const newMetrics = renderCount > 0
+      ? `${renderCount} renders${renderTime > 0 ? ` • ${renderTime.toFixed(2)}ms` : ''}`
+      : '';
+
+    if (componentName !== currentComponentName || newMetrics !== currentMetrics) {
+      requestAnimationFrame(() => {
+        if (!refComponentName.current || !refMetrics.current) return;
+        refComponentName.current.dataset.text = componentName;
+        refMetrics.current.dataset.text = newMetrics;
+      });
+    }
   }, []);
 
   useEffect(() => {
-    const unsubscribeLastReportTime = Store.lastReportTime.subscribe(updateHeaderContent);
+    const debouncedUpdate = debounce(updateHeaderContent, 16, { leading: true });
 
+    const unsubscribeLastReportTime = Store.lastReportTime.subscribe(debouncedUpdate);
     const unsubscribeStoreInspectState = Store.inspectState.subscribe(state => {
       if (state.kind === 'focused') {
-        updateHeaderContent();
+        debouncedUpdate();
       }
     });
 
     return () => {
       unsubscribeLastReportTime();
       unsubscribeStoreInspectState();
+      debouncedUpdate.cancel?.();
     };
-  }, []);
+  }, [updateHeaderContent]);
 
   return (
     <div className="react-scan-header">
