@@ -1,9 +1,7 @@
 import type { Render } from '../../instrumentation';
 import { getLabelText } from '../../utils';
 
-
 export const log = (renders: Array<Render>) => {
-  // todo: make log work now that getLabelText is different
   const logMap = new Map<
     string,
     Array<{ prev: unknown; next: unknown; type: string; unstable: boolean }>

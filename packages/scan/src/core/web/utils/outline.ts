@@ -1,16 +1,14 @@
 import { throttle } from '@web-utils/helpers';
-import { Internals, OutlineKey, ReactScanInternals } from '../../index';
-import { aggregateRender, getLabelText, joinAggregations } from '../../utils';
+import { OutlineKey, ReactScanInternals } from '../../index';
+import { getLabelText, joinAggregations } from '../../utils';
 import { AggregatedChange } from 'src/core/instrumentation';
 import { Fiber } from 'react-reconciler';
 export interface OutlineLabel {
   alpha: number;
-  // outline: Outline;
   color: { r: number; g: number; b: number };
   reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
   labelText: string;
   estimatedTextWidth: number; // this value does not correctly
-  // rect: DOMRect;
   activeOutline: Outline;
 }
 
@@ -122,8 +120,7 @@ const idempotent_startBoundingRectGC = () => {
 };
 
 export const flushOutlines = async (
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  previousOutlines: Map<string, Outline> = new Map(),
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 ) => {
   if (!ReactScanInternals.scheduledOutlines.size) {
     return;
@@ -133,7 +130,6 @@ export const flushOutlines = async (
     ReactScanInternals.scheduledOutlines.values(),
   );
 
-  // oh todo, if there exists an outline, do NOT add it, just increment it
   await activateOutlines();
   ReactScanInternals.scheduledOutlines = new Map();
 
@@ -173,7 +169,8 @@ export const fadeOutOutline = (
     }
 
     if (!frame) {
-      console.error('invariant');
+      // Invariant: There should always be at least one frame
+      // Fixme: there currently exists an edge case where an active outline has 0 group aggregated renders
       activeOutlines.delete(key);
       continue; // then there's nothing to draw
     }
@@ -313,14 +310,17 @@ export const fadeOutOutline = (
 type ComponentName = string;
 export interface Outline {
   domNode: HTMLElement;
-
-  /** Aggregated render info */ // TODO: FLATTEN THIS INTO THE SINGLE OBJECT TO AVOID RE-CREATING OBJECTS
+  /** Aggregated render info */ // TODO: Flatten AggregatedRender into Outline to avoid re-creating objects
   aggregatedRender: AggregatedRender;
 
   /* Active Info- we re-use the Outline object to avoid over-allocing objects, which is why we have a singular aggregatedRender and collection of it (groupedAggregatedRender) */
+
   alpha: number | null;
   totalFrames: number | null;
-  /** Invariant: This scales at a rate of O(unique components rendered at the same (x,y) coordinates) */
+  /* 
+    - Invariant: This scales at a rate of O(unique components rendered at the same (x,y) coordinates) 
+    - grouped renders by fiber
+  */
   groupedAggregatedRender: Map<Fiber, AggregatedRender> | null;
   rect: DOMRect | null;
   /* This value is computed before the full rendered text is shown, so its only considered an estimate */
@@ -387,7 +387,7 @@ const activateOutlines = async () => {
   const totalFrames = 45;
   const alpha = 0.8;
   for (const [fiber, outline] of scheduledOutlines) {
-    // put this behind config to use intersection observer or update speed
+    // todo: put this behind config to use intersection observer or update speed
     // outlineUpdateSpeed: throttled | synchronous // "using synchronous updates will result in smoother animations, but add more overhead to react-scan"
     const rect = rects.get(outline.domNode);
     // const rect = outline.domNode.getBoundingClientRect()
@@ -396,7 +396,6 @@ const activateOutlines = async () => {
       continue;
     }
 
- 
     const prevAggregatedRender =
       activeFibers.get(fiber) ||
       (fiber.alternate && activeFibers.get(fiber.alternate));
@@ -420,8 +419,6 @@ const activateOutlines = async () => {
     if (existingOutline) {
       existingOutline.rect = rect;
     }
-
-
 
     if (!existingOutline) {
       existingOutline = outline; // re-use the existing object to avoid GC time
@@ -473,7 +470,6 @@ export interface MergedOutlineLabel {
 
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
-  maxMergeOps = 1000000000,
 ): Array<MergedOutlineLabel> => {
   if (labels.length <= 1) {
     return labels.map((label) => toMergedLabel(label));
@@ -491,7 +487,6 @@ export const mergeOverlappingLabels = (
 
   const mergedLabels: Array<MergedOutlineLabel> = [];
   const mergedSet = new Set<number>();
-  let ops = 0;
 
   for (let i = 0; i < transformed.length; i++) {
     if (mergedSet.has(i)) continue;
@@ -504,7 +499,6 @@ export const mergeOverlappingLabels = (
     for (
       let j = i + 1;
       j < transformed.length &&
-      ops < maxMergeOps &&
       transformed[j].rect.x <= currentMerged.rect.x + currentMerged.rect.width;
       j++
     ) {
@@ -513,8 +507,6 @@ export const mergeOverlappingLabels = (
       const nextRect = transformed[j].rect;
       const overlapArea = getOverlapArea(currentMerged.rect, nextRect);
       if (overlapArea > 0) {
-        ops++;
-
         const nextLabel = toMergedLabel(transformed[j].original, nextRect);
         currentMerged = mergeTwoLabels(currentMerged, nextLabel);
 

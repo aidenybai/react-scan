@@ -241,7 +241,7 @@ const init = async () => {
       globalHook.ReactScanInternals.onRender = (fiber, renders) => {
         let localCount = 0;
         for (const render of renders) {
-          localCount += render.renders;
+          localCount += render.count;
         }
         count = localCount;
       };

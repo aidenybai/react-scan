@@ -78,7 +78,7 @@ export const isElementInViewport = (
 export interface RenderChange {
   type: 'props' | 'context' | 'state';
   name: string;
-prevValue: unknown;
+  prevValue: unknown;
   nextValue: unknown;
   unstable: boolean;
 }
@@ -95,10 +95,9 @@ export interface Render {
   phase: 'mount' | 'update' | 'unmount';
   componentName: string | null;
   time: number | null;
-  renders: number; // uh is this right?
-  // worry about compat late
+  count: number; // uh is this right?
   forget: boolean;
-  changes: Array<RenderChange>
+  changes: Array<RenderChange>;
   unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
@@ -211,7 +210,7 @@ export const getStateChanges = (fiber: Fiber) => {
     if (Object.is(prevState.memoizedState, nextState.memoizedState)) return;
     const change: RenderChange = {
       type: 'state',
-      name: '',// bad interface should make this a discriminated union
+      name: '', // bad interface should make this a discriminated union
       prevValue: prevState.memoizedState,
       nextValue: nextState.memoizedState,
       unstable: false,
@@ -361,13 +360,12 @@ export const createInstrumentation = (
         const render: Render = {
           phase,
           componentName: getDisplayName(type),
-          renders: 1,
+          count: 1,
           changes,
           time: selfTime,
           forget: hasMemoCache(fiber),
           // only collect if the render was unnecessary 5% of the time since is isRenderUnnecessary is expensive
-          // unnecessary: Math.random() < 0.05 ? isRenderUnnecessary(fiber) : null,
-          unnecessary: null,
+          unnecessary: Math.random() < 0.05 ? isRenderUnnecessary(fiber) : null,
           didCommit: didFiberCommit(fiber),
           fps,
         };

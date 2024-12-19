@@ -12,12 +12,7 @@ import {
   traverseFiber,
   detectReactBuildType,
 } from 'bippy';
-import {
-  // type ActiveOutline,
-  AggregatedRender,
-  flushOutlines,
-  type Outline,
-} from '@web-utils/outline';
+import { flushOutlines, type Outline } from '@web-utils/outline';
 import { log, logIntro } from '@web-utils/log';
 import {
   createInspectElementStateMachine,
@@ -31,7 +26,7 @@ import {
   updateFiberRenderData,
   type RenderData,
 } from 'src/core/utils';
-import { onIdle, readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
 import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
@@ -183,11 +178,9 @@ export interface Internals {
   instrumentation: ReturnType<typeof createInstrumentation> | null;
   componentAllowList: WeakMap<React.ComponentType<any>, Options> | null;
   options: Signal<Options>;
-  // scheduledOutlines: Array<PendingOutline>;
-  scheduledOutlines: Map<Fiber, Outline>; // we clear this nearly immediately, so no memory leak concern
+  scheduledOutlines: Map<Fiber, Outline>; // we clear t,his nearly immediately, so no concern of mem leak on the fiber
+  // outlines at the same coordinates always get merged together, so we pre-compute the merge ahead of time when aggregating in activeOutlines
   activeOutlines: Map<OutlineKey, Outline>; // we re-use the outline object on the scheduled outline
-  // denormalized for quick lookup of which fibers have labels
-  // activeOutlines:  Map<Fiber, ActiveOutline>; // this has an equivalent life cycle to the fiber itself, so there will not be a leak (it only stays alive for non trivial amount of time when a fiber re-renders frequently)
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
   Store: StoreType;
 }
@@ -225,7 +218,6 @@ export const ReactScanInternals: Internals = {
   onRender: null,
   scheduledOutlines: new Map(),
   activeOutlines: new Map(),
-  // activeFibers: new WeakSet,
   Store,
 };
 
@@ -603,7 +595,6 @@ export const start = () => {
               forget: render.forget,
               fps: render.fps,
               phase: new Set([render.phase]),
-              // renders: render.renders,
               time: render.time,
               unnecessary: render.unnecessary,
               frame: 0,
@@ -612,7 +603,6 @@ export const start = () => {
             },
             alpha: null,
             groupedAggregatedRender: null,
-            // componentNames: null,
             rect: null,
             totalFrames: null,
             estimatedTextWidth: null,

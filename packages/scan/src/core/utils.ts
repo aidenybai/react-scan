@@ -26,15 +26,12 @@ export const joinAggregations = ({
   from: AggregatedRender;
   to: AggregatedRender;
 }) => {
-  // to.changes.type = union(to.changes.type, from.changes.type);
   to.changes.type = to.changes.type.union(from.changes.type);
   to.changes.unstable = to.changes.unstable || from.changes.unstable;
-  // to.renders = from.renders + to.renders;
   to.aggregatedCount += 1;
   to.didCommit = to.didCommit || from.didCommit;
   to.forget = to.forget || from.forget;
   to.fps = to.fps + from.fps;
-  // to.phase = union(to.phase, from.phase);
   to.phase = to.phase.union(from.phase);
   to.time = (to.time ?? 0) + (from.time ?? 0);
 
@@ -48,7 +45,6 @@ export const aggregateRender = (
     newRender.changes,
     prevAggregated.changes,
   );
-  // prevAggregated.renders = newRender.renders + prevAggregated.renders;
   prevAggregated.aggregatedCount += 1;
   prevAggregated.didCommit = prevAggregated.didCommit || newRender.didCommit;
   prevAggregated.forget = prevAggregated.forget || newRender.forget;
@@ -61,7 +57,7 @@ export const aggregateRender = (
 };
 
 export const getLabelText = (
-  groupedAggregatedRenders: Array<AggregatedRender>, // i need to aggregate when passing down
+  groupedAggregatedRenders: Array<AggregatedRender>, 
 ) => {
   let labelText = '';
 
@@ -70,10 +66,8 @@ export const getLabelText = (
     Array<{ name: string; forget: boolean; time: number }>
   >();
 
-  // this joins the names with same number of counts one by one, hm
 
   for (const aggregatedRender of groupedAggregatedRenders) {
-    // make sure this invariant holds
     const { forget, time, aggregatedCount, name } = aggregatedRender;
     if (!componentsByCount.has(aggregatedCount)) {
       componentsByCount.set(aggregatedCount, []);
@@ -137,7 +131,7 @@ export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
       renders: [],
     }) as RenderData;
     const firstRender = renders[0];
-    renderData.count += firstRender.renders;
+    renderData.count += firstRender.count;
     renderData.time += firstRender.time ?? 0;
     renderData.renders.push(firstRender);
     type.renderData = renderData;
