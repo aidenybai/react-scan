@@ -86,12 +86,21 @@ export interface Change {
 export type Category = 'commit' | 'unstable' | 'unnecessary';
 
 export interface Render {
-  phase: string;
+  // TODO: use type exported from bippy instead.
+  phase: 'mount' | 'update' | 'unmount';
   componentName: string | null;
   time: number | null;
   count: number;
+  /**
+   * Whether the re-render occurred on a component wrapped with `React.memo()`.
+   */
   forget: boolean;
   changes: Array<Change> | null;
+  /**
+   * Determine if the render is unnecessary.
+   * Only sampling 5% of the renders to avoid performance impact.
+   * Otherwise, it will be `null`.
+   */
   unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
@@ -164,7 +173,6 @@ export const getPropsChanges = (fiber: Fiber) => {
 
   const prevProps = fiber.alternate?.memoizedProps || {};
   const nextProps = fiber.memoizedProps || {};
-
 
   const allKeys = new Set([
     ...Object.keys(prevProps),

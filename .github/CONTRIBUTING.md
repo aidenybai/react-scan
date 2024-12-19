@@ -5,6 +5,7 @@
 ```bash
 git clone https://github.com/aidenybai/react-scan.git
 cd react-scan
+corepack enable
 pnpm install
 ```
 
