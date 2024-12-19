@@ -76,6 +76,8 @@ export interface Options {
   /**
    * Log renders to the console
    *
+   * WARNING: This can add significant overhead when the app re-renders frequently
+   *
    * @default false
    */
   log?: boolean;
@@ -557,10 +559,8 @@ export const start = () => {
       }
       updateFiberRenderData(fiber, renders);
       if (ReactScanInternals.options.value.log) {
-        // running onIdle in hot path is ~1ms per component render- very expensive
-        onIdle(() => {
-          log(renders);
-        });
+        // this can be expensive given enough re-renders
+        log(renders);
       }
 
       if (isCompositeFiber(fiber)) {
@@ -618,7 +618,6 @@ export const start = () => {
             estimatedTextWidth: null,
           });
         }
-  
 
         // - audio context can take up an insane amount of cpu, todo: figure out why
         // - we may want to take this out of hot path
