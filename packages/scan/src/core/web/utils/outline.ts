@@ -129,7 +129,6 @@ export const flushOutlines = async (
     return;
   }
 
-  // const scheduledOutlines = ReactScanInternals.scheduledOutlines;
   const flattenedScheduledOutlines = Array.from(
     ReactScanInternals.scheduledOutlines.values(),
   );
@@ -138,33 +137,13 @@ export const flushOutlines = async (
   await activateOutlines();
   ReactScanInternals.scheduledOutlines = new Map();
 
-  // recalcOutlines(); // is this needed?
-
   paintOutlines(
     ctx,
     flattenedScheduledOutlines, // this only matters for API back compat we aren't using it in this func
   );
-
-  // i don' t think this ever runs? If thers a bug add it back
-  // if (ReactScanInternals.scheduledOutlines.size) {
-  //   requestAnimationFrame(() => {
-  //     void flushOutlines(ctx, newPreviousOutlines); // i think this is fine, think harder about it later
-  //   });
-  // }
 };
 
 let animationFrameId: number | null = null;
-
-const labelTextCache = new WeakMap<Outline, string>();
-
-// function getCachedLabelText(outline: Outline): string {
-//   if (labelTextCache.has(outline)) {
-//     return labelTextCache.get(outline)!;
-//   }
-//   const text = getLabelText(outline.renders) ?? '';
-//   labelTextCache.set(outline, text);
-//   return text;
-// }
 
 export const fadeOutOutline = (
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -256,8 +235,6 @@ export const fadeOutOutline = (
     ctx.stroke();
     ctx.fill();
 
-    // this don't work because we need the set of renders grouped
-    // const labelText = getCachedLabelText(outline);
     const labelText = getLabelText(
       Array.from(invariant_activeOutline.groupedAggregatedRender.values()),
     );
@@ -285,7 +262,6 @@ export const fadeOutOutline = (
     ] of invariant_activeOutline.groupedAggregatedRender) {
       if (aggregatedRender.frame! >= totalFrames) {
         invariant_activeOutline.groupedAggregatedRender.delete(fiber);
-        // ReactScanInternals.activeFibers.delete(fiber);
       }
     }
 
@@ -328,8 +304,6 @@ export const fadeOutOutline = (
 
   ctx.restore();
 
-  // cleanup logic here
-
   if (activeOutlines.size) {
     animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
   } else {
@@ -341,26 +315,16 @@ export interface Outline {
   domNode: HTMLElement;
 
   /** Aggregated render info */ // TODO: FLATTEN THIS INTO THE SINGLE OBJECT TO AVOID RE-CREATING OBJECTS
-  aggregatedRender: AggregatedRender; // i think we need to map this to component names, since that's what it will be under the hood, shrug
-  // actually if we think of this as data for one outline, and then another field storing the minimal information, its fine
-  // im not too worried about something being alloced staying a live a little long vs allocing a lot of memory
-  // can make this nullable and clear it if neccecsary, but probably not a problem
+  aggregatedRender: AggregatedRender;
 
-  /* Active Info- we re-use this object to avoid over-allocing objects */
-  // outline: Outline | null;
+  /* Active Info- we re-use the Outline object to avoid over-allocing objects, which is why we have a singular aggregatedRender and collection of it (groupedAggregatedRender) */
   alpha: number | null;
-
-  totalFrames: number | null; // componentNames: Set<string> | null;
-  // componentRenderCounts: Map<string, number>;
+  totalFrames: number | null;
   /** Invariant: This scales at a rate of O(unique components rendered at the same (x,y) coordinates) */
   groupedAggregatedRender: Map<Fiber, AggregatedRender> | null;
-  // erg, we need count, forget, time which is essentially
   rect: DOMRect | null;
-
-  estimatedTextWidth: number | null; // todo estimated is stupid
-
-  // so we know which fibers currently have outlines
-  // this is used to dedup outlines
+  /* This value is computed before the full rendered text is shown, so its only considered an estimate */
+  estimatedTextWidth: number | null; // todo: estimated is stupid just make it the actual
 }
 export interface AggregatedRender {
   name: ComponentName;
@@ -374,15 +338,11 @@ export interface AggregatedRender {
   didCommit: boolean;
   fps: number;
 
-  computedKey: OutlineKey | null; // hacky but whatever
+  computedKey: OutlineKey | null;
 }
 
 const activateOutlines = async () => {
   const domNodes: Array<HTMLElement> = [];
-
-  // lets just see how expensive that loop is
-  // const fibersWithOutline = new Set
-
   const scheduledOutlines = ReactScanInternals.scheduledOutlines;
   const activeOutlines = ReactScanInternals.activeOutlines;
   const activeFibers = new Map<Fiber, AggregatedRender>();
@@ -408,7 +368,6 @@ const activateOutlines = async () => {
   }
 
   for (const [fiber, outline] of scheduledOutlines) {
-    // if (outline.)
     const existingAggregatedRender =
       activeFibers.get(fiber) ||
       (fiber.alternate && activeFibers.get(fiber.alternate));
@@ -417,20 +376,14 @@ const activateOutlines = async () => {
         to: existingAggregatedRender,
         from: outline.aggregatedRender,
       });
-      // existingAggregatedRender.aggregatedCount = outline.aggregatedRender.aggregatedCount + 1
       existingAggregatedRender.frame = 0;
-      // outline.rect =
-
-      // continue;
     }
     // else, the later logic will handle adding the entry
 
     domNodes.push(outline.domNode);
-    // const existingActiveOutline = previousActiveOutlines.get()
   }
 
   const rects = await batchGetBoundingRects(domNodes);
-  //
   const totalFrames = 45;
   const alpha = 0.8;
   for (const [fiber, outline] of scheduledOutlines) {
@@ -443,10 +396,7 @@ const activateOutlines = async () => {
       continue;
     }
 
-    //
-    // const hasFiber =j
-
-    // console.log('has fibers?', );
+ 
     const prevAggregatedRender =
       activeFibers.get(fiber) ||
       (fiber.alternate && activeFibers.get(fiber.alternate));
@@ -471,7 +421,7 @@ const activateOutlines = async () => {
       existingOutline.rect = rect;
     }
 
-    // activeFibers.add(fiber);
+
 
     if (!existingOutline) {
       existingOutline = outline; // re-use the existing object to avoid GC time
@@ -612,7 +562,7 @@ function mergeTwoLabels(
   return {
     alpha: Math.max(a.alpha, b.alpha),
 
-    ...pickColorFromOutermost(a, b), // kinda wrong, should pick "darkest"/ based on what causes outline to be redder/darker
+    ...pickColorFromOutermost(a, b), // kinda wrong, should pick color in earliest stage
     reasons: mergedReasons,
     groupedAggregatedRender: mergedGrouped,
     rect: mergedRect,
