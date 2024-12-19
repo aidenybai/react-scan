@@ -64,7 +64,7 @@ export interface InternalInteraction {
   route: string | null;
   commit: string | null;
   branch: string | null;
-  uniqueInteractionId: string;
+  uniqueInteractionId: string; // uniqueInteractionId is unique to the session and provided by performance observer.
   componentPath: Array<string>;
   performanceEntry: PerformanceInteraction;
   components: Map<string, InternalComponentCollection>;
