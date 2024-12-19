@@ -57,7 +57,7 @@ export const aggregateRender = (
 };
 
 export const getLabelText = (
-  groupedAggregatedRenders: Array<AggregatedRender>, 
+  groupedAggregatedRenders: Array<AggregatedRender>,
 ) => {
   let labelText = '';
 
@@ -66,13 +66,11 @@ export const getLabelText = (
     Array<{ name: string; forget: boolean; time: number }>
   >();
 
-
   for (const aggregatedRender of groupedAggregatedRenders) {
     const { forget, time, aggregatedCount, name } = aggregatedRender;
     if (!componentsByCount.has(aggregatedCount)) {
       componentsByCount.set(aggregatedCount, []);
     }
-    // biome-ignore lint/style/noNonNullAssertion: <explanation>
     componentsByCount
       .get(aggregatedCount)!
       .push({ name, forget, time: time ?? 0 });
@@ -85,7 +83,6 @@ export const getLabelText = (
   const parts: Array<string> = [];
   let cumulativeTime = 0;
   for (const count of sortedCounts) {
-    // biome-ignore lint/style/noNonNullAssertion: <explanation>
     const componentGroup = componentsByCount.get(count)!;
     const names = componentGroup.map(({ name }) => name).join(', ');
     let text = names;

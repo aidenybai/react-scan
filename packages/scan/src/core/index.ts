@@ -582,12 +582,10 @@ export const start = () => {
 
         if (ReactScanInternals.scheduledOutlines.has(fiber)) {
           const existingOutline =
-            // biome-ignore lint/style/noNonNullAssertion: <explanation>
             ReactScanInternals.scheduledOutlines.get(fiber)!;
           aggregateRender(render, existingOutline.aggregatedRender);
         } else {
           ReactScanInternals.scheduledOutlines.set(fiber, {
-            // biome-ignore lint/style/noNonNullAssertion: <explanation>
             domNode: domFiber.stateNode,
             aggregatedRender: {
               name:
