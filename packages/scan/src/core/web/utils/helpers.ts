@@ -1,15 +1,13 @@
-import {
-  type ClassValue,
-  clsx,
-} from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { type PendingOutline } from './outline';
+import { type Outline } from './outline';
 
 export const cn = (...inputs: Array<ClassValue>): string => {
   return twMerge(clsx(inputs));
 };
 
-export const isFirefox = typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
+export const isFirefox =
+  typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
 
 export const onIdle = (callback: () => void) => {
   if ('scheduler' in globalThis) {
@@ -37,10 +35,9 @@ export const throttle = <T extends (...args: Array<any>) => any>(
   };
 };
 
-
 export const debounce = <T extends (...args: Array<any>) => void>(
   fn: T,
-  delay: number
+  delay: number,
 ) => {
   let timeoutId: number;
 
@@ -52,21 +49,6 @@ export const debounce = <T extends (...args: Array<any>) => void>(
   debounced.cancel = () => window.clearTimeout(timeoutId);
 
   return debounced;
-}
-
-
-export const isOutlineUnstable = (outline: PendingOutline) => {
-  for (let i = 0, len = outline.renders.length; i < len; i++) {
-    const render = outline.renders[i];
-    if (!render.changes) continue;
-    for (let j = 0, len2 = render.changes.length; j < len2; j++) {
-      const change = render.changes[j];
-      if (change.unstable) {
-        return true;
-      }
-    }
-  }
-  return false;
 };
 
 export const createElement = (htmlString: string): HTMLElement => {
@@ -94,7 +76,7 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
   }
 };
 
-export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
+export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
   if (typeof window === 'undefined') return;
 
   try {
@@ -104,6 +86,9 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
   }
 };
 
-export const toggleMultipleClasses = (element: HTMLElement, ...classes: Array<string>) => {
-  classes.forEach(cls => element.classList.toggle(cls));
+export const toggleMultipleClasses = (
+  element: HTMLElement,
+  ...classes: Array<string>
+) => {
+  classes.forEach((cls) => element.classList.toggle(cls));
 };

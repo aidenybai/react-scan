@@ -3,20 +3,6 @@ import { Internals, OutlineKey, ReactScanInternals } from '../../index';
 import { aggregateRender, getLabelText, joinAggregations } from '../../utils';
 import { AggregatedChange } from 'src/core/instrumentation';
 import { Fiber } from 'react-reconciler';
-// import { ReactScanInternals } from 'src/types';
-
-// export interface ActiveOutline {
-//   outline: Outline;
-//   alpha: number;
-//   frame: number;
-//   totalFrames: number;
-//   // text: string | null;
-//   componentNames: Set<string>;
-//   rect: DOMRect;
-// }
-
-// wait is this even used anymore?
-
 export interface OutlineLabel {
   alpha: number;
   // outline: Outline;
@@ -183,86 +169,10 @@ const labelTextCache = new WeakMap<Outline, string>();
 export const fadeOutOutline = (
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 ) => {
-  // const { scheduledOutlines: outlines } = ReactScanInternals;
-  // const options = ReactScanInternals.options.value;
-
   const dpi = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, ctx.canvas.width / dpi, ctx.canvas.height / dpi);
-
-  // const groupedOutlines = new Map<string, Outline>();
-
-  // const toRemove: Array<number> = [];
-  // for (const [fiber, outline] of outlines) {
-  //   // const activeOutline = outlines[idx];
-  //   // if (!activeOutline) continue;
-
-  //   const { rect } = outline;
-  //   if (!rect) {
-  //     // it has not been activated yet
-  //     continue;
-  //   }
-  //   const key = `${rect.x}-${rect.y}`;
-  //   let existing = groupedOutlines.get(key);
-  //   // if (!existing){
-  //   //   existing = []
-  //   //   groupedOutlines.set(key, existing)
-  //   // }
-  //   // existing.push(outline);
-
-  //   // joinAggregations(outline.a)
-  //   // outline.
-
-  //   // gr
-  //   // groupedOutlines.set(existing)
-
-  //   if (!existing) {
-  //     groupedOutlines.set(key, outline);
-  //   } else {
-  //     // todo, make a general render aggregate function?
-
-  //     // existing.outline.aggregatedRenders.aggregatedCount
-
-  //     joinAggregations({
-  //       from: outline.aggregatedRenders,
-  //       to: existing.aggregatedRenders,
-  //     });
-  //     // existing.componentNames.add(activeOutline.a)
-  //     // invariant: existing outlines have all its activated properties non nullable
-  //     // invariant: at this point of the program, outline has all its activated properties non nullable
-  //     existing.componentNames = existing.componentNames!.union(
-  //       outline.componentNames!,
-  //     );
-  //     existing.alpha = Math.max(existing.alpha!, outline.alpha!);
-  //     // existing.text
-  //     existing.frame = Math.min(existing.frame!, outline.frame!);
-  //     existing.totalFrames = Math.max(
-  //       existing.totalFrames!,
-  //       outline.totalFrames!,
-  //     );
-
-  //     // toRemove.push(idx);
-  //   }
-
-  //   out.frame++;
-  //   const progress = activeOutline.frame / activeOutline.totalFrames;
-  //   const alphaScalar = 0.8;
-  //   activeOutline.alpha = alphaScalar * (1 - progress);
-
-  // if (activeOutline.frame >= activeOutline.totalFrames) {
-  //   toRemove.push(idx);
-  // }
-  // }
-
-  // toRemove.sort((a, b) => a - b);
-  // for (let i = toRemove.length - 1; i >= 0; i--) {
-  //   activeOutlines.splice(toRemove[i], 1);
-  // }
-
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
   ctx.save();
-
-  // const renderCountThreshold = options.renderCountThreshold ?? 0;
-
   const phases = new Set<string>();
   const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
   const color = { r: 0, g: 0, b: 0 };
@@ -273,8 +183,6 @@ export const fadeOutOutline = (
     const invariant_activeOutline = activeOutline as {
       [K in keyof Outline]: NonNullable<Outline[K]>;
     };
-    // invariant_activeOutline.frame += 1;
-    // const frame = Math.max(Array.from(invariant_activeOutline.groupedAggregatedRender.values()).map(x=))
     let frame;
 
     for (const aggregatedRender of invariant_activeOutline.groupedAggregatedRender.values()) {
@@ -285,28 +193,12 @@ export const fadeOutOutline = (
         : aggregatedRender.frame!;
     }
 
-    // console.log('any?',Ar );
-
-    // console.log('da frame', frame, invariant_activeOutline.groupedAggregatedRender.size);
-
     if (!frame) {
       console.error('invariant');
       activeOutlines.delete(key);
       continue; // then there's nothing to draw
     }
-    // let totalTime = 0;
-    // let totalCount = 0;
-    // let totalFps = 0;
-    // const renderLen = outline.renders.length;
-    // for (let i = 0; i < renderLen; i++) {
-    //   const render = outline.renders[i];
-    //   totalTime += render.time ?? 0;
-    //   totalCount += render.count;
-    //   totalFps += render.fps;
-    // }
 
-    // const key =
-    //   `${invariant_activeOutline.rect.x}-${invariant_activeOutline.rect.y}` as const;
     const THRESHOLD_FPS = 60;
     const avgFps =
       invariant_activeOutline.aggregatedRender.fps /
@@ -330,31 +222,6 @@ export const fadeOutOutline = (
     phases.clear();
     reasons.length = 0;
 
-    // let didCommit = false;
-    // let isUnstable = false;
-    // let isUnnecessary = false;
-
-    // for (let i = 0; i < renderLen; i++) {
-    //   const render = outline.renders[i];
-    //   phases.add(render.phase);
-    //   if (render.didCommit) {
-    //     didCommit = true;
-    //   }
-
-    //   const changes = render.changes;
-    //   if (changes) {
-    //     for (let j = 0, cLen = changes.length; j < cLen; j++) {
-    //       if (changes[j].unstable) {
-    //         isUnstable = true;
-    //       }
-    //     }
-    //   }
-
-    //   if (render.unnecessary) {
-    //     isUnnecessary = true;
-    //   }
-    // }
-
     if (invariant_activeOutline.aggregatedRender.didCommit)
       reasons.push('commit');
     if (invariant_activeOutline.aggregatedRender.changes.unstable)
@@ -368,17 +235,6 @@ export const fadeOutOutline = (
         color.b = 128;
       }
     }
-
-    // if (renderCountThreshold > 0) {
-    //   // uh this does nothing?????????????????//
-    //   let count = 0;
-    //   for (let i = 0; i < renderLen; i++) {
-    //     count += outline.renders[i].count;
-    //   }
-    //   if (count < renderCountThreshold) {
-    //     continue;
-    //   }
-    // }
 
     const alphaScalar = 0.8;
     invariant_activeOutline.alpha =
@@ -416,15 +272,11 @@ export const fadeOutOutline = (
       const measured = measureTextCached(labelText, ctx);
       pendingLabeledOutlines.push({
         alpha,
-        // outline,
         color,
         reasons,
         labelText,
         estimatedTextWidth: measured.width,
-        // rect: invariant_activeOutline.rect,
         activeOutline: invariant_activeOutline,
-
-        // rect,
       });
     }
 
@@ -626,7 +478,6 @@ const activateOutlines = async () => {
     if (!existingOutline) {
       existingOutline = outline; // re-use the existing object to avoid GC time
       existingOutline.rect = rect;
-      // existingOutline.frame = 0;
       existingOutline.totalFrames = totalFrames;
       existingOutline.groupedAggregatedRender = new Map([
         [fiber, outline.aggregatedRender],
@@ -637,140 +488,21 @@ const activateOutlines = async () => {
       existingOutline.alpha = alpha;
 
       existingOutline.aggregatedRender.computedKey = key;
-      // if (!prevAggregatedRender) {
-      // activateOutlines.de
 
-      // theres another key that exists already, gang
       if (prevAggregatedRender?.computedKey) {
         activeOutlines.delete(prevAggregatedRender.computedKey);
       }
       activeOutlines.set(key, existingOutline);
-      // }
-      /* Active Info */
-      // outline: Outline | null;
-      // alpha: number | null;
-      // frame: number | null;
-      // totalFrames: number | null;
-      // componentNames: Set<string> | null;
-      // rect: DOMRect | null;
     }
 
-    // else {
-    //   console.log('joined', existingOutline, existingOutline.aggregatedRender.renders);
-
-    //   joinAggregations({
-    //     from: outline.aggregatedRender,
-    //     to: existingOutline.aggregatedRender,
-    //   });
-    // }
-
-    // existingOutline.componentNames.add(activeOutline.a)
-    // invariant: existingOutline outlines have all its activated properties non nullable
-    // invariant: at this point of the program, outline has all its activated properties non nullable
-    // existingOutline.componentNames = existingOutline.componentNames!.union(
-    //   outline.componentNames!,
-    // );
-    // const previousComponentAggregatedRender =
-    //   existingOutline.groupedAggregatedRender!.get(
-    //   fiber
-    //   ) ?? (fiber.alternate &&  existingOutline.groupedAggregatedRender!.get(
-    //     fiber.alternate
-    //     ))
-    // // console.log('previous existing has!', previousComponentAggregatedRender?.renders);
-
-    // if (previousComponentAggregatedRender) {
-    //   // previousComponentAggregatedRender.
-
-    //   joinAggregations({
-    //     to: previousComponentAggregatedRender,
-    //     from: outline.aggregatedRender,
-    //   });
-
-    //   // console.log('now it has', previousComponentAggregatedRender.renders);
-    // } else {
-    // existingOutline.groupedAggregatedRender!.set(
-    //   fiber,
-    //   outline.aggregatedRender
-    // );
-    // }
-
-    //  for (const aggregatedRender of existingOutline.groupedAggregatedRender ) {
-
-    //  }
     existingOutline.alpha = Math.max(existingOutline.alpha!, outline.alpha!);
-    // existingOutline.text
-    // existingOutline.frame = Math.min(existingOutline.frame!, outline.frame!);
+
     existingOutline.totalFrames = Math.max(
       existingOutline.totalFrames!,
       outline.totalFrames!,
     );
   }
 };
-
-// const activateOutlines = async (
-//   outlines: Internals['scheduledOutlines'],
-//   previousOutlines: Map<string, Outline>,
-// ) => {
-//   const scheduledOutlines: Internals['scheduledOutlines'] = new Map();
-//   const domNodes: Array<HTMLElement> = [];
-
-//   for (const [fiber, outline] of outlines.entries()) {
-//     // if ()
-//     if (outline.rect === null) {
-//       scheduledOutlines.set(fiber, outline);
-//       domNodes.push(outline.domNode);
-//     }
-//   }
-
-//   // const newPreviousOutlines = new Map<string, Outline>();
-//   //
-//   // const { options } = ReactScanInternals;
-//   // const totalFrames = options.value.alwaysShowLabels ? 60 : 30; // what?
-//   const totalFrames = 30;
-//   const alpha = 0.8;
-
-//   const rects = await batchGetBoundingRects(domNodes);
-//   // const newActiveOutlines: Array<ActiveOutline> = [];
-
-//   const viewportWidth = window.innerWidth;
-//   const viewportHeight = window.innerHeight;
-
-//   // const newActiveOutlines =previousOutlines
-
-//   for (const [fiber, outline] of outlines) {
-//     // const renders = outline.renders;
-
-//     const rect = rects.get(outline.domNode);
-//     if (!rect) {
-//       // If we cannot get the rect, it might mean the element is detached or invisible.
-//       // Skip it.
-//       continue;
-//     }
-//     const key = `${rect.x}-${rect.y}`;
-
-//     const isOffScreen =
-//       rect.bottom < 0 ||
-//       rect.right < 0 ||
-//       rect.top > viewportHeight ||
-//       rect.left > viewportWidth;
-
-//     if (isOffScreen) {
-//       outlines.delete(fiber);
-//       continue;
-//     }
-
-//     outline.rect = rect;
-//     outline.frame = 0;
-//     outline.totalFrames = totalFrames;
-//     outline.componentNames = new Set();
-//     outline.alpha = alpha;
-//   }
-
-//   // ReactScanInternals.activeOutlines.push(...newActiveOutlines);
-//   // ReactScanInternals.activeOutlines.set;
-//   // return newPreviousOutlines;
-// };
-
 function paintOutlines(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   outlines: Array<Outline>,
@@ -782,89 +514,6 @@ function paintOutlines(
     animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
   }
 }
-// export const applyLabelTransform = (rect: DOMRect, estimatedTextWidth: number): DOMRect => {
-//   const textHeight = 11;
-
-//   const labelX = rect.x;
-//   const labelY = rect.y - textHeight - 4;
-
-//   return new DOMRect(
-//     labelX,
-//     labelY,
-//     estimatedTextWidth + 4,
-//     textHeight + 4
-//   );
-// };
-
-//
-
-/**
- * -  this can be done in O(nlogn) using https://en.wikipedia.org/wiki/Sweep_line_algorithm
- * - we don't merge if we need to perform over 1000 merge checks as a naive way to optimize this fn during expensive draws
- *    - this works fine since when there are lots of outlines, its likely going to be very cluttered anyway, merging does not make the situation meangifully better
- */
-//
-
-// export const mergeOverlappingLabels = (
-//   labels: Array<OutlineLabel>,
-//   maxMergeOps = 2000
-// ): Array<OutlineLabel> => {
-//   const sortedByX = labels.map((label) => ({
-//     ...label,
-//     rect: applyLabelTransform(label.activeOutline.rect!, label.estimatedTextWidth!),
-//   }));
-//   sortedByX.sort((a, b) => a.rect.x - b.rect.x);
-
-//   const mergedLabels: Array<OutlineLabel> = [];
-//   const mergedSet = new Set<OutlineLabel>();
-//   let ops = 0;
-
-//   for (let i = 0; i < sortedByX.length; i++) {
-//     const label = sortedByX[i];
-//     if (mergedSet.has(label)) continue;
-
-//     let currentMerged: OutlineLabel = label;
-
-//     for (
-//       let j = i + 1;
-//       j < sortedByX.length &&
-//       sortedByX[j].rect.x <= label.rect.x + label.rect.width &&
-//       ops < maxMergeOps;
-//       j++
-//     ) {
-//       const nextLabel = sortedByX[j];
-//       if (mergedSet.has(nextLabel)) continue;
-
-//       ops++;
-//       const overlapArea = getOverlapArea(label.rect, nextLabel.rect);
-
-//       if (overlapArea > 0) {
-//         const outermostLabel = getOutermostOutline(currentMerged, nextLabel);
-
-//         // @ts-expect-error
-//         console.log('hm', currentMerged.activeOutline.groupedAggregatedRender?.size, nextLabel.activeOutline.groupedAggregatedRender?.size, currentMerged.activeOutline.groupedAggregatedRender?.size + nextLabel.activeOutline.groupedAggregatedRender?.size);
-
-//         outermostLabel.activeOutline.groupedAggregatedRender = new Map([
-//           ...currentMerged.activeOutline.groupedAggregatedRender!.entries(),
-//           ...nextLabel.activeOutline.groupedAggregatedRender!.entries()
-//         ]);
-//         console.log('whats this',currentMerged.activeOutline.groupedAggregatedRender?.values(), nextLabel.activeOutline.groupedAggregatedRender?.values());
-
-//         outermostLabel.alpha = Math.max(
-//           currentMerged.alpha!,
-//           nextLabel.alpha!
-//         );
-
-//         mergedSet.add(currentMerged === outermostLabel ? nextLabel : currentMerged);
-//         currentMerged = outermostLabel;
-//       }
-//     }
-
-//     mergedLabels.push(currentMerged);
-//   }
-
-//   return mergedLabels;
-// };
 
 export interface MergedOutlineLabel {
   alpha: number;
@@ -874,15 +523,6 @@ export interface MergedOutlineLabel {
   rect: DOMRect;
 }
 
-/**
- * Merge overlapping labels into a new array of MergedOutlineLabel.
- * If two (or more) labels overlap, they are combined into a single label.
- *
- * Steps:
- * 1) Transform and sort.
- * 2) Iteratively merge overlapping labels.
- * 3) Create new combined labels without mutating the original ones.
- */
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
   maxMergeOps = 1000000000,
@@ -891,7 +531,6 @@ export const mergeOverlappingLabels = (
     return labels.map((label) => toMergedLabel(label));
   }
 
-  // 1) Transform each label’s rect first
   const transformed = labels.map((label) => ({
     original: label,
     rect: applyLabelTransform(
@@ -900,18 +539,15 @@ export const mergeOverlappingLabels = (
     ),
   }));
 
-  // 2) Sort by rect.x
   transformed.sort((a, b) => a.rect.x - b.rect.x);
 
   const mergedLabels: Array<MergedOutlineLabel> = [];
-  const mergedSet = new Set<number>(); // Track indices of merged labels
+  const mergedSet = new Set<number>();
   let ops = 0;
 
-  // 3) Attempt merges
   for (let i = 0; i < transformed.length; i++) {
     if (mergedSet.has(i)) continue;
 
-    // currentMerged is the current combined label we're building
     let currentMerged = toMergedLabel(
       transformed[i].original,
       transformed[i].rect,
@@ -926,32 +562,24 @@ export const mergeOverlappingLabels = (
     ) {
       if (mergedSet.has(j)) continue;
 
-      // Check overlap with the current merged rect
       const nextRect = transformed[j].rect;
       const overlapArea = getOverlapArea(currentMerged.rect, nextRect);
       if (overlapArea > 0) {
         ops++;
 
         const nextLabel = toMergedLabel(transformed[j].original, nextRect);
-        // Create a new merged label that encloses both
         currentMerged = mergeTwoLabels(currentMerged, nextLabel);
 
-        // Mark the j-th label as merged
         mergedSet.add(j);
       }
     }
 
-    // If currentMerged wasn't merged into another label, push it to final
-    // We know currentMerged is a MergedOutlineLabel
     mergedLabels.push(currentMerged);
   }
 
   return mergedLabels;
 };
 
-/**
- * Convert an original OutlineLabel into the simplified MergedOutlineLabel format.
- */
 function toMergedLabel(
   label: OutlineLabel,
   rectOverride?: DOMRect,
@@ -959,7 +587,6 @@ function toMergedLabel(
   const rect =
     rectOverride ??
     applyLabelTransform(label.activeOutline.rect!, label.estimatedTextWidth!);
-  // Convert groupedAggregatedRender map to array
   const groupedArray = Array.from(
     label.activeOutline.groupedAggregatedRender!.values(),
   );
@@ -972,28 +599,21 @@ function toMergedLabel(
   };
 }
 
-/**
- * Merge two MergedOutlineLabels into a single new MergedOutlineLabel.
- */
 function mergeTwoLabels(
   a: MergedOutlineLabel,
   b: MergedOutlineLabel,
 ): MergedOutlineLabel {
-  // Compute bounding rect that encloses both
   const mergedRect = getBoundingRect(a.rect, b.rect);
 
-  // Combine groupedAggregatedRender arrays
   const mergedGrouped = a.groupedAggregatedRender.concat(
     b.groupedAggregatedRender,
   );
 
-  // Combine reasons (unique)
   const mergedReasons = Array.from(new Set([...a.reasons, ...b.reasons]));
 
   return {
     alpha: Math.max(a.alpha, b.alpha),
-    // Keep color from "outermost" label: define "outermost" as the one with larger rect area or just pick 'a'.
-    // If you'd rather pick based on area, compute area and pick:
+
     ...pickColorFromOutermost(a, b),
     reasons: mergedReasons,
     groupedAggregatedRender: mergedGrouped,
@@ -1001,9 +621,6 @@ function mergeTwoLabels(
   };
 }
 
-/**
- * Return the bounding DOMRect that encloses both r1 and r2.
- */
 function getBoundingRect(r1: DOMRect, r2: DOMRect): DOMRect {
   const x1 = Math.min(r1.x, r2.x);
   const y1 = Math.min(r1.y, r2.y);
@@ -1012,18 +629,12 @@ function getBoundingRect(r1: DOMRect, r2: DOMRect): DOMRect {
   return new DOMRect(x1, y1, x2 - x1, y2 - y1);
 }
 
-/**
- * Pick color from the outermost label. "Outermost" means largest area.
- */
 function pickColorFromOutermost(a: MergedOutlineLabel, b: MergedOutlineLabel) {
   const areaA = a.rect.width * a.rect.height;
   const areaB = b.rect.width * b.rect.height;
   return areaA >= areaB ? { color: a.color } : { color: b.color };
 }
 
-/**
- * Compute overlap area between two rects.
- */
 function getOverlapArea(rect1: DOMRect, rect2: DOMRect): number {
   const xOverlap = Math.max(
     0,
@@ -1060,25 +671,3 @@ export const measureTextCached = (
   textMeasurementCache.set(text, metrics);
   return metrics;
 };
-
-// export const getOverlapArea = (rect1: DOMRect, rect2: DOMRect): number => {
-//   const xOverlap = Math.max(
-//     0,
-//     Math.min(rect1.right, rect2.right) - Math.max(rect1.left, rect2.left)
-//   );
-//   const yOverlap = Math.max(
-//     0,
-//     Math.min(rect1.bottom, rect2.bottom) - Math.max(rect1.top, rect2.top)
-//   );
-//   return xOverlap * yOverlap;
-// };
-
-// export const getOutermostOutline = (
-//   label1: OutlineLabel,
-//   label2: OutlineLabel
-// ): OutlineLabel => {
-//   const area1 = label1.activeOutline.rect!.width * label1.activeOutline.rect!.height;
-//   const area2 = label2.activeOutline.rect!.width * label2.activeOutline.rect!.height;
-
-//   return area1 >= area2 ? label1 : label2;
-// };
