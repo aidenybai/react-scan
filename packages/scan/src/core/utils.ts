@@ -1,58 +1,99 @@
-import { type Fiber } from 'react-reconciler';
+import type { Fiber } from 'react-reconciler';
 import { getType } from 'bippy';
 import { ReactScanInternals } from '..';
-import type { Render } from './instrumentation';
+import type { AggregatedChange, Render, RenderChange } from './instrumentation';
+import type { AggregatedRender, Outline } from '@web-utils/outline';
+export const aggregateChanges = (
+  changes: Array<RenderChange>,
+  prevAggregatedChange?: AggregatedChange,
+) => {
+ const newChange = {
+    type:prevAggregatedChange?.type ?? new Set(),
+    unstable:prevAggregatedChange?.unstable ?? false,
+  }
+  // biome-ignore lint/complexity/noForEach: <explanation>
+  changes.forEach((change) => {
+    newChange.type.add(change.type);
+    newChange.unstable =
+    newChange.unstable || change.unstable;
+  })
 
-export const getLabelText = (renders: Array<Render>) => {
+  return newChange;
+};
+export const joinAggregations = ({
+  from,
+  to,
+}: {
+  from: AggregatedRender;
+  to: AggregatedRender;
+}) => {
+  // to.changes.type = union(to.changes.type, from.changes.type);
+  to.changes.type = to.changes.type.union(from.changes.type);
+  to.changes.unstable = to.changes.unstable || from.changes.unstable;
+  // to.renders = from.renders + to.renders;
+  to.aggregatedCount += 1
+  to.didCommit = to.didCommit || from.didCommit;
+  to.forget = to.forget || from.forget;
+  to.fps = to.fps + from.fps;
+  // to.phase = union(to.phase, from.phase);
+  to.phase = to.phase.union(from.phase);
+  to.time = (to.time ?? 0) + (from.time ?? 0);
+
+  to.unnecessary = to.unnecessary || from.unnecessary;
+};
+export const aggregateRender = (
+  newRender: Render,
+  prevAggregated: AggregatedRender,
+) => {
+  prevAggregated.changes = aggregateChanges(
+    newRender.changes,
+    prevAggregated.changes,
+  );
+  // prevAggregated.renders = newRender.renders + prevAggregated.renders;
+  prevAggregated.aggregatedCount += 1;
+  prevAggregated.didCommit = prevAggregated.didCommit || newRender.didCommit;
+  prevAggregated.forget = prevAggregated.forget || newRender.forget;
+  prevAggregated.fps = prevAggregated.fps + newRender.fps;
+  prevAggregated.phase.add(newRender.phase);
+  prevAggregated.time = (prevAggregated.time ?? 0) + (newRender.time ?? 0);
+
+  prevAggregated.unnecessary =
+    prevAggregated.unnecessary || newRender.unnecessary;
+};
+
+export const getLabelText = (
+  groupedAggregatedRenders: Array<AggregatedRender>, // i need to aggregate when passing down
+) => {
   let labelText = '';
 
-  const components = new Map<
-    string,
-    {
-      count: number;
-      forget: boolean;
-      time: number;
-    }
-  >();
-
-  for (let i = 0, len = renders.length; i < len; i++) {
-    const render = renders[i];
-    const name = render.componentName;
-
-    if (!name?.trim()) continue;
-
-    const { count, forget, time } = components.get(name) ?? {
-      count: 0,
-      forget: false,
-      time: 0,
-    };
-    components.set(name, {
-      count: count + render.count,
-      forget: forget || render.forget,
-      time: time + (render.time ?? 0),
-    });
-  }
 
   const componentsByCount = new Map<
     number,
     Array<{ name: string; forget: boolean; time: number }>
   >();
 
-  for (const [name, data] of Array.from(components.entries())) {
-    const { count, forget, time } = data;
-    if (!componentsByCount.has(count)) {
-      componentsByCount.set(count, []);
+  // this joins the names with same number of counts one by one, hm
+
+
+  for (const aggregatedRender of groupedAggregatedRenders) { // make sure this invariant holds
+    const { forget, time, aggregatedCount,name } = aggregatedRender;
+    if (!componentsByCount.has(aggregatedCount)) {
+      componentsByCount.set(aggregatedCount, []);
     }
-    componentsByCount.get(count)!.push({ name, forget, time });
+    // biome-ignore lint/style/noNonNullAssertion: <explanation>
+    componentsByCount.get(aggregatedCount)!.push({ name, forget, time: time ?? 0 });
   }
 
   const sortedCounts = Array.from(componentsByCount.keys()).sort(
     (a, b) => b - a,
   );
 
+  
+
   const parts: Array<string> = [];
   let cumulativeTime = 0;
   for (const count of sortedCounts) {
+    // biome-ignore lint/style/noNonNullAssertion: <explanation>
     const componentGroup = componentsByCount.get(count)!;
     const names = componentGroup.map(({ name }) => name).join(', ');
     let text = names;
@@ -88,6 +129,7 @@ export const getLabelText = (renders: Array<Render>) => {
   return labelText;
 };
 
+// this is stupid broken
 export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
   ReactScanInternals.options.value.onRender?.(fiber, renders);
   const type = getType(fiber.type) || fiber.type;
@@ -98,7 +140,7 @@ export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
       renders: [],
     }) as RenderData;
     const firstRender = renders[0];
-    renderData.count += firstRender.count;
+    renderData.count += firstRender.renders;
     renderData.time += firstRender.time ?? 0;
     renderData.renders.push(firstRender);
     type.renderData = renderData;

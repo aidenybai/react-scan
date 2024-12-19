@@ -98,7 +98,8 @@ export default defineConfig([
     platform: 'browser',
     treeshake: true,
     dts: true,
-    minify: process.env.NODE_ENV === 'production' ? 'terser' : false,
+    // minify: process.env.NODE_ENV === 'production' ? 'terser' : false,
+    minify: false,
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
     },

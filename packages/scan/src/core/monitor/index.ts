@@ -132,7 +132,6 @@ export const startMonitoring = () => {
       updateFiberRenderData(fiber, renders);
 
       if (isCompositeFiber(fiber)) {
-        reportRender(fiber, renders);
         aggregateComponentRenderToInteraction(fiber, renders);
       }
       ReactScanInternals.options.value.onRender?.(fiber, renders);
