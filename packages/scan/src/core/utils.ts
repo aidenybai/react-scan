@@ -7,16 +7,15 @@ export const aggregateChanges = (
   changes: Array<RenderChange>,
   prevAggregatedChange?: AggregatedChange,
 ) => {
- const newChange = {
-    type:prevAggregatedChange?.type ?? new Set(),
-    unstable:prevAggregatedChange?.unstable ?? false,
-  }
+  const newChange = {
+    type: prevAggregatedChange?.type ?? new Set(),
+    unstable: prevAggregatedChange?.unstable ?? false,
+  };
   // biome-ignore lint/complexity/noForEach: <explanation>
   changes.forEach((change) => {
     newChange.type.add(change.type);
-    newChange.unstable =
-    newChange.unstable || change.unstable;
-  })
+    newChange.unstable = newChange.unstable || change.unstable;
+  });
 
   return newChange;
 };
@@ -31,7 +30,7 @@ export const joinAggregations = ({
   to.changes.type = to.changes.type.union(from.changes.type);
   to.changes.unstable = to.changes.unstable || from.changes.unstable;
   // to.renders = from.renders + to.renders;
-  to.aggregatedCount += 1
+  to.aggregatedCount += 1;
   to.didCommit = to.didCommit || from.didCommit;
   to.forget = to.forget || from.forget;
   to.fps = to.fps + from.fps;
@@ -66,7 +65,6 @@ export const getLabelText = (
 ) => {
   let labelText = '';
 
-
   const componentsByCount = new Map<
     number,
     Array<{ name: string; forget: boolean; time: number }>
@@ -74,21 +72,21 @@ export const getLabelText = (
 
   // this joins the names with same number of counts one by one, hm
 
-
-  for (const aggregatedRender of groupedAggregatedRenders) { // make sure this invariant holds
-    const { forget, time, aggregatedCount,name } = aggregatedRender;
+  for (const aggregatedRender of groupedAggregatedRenders) {
+    // make sure this invariant holds
+    const { forget, time, aggregatedCount, name } = aggregatedRender;
     if (!componentsByCount.has(aggregatedCount)) {
       componentsByCount.set(aggregatedCount, []);
     }
     // biome-ignore lint/style/noNonNullAssertion: <explanation>
-    componentsByCount.get(aggregatedCount)!.push({ name, forget, time: time ?? 0 });
+    componentsByCount
+      .get(aggregatedCount)!
+      .push({ name, forget, time: time ?? 0 });
   }
 
   const sortedCounts = Array.from(componentsByCount.keys()).sort(
     (a, b) => b - a,
   );
-
-  
 
   const parts: Array<string> = [];
   let cumulativeTime = 0;
@@ -129,7 +127,6 @@ export const getLabelText = (
   return labelText;
 };
 
-// this is stupid broken
 export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
   ReactScanInternals.options.value.onRender?.(fiber, renders);
   const type = getType(fiber.type) || fiber.type;

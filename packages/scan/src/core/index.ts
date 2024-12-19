@@ -1,6 +1,6 @@
-import type { Fiber } from "react-reconciler";
-import type * as React from "react";
-import { type Signal, signal } from "@preact/signals";
+import type { Fiber } from 'react-reconciler';
+import type * as React from 'react';
+import { type Signal, signal } from '@preact/signals';
 import {
   getDisplayName,
   getRDTHook,
@@ -17,16 +17,21 @@ import {
   AggregatedRender,
   flushOutlines,
   type Outline,
-} from "@web-utils/outline";
-import { log, logIntro } from "@web-utils/log";
+} from '@web-utils/outline';
+import { log, logIntro } from '@web-utils/log';
 import {
   createInspectElementStateMachine,
   type States,
 } from '@web-inspect-element/inspect-state-machine';
 import { playGeigerClickSound } from '@web-utils/geiger';
 import { ICONS } from '@web-assets/svgs/svgs';
-import { aggregateChanges, aggregateRender, updateFiberRenderData, type RenderData } from 'src/core/utils';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import {
+  aggregateChanges,
+  aggregateRender,
+  updateFiberRenderData,
+  type RenderData,
+} from 'src/core/utils';
+import { onIdle, readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
 import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
@@ -126,7 +131,7 @@ export interface Options {
    *
    * @default "fast"
    */
-  animationSpeed?: "slow" | "fast" | "off";
+  animationSpeed?: 'slow' | 'fast' | 'off';
 
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
@@ -137,15 +142,15 @@ export interface Options {
 
 export type MonitoringOptions = Pick<
   Options,
-  | "includeChildren"
-  | "enabled"
-  | "renderCountThreshold"
-  | "resetCountTimeout"
-  | "onCommitStart"
-  | "onCommitFinish"
-  | "onPaintStart"
-  | "onPaintFinish"
-  | "onRender"
+  | 'includeChildren'
+  | 'enabled'
+  | 'renderCountThreshold'
+  | 'resetCountTimeout'
+  | 'onCommitStart'
+  | 'onCommitFinish'
+  | 'onPaintStart'
+  | 'onPaintFinish'
+  | 'onRender'
 >;
 
 interface Monitor {
@@ -188,10 +193,10 @@ export interface Internals {
 export const Store: StoreType = {
   wasDetailsOpen: signal(true),
   isInIframe: signal(
-    typeof window !== "undefined" && window.self !== window.top
+    typeof window !== 'undefined' && window.self !== window.top,
   ),
   inspectState: signal<States>({
-    kind: "uninitialized",
+    kind: 'uninitialized',
   }),
   monitor: signal<Monitor | null>(null),
   fiberRoots: new WeakSet<Fiber>(),
@@ -347,7 +352,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
   const { selfTime } = getTimings(fiber.type);
   const displayName = getDisplayName(fiber.type);
 
-  Store.lastReportTime.value = Date.now()
+  Store.lastReportTime.value = Date.now();
 
   const currentFiberData = Store.reportData.get(reportFiber) ?? {
     count: 0,
@@ -399,7 +404,7 @@ export const isValidFiber = (fiber: Fiber) => {
           allowList?.get(node.type) ?? allowList?.get(node.elementType);
         return options?.includeChildren;
       },
-      true
+      true,
     );
     if (!parent && !shouldAllow) return false;
   }
@@ -416,7 +421,7 @@ const startFlushOutlineInterval = (ctx: CanvasRenderingContext2D) => {
   }, 30);
 };
 export const start = () => {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
 
   const localStorageOptions =
     readLocalStorage<LocalStorageOptions>('react-scan-options');
@@ -542,7 +547,7 @@ export const start = () => {
     },
     onError(error) {
       // eslint-disable-next-line no-console
-      console.error("[React Scan] Error instrumenting:", error);
+      console.error('[React Scan] Error instrumenting:', error);
     },
     isValidFiber,
     onRender(fiber, renders) {
@@ -551,10 +556,19 @@ export const start = () => {
         return;
       }
       updateFiberRenderData(fiber, renders);
+      if (ReactScanInternals.options.value.log) {
+        // running onIdle in hot path is ~1ms per component render- very expensive
+        onIdle(() => {
+          log(renders);
+        });
+      }
 
       if (isCompositeFiber(fiber)) {
         // report render has a non trivial cost because it calls Date.now(), so we want to avoid the computation if possible
-        if (ReactScanInternals.options.value.showToolbar !== false  && Store.inspectState.value.kind === 'focused') {
+        if (
+          ReactScanInternals.options.value.showToolbar !== false &&
+          Store.inspectState.value.kind === 'focused'
+        ) {
           reportRender(fiber, renders);
         }
       }
@@ -582,7 +596,7 @@ export const start = () => {
             aggregatedRender: {
               name:
                 renders.find((render) => render.componentName)?.componentName ??
-                "Unknown", 
+                'Unknown',
               aggregatedCount: 1,
               changes: aggregateChanges(render.changes),
               didCommit: render.didCommit,
@@ -604,9 +618,7 @@ export const start = () => {
             estimatedTextWidth: null,
           });
         }
-        // ReactScanInternals.scheduledOutlines.set(fiber, {
-        //   aggregatedRenders:
-        // })
+  
 
         // - audio context can take up an insane amount of cpu, todo: figure out why
         // - we may want to take this out of hot path
@@ -615,7 +627,7 @@ export const start = () => {
           const amplitude = Math.min(
             1,
             ((render.time ?? 0) - renderTimeThreshold) /
-              (renderTimeThreshold * 2)
+              (renderTimeThreshold * 2),
           );
           playGeigerClickSound(audioContext, amplitude);
         }
@@ -634,7 +646,7 @@ export const start = () => {
       if (isInstrumentationActive()) return;
       // eslint-disable-next-line no-console
       console.error(
-        "[React Scan] Failed to load. Must import React Scan before React runs."
+        '[React Scan] Failed to load. Must import React Scan before React runs.',
       );
     }, 5000);
   }
@@ -642,7 +654,7 @@ export const start = () => {
 
 export const withScan = <T>(
   component: React.ComponentType<T>,
-  options: Options = {}
+  options: Options = {},
 ) => {
   setOptions(options);
   const isInIframe = Store.isInIframe.value;
@@ -680,7 +692,7 @@ export const useScan = (options: Options = {}) => {
 
 export const onRender = (
   type: unknown,
-  _onRender: (fiber: Fiber, renders: Array<Render>) => void
+  _onRender: (fiber: Fiber, renders: Array<Render>) => void,
 ) => {
   const prevOnRender = ReactScanInternals.onRender;
   ReactScanInternals.onRender = (fiber, renders) => {
@@ -699,7 +711,7 @@ export const ignoredProps = new WeakSet<
 >();
 
 export const ignoreScan = (node: React.ReactNode) => {
-  if (typeof node === "object" && node) {
+  if (typeof node === 'object' && node) {
     ignoredProps.add(node);
   }
 };

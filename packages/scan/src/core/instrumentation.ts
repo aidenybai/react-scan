@@ -98,7 +98,7 @@ export interface Render {
   renders: number; // uh is this right?
   // worry about compat late
   forget: boolean;
-changes: Array<RenderChange>
+  changes: Array<RenderChange>
   unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
