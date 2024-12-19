@@ -1,5 +1,5 @@
 'use client';
-import { getDisplayName, isCompositeFiber } from 'bippy';
+import { getDisplayName, getTimings, isCompositeFiber } from 'bippy';
 import { type Fiber } from 'react-reconciler';
 import { useEffect } from 'react';
 import {
@@ -73,9 +73,7 @@ export const Monitoring = ({
   }
 
   useEffect(() => {
-    scanMonitoring({
-      enabled: true,
-    });
+    scanMonitoring({ enabled: true });
     return initPerformanceMonitoring();
   }, []);
 
@@ -149,44 +147,41 @@ const aggregateComponentRenderToInteraction = (
   renders: Array<Render>,
 ) => {
   const monitor = Store.monitor.value;
-  if (monitor && monitor.interactions && monitor.interactions.length > 0) {
-    const latestInteraction =
-      monitor.interactions[monitor.interactions.length - 1];
+  if (!monitor || !monitor.interactions || monitor.interactions.length === 0)
+    return;
+  const lastInteraction = monitor.interactions.at(-1); // Associate component render with last interaction
+  if (!lastInteraction) return;
 
-    let totalTime = 0;
-    for (const render of renders) {
-      totalTime += render.time ?? 0;
-    }
+  const displayName = getDisplayName(fiber.type);
+  if (!displayName) return; // TODO(nisarg): it may be useful to somehow report the first ancestor with a display name instead of completely ignoring
 
-    const displayName = getDisplayName(fiber.type);
-    if (!displayName) {
-      // it may be useful to somehow report the first ancestor with a display name instead of completely ignoring
-      return;
-    }
-    let component = latestInteraction.components.get(displayName);
-    if (!component) {
-      component = {
-        fibers: new Set(),
-        name: displayName,
-        renders: 0,
-        totalTime,
-        retiresAllowed: MAX_RETRIES_BEFORE_COMPONENT_GC,
-        uniqueInteractionId: latestInteraction.uniqueInteractionId,
-      };
-      latestInteraction.components.set(displayName, component);
-    }
+  let component = lastInteraction.components.get(displayName); // TODO(nisarg): Same names are grouped together which is wrong.
 
-    if (fiber.alternate && !component.fibers.has(fiber.alternate)) {
-      // then the alternate tree fiber exists in the weakset, don't double count the instance
-      component.fibers.add(fiber.alternate);
-    }
+  if (!component) {
+    component = {
+      fibers: new Set(),
+      name: displayName,
+      renders: 0,
+      retiresAllowed: MAX_RETRIES_BEFORE_COMPONENT_GC,
+      uniqueInteractionId: lastInteraction.uniqueInteractionId,
+    };
+    lastInteraction.components.set(displayName, component);
+  }
 
-    component.renders += renders.length;
-    if (!component.totalTime) {
-      component.totalTime = 0;
-    }
-    component.totalTime += component.totalTime
-      ? component.totalTime + totalTime
-      : totalTime;
+  if (fiber.alternate && !component.fibers.has(fiber.alternate)) {
+    // then the alternate tree fiber exists in the weakset, don't double count the instance
+    component.fibers.add(fiber.alternate);
+  }
+
+  const rendersCount = renders.length;
+  component.renders += rendersCount;
+
+  // We leave the times undefined to differentiate between a 0ms render and a non-profiled render.
+  if (fiber.actualDuration) {
+    const { selfTime, totalTime } = getTimings(fiber);
+    if (!component.totalTime) component.totalTime = 0;
+    if (!component.selfTime) component.selfTime = 0;
+    component.totalTime += totalTime;
+    component.selfTime += selfTime;
   }
 };
