@@ -213,7 +213,6 @@ export const fadeOutOutline = (
     const r = Math.round(START_COLOR.r + t * (END_COLOR.r - START_COLOR.r));
     const g = Math.round(START_COLOR.g + t * (END_COLOR.g - START_COLOR.g));
     const b = Math.round(START_COLOR.b + t * (END_COLOR.b - START_COLOR.b));
-    // let color = { r, g, b };
     color.r = r;
     color.g = g;
     color.b = b;
@@ -229,7 +228,6 @@ export const fadeOutOutline = (
     if (invariant_activeOutline.aggregatedRender.unnecessary) {
       reasons.push('unnecessary');
       if (reasons.length === 1) {
-        // color = { r: 128, g: 128, b: 128 };
         color.r = 128;
         color.g = 128;
         color.b = 128;
@@ -614,7 +612,7 @@ function mergeTwoLabels(
   return {
     alpha: Math.max(a.alpha, b.alpha),
 
-    ...pickColorFromOutermost(a, b),
+    ...pickColorFromOutermost(a, b), // kinda wrong, should pick "darkest"/ based on what causes outline to be redder/darker
     reasons: mergedReasons,
     groupedAggregatedRender: mergedGrouped,
     rect: mergedRect,
