@@ -2,6 +2,7 @@ import { throttle } from '@web-utils/helpers';
 import { ReactScanInternals } from '../../index';
 import { type Render } from '../../instrumentation';
 import { getLabelText } from '../../utils';
+import { outlineWorker, type DrawingQueue } from './outline-worker';
 
 export interface PendingOutline {
   domNode: HTMLElement;
@@ -142,7 +143,6 @@ const idempotent_startBoundingRectGC = () => {
 };
 
 export const flushOutlines = async (
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   previousOutlines: Map<string, PendingOutline> = new Map(),
 ) => {
   if (!ReactScanInternals.scheduledOutlines.length) {
@@ -158,14 +158,11 @@ export const flushOutlines = async (
 
   recalcOutlines();
 
-  void paintOutlines(
-    ctx,
-    scheduledOutlines, // this only matters for API back compat we aren't using it in this func
-  );
+  paintOutlines(scheduledOutlines);
 
   if (ReactScanInternals.scheduledOutlines.length) {
     requestAnimationFrame(() => {
-      void flushOutlines(ctx, newPreviousOutlines); // i think this is fine, think harder about it later
+      void flushOutlines(newPreviousOutlines);
     });
   }
 };
@@ -183,14 +180,9 @@ function getCachedLabelText(outline: PendingOutline): string {
   return text;
 }
 
-export const fadeOutOutline = (
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-) => {
+export const fadeOutOutline = () => {
   const { activeOutlines } = ReactScanInternals;
   const options = ReactScanInternals.options.value;
-
-  const dpi = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, ctx.canvas.width / dpi, ctx.canvas.height / dpi);
 
   const groupedOutlines = new Map<string, ActiveOutline>();
 
@@ -241,8 +233,8 @@ export const fadeOutOutline = (
     activeOutlines.splice(toRemove[i], 1);
   }
 
+  const drawingQueue: Array<DrawingQueue> = [];
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
-  ctx.save();
 
   const renderCountThreshold = options.renderCountThreshold ?? 0;
 
@@ -329,15 +321,12 @@ export const fadeOutOutline = (
     const alpha = activeOutline.alpha;
     const fillAlpha = alpha * 0.1;
 
-    const rgb = `${color.r},${color.g},${color.b}`;
-    ctx.strokeStyle = `rgba(${rgb},${alpha})`;
-    ctx.lineWidth = 1;
-    ctx.fillStyle = `rgba(${rgb},${fillAlpha})`;
-
-    ctx.beginPath();
-    ctx.rect(rect.x, rect.y, rect.width, rect.height);
-    ctx.stroke();
-    ctx.fill();
+    drawingQueue.push({
+      rect,
+      color,
+      alpha,
+      fillAlpha,
+    });
 
     const labelText = getCachedLabelText(outline);
 
@@ -346,7 +335,7 @@ export const fadeOutOutline = (
       labelText &&
       !(phases.has('mount') && phases.size === 1)
     ) {
-      const measured = measureTextCached(labelText, ctx);
+      const measured = measureTextCached(labelText);
       pendingLabeledOutlines.push({
         alpha,
         outline,
@@ -359,40 +348,25 @@ export const fadeOutOutline = (
     }
   }
 
-  ctx.restore();
-
   const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines);
 
-  ctx.save();
-  ctx.font = `11px ${MONO_FONT}`;
-
-  for (let i = 0, len = mergedLabels.length; i < len; i++) {
-    const { alpha, outline, color, reasons, rect } = mergedLabels[i];
-    const text = getCachedLabelText(outline);
-    const conditionalText =
-      reasons.includes('unstable') &&
-      (reasons.includes('commit') || reasons.includes('unnecessary'))
-        ? `⚠️${text}`
-        : text;
-
-    const textMetrics = ctx.measureText(conditionalText);
-    const textWidth = textMetrics.width;
-    const textHeight = 11;
-
-    const labelX: number = rect.x;
-    const labelY: number = rect.y - textHeight - 4;
-
-    ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
-    ctx.fillRect(labelX, labelY, textWidth + 4, textHeight + 4);
-
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.fillText(conditionalText, labelX + 2, labelY + textHeight);
-  }
-
-  ctx.restore();
+  outlineWorker.call({
+    type: 'fade-out-outline',
+    payload: {
+      dpi: window.devicePixelRatio,
+      drawingQueue,
+      mergedLabels: mergedLabels.map((v) => ({
+        alpha: v.alpha,
+        rect: v.rect,
+        color: v.color,
+        reasons: v.reasons,
+        labelText: getCachedLabelText(v.outline),
+      })),
+    },
+  });
 
   if (activeOutlines.length) {
-    animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
+    animationFrameId = requestAnimationFrame(() => fadeOutOutline());
   } else {
     animationFrameId = null;
   }
@@ -460,15 +434,12 @@ const activateOutlines = async (
   return newPreviousOutlines;
 };
 
-async function paintOutlines(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  outlines: Array<PendingOutline>,
-): Promise<void> {
+function paintOutlines(outlines: Array<PendingOutline>): void {
   const { options } = ReactScanInternals;
   options.value.onPaintStart?.(outlines); // maybe we should start passing activeOutlines to onPaintStart, since we have the activeOutlines at painStart
 
   if (!animationFrameId) {
-    animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
+    animationFrameId = requestAnimationFrame(() => fadeOutOutline());
   }
 }
 export const getLabelRect = (label: OutlineLabel): DOMRect => {
@@ -551,12 +522,18 @@ export const mergeOverlappingLabels = (
 
 const textMeasurementCache = new Map<string, TextMetrics>();
 
-export const measureTextCached = (
-  text: string,
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-): TextMetrics => {
+export const measureTextCached = (text: string): TextMetrics => {
   if (textMeasurementCache.has(text)) {
     return textMeasurementCache.get(text)!;
+  }
+  const dpi = window.devicePixelRatio || 1;
+  const canvas = new OffscreenCanvas(
+    dpi * window.innerWidth,
+    dpi * window.innerHeight,
+  );
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('unreachable');
   }
   ctx.font = `11px ${MONO_FONT}`;
   const metrics = ctx.measureText(text);
