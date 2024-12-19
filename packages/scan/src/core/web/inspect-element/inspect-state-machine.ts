@@ -1,5 +1,5 @@
 import { didFiberRender } from 'bippy';
-import { Store } from '../../index';
+import { ReactScanInternals, Store } from '../../index';
 import { throttle } from '../utils/helpers';
 import { renderPropsAndState } from './view-state';
 import {
@@ -109,8 +109,24 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
     };
     helper();
   };
+
+  window.addEventListener(
+    'mousemove',
+    () => {
+      if (Store.inspectState.value.kind !== 'inspect-off') {
+        return;
+      }
+      // the canvas doesn't get cleared when the mouse move overlaps with the clear
+      // i can't figure out why this happens, so this is an unfortunate hack
+      clearCanvas();
+      updateCanvasSize(canvas, ctx);
+    },
+    { capture: true },
+  );
+  let previousState: typeof Store.inspectState.value.kind;
+
   const repaint = throttle(() => {
-    unsubscribeAll(); // potential optimization: only unSub if inspectStateKind transitioned
+    // todo: make inspect-off state act as 0 perf hit since it does nothing
     const unSub = (() => {
       const inspectState = Store.inspectState.value;
       switch (inspectState.kind) {
@@ -118,23 +134,25 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
           return;
         }
         case 'inspect-off': {
-          clearCanvas();
-          // the canvas doesn't get cleared when the mouse move overlaps with the clear
-          // i can't figure out why this happens, so this is an unfortunate hack
-          const mouseMove = () => {
-            clearCanvas();
-            updateCanvasSize(canvas, ctx);
-          };
-
-          window.addEventListener('mousemove', mouseMove, { capture: true });
-
-          return () => {
-            window.removeEventListener('mousemove', mouseMove, {
-              capture: true,
-            });
-          };
+          if (previousState !== 'inspect-off') {
+            // likely because of weird RAF timing
+            // todo: figure out why this is needed
+            // to see the bug without setTimeout:
+            // - inspect something
+            // - focus something
+            // - turn off inspection
+            // - focus drawing still exists
+            setTimeout(() => {
+              cancelAnimationFrame(animationId);
+              unsubscribeAll();
+              clearCanvas();
+            }, 100);
+          }
+          clearCanvas(); // todo: make sure this isn't expensive
+          return;
         }
         case 'inspecting': {
+          unsubscribeAll();
           recursiveRaf(() => {
             if (!inspectState.hoveredDomElement) {
               return;
@@ -237,6 +255,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
           }
 
           return () => {
+            cancelAnimationFrame(animationId);
             window.removeEventListener('pointerdown', pointerdown, {
               capture: true,
             });
@@ -249,6 +268,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
           };
         }
         case 'focused': {
+          unsubscribeAll(); // potential optimization: only unSub if inspectStateKind transitioned
           recursiveRaf(() => {
             drawHoverOverlay(
               inspectState.focusedDomElement,
@@ -278,7 +298,8 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
 
           const element = inspectState.focusedDomElement;
 
-          const { parentCompositeFiber } = getCompositeComponentFromElement(element);
+          const { parentCompositeFiber } =
+            getCompositeComponentFromElement(element);
 
           if (!parentCompositeFiber) {
             return;
@@ -286,10 +307,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
 
           const didRender = didFiberRender(parentCompositeFiber); // because we react to any change, not just this fibers change, we need this check to know if the current fiber re-rendered for this publish
 
-          renderPropsAndState(
-            didRender,
-            parentCompositeFiber,
-          );
+          renderPropsAndState(didRender, parentCompositeFiber);
 
           const keyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -370,6 +388,8 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
           return () => {
             cleanup();
 
+            cancelAnimationFrame(animationId);
+
             window.removeEventListener('keydown', keyDown, { capture: true });
             window.removeEventListener(
               'pointerdown',
@@ -384,6 +404,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
     if (unSub) {
       (unsubscribeFns as any)[Store.inspectState.value.kind] = unSub;
     }
+    previousState = Store.inspectState.value.kind;
   }, 16);
 
   Store.inspectState.subscribe(repaint);

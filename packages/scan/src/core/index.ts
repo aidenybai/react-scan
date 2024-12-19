@@ -13,9 +13,10 @@ import {
   detectReactBuildType,
 } from 'bippy';
 import {
-  type ActiveOutline,
+  // type ActiveOutline,
+  AggregatedRender,
   flushOutlines,
-  type PendingOutline,
+  type Outline,
 } from '@web-utils/outline';
 import { log, logIntro } from '@web-utils/log';
 import {
@@ -24,8 +25,13 @@ import {
 } from '@web-inspect-element/inspect-state-machine';
 import { playGeigerClickSound } from '@web-utils/geiger';
 import { ICONS } from '@web-assets/svgs/svgs';
-import { updateFiberRenderData, type RenderData } from 'src/core/utils';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import {
+  aggregateChanges,
+  aggregateRender,
+  updateFiberRenderData,
+  type RenderData,
+} from 'src/core/utils';
+import { onIdle, readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
 import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
@@ -69,6 +75,8 @@ export interface Options {
 
   /**
    * Log renders to the console
+   *
+   * WARNING: This can add significant overhead when the app re-renders frequently
    *
    * @default false
    */
@@ -130,8 +138,8 @@ export interface Options {
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
-  onPaintStart?: (outlines: Array<PendingOutline>) => void;
-  onPaintFinish?: (outlines: Array<PendingOutline>) => void;
+  onPaintStart?: (outlines: Array<Outline>) => void;
+  onPaintFinish?: (outlines: Array<Outline>) => void;
 }
 
 export type MonitoringOptions = Pick<
@@ -169,12 +177,17 @@ interface StoreType {
   lastReportTime: Signal<number>;
 }
 
+export type OutlineKey = `${string}-${string}`;
+
 export interface Internals {
   instrumentation: ReturnType<typeof createInstrumentation> | null;
   componentAllowList: WeakMap<React.ComponentType<any>, Options> | null;
   options: Signal<Options>;
-  scheduledOutlines: Array<PendingOutline>;
-  activeOutlines: Array<ActiveOutline>;
+  // scheduledOutlines: Array<PendingOutline>;
+  scheduledOutlines: Map<Fiber, Outline>; // we clear this nearly immediately, so no memory leak concern
+  activeOutlines: Map<OutlineKey, Outline>; // we re-use the outline object on the scheduled outline
+  // denormalized for quick lookup of which fibers have labels
+  // activeOutlines:  Map<Fiber, ActiveOutline>; // this has an equivalent life cycle to the fiber itself, so there will not be a leak (it only stays alive for non trivial amount of time when a fiber re-renders frequently)
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
   Store: StoreType;
 }
@@ -210,8 +223,9 @@ export const ReactScanInternals: Internals = {
     dangerouslyForceRunInProduction: false,
   }),
   onRender: null,
-  scheduledOutlines: [],
-  activeOutlines: [],
+  scheduledOutlines: new Map(),
+  activeOutlines: new Map(),
+  // activeFibers: new WeakSet,
   Store,
 };
 
@@ -340,7 +354,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
   const { selfTime } = getTimings(fiber.type);
   const displayName = getDisplayName(fiber.type);
 
-  Store.lastReportTime.value = performance.now();
+  Store.lastReportTime.value = Date.now();
 
   const currentFiberData = Store.reportData.get(reportFiber) ?? {
     count: 0,
@@ -367,9 +381,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
       type: getType(fiber.type) || fiber.type,
     };
 
-    existingLegacyData.count =
-      Number(existingLegacyData.count || 0) + Number(renders.length);
-    existingLegacyData.time =
+    existingLegacyData.count = existingLegacyData.time =
       Number(existingLegacyData.time || 0) + Number(selfTime || 0);
     existingLegacyData.renders = renders;
 
@@ -546,13 +558,23 @@ export const start = () => {
         return;
       }
       updateFiberRenderData(fiber, renders);
+      if (ReactScanInternals.options.value.log) {
+        // this can be expensive given enough re-renders
+        log(renders);
+      }
 
       if (isCompositeFiber(fiber)) {
-        reportRender(fiber, renders);
+        // report render has a non trivial cost because it calls Date.now(), so we want to avoid the computation if possible
+        if (
+          ReactScanInternals.options.value.showToolbar !== false &&
+          Store.inspectState.value.kind === 'focused'
+        ) {
+          reportRender(fiber, renders);
+        }
       }
 
       if (ReactScanInternals.options.value.log) {
-        log(renders);
+        renders;
       }
 
       ReactScanInternals.options.value.onRender?.(fiber, renders);
@@ -562,10 +584,40 @@ export const start = () => {
         const domFiber = getNearestHostFiber(fiber);
         if (!domFiber || !domFiber.stateNode) continue;
 
-        ReactScanInternals.scheduledOutlines.push({
-          domNode: domFiber.stateNode,
-          renders,
-        });
+        if (ReactScanInternals.scheduledOutlines.has(fiber)) {
+          const existingOutline =
+            // biome-ignore lint/style/noNonNullAssertion: <explanation>
+            ReactScanInternals.scheduledOutlines.get(fiber)!;
+          aggregateRender(render, existingOutline.aggregatedRender);
+        } else {
+          ReactScanInternals.scheduledOutlines.set(fiber, {
+            // biome-ignore lint/style/noNonNullAssertion: <explanation>
+            domNode: domFiber.stateNode,
+            aggregatedRender: {
+              name:
+                renders.find((render) => render.componentName)?.componentName ??
+                'Unknown',
+              aggregatedCount: 1,
+              changes: aggregateChanges(render.changes),
+              didCommit: render.didCommit,
+              forget: render.forget,
+              fps: render.fps,
+              phase: new Set([render.phase]),
+              // renders: render.renders,
+              time: render.time,
+              unnecessary: render.unnecessary,
+              frame: 0,
+
+              computedKey: null,
+            },
+            alpha: null,
+            groupedAggregatedRender: null,
+            // componentNames: null,
+            rect: null,
+            totalFrames: null,
+            estimatedTextWidth: null,
+          });
+        }
 
         // - audio context can take up an insane amount of cpu, todo: figure out why
         // - we may want to take this out of hot path
