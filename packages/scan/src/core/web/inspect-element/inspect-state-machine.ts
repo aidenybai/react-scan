@@ -1,5 +1,5 @@
 import { didFiberRender } from 'bippy';
-import { Store } from '../../index';
+import { ReactScanInternals, Store } from '../../index';
 import { throttle } from '../utils/helpers';
 import { renderPropsAndState } from './view-state';
 import {
@@ -112,7 +112,10 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
 
   window.addEventListener(
     'mousemove',
-    (e) => (e: MouseEvent) => {
+    () => {
+      if (Store.inspectState.value.kind !== 'inspect-off') {
+        return;
+      }
       // the canvas doesn't get cleared when the mouse move overlaps with the clear
       // i can't figure out why this happens, so this is an unfortunate hack
       clearCanvas();
@@ -120,6 +123,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
     },
     { capture: true },
   );
+  let previousState: typeof Store.inspectState.value.kind;
 
   const repaint = throttle(() => {
     // todo: make inspect-off state act as 0 perf hit since it does nothing
@@ -130,11 +134,25 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
           return;
         }
         case 'inspect-off': {
+          if (previousState !== 'inspect-off') {
+            // likely because of weird RAF timing
+            // todo: figure out why this is needed
+            // to see the bug without setTimeout:
+            // - inspect something
+            // - focus something
+            // - turn off inspection
+            // - focus drawing still exists
+            setTimeout(() => {
+              cancelAnimationFrame(animationId);
+              unsubscribeAll();
+              clearCanvas();
+            }, 100);
+          }
           clearCanvas(); // todo: make sure this isn't expensive
           return;
         }
         case 'inspecting': {
-          unsubscribeAll(); // potential optimization: only unSub if inspectStateKind transitioned
+          unsubscribeAll();
           recursiveRaf(() => {
             if (!inspectState.hoveredDomElement) {
               return;
@@ -386,6 +404,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
     if (unSub) {
       (unsubscribeFns as any)[Store.inspectState.value.kind] = unSub;
     }
+    previousState = Store.inspectState.value.kind;
   }, 16);
 
   Store.inspectState.subscribe(repaint);
