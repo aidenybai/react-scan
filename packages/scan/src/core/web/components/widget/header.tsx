@@ -4,59 +4,60 @@ import { Store } from "../../../..";
 import { getCompositeComponentFromElement, getOverrideMethods } from "../../inspect-element/utils";
 import { replayComponent } from "../../inspect-element/view-state";
 import { Icon } from "../icon";
-import { debounce } from "../../utils/helpers";
+import type { States } from "../../inspect-element/inspect-state-machine";
+
+const THROTTLE_MS = 32;
+const REPLAY_DELAY_MS = 300;
 
 const BtnReplay = () => {
-  const refBtnReplay = useRef<HTMLButtonElement>(null);
-  const refIsReplaying = useRef(false);
-  const timeoutRef = useRef<number>();
+  const replayState = useRef({
+    isReplaying: false,
+    timeoutId: undefined as TTimer,
+    toggleDisabled(disabled: boolean, button: HTMLElement) {
+      button.classList[disabled ? 'add' : 'remove']('disabled');
+    }
+  });
 
   const { overrideProps, overrideHookState } = getOverrideMethods();
-  const canEdit = !overrideProps;
+  const canEdit = !!overrideProps;
 
-  const handleReplay = useCallback((e: MouseEvent) => {
+  const handleReplay = (e: MouseEvent) => {
     e.stopPropagation();
+    const state = replayState.current;
+    const button = e.currentTarget as HTMLElement;
 
     const inspectState = Store.inspectState.value;
-    if (refIsReplaying.current || inspectState.kind !== 'focused') return;
+    if (state.isReplaying || inspectState.kind !== 'focused') return;
 
     const { parentCompositeFiber } = getCompositeComponentFromElement(inspectState.focusedDomElement);
     if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
 
-    refIsReplaying.current = true;
-    refBtnReplay.current?.classList.add('disabled');
+    state.isReplaying = true;
+    state.toggleDisabled(true, button);
 
-    void replayComponent(parentCompositeFiber).finally(() => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      const cleanup = () => {
-        refIsReplaying.current = false;
-        refBtnReplay.current?.classList.remove('disabled');
-      };
-
-      if (document.hidden) {
-        cleanup();
-      } else {
-        timeoutRef.current = window.setTimeout(cleanup, 300);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+    void replayComponent(parentCompositeFiber)
+      .catch(() => void 0)
+      .finally(() => {
+        if (state.timeoutId) {
+          clearTimeout(state.timeoutId);
+          state.timeoutId = undefined;
+        }
+        if (document.hidden) {
+          state.isReplaying = false;
+          state.toggleDisabled(false, button);
+        } else {
+          state.timeoutId = setTimeout(() => {
+            state.isReplaying = false;
+            state.toggleDisabled(false, button);
+          }, REPLAY_DELAY_MS);
+        }
+      });
+  };
 
   if (!canEdit) return null;
 
   return (
     <button
-      ref={refBtnReplay}
       title="Replay component"
       className="react-scan-replay-button"
       onClick={handleReplay}
@@ -67,85 +68,157 @@ const BtnReplay = () => {
 };
 
 export const Header = () => {
-  const refComponentName = useRef<HTMLSpanElement>(null);
-  const refMetrics = useRef<HTMLSpanElement>(null);
+  const headerState = useRef({
+    refs: {
+      componentName: null as HTMLSpanElement | null,
+      metrics: null as HTMLSpanElement | null,
+    },
+    timers: {
+      update: undefined as TTimer,
+      raf: 0 as number
+    },
+    values: {
+      componentName: '',
+      metrics: '',
+      lastUpdate: 0,
+      pendingUpdate: false,
+      fiber: null as any
+    },
+    mounted: true
+  });
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (Store.inspectState.value.propContainer) {
       Store.inspectState.value = {
         kind: 'inspect-off',
         propContainer: Store.inspectState.value.propContainer,
       };
     }
-  }, []);
+  };
+
+  const formatMetrics = (count: number, time?: number) =>
+    `${count} renders${time ? ` • ${time.toFixed(2)}ms` : ''}`;
 
   const updateHeaderContent = useCallback(() => {
+    const state = headerState.current;
+    if (!state.mounted) return;
+
     const inspectState = Store.inspectState.value;
     if (inspectState.kind !== 'focused') return;
 
     const focusedDomElement = inspectState.focusedDomElement;
-    if (!refComponentName.current || !refMetrics.current || !focusedDomElement) return;
+    if (!focusedDomElement || !state.refs.componentName || !state.refs.metrics) return;
 
     const { parentCompositeFiber } = getCompositeComponentFromElement(focusedDomElement);
     if (!parentCompositeFiber) return;
 
-    const currentComponentName = refComponentName.current.dataset.text;
-    const currentMetrics = refMetrics.current.dataset.text;
-
     const fiber = parentCompositeFiber.alternate ?? parentCompositeFiber;
-    const reportData = Store.reportData.get(fiber);
-    const componentName = getDisplayName(parentCompositeFiber.type) ?? 'Unknown';
 
-    if (componentName === currentComponentName && reportData?.count === 0) {
-      return;
+    if (fiber !== state.values.fiber) {
+      state.values.fiber = fiber;
+      state.values.componentName = getDisplayName(parentCompositeFiber.type) ?? 'Unknown';
     }
 
-    const renderCount = reportData?.count ?? 0;
-    const renderTime = reportData?.time ?? 0;
-    const newMetrics = renderCount > 0
-      ? `${renderCount} renders${renderTime > 0 ? ` • ${renderTime.toFixed(2)}ms` : ''}`
-      : '';
+    const reportData = Store.reportData.get(fiber);
 
-    if (componentName !== currentComponentName || newMetrics !== currentMetrics) {
-      requestAnimationFrame(() => {
-        if (!refComponentName.current || !refMetrics.current) return;
-        refComponentName.current.dataset.text = componentName;
-        refMetrics.current.dataset.text = newMetrics;
+    if (!reportData?.count) return;
+    const newMetrics = formatMetrics(reportData.count, reportData.time);
+    if (newMetrics === state.values.metrics && !state.values.pendingUpdate) return;
+
+    if (!state.values.pendingUpdate) {
+      state.values.pendingUpdate = true;
+      cancelAnimationFrame(state.timers.raf);
+      state.timers.raf = requestAnimationFrame(() => {
+        if (state.refs.componentName && state.refs.metrics) {
+          state.refs.componentName.dataset.text = state.values.componentName;
+          state.refs.metrics.dataset.text = newMetrics;
+          state.values.metrics = newMetrics;
+          state.values.lastUpdate = Date.now();
+          state.values.pendingUpdate = false;
+          state.timers.raf = 0;
+        }
       });
     }
   }, []);
 
+  const scheduleUpdate = useCallback(() => {
+    const state = headerState.current;
+    const now = Date.now();
+    const timeSinceLastUpdate = now - state.values.lastUpdate;
+
+    if (timeSinceLastUpdate < THROTTLE_MS) return;
+
+    if (state.timers.update) {
+      clearTimeout(state.timers.update);
+      state.timers.update = undefined;
+    }
+
+    state.timers.update = setTimeout(updateHeaderContent, THROTTLE_MS);
+  }, [updateHeaderContent]);
+
+  const handleInspectStateChange = useCallback((newState: States) => {
+    const state = headerState.current;
+    if (!state.mounted) return;
+
+    if (state.timers.update) {
+      clearTimeout(state.timers.update);
+      state.timers.update = undefined;
+    }
+    if (state.timers.raf) {
+      cancelAnimationFrame(state.timers.raf);
+      state.timers.raf = 0;
+    }
+    state.values.pendingUpdate = false;
+
+    if (newState.kind === 'focused') {
+      updateHeaderContent();
+    }
+  }, [updateHeaderContent]);
+
   useEffect(() => {
-    const unsubscribeLastReportTime = Store.lastReportTime.subscribe(updateHeaderContent);
-    const unsubscribeStoreInspectState = Store.inspectState.subscribe(state => {
-      if (state.kind === 'focused') {
-        updateHeaderContent();
-      }
-    });
+    const state = headerState.current;
+
+    Store.lastReportTime.subscribe(scheduleUpdate);
+    Store.inspectState.subscribe(handleInspectStateChange);
 
     return () => {
-      unsubscribeLastReportTime();
-      unsubscribeStoreInspectState();
+      state.mounted = false;
+      if (state.timers.update) {
+        clearTimeout(state.timers.update);
+        state.timers.update = undefined;
+      }
+      if (state.timers.raf) {
+        cancelAnimationFrame(state.timers.raf);
+        state.timers.raf = 0;
+      }
+      state.values.pendingUpdate = false;
     };
-  }, [updateHeaderContent]);
+  }, [scheduleUpdate, handleInspectStateChange]);
+
+  const setComponentNameRef = useCallback((node: HTMLSpanElement | null) => {
+    headerState.current.refs.componentName = node;
+  }, []);
+
+  const setMetricsRef = useCallback((node: HTMLSpanElement | null) => {
+    headerState.current.refs.metrics = node;
+  }, []);
 
   return (
     <div className="react-scan-header">
       <span
-        ref={refComponentName}
+        ref={setComponentNameRef}
         className="with-data-text"
       />
       <span
-        ref={refMetrics}
+        ref={setMetricsRef}
         className="with-data-text mr-auto !overflow-visible text-xs text-[#888]"
       />
 
-      {/* fixme: render replay button causes large amounts of cpu usage when idle */}
-      {/* <BtnReplay /> */}
+      <BtnReplay />
 
       <button
         title="Close"
-        class="react-scan-close-button ml-auto"
+        class="react-scan-close-button"
         onClick={handleClose}
       >
         <Icon name="icon-close" />
