@@ -158,12 +158,12 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   return parentCompositeFiber;
 };
 
-let unsubscribeTrackVisibilityChange: () => void;
+let unsubscribeTrackVisibilityChange: (() => void) | undefined;
 // fixme: compress me if this stays here for bad interaction time checks
 let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
 
 const trackVisibilityChange = () => {
-  unsubscribeTrackVisibilityChange();
+  unsubscribeTrackVisibilityChange?.();
   const onVisibilityChange = () => {
     if (document.hidden) {
       lastVisibilityHiddenAt = Date.now();
