@@ -1,6 +1,5 @@
- 
-import { type Fiber } from 'react-reconciler';
 import { getDisplayName } from 'bippy';
+import { type Fiber } from 'react-reconciler';
 import { Store } from '../..';
 import { getCompositeComponentFromElement } from '../web/inspect-element/utils';
 import type {
@@ -127,7 +126,10 @@ function getCleanComponentName(component: any): string {
   const name = getDisplayName(component);
   if (!name) return '';
 
-  return name.replace(/^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/, '$<inner>');
+  return name.replace(
+    /^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/,
+    '$<inner>',
+  );
 }
 
 export function normalizePath(path: Array<string>): string {
@@ -281,11 +283,9 @@ const setupPerformanceListener = (
   };
 
   const po = new PerformanceObserver((list) => {
-    list
-      .getEntries()
-      .forEach((entry) =>
-        processInteractionEntry(entry as PerformanceInteractionEntry),
-      );
+    for (const entry of list.getEntries()) {
+      processInteractionEntry(entry as PerformanceInteractionEntry);
+    }
   });
 
   try {

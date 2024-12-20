@@ -1,8 +1,8 @@
 import { throttle } from '@web-utils/helpers';
+import { Fiber } from 'react-reconciler';
+import { AggregatedChange } from 'src/core/instrumentation';
 import { OutlineKey, ReactScanInternals } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
-import { AggregatedChange } from 'src/core/instrumentation';
-import { Fiber } from 'react-reconciler';
 export interface OutlineLabel {
   alpha: number;
   color: { r: number; g: number; b: number };
@@ -111,11 +111,11 @@ const idempotent_startBoundingRectGC = () => {
   if (boundingRectGcInterval) return;
   setInterval(() => {
     const now = Date.now();
-    boundingRectCache.forEach((value, key) => {
+    for (const [key, value] of boundingRectCache) {
       if (now - value.timestamp >= CACHE_LIFETIME) {
         boundingRectCache.delete(key);
       }
-    });
+    }
   }, CACHE_LIFETIME);
 };
 
@@ -348,23 +348,27 @@ const activateOutlines = async () => {
   const activeFibers = new Map<Fiber, AggregatedRender>();
 
   for (const activeOutline of ReactScanInternals.activeOutlines.values()) {
-    activeOutline.groupedAggregatedRender?.forEach(
-      (aggregatedRender, fiber) => {
-        if (fiber.alternate && activeFibers.has(fiber.alternate)) {
-          const alternateAggregatedRender = activeFibers.get(fiber.alternate);
+    if (!activeOutline.groupedAggregatedRender) {
+      continue;
+    }
+    for (const [
+      fiber,
+      aggregatedRender,
+    ] of activeOutline.groupedAggregatedRender) {
+      if (fiber.alternate && activeFibers.has(fiber.alternate)) {
+        const alternateAggregatedRender = activeFibers.get(fiber.alternate);
 
-          if (alternateAggregatedRender) {
-            joinAggregations({
-              from: alternateAggregatedRender,
-              to: aggregatedRender,
-            });
-          }
-
-          activeFibers.delete(fiber.alternate);
+        if (alternateAggregatedRender) {
+          joinAggregations({
+            from: alternateAggregatedRender,
+            to: aggregatedRender,
+          });
         }
-        activeFibers.set(fiber, aggregatedRender);
-      },
-    );
+
+        activeFibers.delete(fiber.alternate);
+      }
+      activeFibers.set(fiber, aggregatedRender);
+    }
   }
 
   for (const [fiber, outline] of scheduledOutlines) {

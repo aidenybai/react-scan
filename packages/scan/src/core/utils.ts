@@ -1,8 +1,9 @@
-import type { Fiber } from 'react-reconciler';
+import type { AggregatedRender } from '@web-utils/outline';
 import { getType } from 'bippy';
+import type { Fiber } from 'react-reconciler';
 import { ReactScanInternals } from '..';
 import type { AggregatedChange, Render, RenderChange } from './instrumentation';
-import type { AggregatedRender, Outline } from '@web-utils/outline';
+
 export const aggregateChanges = (
   changes: Array<RenderChange>,
   prevAggregatedChange?: AggregatedChange,
@@ -11,11 +12,10 @@ export const aggregateChanges = (
     type: prevAggregatedChange?.type ?? new Set(),
     unstable: prevAggregatedChange?.unstable ?? false,
   };
-  // biome-ignore lint/complexity/noForEach: <explanation>
-  changes.forEach((change) => {
+  for (const change of changes) {
     newChange.type.add(change.type);
     newChange.unstable = newChange.unstable || change.unstable;
-  });
+  }
 
   return newChange;
 };

@@ -1,11 +1,11 @@
-import { fastSerialize } from '../../instrumentation';
 import { Store } from '../../index';
+import { fastSerialize } from '../../instrumentation';
 import {
   getAllFiberContexts,
   getChangedProps,
   getChangedState,
-  getStateFromFiber,
   getOverrideMethods,
+  getStateFromFiber,
 } from './utils';
 
 const EXPANDED_PATHS = new Set<string>();
@@ -36,49 +36,51 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
 
   const changedProps = new Set(getChangedProps(fiber));
   const changedState = new Set(getChangedState(fiber));
+  // Empty??
   const changedContext = new Set<string>();
 
-  changedProps.forEach((key) => {
+  for (const key of changedProps) {
     cumulativeChanges.props.set(
       key,
       (cumulativeChanges.props.get(key) ?? 0) + 1,
     );
-  });
+  }
 
-  changedState.forEach((key) => {
+  for (const key of changedState) {
     cumulativeChanges.state.set(
       key,
       (cumulativeChanges.state.get(key) ?? 0) + 1,
     );
-  });
+  }
 
-  changedContext.forEach((key) => {
+  // FIXME(Alexis): changedContext is empty, this block is no-op
+  for (const key of changedContext) {
     cumulativeChanges.context.set(
       key,
       (cumulativeChanges.context.get(key) ?? 0) + 1,
     );
-  });
+  }
 
   propContainer.innerHTML = '';
 
   const changedItems: Array<string> = [];
 
   if (cumulativeChanges.props.size > 0) {
-    cumulativeChanges.props.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.props) {
       changedItems.push(`Prop: ${key} ×${count}`);
-    });
+    }
   }
 
   if (cumulativeChanges.state.size > 0) {
-    cumulativeChanges.state.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.state) {
       changedItems.push(`State: ${key} ×${count}`);
-    });
+    }
   }
 
   if (cumulativeChanges.context.size > 0) {
-    cumulativeChanges.context.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.context) {
       changedItems.push(`Context: ${key} ×${count}`);
-    });
+    }
   }
 
   const whatChangedSection = document.createElement('details');
@@ -100,11 +102,11 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
     propsList.style.listStyleType = 'disc';
     propsList.style.paddingLeft = '20px';
 
-    cumulativeChanges.props.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.props) {
       const li = document.createElement('li');
       li.textContent = `${key} ×${count}`;
       propsList.appendChild(li);
-    });
+    }
 
     whatChangedSection.appendChild(propsHeader);
     whatChangedSection.appendChild(propsList);
@@ -117,11 +119,11 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
     stateList.style.listStyleType = 'disc';
     stateList.style.paddingLeft = '20px';
 
-    cumulativeChanges.state.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.state) {
       const li = document.createElement('li');
       li.textContent = `${key} ×${count}`;
       stateList.appendChild(li);
-    });
+    }
 
     whatChangedSection.appendChild(stateHeader);
     whatChangedSection.appendChild(stateList);
@@ -134,11 +136,11 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
     contextList.style.listStyleType = 'disc';
     contextList.style.paddingLeft = '20px';
 
-    cumulativeChanges.context.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.context) {
       const li = document.createElement('li');
       li.textContent = `${key} ×${count}`;
       contextList.appendChild(li);
-    });
+    }
 
     whatChangedSection.appendChild(contextHeader);
     whatChangedSection.appendChild(contextList);
@@ -257,7 +259,9 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
     }, null);
   }
 
-  sections.forEach((section) => content.appendChild(section.element));
+  for (const section of sections) {
+    content.appendChild(section.element);
+  }
 
   inspector.appendChild(content);
 
@@ -277,9 +281,8 @@ const renderSection = (
   section.className = 'react-scan-section';
   section.dataset.section = title;
 
-  const entries = Object.entries(data);
-
-  entries.forEach(([key, value]) => {
+  for (const key in data) {
+    const value = data[key];
     const el = createPropertyElement(
       componentName,
       didRender,
@@ -293,11 +296,10 @@ const renderSection = (
       '',
       new WeakMap(),
     );
-    if (!el) {
-      return;
+    if (el) {
+      section.appendChild(el);
     }
-    section.appendChild(el);
-  });
+  }
 
   return section;
 };
@@ -348,11 +350,11 @@ export const createPropertyElement = (
   try {
     if (!changedAtInterval) {
       changedAtInterval = setInterval(() => {
-        changedAt.forEach((value, key) => {
+        for (const [key, value] of changedAt) {
           if (Date.now() - value > 450) {
             changedAt.delete(key);
           }
-        });
+        }
       }, 200);
     }
     const container = document.createElement('div');
@@ -427,27 +429,28 @@ export const createPropertyElement = (
 
       if (isExpanded) {
         if (Array.isArray(value)) {
-          value.forEach((item, index) => {
+          for (let i = 0, len = value.length; i < len; i++) {
             const el = createPropertyElement(
               componentName,
               didRender,
               propsContainer,
               fiber,
-              index.toString(),
-              item,
+              `${i}`,
+              value[i],
               section,
               level + 1,
               changedKeys,
               currentPath,
               objectPathMap,
             );
-            if (!el) {
-              return;
+            if (el) {
+              content.appendChild(el);
             }
-            content.appendChild(el);
-          });
+          }
         } else {
-          Object.entries(value).forEach(([k, v]) => {
+          for (const k in value) {
+            const v = value[key];
+
             const el = createPropertyElement(
               componentName,
               didRender,
@@ -461,11 +464,10 @@ export const createPropertyElement = (
               currentPath,
               objectPathMap,
             );
-            if (!el) {
-              return;
+            if (el) {
+              content.appendChild(el);
             }
-            content.appendChild(el);
-          });
+          }
         }
       }
 
@@ -483,27 +485,27 @@ export const createPropertyElement = (
 
           if (!content.hasChildNodes()) {
             if (Array.isArray(value)) {
-              value.forEach((item, index) => {
+              for (let i = 0, len = value.length; i < len; i++) {
                 const el = createPropertyElement(
                   componentName,
                   didRender,
                   propsContainer,
                   fiber,
-                  index.toString(),
-                  item,
+                  `${i}`,
+                  value[i],
                   section,
                   level + 1,
                   changedKeys,
                   currentPath,
                   new WeakMap(),
                 );
-                if (!el) {
-                  return;
+                if (el) {
+                  content.appendChild(el);
                 }
-                content.appendChild(el);
-              });
+              }
             } else {
-              Object.entries(value).forEach(([k, v]) => {
+              for (const k in value) {
+                const v = value[k];
                 const el = createPropertyElement(
                   componentName,
                   didRender,
@@ -517,11 +519,10 @@ export const createPropertyElement = (
                   currentPath,
                   new WeakMap(),
                 );
-                if (!el) {
-                  return;
+                if (el) {
+                  content.appendChild(el);
                 }
-                content.appendChild(el);
-              });
+              }
             }
           }
         } else {
@@ -698,18 +699,18 @@ export const replayComponent = async (fiber: any) => {
     const currentProps = fiber.memoizedProps || {};
 
     try {
-      Object.keys(currentProps).forEach((key) => {
+      for (const key in currentProps) {
         overrideProps(fiber, [key], currentProps[key]);
-      });
+      }
     } catch (e) {
       /**/
     }
 
     try {
       const state = getStateFromFiber(fiber) || {};
-      Object.keys(state).forEach((key) => {
+      for (const key in state) {
         overrideHookState(fiber, key, [], state[key]);
-      });
+      }
     } catch (e) {
       /**/
     }

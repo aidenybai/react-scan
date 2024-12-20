@@ -1,14 +1,14 @@
 import { didFiberRender } from 'bippy';
-import { ReactScanInternals, Store } from '../../index';
+import { Store } from '../../index';
 import { throttle } from '../utils/helpers';
-import { renderPropsAndState } from './view-state';
 import {
+  OVERLAY_DPR,
   currentLockIconRect,
   drawHoverOverlay,
-  OVERLAY_DPR,
   updateCanvasSize,
 } from './overlay';
 import { getCompositeComponentFromElement } from './utils';
+import { renderPropsAndState } from './view-state';
 
 export type States =
   | {
@@ -88,12 +88,18 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
     ctx.restore();
   };
   const unsubscribeFns: Partial<{ [_ in keyof States as Kinds]: () => void }> =
-    {};
+    {
+      // Needs to be initialized already so that we don't shift V8 states
+      focused: undefined,
+      'inspect-off': undefined,
+      inspecting: undefined,
+      uninitialized: undefined,
+    };
 
   const unsubscribeAll = () => {
-    Object.entries(unsubscribeFns).forEach(([_, unSub]) => {
-      unSub();
-    });
+    for (const key in unsubscribeFns) {
+      unsubscribeFns[key as Kinds]!();
+    }
   };
 
   const recursiveRaf = (cb: () => void) => {

@@ -1,14 +1,14 @@
-import type { Fiber } from 'react-reconciler';
 import {
-  FunctionComponentTag,
   ClassComponentTag,
-  isHostFiber,
-  traverseFiber,
+  ForwardRefTag,
+  FunctionComponentTag,
   MemoComponentTag,
   SimpleMemoComponentTag,
-  ForwardRefTag,
   isCompositeFiber,
+  isHostFiber,
+  traverseFiber,
 } from 'bippy';
+import type { Fiber } from 'react-reconciler';
 import { ReactScanInternals, Store } from '../../index';
 
 interface OverrideMethods {
@@ -112,11 +112,12 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
   const currentProps = fiber.memoizedProps || {};
   const previousProps = fiber.alternate?.memoizedProps || {};
 
-  Object.keys(currentProps).forEach((key) => {
+  // TODO(Alexis): no union of keys check?
+  for (const key in currentProps) {
     if (currentProps[key] !== previousProps[key] && key !== 'children') {
       changes.add(key);
     }
-  });
+  }
 
   return changes;
 };
@@ -159,11 +160,11 @@ export const getChangedState = (fiber: Fiber): Set<string> => {
     ? getStateFromFiber(fiber.alternate)
     : {};
 
-  Object.keys(currentState).forEach((key) => {
+  for (const key in currentState) {
     if (currentState[key] !== previousState[key]) {
       changes.add(key);
     }
-  });
+  }
 
   return changes;
 };
