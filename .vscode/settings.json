@@ -16,5 +16,8 @@
   "editor.colorDecorators": true,
   "[css]": {
     "editor.formatOnSave": false
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
   }
 }
