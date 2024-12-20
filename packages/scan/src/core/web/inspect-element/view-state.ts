@@ -89,7 +89,7 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
   whatChangedSection.open = Store.wasDetailsOpen.value;
 
   const summary = document.createElement('summary');
-  summary.textContent = 'What changes?';
+  summary.textContent = 'What changed?';
   summary.className = 'font-bold';
   whatChangedSection.appendChild(summary);
 

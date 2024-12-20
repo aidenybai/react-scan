@@ -12,7 +12,22 @@ export const log = (renders: Array<Render>) => {
     if (!render.componentName) continue;
 
     const changeLog = logMap.get(render.componentName) ?? [];
-    const labelText = getLabelText([render]);
+    renders;
+    const labelText = getLabelText([
+      {
+        aggregatedCount: 1,
+
+        computedKey: null,
+        name: render.componentName,
+        frame: null,
+        ...render,
+        changes: {
+          type: new Set(render.changes.map((change) => change.type)),
+          unstable: render.changes.some((change) => change.unstable),
+        },
+        phase: new Set([render.phase]),
+      },
+    ]);
     if (!labelText) continue;
 
     let prevChangedProps: Record<string, any> | null = null;

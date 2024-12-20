@@ -16,7 +16,7 @@ import {
 import type * as React from 'react';
 import type { Fiber, FiberRoot } from 'react-reconciler';
 import { isEqual } from 'src/core/utils';
-import { ReactScanInternals } from './index';
+import { ReactScanInternals, Store } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -77,7 +77,7 @@ export const isElementInViewport = (
   return isVisible && rect.width && rect.height;
 };
 
-export interface Change {
+export interface RenderChange {
   type: 'props' | 'context' | 'state';
   name: string;
   prevValue: unknown;
@@ -85,15 +85,21 @@ export interface Change {
   unstable: boolean;
 }
 
+// this must grow O(1) w.r.t to renders
+export interface AggregatedChange {
+  type: Set<'props' | 'context' | 'state'>;
+  unstable: boolean;
+}
+
 export type Category = 'commit' | 'unstable' | 'unnecessary';
 
 export interface Render {
-  phase: string;
+  phase: 'mount' | 'update' | 'unmount';
   componentName: string | null;
   time: number | null;
-  count: number;
+  count: number; // uh is this right?
   forget: boolean;
-  changes: Array<Change> | null;
+  changes: Array<RenderChange>;
   unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
@@ -162,11 +168,10 @@ export function fastSerialize(value: unknown, depth = 0): string {
 }
 
 export const getPropsChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+  const changes: Array<RenderChange> = [];
 
   const prevProps = fiber.alternate?.memoizedProps || {};
   const nextProps = fiber.memoizedProps || {};
-
 
   const allKeys = new Set([
     ...Object.keys(prevProps),
@@ -183,7 +188,7 @@ export const getPropsChanges = (fiber: Fiber) => {
     ) {
       continue;
     }
-    const change: Change = {
+    const change: RenderChange = {
       type: 'props',
       name: propName,
       prevValue,
@@ -204,11 +209,15 @@ interface FiberState {
   memoizedState: unknown;
 }
 
-function getStateChangesTraversal(this: Array<Change>, prevState: FiberState, nextState: FiberState): void {
+function getStateChangesTraversal(
+  this: Array<RenderChange>,
+  prevState: FiberState,
+  nextState: FiberState,
+): void {
   if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
-  const change: Change = {
+  const change: RenderChange = {
     type: 'state',
-    name: '',
+    name: '', // bad interface should make this a discriminated union
     prevValue: prevState.memoizedState,
     nextValue: nextState.memoizedState,
     unstable: false,
@@ -217,7 +226,7 @@ function getStateChangesTraversal(this: Array<Change>, prevState: FiberState, ne
 }
 
 export const getStateChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+  const changes: Array<RenderChange> = [];
 
   traverseState(fiber, getStateChangesTraversal.bind(changes));
 
@@ -229,11 +238,15 @@ interface FiberContext {
   memoizedValue: unknown;
 }
 
-function getContextChangesTraversal(this: Array<Change>, prevContext: FiberContext, nextContext: FiberContext): void {
+function getContextChangesTraversal(
+  this: Array<RenderChange>,
+  prevContext: FiberContext,
+  nextContext: FiberContext,
+): void {
   const prevValue = prevContext.memoizedValue;
   const nextValue = nextContext.memoizedValue;
 
-  const change: Change = {
+  const change: RenderChange = {
     type: 'context',
     name: '',
     prevValue,
@@ -255,7 +268,7 @@ function getContextChangesTraversal(this: Array<Change>, prevContext: FiberConte
 }
 
 export const getContextChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+  const changes: Array<RenderChange> = [];
 
   traverseContexts(fiber, getContextChangesTraversal.bind(changes));
 
@@ -298,7 +311,11 @@ interface IsRenderUnnecessaryState {
   isRequiredChange: boolean;
 }
 
-function isRenderUnnecessaryTraversal(this: IsRenderUnnecessaryState, prevValue: unknown, nextValue: unknown): void {
+function isRenderUnnecessaryTraversal(
+  this: IsRenderUnnecessaryState,
+  prevValue: unknown,
+  nextValue: unknown,
+): void {
   if (
     !isEqual(prevValue, nextValue) &&
     !isValueUnstable(prevValue, nextValue)
@@ -351,7 +368,7 @@ export const createInstrumentation = (
         }
         if (!validInstancesIndicies.length) return null;
 
-        const changes: Array<Change> = [];
+        const changes: Array<RenderChange> = [];
 
         const propsChanges = getPropsChanges(fiber);
         const stateChanges = getStateChanges(fiber);
@@ -381,8 +398,7 @@ export const createInstrumentation = (
           changes,
           time: selfTime,
           forget: hasMemoCache(fiber),
-          // only collect if the render was unnecessary 5% of the time since is isRenderUnnecessary is expensive
-          unnecessary: Math.random() < 0.05 ? isRenderUnnecessary(fiber) : null,
+          unnecessary: Store.monitor ? null : isRenderUnnecessary(fiber),
           didCommit: didFiberCommit(fiber),
           fps,
         };

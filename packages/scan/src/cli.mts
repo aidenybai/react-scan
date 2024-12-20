@@ -88,8 +88,8 @@ const applyStealthScripts = async (context: BrowserContext) => {
     window.navigator.permissions.query = (parameters: any) =>
       parameters.name === 'notifications'
         ? Promise.resolve({
-          state: Notification.permission,
-        } as PermissionStatus)
+            state: Notification.permission,
+          } as PermissionStatus)
         : originalQuery(parameters);
   });
 };
@@ -139,7 +139,8 @@ const init = async () => {
       const installPromise = new Promise<void>((resolve, reject) => {
         const runInstall = () => {
           confirm({
-            message: 'No drivers found. Install Playwright Chromium driver to continue?',
+            message:
+              'No drivers found. Install Playwright Chromium driver to continue?',
           }).then((shouldInstall) => {
             if (isCancel(shouldInstall)) {
               cancel('Operation cancelled.');
@@ -157,7 +158,10 @@ const init = async () => {
 
             installProcess.on('close', (code) => {
               if (!code) resolve();
-              else reject(new Error(`Installation process exited with code ${code}`));
+              else
+                reject(
+                  new Error(`Installation process exited with code ${code}`),
+                );
             });
 
             installProcess.on('error', reject);
