@@ -98,7 +98,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
 
   const unsubscribeAll = () => {
     for (const key in unsubscribeFns) {
-      unsubscribeFns[key as Kinds]!();
+      unsubscribeFns[key as Kinds]?.();
     }
   };
 
