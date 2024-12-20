@@ -1,12 +1,9 @@
 import { throttle } from '@web-utils/helpers';
-import { getNearestHostFiber } from 'bippy';
-import { type Fiber } from 'react-reconciler';
 import { ReactScanInternals } from '../../index';
-import { isElementInViewport, type Render } from '../../instrumentation';
+import { type Render } from '../../instrumentation';
 import { getLabelText } from '../../utils';
 
 export interface PendingOutline {
-  rect: DOMRect;
   domNode: HTMLElement;
   renders: Array<Render>;
 }
@@ -17,6 +14,7 @@ export interface ActiveOutline {
   frame: number;
   totalFrames: number;
   text: string | null;
+  rect: DOMRect;
 }
 
 export interface OutlineLabel {
@@ -26,6 +24,7 @@ export interface OutlineLabel {
   reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
   labelText: string;
   textWidth: number;
+  rect: DOMRect;
 }
 
 const DEFAULT_THROTTLE_TIME = 32; // 2 frames
@@ -35,8 +34,8 @@ const END_COLOR = { r: 185, g: 49, b: 115 };
 const MONO_FONT =
   'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
-export const getOutlineKey = (outline: PendingOutline): string => {
-  return `${outline.rect.top}-${outline.rect.left}-${outline.rect.width}-${outline.rect.height}`;
+export const getOutlineKey = (rect: DOMRect): string => {
+  return `${rect.top}-${rect.left}-${rect.width}-${rect.height}`;
 };
 
 let currentFrameId = 0;
@@ -46,115 +45,21 @@ function incrementFrameId() {
   requestAnimationFrame(incrementFrameId);
 }
 
-if (typeof window !== "undefined") {
+if (typeof window !== 'undefined') {
   incrementFrameId();
 }
 
-interface CachedRect {
-  rect: DOMRect;
-  frameId: number;
-}
+export const recalcOutlines = throttle(async () => {
+  const { activeOutlines } = ReactScanInternals;
 
-const rectCache = new Map<Element, CachedRect>();
-
-export const getRect = (el: Element): DOMRect | null => {
-  const cached = rectCache.get(el);
-
-  if (cached && cached.frameId === currentFrameId) {
-    return cached.rect;
-  }
-
-  const rect = el.getBoundingClientRect();
-  if (!isElementInViewport(el, rect)) {
-    return null;
-  }
-
-  rectCache.set(el, { rect, frameId: currentFrameId });
-
-  return rect;
-};
-
-export const getOutline = (
-  fiber: Fiber,
-  render: Render,
-): PendingOutline | null => {
-  const domFiber = getNearestHostFiber(fiber);
-  if (!domFiber) return null;
-
-  const domNode = domFiber.stateNode;
-
-  if (!(domNode instanceof HTMLElement)) return null;
-
-  let shouldIgnore = false;
-
-  let currentDomNode: HTMLElement | null = domNode;
-  while (currentDomNode) {
-    if (currentDomNode.hasAttribute('data-react-scan-ignore')) {
-      shouldIgnore = true;
-      break;
-    }
-    currentDomNode = currentDomNode.parentElement;
-  }
-
-  if (shouldIgnore) return null;
-
-  const rect = getRect(domNode);
-  if (!rect) return null;
-
-  return {
-    rect,
-    domNode,
-    renders: [render],
-  };
-};
-
-export const mergeOutlines = (outlines: Array<PendingOutline>) => {
-  const mergedOutlines = new Map<string, PendingOutline>();
-  for (let i = 0, len = outlines.length; i < len; i++) {
-    const outline = outlines[i];
-    const key = getOutlineKey(outline);
-    const existingOutline = mergedOutlines.get(key);
-
-    if (!existingOutline) {
-      mergedOutlines.set(key, outline);
-      continue;
-    }
-    existingOutline.renders.push(...outline.renders);
-  }
-  return Array.from(mergedOutlines.values());
-};
-
-export const recalcOutlines = throttle(() => {
-  const { scheduledOutlines, activeOutlines } = ReactScanInternals;
-
-  const domNodes = new Set<HTMLElement>();
-
-  for (let i = scheduledOutlines.length - 1; i >= 0; i--) {
-    const outline = scheduledOutlines[i];
-    domNodes.add(outline.domNode);
-  }
+  const domNodes: Array<HTMLElement> = [];
 
   for (let i = activeOutlines.length - 1; i >= 0; i--) {
     const activeOutline = activeOutlines[i];
     if (!activeOutline) continue;
-    domNodes.add(activeOutline.outline.domNode);
+    domNodes.push(activeOutline.outline.domNode);
   }
-
-  const rectMap = new Map<HTMLElement, DOMRect | null>();
-
-  for (const domNode of domNodes) {
-    rectMap.set(domNode, getRect(domNode));
-  }
-
-  for (let i = scheduledOutlines.length - 1; i >= 0; i--) {
-    const outline = scheduledOutlines[i];
-    const rect = rectMap.get(outline.domNode);
-    if (!rect) {
-      scheduledOutlines.splice(i, 1);
-      continue;
-    }
-    outline.rect = rect;
-  }
+  const rectMap = await batchGetBoundingRects(domNodes);
 
   for (let i = activeOutlines.length - 1; i >= 0; i--) {
     const activeOutline = activeOutlines[i];
@@ -164,11 +69,79 @@ export const recalcOutlines = throttle(() => {
       activeOutlines.splice(i, 1);
       continue;
     }
-    activeOutline.outline.rect = rect;
+    activeOutline.rect = rect;
   }
 }, DEFAULT_THROTTLE_TIME);
 
-export const flushOutlines = (
+const boundingRectCache = new Map<
+  HTMLElement,
+  { rect: DOMRect; timestamp: number }
+>();
+
+const CACHE_LIFETIME = 200;
+
+export const batchGetBoundingRects = (
+  elements: Array<HTMLElement>,
+): Promise<Map<HTMLElement, DOMRect>> => {
+  idempotent_startBoundingRectGC();
+  return new Promise((resolve) => {
+    const now = Date.now();
+    const results = new Map<HTMLElement, DOMRect>();
+    const needsUpdate: Array<HTMLElement> = [];
+
+    for (const element of elements) {
+      const cached = boundingRectCache.get(element);
+      if (cached && now - cached.timestamp < CACHE_LIFETIME) {
+        results.set(element, cached.rect);
+      } else {
+        needsUpdate.push(element);
+      }
+    }
+
+    if (needsUpdate.length === 0) {
+      resolve(results);
+      return;
+    }
+
+    // intersection observer runs off main thread, and provides
+    // the client bounding rect on observation start https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API#intersection_observer_concepts_and_usage
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const element = entry.target as HTMLElement;
+        const bounds = entry.boundingClientRect;
+
+        results.set(element, bounds);
+        boundingRectCache.set(element, {
+          rect: bounds,
+          timestamp: now,
+        });
+      }
+
+      observer.disconnect();
+      resolve(results);
+    });
+
+    for (const element of needsUpdate) {
+      observer.observe(element);
+    }
+  });
+};
+
+let boundingRectGcInterval: ReturnType<typeof setInterval>;
+// eslint-disable-next-line camelcase
+const idempotent_startBoundingRectGC = () => {
+  if (boundingRectGcInterval) return;
+  setInterval(() => {
+    const now = Date.now();
+    boundingRectCache.forEach((value, key) => {
+      if (now - value.timestamp >= CACHE_LIFETIME) {
+        boundingRectCache.delete(key);
+      }
+    });
+  }, CACHE_LIFETIME);
+};
+
+export const flushOutlines = async (
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   previousOutlines: Map<string, PendingOutline> = new Map(),
 ) => {
@@ -177,32 +150,38 @@ export const flushOutlines = (
   }
 
   const scheduledOutlines = ReactScanInternals.scheduledOutlines;
+  const newPreviousOutlines = await activateOutlines(
+    scheduledOutlines,
+    previousOutlines,
+  );
   ReactScanInternals.scheduledOutlines = [];
 
   recalcOutlines();
 
-  const newPreviousOutlines = new Map<string, PendingOutline>();
-
-  paintOutlines(
+  void paintOutlines(
     ctx,
-    scheduledOutlines.filter((outline) => {
-      const key = getOutlineKey(outline);
-      if (previousOutlines.has(key)) {
-        return false;
-      }
-      newPreviousOutlines.set(key, outline);
-      return true;
-    }),
+    scheduledOutlines, // this only matters for API back compat we aren't using it in this func
   );
 
   if (ReactScanInternals.scheduledOutlines.length) {
     requestAnimationFrame(() => {
-      flushOutlines(ctx, newPreviousOutlines);
+      void flushOutlines(ctx, newPreviousOutlines); // i think this is fine, think harder about it later
     });
   }
 };
 
 let animationFrameId: number | null = null;
+
+const labelTextCache = new WeakMap<PendingOutline, string>();
+
+function getCachedLabelText(outline: PendingOutline): string {
+  if (labelTextCache.has(outline)) {
+    return labelTextCache.get(outline)!;
+  }
+  const text = getLabelText(outline.renders) ?? '';
+  labelTextCache.set(outline, text);
+  return text;
+}
 
 export const fadeOutOutline = (
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -215,58 +194,69 @@ export const fadeOutOutline = (
 
   const groupedOutlines = new Map<string, ActiveOutline>();
 
-  for (let i = activeOutlines.length - 1; i >= 0; i--) {
-    const activeOutline = activeOutlines[i];
+  const toRemove: Array<number> = [];
+  for (let idx = activeOutlines.length - 1; idx >= 0; idx--) {
+    const activeOutline = activeOutlines[idx];
     if (!activeOutline) continue;
-    const { outline } = activeOutline;
 
-    const { rect } = outline;
-
+    const { outline, rect } = activeOutline;
     const key = `${rect.x}-${rect.y}`;
+    const existing = groupedOutlines.get(key);
 
-    if (!groupedOutlines.has(key)) {
+    if (!existing) {
       groupedOutlines.set(key, activeOutline);
     } else {
-      const group = groupedOutlines.get(key)!;
+      if (existing.outline.renders !== outline.renders) {
+        const CHUNK_SIZE = 10000; //Array.prototype.push(...) can stack overflow with too many elements
+        const renders = outline.renders;
 
-      if (group.outline.renders !== outline.renders) {
-        group.outline.renders = [...group.outline.renders, ...outline.renders];
+        for (let start = 0; start < renders.length; start += CHUNK_SIZE) {
+          const chunk = renders.slice(start, start + CHUNK_SIZE);
+          existing.outline.renders.push(...chunk);
+        }
+
+        existing.alpha = Math.max(existing.alpha, activeOutline.alpha);
+        existing.frame = Math.min(existing.frame, activeOutline.frame);
+        existing.totalFrames = Math.max(
+          existing.totalFrames,
+          activeOutline.totalFrames,
+        );
       }
 
-      group.alpha = Math.max(group.alpha, activeOutline.alpha);
-      group.frame = Math.min(group.frame, activeOutline.frame);
-      group.totalFrames = Math.max(
-        group.totalFrames,
-        activeOutline.totalFrames,
-      );
-
-      activeOutlines.splice(i, 1);
+      toRemove.push(idx);
     }
 
     activeOutline.frame++;
-
     const progress = activeOutline.frame / activeOutline.totalFrames;
-
     const alphaScalar = 0.8;
     activeOutline.alpha = alphaScalar * (1 - progress);
 
     if (activeOutline.frame >= activeOutline.totalFrames) {
-      activeOutlines.splice(i, 1);
+      toRemove.push(idx);
     }
   }
 
-  const pendingLabeledOutlines: Array<OutlineLabel> = [];
+  toRemove.sort((a, b) => a - b);
+  for (let i = toRemove.length - 1; i >= 0; i--) {
+    activeOutlines.splice(toRemove[i], 1);
+  }
 
+  const pendingLabeledOutlines: Array<OutlineLabel> = [];
   ctx.save();
 
   const renderCountThreshold = options.renderCountThreshold ?? 0;
-  for (const activeOutline of Array.from(groupedOutlines.values())) {
-    const { outline, frame, totalFrames } = activeOutline;
+
+  const phases = new Set<string>();
+  const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
+
+  for (const activeOutline of groupedOutlines.values()) {
+    const { outline, frame, totalFrames, rect } = activeOutline;
 
     let totalTime = 0;
     let totalCount = 0;
     let totalFps = 0;
-    for (let i = 0, len = outline.renders.length; i < len; i++) {
+    const renderLen = outline.renders.length;
+    for (let i = 0; i < renderLen; i++) {
       const render = outline.renders[i];
       totalTime += render.time ?? 0;
       totalCount += render.count;
@@ -274,50 +264,48 @@ export const fadeOutOutline = (
     }
 
     const THRESHOLD_FPS = 60;
+    const avgFps = totalFps / renderLen;
     const averageScore = Math.max(
-      (THRESHOLD_FPS -
-        Math.min(totalFps / outline.renders.length, THRESHOLD_FPS)) /
-        THRESHOLD_FPS,
-      totalTime / totalCount / 16, // long task
+      (THRESHOLD_FPS - Math.min(avgFps, THRESHOLD_FPS)) / THRESHOLD_FPS,
+      totalTime / totalCount / 16,
     );
 
     const t = Math.min(averageScore, 1);
-
     const r = Math.round(START_COLOR.r + t * (END_COLOR.r - START_COLOR.r));
     const g = Math.round(START_COLOR.g + t * (END_COLOR.g - START_COLOR.g));
     const b = Math.round(START_COLOR.b + t * (END_COLOR.b - START_COLOR.b));
-
     let color = { r, g, b };
 
-    const phases = new Set();
-
-    const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
+    phases.clear();
+    reasons.length = 0;
 
     let didCommit = false;
     let isUnstable = false;
     let isUnnecessary = false;
-    for (let i = 0, len = outline.renders.length; i < len; i++) {
+
+    for (let i = 0; i < renderLen; i++) {
       const render = outline.renders[i];
       phases.add(render.phase);
       if (render.didCommit) {
         didCommit = true;
       }
-      for (let j = 0, len2 = render.changes?.length ?? 0; j < len2; j++) {
-        const change = render.changes![j];
-        if (change.unstable) {
-          isUnstable = true;
+
+      const changes = render.changes;
+      if (changes) {
+        for (let j = 0, cLen = changes.length; j < cLen; j++) {
+          if (changes[j].unstable) {
+            isUnstable = true;
+          }
         }
       }
+
       if (render.unnecessary) {
         isUnnecessary = true;
       }
     }
-    if (didCommit) {
-      reasons.push('commit');
-    }
-    if (isUnstable) {
-      reasons.push('unstable');
-    }
+
+    if (didCommit) reasons.push('commit');
+    if (isUnstable) reasons.push('unstable');
     if (isUnnecessary) {
       reasons.push('unnecessary');
       if (reasons.length === 1) {
@@ -325,13 +313,10 @@ export const fadeOutOutline = (
       }
     }
 
-    const { rect } = outline;
-
     if (renderCountThreshold > 0) {
       let count = 0;
-      for (let i = 0, len = outline.renders.length; i < len; i++) {
-        const render = outline.renders[i];
-        count += render.count;
+      for (let i = 0; i < renderLen; i++) {
+        count += outline.renders[i].count;
       }
       if (count < renderCountThreshold) {
         continue;
@@ -342,7 +327,7 @@ export const fadeOutOutline = (
     activeOutline.alpha = alphaScalar * (1 - frame / totalFrames);
 
     const alpha = activeOutline.alpha;
-    const fillAlpha = activeOutline.alpha * 0.1;
+    const fillAlpha = alpha * 0.1;
 
     const rgb = `${color.r},${color.g},${color.b}`;
     ctx.strokeStyle = `rgba(${rgb},${alpha})`;
@@ -354,15 +339,22 @@ export const fadeOutOutline = (
     ctx.stroke();
     ctx.fill();
 
-    const labelText = getLabelText(outline.renders) ?? '';
-    if (reasons.length && labelText && !(phases.has('mount') && phases.size === 1)) {
+    const labelText = getCachedLabelText(outline);
+
+    if (
+      reasons.length &&
+      labelText &&
+      !(phases.has('mount') && phases.size === 1)
+    ) {
+      const measured = measureTextCached(labelText, ctx);
       pendingLabeledOutlines.push({
         alpha,
         outline,
         color,
         reasons,
         labelText,
-        textWidth: measureTextCached(labelText, ctx).width,
+        textWidth: measured.width,
+        rect,
       });
     }
   }
@@ -371,35 +363,33 @@ export const fadeOutOutline = (
 
   const mergedLabels = mergeOverlappingLabels(pendingLabeledOutlines);
 
+  ctx.save();
+  ctx.font = `11px ${MONO_FONT}`;
+
   for (let i = 0, len = mergedLabels.length; i < len; i++) {
-    const { alpha, outline, color, reasons } = mergedLabels[i];
-    const labelText = getLabelText(outline.renders);
-    const text =
+    const { alpha, outline, color, reasons, rect } = mergedLabels[i];
+    const text = getCachedLabelText(outline);
+    const conditionalText =
       reasons.includes('unstable') &&
       (reasons.includes('commit') || reasons.includes('unnecessary'))
-        ? `⚠️${labelText}`
-        : `${labelText}`;
-    const { rect } = outline;
-    ctx.save();
+        ? `⚠️${text}`
+        : text;
 
-    if (text) {
-      ctx.font = `11px ${MONO_FONT}`;
-      const textMetrics = ctx.measureText(text);
-      const textWidth = textMetrics.width;
-      const textHeight = 11;
+    const textMetrics = ctx.measureText(conditionalText);
+    const textWidth = textMetrics.width;
+    const textHeight = 11;
 
-      const labelX: number = rect.x;
-      const labelY: number = rect.y - textHeight - 4;
+    const labelX: number = rect.x;
+    const labelY: number = rect.y - textHeight - 4;
 
-      ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
-      ctx.fillRect(labelX, labelY, textWidth + 4, textHeight + 4);
+    ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
+    ctx.fillRect(labelX, labelY, textWidth + 4, textHeight + 4);
 
-      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      ctx.fillText(text, labelX + 2, labelY + textHeight);
-    }
-
-    ctx.restore();
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillText(conditionalText, labelX + 2, labelY + textHeight);
   }
+
+  ctx.restore();
 
   if (activeOutlines.length) {
     animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
@@ -408,93 +398,139 @@ export const fadeOutOutline = (
   }
 };
 
-function paintOutlines(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+export interface PendingOutline {
+  domNode: HTMLElement;
+  renders: Array<Render>;
+}
+
+const activateOutlines = async (
   outlines: Array<PendingOutline>,
-): void {
+  previousOutlines: Map<string, PendingOutline>,
+) => {
+  const newPreviousOutlines = new Map<string, PendingOutline>();
+
   const { options } = ReactScanInternals;
   const totalFrames = options.value.alwaysShowLabels ? 60 : 30;
   const alpha = 0.8;
 
-  options.value.onPaintStart?.(outlines);
+  const rects = await batchGetBoundingRects(outlines.map((o) => o.domNode));
+  const newActiveOutlines: Array<ActiveOutline> = [];
 
-  const newActiveOutlines = outlines.map((outline) => {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  for (const outline of outlines) {
     const renders = outline.renders;
+    const rect = rects.get(outline.domNode);
+    if (!rect) {
+      // If we cannot get the rect, it might mean the element is detached or invisible.
+      // Skip it.
+      continue;
+    }
+
+    const isOffScreen =
+      rect.bottom < 0 ||
+      rect.right < 0 ||
+      rect.top > viewportHeight ||
+      rect.left > viewportWidth;
+
+    if (isOffScreen) {
+      continue;
+    }
+
+    const key = getOutlineKey(rect);
+    if (previousOutlines.has(key)) {
+      continue;
+    }
+    newPreviousOutlines.set(key, outline);
 
     const frame = 0;
 
-    return {
+    newActiveOutlines.push({
       outline,
       alpha,
       frame,
       totalFrames,
       text: getLabelText(renders),
-    };
-  });
+      rect,
+    });
+  }
 
   ReactScanInternals.activeOutlines.push(...newActiveOutlines);
+  return newPreviousOutlines;
+};
+
+async function paintOutlines(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  outlines: Array<PendingOutline>,
+): Promise<void> {
+  const { options } = ReactScanInternals;
+  options.value.onPaintStart?.(outlines); // maybe we should start passing activeOutlines to onPaintStart, since we have the activeOutlines at painStart
+
   if (!animationFrameId) {
     animationFrameId = requestAnimationFrame(() => fadeOutOutline(ctx));
   }
 }
+export const getLabelRect = (label: OutlineLabel): DOMRect => {
+  const textHeight = 11;
 
+  const labelX = label.rect.x;
+  const labelY = label.rect.y - textHeight - 4;
 
-interface LabelRect {
-  label: OutlineLabel;
-  rect: DOMRect;
-}
+  return new DOMRect(labelX, labelY, label.textWidth + 4, textHeight + 4);
+};
 
-function getLabelRects(labels: Array<OutlineLabel>): Array<LabelRect> {
-  const labelRects: Array<LabelRect> = [];
-  for (let i = 0, len = labels.length; i < len; i++) {
-    labelRects.push({
-      label: labels[i],
-      rect: getLabelRect(labels[i]),
-    });
-  }
-  return labelRects;
-}
+//
 
-function sortLabelRects(a: LabelRect, b: LabelRect) {
-  return a.rect.x - b.rect.x;
-}
+/**
+ * -  this can be done in O(nlogn) using https://en.wikipedia.org/wiki/Sweep_line_algorithm
+ * - we don't merge if we need to perform over 1000 merge checks as a naive way to optimize this fn during expensive draws
+ *    - this works fine since when there are lots of outlines, its likely going to be very cluttered anyway, merging does not make the situation meangifully better
+ */
+//
 
-// (Alexis): maybe slow nested iterations
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
+  maxMergeOps = 2000,
 ): Array<OutlineLabel> => {
-  // Precompute labelRects
-  const labelRects = getLabelRects(labels);
-
-  // Sort labels by x-coordinate
-  labelRects.sort(sortLabelRects);
+  const sortedByX = labels.map((label) => ({
+    ...label,
+    rect: getLabelRect(label),
+  }));
+  sortedByX.sort((a, b) => a.rect.x - b.rect.x);
 
   const mergedLabels: Array<OutlineLabel> = [];
+  let ops = 0;
 
-  for (let i = 0, len = labelRects.length; i < len; i++) {
-    const { label, rect } = labelRects[i];
+  for (let i = 0; i < sortedByX.length; i++) {
+    const label = sortedByX[i];
     let isMerged = false;
 
     // Only compare with labels that might overlap
     for (
       let j = i + 1;
-      j < labelRects.length && labelRects[j].rect.x <= rect.x + rect.width;
+      j < sortedByX.length &&
+      sortedByX[j].rect.x <= label.rect.x + label.rect.width &&
+      ops < maxMergeOps;
       j++
     ) {
-      const nextLabel = labelRects[j].label;
-      const nextRect = labelRects[j].rect;
+      ops++;
+      const nextLabel = sortedByX[j];
+      const nextRect = sortedByX[j].rect;
 
-      const overlapArea = getOverlapArea(rect, nextRect);
+      const overlapArea = getOverlapArea(label.rect, nextRect);
 
       if (overlapArea > 0) {
-        // Merge labels
-        const combinedOutline: PendingOutline = {
-          rect: getOutermostOutline(nextLabel.outline, label.outline).rect,
-          domNode: getOutermostOutline(nextLabel.outline, label.outline).domNode,
-          renders: ([] as Array<Render>).concat(label.outline.renders, nextLabel.outline.renders),
+        const outermostLabel = getOutermostLabel(nextLabel, label);
+        const combinedOutline: PendingOutline & { rect: DOMRect } = {
+          rect: outermostLabel.rect,
+          domNode: outermostLabel.outline.domNode,
+          renders: [...label.outline.renders, ...nextLabel.outline.renders],
         };
 
         nextLabel.alpha = Math.max(nextLabel.alpha, label.alpha);
+
+        nextLabel.rect = combinedOutline.rect;
         nextLabel.outline = combinedOutline;
         nextLabel.reasons = Array.from(
           new Set(nextLabel.reasons.concat(label.reasons)),
@@ -511,18 +547,6 @@ export const mergeOverlappingLabels = (
   }
 
   return mergedLabels;
-};
-
-export const getLabelRect = (
-  label: OutlineLabel,
-): DOMRect => {
-  const { rect } = label.outline;
-  const textHeight = 11;
-
-  const labelX = rect.x;
-  const labelY = rect.y - textHeight - 4;
-
-  return new DOMRect(labelX, labelY, label.textWidth + 4, textHeight + 4);
 };
 
 const textMeasurementCache = new Map<string, TextMetrics>();
@@ -552,12 +576,12 @@ export const getOverlapArea = (rect1: DOMRect, rect2: DOMRect): number => {
   return xOverlap * yOverlap;
 };
 
-export const getOutermostOutline = (
-  outline1: PendingOutline,
-  outline2: PendingOutline,
-): PendingOutline => {
-  const area1 = outline1.rect.width * outline1.rect.height;
-  const area2 = outline2.rect.width * outline2.rect.height;
+export const getOutermostLabel = (
+  label1: OutlineLabel,
+  label2: OutlineLabel,
+): OutlineLabel => {
+  const area1 = label1.rect.width * label1.rect.height;
+  const area2 = label2.rect.width * label2.rect.height;
 
-  return area1 >= area2 ? outline1 : outline2;
+  return area1 >= area2 ? label1 : label2;
 };

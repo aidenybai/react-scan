@@ -1,4 +1,4 @@
-import { recalcOutlines } from './utils/outline';
+import { recalcOutlines } from '@web-utils/outline';
 
 export const initReactScanOverlay = () => {
   const container = document.getElementById('react-scan-root');

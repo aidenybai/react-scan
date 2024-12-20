@@ -18,6 +18,7 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    "@typescript-eslint/no-unused-vars":"warn",
     '@typescript-eslint/explicit-function-return-type': 'off',
     'import/no-default-export': 'off',
     'no-bitwise': 'off',
@@ -47,12 +48,14 @@ module.exports = {
     'no-implicit-coercion': 'off',
     '@typescript-eslint/no-redundant-type-constituents': 'off',
     'object-shorthand': 'off',
+    "@typescript-eslint/no-unused-vars":"warn",
     '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',
     'no-useless-return': 'off',
     'func-names': 'off',
     '@typescript-eslint/prefer-for-of': 'off',
     '@typescript-eslint/restrict-template-expressions': 'off',
     '@typescript-eslint/array-type': ['error', { default: 'generic' }],
+    "no-console":'warn'
   },
   settings: {
     'import/resolver': {

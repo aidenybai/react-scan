@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'preact/hooks';
-import { cn, readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import { cn } from '@web-utils/helpers';
 import { ReactScanInternals, Store, setOptions } from '../../../..';
 import { getNearestFiberFromElement } from '../../inspect-element/utils';
 import { Icon } from '../icon';
@@ -12,7 +12,6 @@ interface ToolbarProps {
 export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
   const inspectState = Store.inspectState;
 
-  const instrumentation = ReactScanInternals.instrumentation;
   const isInspectFocused = inspectState.value.kind === 'focused';
   const isInspectActive = inspectState.value.kind === 'inspecting';
 
@@ -62,31 +61,35 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
     }
   }, [Store.inspectState.value]);
 
-  const onPreviousFocus = useCallback(() => {
-    const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement)
-      return;
-
-    const focusedDomElement = currentState.focusedDomElement;
+  const findNextElement = useCallback((
+    currentElement: HTMLElement,
+    direction: 'next' | 'previous'
+  ) => {
     const allElements = Array.from(document.querySelectorAll('*')).filter(
       (el): el is HTMLElement => el instanceof HTMLElement,
     );
-    const currentIndex = allElements.indexOf(focusedDomElement);
-    if (currentIndex === -1) return;
+    const currentIndex = allElements.indexOf(currentElement);
+    if (currentIndex === -1) return null;
 
-    let prevElement: HTMLElement | null = null;
-    let prevIndex = currentIndex - 1;
-    const currentFiber = getNearestFiberFromElement(focusedDomElement);
+    const currentFiber = getNearestFiberFromElement(currentElement);
+    const increment = direction === 'next' ? 1 : -1;
+    let index = currentIndex + increment;
 
-    while (prevIndex >= 0) {
-      const fiber = getNearestFiberFromElement(allElements[prevIndex]);
+    while (index >= 0 && index < allElements.length) {
+      const fiber = getNearestFiberFromElement(allElements[index]);
       if (fiber && fiber !== currentFiber) {
-        prevElement = allElements[prevIndex];
-        break;
+        return allElements[index];
       }
-      prevIndex--;
+      index += increment;
     }
+    return null;
+  }, []);
 
+  const onPreviousFocus = useCallback(() => {
+    const currentState = Store.inspectState.value;
+    if (currentState.kind !== 'focused' || !currentState.focusedDomElement) return;
+
+    const prevElement = findNextElement(currentState.focusedDomElement, 'previous');
     if (prevElement) {
       Store.inspectState.value = {
         kind: 'focused',
@@ -94,33 +97,13 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
         propContainer: currentState.propContainer,
       };
     }
-  }, [Store.inspectState.value]);
+  }, [findNextElement]);
 
   const onNextFocus = useCallback(() => {
     const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement)
-      return;
+    if (currentState.kind !== 'focused' || !currentState.focusedDomElement) return;
 
-    const focusedDomElement = currentState.focusedDomElement;
-    const allElements = Array.from(document.querySelectorAll('*')).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement,
-    );
-    const currentIndex = allElements.indexOf(focusedDomElement);
-    if (currentIndex === -1) return;
-
-    let nextElement: HTMLElement | null = null;
-    let nextIndex = currentIndex + 1;
-    const prevFiber = getNearestFiberFromElement(focusedDomElement);
-
-    while (nextIndex < allElements.length) {
-      const fiber = getNearestFiberFromElement(allElements[nextIndex]);
-      if (fiber && fiber !== prevFiber) {
-        nextElement = allElements[nextIndex];
-        break;
-      }
-      nextIndex++;
-    }
-
+    const nextElement = findNextElement(currentState.focusedDomElement, 'next');
     if (nextElement) {
       Store.inspectState.value = {
         kind: 'focused',
@@ -128,19 +111,18 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
         propContainer: currentState.propContainer,
       };
     }
-  }, [Store.inspectState.value]);
+  }, [findNextElement]);
 
   const onToggleActive = useCallback(() => {
-    if (instrumentation) {
-      instrumentation.isPaused.value = !instrumentation.isPaused.value;
-      saveLocalStorage('react-scan-paused', instrumentation.isPaused.value);
+    if (ReactScanInternals.instrumentation) {
+      ReactScanInternals.instrumentation.isPaused.value = !ReactScanInternals.instrumentation.isPaused.value;
     }
-  }, []);
+  }, [ReactScanInternals.instrumentation]);
+
 
   const onSoundToggle = useCallback(() => {
     const newSoundState = !ReactScanInternals.options.value.playSound;
-    setOptions({ playSound: newSoundState, showToolbar: true });
-    saveLocalStorage('react-scan-sound', newSoundState);
+    setOptions({ playSound: newSoundState });
   }, []);
 
   useEffect(() => {
@@ -151,20 +133,6 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
         kind: 'inspect-off',
         propContainer: refPropContainer.current!,
       };
-    }
-  }, []);
-
-  useEffect(() => {
-    if (instrumentation) {
-      const savedStatePaused = readLocalStorage<boolean>('react-scan-paused');
-      if (savedStatePaused !== null) {
-        instrumentation.isPaused.value = savedStatePaused;
-      }
-
-      const savedStateSound = readLocalStorage<boolean>('react-scan-sound');
-      if (savedStateSound !== null) {
-        setOptions({ playSound: savedStateSound, showToolbar: true });
-      }
     }
   }, []);
 

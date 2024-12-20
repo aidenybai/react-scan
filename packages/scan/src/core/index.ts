@@ -3,16 +3,18 @@ import type * as React from 'react';
 import { type Signal, signal } from '@preact/signals';
 import {
   getDisplayName,
+  getRDTHook,
+  getNearestHostFiber,
   getTimings,
   getType,
   isCompositeFiber,
   isInstrumentationActive,
   traverseFiber,
+  detectReactBuildType,
 } from 'bippy';
 import {
   type ActiveOutline,
   flushOutlines,
-  getOutline,
   type PendingOutline,
 } from '@web-utils/outline';
 import { log, logIntro } from '@web-utils/log';
@@ -23,6 +25,7 @@ import {
 import { playGeigerClickSound } from '@web-utils/geiger';
 import { ICONS } from '@web-assets/svgs/svgs';
 import { updateFiberRenderData, type RenderData } from 'src/core/utils';
+import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
 import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
 import { createToolbar } from './web/toolbar';
@@ -31,6 +34,7 @@ import { type getSession } from './monitor/utils';
 import styles from './web/assets/css/styles.css';
 
 let toolbarContainer: HTMLElement | null = null;
+let shadowRoot: ShadowRoot | null = null;
 
 export interface Options {
   /**
@@ -48,6 +52,13 @@ export interface Options {
    * @default true
    */
   includeChildren?: boolean;
+
+  /**
+   * Force React Scan to run in production (not recommended)
+   *
+   * @default false
+   */
+  dangerouslyForceRunInProduction?: boolean;
 
   /**
    * Enable/disable geiger sound
@@ -196,11 +207,82 @@ export const ReactScanInternals: Internals = {
     report: undefined,
     alwaysShowLabels: false,
     animationSpeed: 'fast',
+    dangerouslyForceRunInProduction: false,
   }),
   onRender: null,
   scheduledOutlines: [],
   activeOutlines: [],
   Store,
+};
+
+type LocalStorageOptions = Omit<
+  Options,
+  | 'onCommitStart'
+  | 'onRender'
+  | 'onCommitFinish'
+  | 'onPaintStart'
+  | 'onPaintFinish'
+>;
+
+const validateOptions = (options: Partial<Options>): Partial<Options> => {
+  const errors: Array<string> = [];
+  const validOptions: Partial<Options> = {};
+
+  Object.entries(options).forEach(([key, value]) => {
+    switch (key) {
+      case 'enabled':
+      case 'includeChildren':
+      case 'playSound':
+      case 'log':
+      case 'showToolbar':
+      case 'report':
+      case 'alwaysShowLabels':
+      case 'dangerouslyForceRunInProduction':
+        if (typeof value !== 'boolean') {
+          errors.push(`- ${key} must be a boolean. Got "${value}"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      case 'renderCountThreshold':
+      case 'resetCountTimeout':
+        if (typeof value !== 'number' || value < 0) {
+          errors.push(`- ${key} must be a non-negative number. Got "${value}"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      case 'animationSpeed':
+        if (!['slow', 'fast', 'off'].includes(value as string)) {
+          errors.push(
+            `- Invalid animation speed "${value}". Using default "fast"`,
+          );
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      case 'onCommitStart':
+      case 'onCommitFinish':
+      case 'onRender':
+      case 'onPaintStart':
+      case 'onPaintFinish':
+        if (typeof value !== 'function') {
+          errors.push(`- ${key} must be a function. Got "${value}"`);
+        } else {
+          (validOptions as any)[key] = value;
+        }
+        break;
+      default:
+        errors.push(`- Unknown option "${key}"`);
+    }
+  });
+
+  if (errors.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
+  }
+
+  return validOptions;
 };
 
 export const getReport = (type?: React.ComponentType<any>) => {
@@ -215,23 +297,38 @@ export const getReport = (type?: React.ComponentType<any>) => {
   return Store.legacyReportData;
 };
 
-export const setOptions = (options: Options) => {
-  const { instrumentation } = ReactScanInternals;
-  if (instrumentation) {
-    instrumentation.isPaused.value = options.enabled === false;
+export const setOptions = (userOptions: Partial<Options>) => {
+  const validOptions = validateOptions(userOptions);
+
+  if (Object.keys(validOptions).length === 0) {
+    return;
   }
 
-  const previousOptions = ReactScanInternals.options.value;
+  if ('playSound' in validOptions && validOptions.playSound) {
+    validOptions.enabled = true;
+  }
 
-  ReactScanInternals.options.value = {
+  const newOptions = {
     ...ReactScanInternals.options.value,
-    ...options,
+    ...validOptions,
   };
 
-  if (previousOptions.showToolbar && !options.showToolbar) {
-    if (toolbarContainer) {
+  const { instrumentation } = ReactScanInternals;
+  if (instrumentation && 'enabled' in validOptions) {
+    instrumentation.isPaused.value = validOptions.enabled === false;
+  }
+
+  ReactScanInternals.options.value = newOptions;
+
+  saveLocalStorage('react-scan-options', newOptions);
+
+  if ('showToolbar' in validOptions) {
+    if (toolbarContainer && !newOptions.showToolbar) {
       toolbarContainer.remove();
-      toolbarContainer = null;
+    }
+
+    if (newOptions.showToolbar && toolbarContainer && shadowRoot) {
+      toolbarContainer = createToolbar(shadowRoot);
     }
   }
 };
@@ -240,7 +337,7 @@ export const getOptions = () => ReactScanInternals.options;
 
 export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
   const reportFiber = fiber;
-  const { selfTime } = getTimings(fiber);
+  const { selfTime } = getTimings(fiber.type);
   const displayName = getDisplayName(fiber.type);
 
   Store.lastReportTime.value = performance.now();
@@ -304,75 +401,131 @@ export const isValidFiber = (fiber: Fiber) => {
   return true;
 };
 
+let flushInterval: ReturnType<typeof setInterval>;
+const startFlushOutlineInterval = (ctx: CanvasRenderingContext2D) => {
+  clearInterval(flushInterval);
+  setInterval(() => {
+    requestAnimationFrame(() => {
+      flushOutlines(ctx);
+    });
+  }, 30);
+};
 export const start = () => {
   if (typeof window === 'undefined') return;
 
-  const existingRoot = document.querySelector('react-scan-root');
-  if (existingRoot) {
-    return;
+  const localStorageOptions =
+    readLocalStorage<LocalStorageOptions>('react-scan-options');
+  if (localStorageOptions) {
+    const validLocalOptions = validateOptions(localStorageOptions);
+    if (Object.keys(validLocalOptions).length > 0) {
+      ReactScanInternals.options.value = {
+        ...ReactScanInternals.options.value,
+        ...validLocalOptions,
+      };
+    }
   }
-
-  // Create container for shadow DOM
-  const container = document.createElement('div');
-  container.id = 'react-scan-root';
-
-  const shadow = container.attachShadow({ mode: 'open' });
-
-  const fragment = document.createDocumentFragment();
-
-  // add styles
-  const cssStyles = document.createElement('style');
-  cssStyles.textContent = styles;
-
-  // Create SVG sprite sheet node directly
-  const iconSprite = new DOMParser().parseFromString(
-    ICONS,
-    'image/svg+xml',
-  ).documentElement;
-  shadow.appendChild(iconSprite);
-
-  // add toolbar root
-  const root = document.createElement('div');
-  root.id = 'react-scan-toolbar-root';
-  root.className = 'absolute z-2147483647';
-
-  fragment.appendChild(cssStyles);
-  fragment.appendChild(root);
-
-  shadow.appendChild(fragment);
-
-  // Add container to document first (so shadow DOM is available)
-  document.documentElement.appendChild(container);
-
-  const options = ReactScanInternals.options.value;
-
-  const ctx = initReactScanOverlay();
-  if (!ctx) return;
-
-  createInspectElementStateMachine(shadow);
 
   const audioContext =
     typeof window !== 'undefined'
-      ? new (window.AudioContext ||
+      ? new (
+          window.AudioContext ||
           // @ts-expect-error -- This is a fallback for Safari
-          window.webkitAudioContext)()
+          window.webkitAudioContext
+        )()
       : null;
 
-  globalThis.__REACT_SCAN__ = {
-    ReactScanInternals,
-  };
-
+  let ctx: ReturnType<typeof initReactScanOverlay> | null = null;
   // TODO: dynamic enable, and inspect-off check
+
   const instrumentation = createInstrumentation('devtools', {
     onActive() {
       if (!Store.monitor.value) {
+        const rdtHook = getRDTHook();
+        let isProduction = false;
+        for (const renderer of rdtHook.renderers.values()) {
+          const buildType = detectReactBuildType(renderer);
+          if (buildType === 'production') {
+            isProduction = true;
+          }
+        }
+        if (
+          isProduction &&
+          !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+        ) {
+          setOptions({ enabled: false, showToolbar: false });
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[React Scan] Running in production mode is not recommended.\n' +
+              'If you really need this, set dangerouslyForceRunInProduction: true in options.',
+          );
+          return;
+        }
+
+        const existingRoot = document.querySelector('react-scan-root');
+        if (existingRoot) {
+          return;
+        }
+
+        const container = document.createElement('div');
+        container.id = 'react-scan-root';
+
+        shadowRoot = container.attachShadow({ mode: 'open' });
+
+        const fragment = document.createDocumentFragment();
+
+        const cssStyles = document.createElement('style');
+        cssStyles.textContent = styles;
+
+        const iconSprite = new DOMParser().parseFromString(
+          ICONS,
+          'image/svg+xml',
+        ).documentElement;
+        shadowRoot.appendChild(iconSprite);
+
+        const root = document.createElement('div');
+        root.id = 'react-scan-toolbar-root';
+        root.className = 'absolute z-2147483647';
+
+        fragment.appendChild(cssStyles);
+        fragment.appendChild(root);
+
+        shadowRoot.appendChild(fragment);
+
+        document.documentElement.appendChild(container);
+
+        ctx = initReactScanOverlay();
+        if (!ctx) return;
+        startFlushOutlineInterval(ctx);
+
+        createInspectElementStateMachine(shadowRoot);
+
+        globalThis.__REACT_SCAN__ = {
+          ReactScanInternals,
+        };
+
+        if (ReactScanInternals.options.value.showToolbar) {
+          toolbarContainer = createToolbar(shadowRoot);
+        }
+
+        container.setAttribute('part', 'scan-root');
+
+        const mainStyles = document.createElement('style');
+        mainStyles.textContent = `
+          html[data-theme="light"] react-scan-root::part(scan-root) {
+            --icon-color: rgba(0, 0, 0, 0.8);
+          }
+
+          html[data-theme="dark"] react-scan-root::part(scan-root) {
+            --icon-color: rgba(255, 255, 255, 0.8);
+          }
+        `;
+        document.head.appendChild(mainStyles);
+
         const existingOverlay = document.querySelector('react-scan-overlay');
         if (existingOverlay) {
           return;
         }
-        const overlayElement = document.createElement(
-          'react-scan-overlay',
-        ) as any;
+        const overlayElement = document.createElement('react-scan-overlay');
 
         document.documentElement.appendChild(overlayElement);
 
@@ -388,7 +541,7 @@ export const start = () => {
     },
     isValidFiber,
     onRender(fiber, renders) {
-      if (ReactScanInternals.instrumentation?.isPaused.value) {
+      if (Boolean(ReactScanInternals.instrumentation?.isPaused.value) || !ctx) {
         // don't draw if it's paused
         return;
       }
@@ -406,11 +559,16 @@ export const start = () => {
 
       for (let i = 0, len = renders.length; i < len; i++) {
         const render = renders[i];
-        const outline = getOutline(fiber, render);
-        if (!outline) continue;
-        ReactScanInternals.scheduledOutlines.push(outline);
+        const domFiber = getNearestHostFiber(fiber);
+        if (!domFiber || !domFiber.stateNode) continue;
 
-        // audio context can take up an insane amount of cpu, todo: figure out why
+        ReactScanInternals.scheduledOutlines.push({
+          domNode: domFiber.stateNode,
+          renders,
+        });
+
+        // - audio context can take up an insane amount of cpu, todo: figure out why
+        // - we may want to take this out of hot path
         if (ReactScanInternals.options.value.playSound && audioContext) {
           const renderTimeThreshold = 10;
           const amplitude = Math.min(
@@ -421,7 +579,6 @@ export const start = () => {
           playGeigerClickSound(audioContext, amplitude);
         }
       }
-      flushOutlines(ctx, new Map());
     },
     onCommitFinish() {
       ReactScanInternals.options.value.onCommitFinish?.();
@@ -429,26 +586,6 @@ export const start = () => {
   });
 
   ReactScanInternals.instrumentation = instrumentation;
-
-  if (options.showToolbar) {
-    toolbarContainer = createToolbar(shadow);
-  }
-
-  // Add this right after creating the container
-  container.setAttribute('part', 'scan-root');
-
-  // Add this before creating the Shadow DOM
-  const mainStyles = document.createElement('style');
-  mainStyles.textContent = `
-    html[data-theme="light"] react-scan-root::part(scan-root) {
-      --icon-color: rgba(0, 0, 0, 0.8);
-    }
-
-    html[data-theme="dark"] react-scan-root::part(scan-root) {
-      --icon-color: rgba(255, 255, 255, 0.8);
-    }
-  `;
-  document.head.appendChild(mainStyles);
 
   // TODO: add an visual error indicator that it didn't load
   if (!Store.monitor.value) {

@@ -94,59 +94,72 @@ export interface Render {
   count: number;
   forget: boolean;
   changes: Array<Change> | null;
-  unnecessary: boolean;
+  unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
 }
 
 const unstableTypes = ['function', 'object'];
 
-export const fastSerialize = (value: unknown, depth = 0) => {
+const cache = new WeakMap<object, string>();
+
+export function fastSerialize(value: unknown, depth = 0): string {
   if (depth < 0) return '…';
+
   switch (typeof value) {
     case 'function':
       return value.toString();
     case 'string':
       return value;
+    case 'number':
+    case 'boolean':
+    case 'undefined':
+      return String(value);
     case 'object':
-      if (value === null) {
-        return 'null';
-      }
-      if (Array.isArray(value)) {
-        return value.length > 0 ? `[${value.length}]` : '[]';
-      }
-      if (isValidElement(value)) {
-        // attempt to extract some name from the component
-        return `<${getDisplayName(value.type) ?? ''} ${
-          Object.keys(value.props || {}).length
-        }>`;
-      }
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        value.constructor === Object
-      ) {
-        for (const key in value) {
-          if (Object.prototype.hasOwnProperty.call(value, key)) {
-            return `{${Object.keys(value).length}}`;
-          }
-        }
-        return '{}';
-      }
-      // eslint-disable-next-line no-case-declarations
-      const tagString = Object.prototype.toString.call(value).slice(8, -1);
-      if (tagString === 'Object') {
-        const proto = Object.getPrototypeOf(value);
-        const constructor = proto?.constructor;
-        if (typeof constructor === 'function') {
-          return `${constructor.displayName || constructor.name || ''}{…}`;
-        }
-      }
-      return `${tagString}{…}`;
+      break;
     default:
       return String(value);
   }
-};
+
+  if (value === null) return 'null';
+
+  if (cache.has(value)) {
+    return cache.get(value)!;
+  }
+
+  if (Array.isArray(value)) {
+    const str = value.length ? `[${value.length}]` : '[]';
+    cache.set(value, str);
+    return str;
+  }
+
+  if (isValidElement(value)) {
+    const type = getDisplayName(value.type) ?? '';
+    const propCount = value.props ? Object.keys(value.props).length : 0;
+    const str = `<${type} ${propCount}>`;
+    cache.set(value, str);
+    return str;
+  }
+
+  if (Object.getPrototypeOf(value) === Object.prototype) {
+    const keys = Object.keys(value);
+    const str = keys.length ? `{${keys.length}}` : '{}';
+    cache.set(value, str);
+    return str;
+  }
+
+  const ctor = (value as any).constructor;
+  if (ctor && typeof ctor === 'function' && ctor.name) {
+    const str = `${ctor.name}{…}`;
+    cache.set(value, str);
+    return str;
+  }
+
+  const tagString = Object.prototype.toString.call(value).slice(8, -1);
+  const str = `${tagString}{…}`;
+  cache.set(value, str);
+  return str;
+}
 
 export const getPropsChanges = (fiber: Fiber) => {
   const changes: Array<Change> = [];
@@ -154,8 +167,12 @@ export const getPropsChanges = (fiber: Fiber) => {
   const prevProps = fiber.alternate?.memoizedProps || {};
   const nextProps = fiber.memoizedProps || {};
 
-  // eslint-disable-next-line prefer-object-spread
-  for (const propName in Object.assign({}, prevProps, nextProps)) {
+
+  const allKeys = new Set([
+    ...Object.keys(prevProps),
+    ...Object.keys(nextProps),
+  ]);
+  for (const propName in allKeys) {
     const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
@@ -364,7 +381,8 @@ export const createInstrumentation = (
           changes,
           time: selfTime,
           forget: hasMemoCache(fiber),
-          unnecessary: isRenderUnnecessary(fiber),
+          // only collect if the render was unnecessary 5% of the time since is isRenderUnnecessary is expensive
+          unnecessary: Math.random() < 0.05 ? isRenderUnnecessary(fiber) : null,
           didCommit: didFiberCommit(fiber),
           fps,
         };

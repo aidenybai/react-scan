@@ -225,6 +225,7 @@ export interface Options {
    * Maximum number of renders for red indicator
    *
    * @default 20
+   * @deprecated
    */
   maxRenders?: number;
 

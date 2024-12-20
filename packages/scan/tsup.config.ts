@@ -175,7 +175,9 @@ export default defineConfig([
       '.css': 'text',
     },
     esbuildPlugins: [
-      TsconfigPathsPlugin({ tsconfig: path.resolve(__dirname, './tsconfig.json') })
+      TsconfigPathsPlugin({
+        tsconfig: path.resolve(__dirname, './tsconfig.json'),
+      }),
     ],
   },
   {

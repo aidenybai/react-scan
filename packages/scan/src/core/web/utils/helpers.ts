@@ -37,23 +37,48 @@ export const throttle = <T extends (...args: Array<any>) => any>(
   };
 };
 
-
-export const debounce = <T extends (...args: Array<any>) => void>(
+export const debounce = <T extends (...args: Array<any>) => any>(
   fn: T,
-  delay: number
+  wait: number,
+  options: { leading?: boolean; trailing?: boolean } = {}
 ) => {
-  let timeoutId: number;
+  let timeoutId: number | undefined;
+  let lastArgs: Parameters<T> | undefined;
+  let isLeadingInvoked = false;
 
   const debounced = (...args: Parameters<T>) => {
-    window.clearTimeout(timeoutId);
-    timeoutId = window.setTimeout(() => fn(...args), delay);
+    lastArgs = args;
+
+    if (options.leading && !isLeadingInvoked) {
+      isLeadingInvoked = true;
+      fn(...args);
+      return;
+    }
+
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+
+    if (options.trailing !== false) {
+      timeoutId = window.setTimeout(() => {
+        isLeadingInvoked = false;
+        timeoutId = undefined;
+        fn(...(lastArgs!));
+      }, wait);
+    }
   };
 
-  debounced.cancel = () => window.clearTimeout(timeoutId);
+  debounced.cancel = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+      isLeadingInvoked = false;
+      lastArgs = undefined;
+    }
+  };
 
   return debounced;
-}
-
+};
 
 export const isOutlineUnstable = (outline: PendingOutline) => {
   for (let i = 0, len = outline.renders.length; i < len; i++) {
@@ -69,13 +94,11 @@ export const isOutlineUnstable = (outline: PendingOutline) => {
   return false;
 };
 
-
 export const createElement = (htmlString: string): HTMLElement => {
   const template = document.createElement('template');
   template.innerHTML = htmlString.trim();
   return template.content.firstElementChild as HTMLElement;
 };
-
 
 export const tryOrElse = <T, E>(cb: () => T, val: E) => {
   try {
@@ -86,6 +109,8 @@ export const tryOrElse = <T, E>(cb: () => T, val: E) => {
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
+  if (typeof window === 'undefined') return null;
+
   try {
     const stored = localStorage.getItem(storageKey);
     return stored ? JSON.parse(stored) : null;
@@ -96,6 +121,7 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
 
 export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
   if (typeof window === 'undefined') return;
+
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {

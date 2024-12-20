@@ -10,11 +10,14 @@ import {
   isCompositeFiber,
 } from 'bippy';
 import { ReactScanInternals, Store } from '../../index';
-import { getRect } from '../utils/outline';
 
 interface OverrideMethods {
-  overrideProps: ((fiber: Fiber, path: Array<string>, value: any) => void) | null;
-  overrideHookState: ((fiber: Fiber, id: string, path: Array<any>, value: any) => void) | null;
+  overrideProps:
+    | ((fiber: Fiber, path: Array<string>, value: any) => void)
+    | null;
+  overrideHookState:
+    | ((fiber: Fiber, id: string, path: Array<any>, value: any) => void)
+    | null;
 }
 
 export const getFiberFromElement = (element: Element): Fiber | null => {
@@ -203,7 +206,7 @@ export const getCompositeComponentFromElement = (element: Element) => {
     : (associatedFiber.alternate ?? associatedFiber);
   const stateNode = getFirstStateNode(currentAssociatedFiber);
   if (!stateNode) return {};
-  const targetRect = getRect(stateNode);
+  const targetRect = stateNode.getBoundingClientRect(); // causes reflow, be careful
   if (!targetRect) return {};
   const anotherRes = getParentCompositeFiber(currentAssociatedFiber);
   if (!anotherRes) {

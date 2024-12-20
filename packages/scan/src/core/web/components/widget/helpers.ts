@@ -93,30 +93,44 @@ export const calculatePosition = (corner: Corner, width: number, height: number)
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
 
+  // Check if widget is minimized
+  const isMinimized = width === MIN_SIZE.width;
+
+  // Only bound dimensions if minimized
+  const effectiveWidth = isMinimized ? width : Math.min(width, windowWidth - (SAFE_AREA * 2));
+  const effectiveHeight = isMinimized ? height : Math.min(height, windowHeight - (SAFE_AREA * 2));
+
   // Calculate base positions
+  let x: number;
+  let y: number;
+
   switch (corner) {
     case 'top-right':
-      return {
-        x: windowWidth - width - SAFE_AREA,
-        y: SAFE_AREA
-      };
+      x = windowWidth - effectiveWidth - SAFE_AREA;
+      y = SAFE_AREA;
+      break;
     case 'bottom-right':
-      return {
-        x: windowWidth - width - SAFE_AREA,
-        y: windowHeight - height - SAFE_AREA
-      };
+      x = windowWidth - effectiveWidth - SAFE_AREA;
+      y = windowHeight - effectiveHeight - SAFE_AREA;
+      break;
     case 'bottom-left':
-      return {
-        x: SAFE_AREA,
-        y: windowHeight - height - SAFE_AREA
-      };
+      x = SAFE_AREA;
+      y = windowHeight - effectiveHeight - SAFE_AREA;
+      break;
     case 'top-left':
     default:
-      return {
-        x: SAFE_AREA,
-        y: SAFE_AREA
-      };
+      x = SAFE_AREA;
+      y = SAFE_AREA;
+      break;
   }
+
+  // Only ensure positions are within bounds if minimized
+  if (isMinimized) {
+    x = Math.max(SAFE_AREA, Math.min(x, windowWidth - effectiveWidth - SAFE_AREA));
+    y = Math.max(SAFE_AREA, Math.min(y, windowHeight - effectiveHeight - SAFE_AREA));
+  }
+
+  return { x, y };
 };
 
 export const getPositionClasses = (position: ResizeHandleProps['position']): string => {

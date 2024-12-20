@@ -3,10 +3,9 @@ node_modules
 .env
 dist
 **/*.tgz
-packages/extension/build/
-!packages/extension/build/react-scan-extension.zip
 *.log
 build
+!packages/extension/build/
 playgrounds
 # SSL Certificates
 bin/certs/*.pem

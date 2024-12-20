@@ -6,6 +6,7 @@ import './styles.css';
 
 scan({
   enabled: true,
+  dangerouslyForceRunInProduction: true,
   // monitor: {
   //   url: 'https://localhost:3000/api/scan',
   // },

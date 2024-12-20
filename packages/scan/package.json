@@ -1,14 +1,8 @@
 {
   "name": "react-scan",
-  "version": "0.0.49",
+  "version": "0.0.51",
   "description": "Scan your React app for renders",
-  "keywords": [
-    "react",
-    "react-scan",
-    "react scan",
-    "render",
-    "performance"
-  ],
+  "keywords": ["react", "react-scan", "react scan", "render", "performance"],
   "homepage": "https://react-scan.million.dev",
   "bugs": {
     "url": "https://github.com/aidenybai/react-scan/issues"
@@ -167,27 +161,17 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "monitoring": [
-        "./dist/core/monitor/index.d.ts"
-      ],
-      "monitoring/next": [
-        "./dist/core/monitor/params/next.d.ts"
-      ],
+      "monitoring": ["./dist/core/monitor/index.d.ts"],
+      "monitoring/next": ["./dist/core/monitor/params/next.d.ts"],
       "monitoring/react-router-legacy": [
         "./dist/core/monitor/params/react-router-v5.d.ts"
       ],
       "monitoring/react-router": [
         "./dist/core/monitor/params/react-router-v6.d.ts"
       ],
-      "monitoring/remix": [
-        "./dist/core/monitor/params/remix.d.ts"
-      ],
-      "monitoring/astro": [
-        "./dist/core/monitor/params/astro/index.ts"
-      ],
-      "react-component-name/vite": [
-        "./dist/react-component-name/vite.d.ts"
-      ],
+      "monitoring/remix": ["./dist/core/monitor/params/remix.d.ts"],
+      "monitoring/astro": ["./dist/core/monitor/params/astro/index.ts"],
+      "react-component-name/vite": ["./dist/react-component-name/vite.d.ts"],
       "react-component-name/webpack": [
         "./dist/react-component-name/webpack.d.ts"
       ],
@@ -203,20 +187,11 @@
       "react-component-name/rollup": [
         "./dist/react-component-name/rollup.d.ts"
       ],
-      "react-component-name/astro": [
-        "./dist/react-component-name/astro.d.ts"
-      ]
+      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"]
     }
   },
   "bin": "bin/cli.js",
-  "files": [
-    "dist",
-    "bin",
-    "package.json",
-    "README.md",
-    "LICENSE",
-    "auto.d.ts"
-  ],
+  "files": ["dist", "bin", "package.json", "README.md", "LICENSE", "auto.d.ts"],
   "scripts": {
     "build": "npm run build:css && NODE_ENV=production tsup",
     "postbuild": "pnpm copy-astro && node ../../scripts/version-warning.mjs",
@@ -242,14 +217,15 @@
     "@preact/signals": "^1.3.1",
     "@rollup/pluginutils": "^5.1.3",
     "@types/node": "^20.17.9",
-    "bippy": "^0.0.20",
+    "bippy": "^0.0.25",
     "esbuild": "^0.24.0",
     "estree-walker": "^3.0.3",
     "kleur": "^4.1.5",
     "mri": "^1.2.0",
     "playwright": "^1.49.0",
     "preact": "^10.25.1",
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "devDependencies": {
     "@esbuild-plugins/tsconfig-paths": "^0.1.2",
