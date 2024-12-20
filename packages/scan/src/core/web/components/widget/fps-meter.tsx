@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'preact/hooks';
 import { cn, toggleMultipleClasses } from '@web-utils/helpers';
+import { useEffect, useRef } from 'preact/hooks';
 import { getFPS } from '../../../instrumentation';
 
 export const FpsMeter = () => {
@@ -17,9 +17,19 @@ export const FpsMeter = () => {
         const fps = getFPS();
         refContainer.current.dataset.text = fps.toString();
         if (fps < 10) {
-          toggleMultipleClasses(refContainer.current, 'text-white', 'bg-red-500', 'text-black', 'bg-yellow-300');
+          toggleMultipleClasses(refContainer.current, [
+            'text-white',
+            'bg-red-500',
+            'text-black',
+            'bg-yellow-300',
+          ]);
         } else if (fps < 30) {
-          toggleMultipleClasses(refContainer.current, 'text-white', 'bg-red-500', 'text-black', 'bg-yellow-300');
+          toggleMultipleClasses(refContainer.current, [
+            'text-white',
+            'bg-red-500',
+            'text-black',
+            'bg-yellow-300',
+          ]);
         }
 
         lastUpdate = now;
@@ -30,7 +40,6 @@ export const FpsMeter = () => {
     rafId = requestAnimationFrame(updateFPS);
     return () => cancelAnimationFrame(rafId);
   }, []);
-
 
   return (
     <span
