@@ -1,7 +1,7 @@
+import { type Fiber } from 'react-reconciler';
 import { throttle } from '@web-utils/helpers';
-import { Fiber } from 'react-reconciler';
-import { AggregatedChange } from 'src/core/instrumentation';
-import { OutlineKey, ReactScanInternals } from '../../index';
+import { type AggregatedChange } from 'src/core/instrumentation';
+import { type OutlineKey, ReactScanInternals } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
 
 const enum Reason {
@@ -220,7 +220,7 @@ export const fadeOutOutline = (
 
     const alphaScalar = 0.8;
     invariant_activeOutline.alpha =
-      alphaScalar * (1 - frame! / invariant_activeOutline.totalFrames!);
+      alphaScalar * (1 - frame / invariant_activeOutline.totalFrames);
 
     const alpha = invariant_activeOutline.alpha;
     const fillAlpha = alpha * 0.1;
@@ -296,8 +296,8 @@ export const fadeOutOutline = (
     const textWidth = textMetrics.width;
     const textHeight = 11;
 
-    const labelX: number = rect!.x;
-    const labelY: number = rect!.y - textHeight - 4;
+    const labelX: number = rect.x;
+    const labelY: number = rect.y - textHeight - 4;
 
     ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${alpha})`;
     ctx.fillRect(labelX, labelY, textWidth + 4, textHeight + 4);
@@ -348,7 +348,7 @@ export interface AggregatedRender {
   computedKey: OutlineKey | null;
 }
 
-export let areFibersEqual = (fiberA: Fiber, fiberB: Fiber) => {
+export const areFibersEqual = (fiberA: Fiber, fiberB: Fiber) => {
   if (fiberA === fiberB) {
     return true;
   }
@@ -484,11 +484,11 @@ const activateOutlines = async () => {
       activeOutlines.set(key, existingOutline);
     }
 
-    existingOutline.alpha = Math.max(existingOutline.alpha!, outline.alpha!);
+    existingOutline.alpha = Math.max(existingOutline.alpha, outline.alpha);
 
     existingOutline.totalFrames = Math.max(
-      existingOutline.totalFrames!,
-      outline.totalFrames!,
+      existingOutline.totalFrames,
+      outline.totalFrames,
     );
   }
 };
@@ -521,7 +521,7 @@ export const mergeOverlappingLabels = (
 
   const transformed = labels.map((label) => ({
     original: label,
-    rect: applyLabelTransform(label.activeOutline.rect!, label.textWidth!),
+    rect: applyLabelTransform(label.activeOutline.rect!, label.textWidth),
   }));
 
   transformed.sort((a, b) => a.rect.x - b.rect.x);
@@ -567,7 +567,7 @@ function toMergedLabel(
 ): MergedOutlineLabel {
   const rect =
     rectOverride ??
-    applyLabelTransform(label.activeOutline.rect!, label.textWidth!);
+    applyLabelTransform(label.activeOutline.rect!, label.textWidth);
   const groupedArray = Array.from(
     label.activeOutline.groupedAggregatedRender!.values(),
   );
