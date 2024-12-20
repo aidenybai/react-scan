@@ -19,7 +19,7 @@ scan({
   runInProduction: true,
 });
 
-const TARGET = 25;
+const TARGET = 50;
 
 const TriangleDemo = () => {
   const [elapsed, setElapsed] = useState(0);

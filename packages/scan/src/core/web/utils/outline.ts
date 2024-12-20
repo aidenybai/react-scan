@@ -341,6 +341,29 @@ export interface AggregatedRender {
   computedKey: OutlineKey | null;
 }
 
+export let areFibersEqual = (fiberA: Fiber, fiberB: Fiber) => {
+  if (fiberA === fiberB) {
+    return true;
+  }
+
+  if (fiberA.alternate === fiberB) {
+    return true;
+  }
+
+  if (fiberA === fiberB.alternate) {
+    return true;
+  }
+
+  if (
+    fiberA.alternate &&
+    fiberB.alternate &&
+    fiberA.alternate === fiberB.alternate
+  ) {
+    return true;
+  }
+  return false;
+};
+
 const activateOutlines = async () => {
   const domNodes: Array<HTMLElement> = [];
   const scheduledOutlines = ReactScanInternals.scheduledOutlines;
@@ -415,7 +438,6 @@ const activateOutlines = async () => {
       rect.right < 0 ||
       rect.top > viewportHeight ||
       rect.left > viewportWidth;
-    // it is ~8x faster to delete map items in the loop vs accumulating them in an array then deleting after on node v23.4.0
     if (isOffScreen) {
       // if its offscreen there is no reason to waste computation to aggregate + draw it
       continue;
@@ -441,8 +463,17 @@ const activateOutlines = async () => {
 
       existingOutline.aggregatedRender.computedKey = key;
 
+    
+    // handles canceling the animation of the associated render that was painted at a different location
       if (prevAggregatedRender?.computedKey) {
-        activeOutlines.delete(prevAggregatedRender.computedKey);
+        const groupOnKey = activeOutlines.get(prevAggregatedRender.computedKey);
+        groupOnKey?.groupedAggregatedRender?.forEach(
+          (value, prevStoredFiber) => {
+            if (areFibersEqual(prevStoredFiber, fiber)) {
+              value.frame = 45;
+            }
+          },
+        );
       }
       activeOutlines.set(key, existingOutline);
     }
