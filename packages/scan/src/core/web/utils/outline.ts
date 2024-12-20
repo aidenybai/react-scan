@@ -480,24 +480,48 @@ export const getLabelRect = (label: OutlineLabel): DOMRect => {
   return new DOMRect(labelX, labelY, label.textWidth + 4, textHeight + 4);
 };
 
-//
+interface SortedLabel {
+  rect: DOMRect;
+  alpha: number;
+  outline: PendingOutline;
+  color: {
+    r: number;
+    g: number;
+    b: number;
+  };
+  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  labelText: string;
+  textWidth: number;
+}
+
+function sortByX(a: SortedLabel, b: SortedLabel): number {
+  return a.rect.x - b.rect.x;
+}
+
+function getSortedLabels(labels: Array<OutlineLabel>): Array<SortedLabel> {
+  const sorted: Array<SortedLabel> = [];
+  for (let i = 0, len = labels.length; i < len; i++) {
+    const label = labels[i];
+    sorted.push({
+      ...label,
+      rect: getLabelRect(label),
+    });
+  }
+  sorted.sort(sortByX);
+  return sorted;
+}
 
 /**
  * -  this can be done in O(nlogn) using https://en.wikipedia.org/wiki/Sweep_line_algorithm
  * - we don't merge if we need to perform over 1000 merge checks as a naive way to optimize this fn during expensive draws
  *    - this works fine since when there are lots of outlines, its likely going to be very cluttered anyway, merging does not make the situation meangifully better
  */
-//
 
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
   maxMergeOps = 2000,
 ): Array<OutlineLabel> => {
-  const sortedByX = labels.map((label) => ({
-    ...label,
-    rect: getLabelRect(label),
-  }));
-  sortedByX.sort((a, b) => a.rect.x - b.rect.x);
+  const sortedByX = getSortedLabels(labels);
 
   const mergedLabels: Array<OutlineLabel> = [];
   let ops = 0;
@@ -525,7 +549,10 @@ export const mergeOverlappingLabels = (
         const combinedOutline: PendingOutline & { rect: DOMRect } = {
           rect: outermostLabel.rect,
           domNode: outermostLabel.outline.domNode,
-          renders: [...label.outline.renders, ...nextLabel.outline.renders],
+          renders: ([] as Array<Render>).concat(
+            label.outline.renders,
+            nextLabel.outline.renders,
+          ),
         };
 
         nextLabel.alpha = Math.max(nextLabel.alpha, label.alpha);
