@@ -3,10 +3,17 @@ import { Fiber } from 'react-reconciler';
 import { AggregatedChange } from 'src/core/instrumentation';
 import { OutlineKey, ReactScanInternals } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
+
+const enum Reason {
+  Commit = 0b001,
+  Unstable = 0b010,
+  Unnecessary = 0b100,
+}
+
 export interface OutlineLabel {
   alpha: number;
   color: { r: number; g: number; b: number };
-  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  reasons: number; // based on Reason enum
   labelText: string;
   textWidth: number; // this value does not correctly
   activeOutline: Outline;
@@ -149,7 +156,7 @@ export const fadeOutOutline = (
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
   ctx.save();
   const phases = new Set<string>();
-  const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
+  let reasons = 0b000;
   const color = { r: 0, g: 0, b: 0 };
   const activeOutlines = ReactScanInternals.activeOutlines;
 
@@ -195,12 +202,12 @@ export const fadeOutOutline = (
 
     // don't re-create to avoid gc time
     phases.clear();
-    reasons.length = 0;
+    reasons = 0;
 
     if (invariant_activeOutline.aggregatedRender.didCommit)
-      reasons.push('commit');
+      reasons |= Reason.Commit;
     if (invariant_activeOutline.aggregatedRender.changes.unstable)
-      reasons.push('unstable');
+      reasons |= Reason.Unstable;
     // todo: add better UI for unnecessary, adds too much overhead for a slight UI tweak
     // if (invariant_activeOutline.aggregatedRender.unnecessary) {
     //   reasons.push('unnecessary');
@@ -238,7 +245,7 @@ export const fadeOutOutline = (
     );
 
     if (
-      reasons.length &&
+      reasons > 0 &&
       labelText &&
       !(phases.has('mount') && phases.size === 1)
     ) {
@@ -280,8 +287,8 @@ export const fadeOutOutline = (
       mergedLabels[i];
     const text = getLabelText(groupedAggregatedRender) ?? 'Unknown';
     const conditionalText =
-      reasons.includes('unstable') &&
-      (reasons.includes('commit') || reasons.includes('unnecessary'))
+      reasons & Reason.Unstable &&
+      (reasons & Reason.Commit || reasons & Reason.Unnecessary)
         ? `⚠️${text}`
         : text;
 
@@ -463,8 +470,7 @@ const activateOutlines = async () => {
 
       existingOutline.aggregatedRender.computedKey = key;
 
-    
-    // handles canceling the animation of the associated render that was painted at a different location
+      // handles canceling the animation of the associated render that was painted at a different location
       if (prevAggregatedRender?.computedKey) {
         const groupOnKey = activeOutlines.get(prevAggregatedRender.computedKey);
         groupOnKey?.groupedAggregatedRender?.forEach(
@@ -501,7 +507,7 @@ function paintOutlines(
 export interface MergedOutlineLabel {
   alpha: number;
   color: { r: number; g: number; b: number };
-  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  reasons: number;
   groupedAggregatedRender: Array<AggregatedRender>;
   rect: DOMRect;
 }
@@ -568,7 +574,7 @@ function toMergedLabel(
   return {
     alpha: label.alpha,
     color: label.color,
-    reasons: label.reasons.slice(),
+    reasons: label.reasons,
     groupedAggregatedRender: groupedArray,
     rect,
   };
@@ -584,7 +590,7 @@ function mergeTwoLabels(
     b.groupedAggregatedRender,
   );
 
-  const mergedReasons = Array.from(new Set([...a.reasons, ...b.reasons]));
+  const mergedReasons = a.reasons | b.reasons;
 
   return {
     alpha: Math.max(a.alpha, b.alpha),
