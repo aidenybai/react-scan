@@ -14,7 +14,7 @@ import {
   traverseState,
 } from 'bippy';
 import type { Fiber, FiberRoot } from 'react-reconciler';
-import { ReactScanInternals } from './index';
+import { ReactScanInternals, Store } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -75,7 +75,7 @@ export const isElementInViewport = (
   return isVisible && rect.width && rect.height;
 };
 
-export interface Change {
+export interface RenderChange {
   type: 'props' | 'context' | 'state';
   name: string;
   prevValue: unknown;
@@ -83,15 +83,21 @@ export interface Change {
   unstable: boolean;
 }
 
+// this must grow O(1) w.r.t to renders
+export interface AggregatedChange {
+  type: Set<'props' | 'context' | 'state'>;
+  unstable: boolean;
+}
+
 export type Category = 'commit' | 'unstable' | 'unnecessary';
 
 export interface Render {
-  phase: string;
+  phase: 'mount' | 'update' | 'unmount';
   componentName: string | null;
   time: number | null;
-  count: number;
+  count: number; // uh is this right?
   forget: boolean;
-  changes: Array<Change> | null;
+  changes: Array<RenderChange>;
   unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
@@ -160,7 +166,7 @@ export function fastSerialize(value: unknown, depth = 0): string {
 }
 
 export const getPropsChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+  const changes: Array<RenderChange> = [];
 
   const prevProps = fiber.alternate?.memoizedProps || {};
   const nextProps = fiber.memoizedProps || {};
@@ -180,7 +186,7 @@ export const getPropsChanges = (fiber: Fiber) => {
     ) {
       continue;
     }
-    const change: Change = {
+    const change: RenderChange = {
       type: 'props',
       name: propName,
       prevValue,
@@ -198,13 +204,13 @@ export const getPropsChanges = (fiber: Fiber) => {
 };
 
 export const getStateChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+  const changes: Array<RenderChange> = [];
 
   traverseState(fiber, (prevState, nextState) => {
     if (Object.is(prevState.memoizedState, nextState.memoizedState)) return;
-    const change: Change = {
+    const change: RenderChange = {
       type: 'state',
-      name: '',
+      name: '', // bad interface should make this a discriminated union
       prevValue: prevState.memoizedState,
       nextValue: nextState.memoizedState,
       unstable: false,
@@ -216,13 +222,13 @@ export const getStateChanges = (fiber: Fiber) => {
 };
 
 export const getContextChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+  const changes: Array<RenderChange> = [];
 
   traverseContexts(fiber, (prevContext, nextContext) => {
     const prevValue = prevContext.memoizedValue;
     const nextValue = nextContext.memoizedValue;
 
-    const change: Change = {
+    const change: RenderChange = {
       type: 'context',
       name: '',
       prevValue,
@@ -328,7 +334,7 @@ export const createInstrumentation = (
         }
         if (!validInstancesIndicies.length) return null;
 
-        const changes: Array<Change> = [];
+        const changes: Array<RenderChange> = [];
 
         const propsChanges = getPropsChanges(fiber);
         const stateChanges = getStateChanges(fiber);
@@ -358,8 +364,7 @@ export const createInstrumentation = (
           changes,
           time: selfTime,
           forget: hasMemoCache(fiber),
-          // only collect if the render was unnecessary 5% of the time since is isRenderUnnecessary is expensive
-          unnecessary: Math.random() < 0.05 ? isRenderUnnecessary(fiber) : null,
+          unnecessary: Store.monitor ? null : isRenderUnnecessary(fiber),
           didCommit: didFiberCommit(fiber),
           fps,
         };

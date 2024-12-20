@@ -6,7 +6,6 @@ export enum Device {
   MOBILE = 2,
 }
 
-
 export interface Session {
   id: string;
   device: Device;
@@ -39,6 +38,8 @@ export interface Interaction {
   projectId?: string;
   sessionId?: string;
   uniqueInteractionId: string;
+
+  meta?: unknown;
 }
 
 export interface Component {
@@ -102,4 +103,8 @@ export interface PerformanceInteraction {
   processingDuration: number;
   presentationDelay: number;
   timestamp: number;
+  timeSinceTabInactive: number | 'never-hidden';
+  visibilityState: DocumentVisibilityState;
+  timeOrigin: number;
+  referrer: string;
 }

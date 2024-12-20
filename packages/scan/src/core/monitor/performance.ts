@@ -1,4 +1,3 @@
- 
 import { type Fiber } from 'react-reconciler';
 import { getDisplayName } from 'bippy';
 import { Store } from '../..';
@@ -127,7 +126,10 @@ function getCleanComponentName(component: any): string {
   const name = getDisplayName(component);
   if (!name) return '';
 
-  return name.replace(/^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/, '$<inner>');
+  return name.replace(
+    /^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/,
+    '$<inner>',
+  );
 }
 
 export function normalizePath(path: Array<string>): string {
@@ -162,6 +164,25 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   }
   return parentCompositeFiber;
 };
+
+let unsubscribeTrackVisibilityChange: () => void;
+// fixme: compress me if this stays here for bad interaction time checks
+let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
+
+const trackVisibilityChange = () => {
+  unsubscribeTrackVisibilityChange();
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      lastVisibilityHiddenAt = Date.now();
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
+  unsubscribeTrackVisibilityChange = () => {
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  };
+};
+
 // todo: update monitoring api to expose filters for component names
 export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
   const filters = { ...DEFAULT_FILTERS, ...options };
@@ -211,6 +232,7 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
 const setupPerformanceListener = (
   onEntry: (interaction: PerformanceInteraction) => void,
 ) => {
+  trackVisibilityChange();
   const longestInteractionList: Array<PerformanceInteraction> = [];
   const longestInteractionMap = new Map<string, PerformanceInteraction>();
   const interactionTargetMap = new Map<string, Element>();
@@ -258,6 +280,13 @@ const setupPerformanceListener = (
         presentationDelay:
           entry.duration - (entry.processingEnd - entry.startTime),
         timestamp: Date.now(),
+        timeSinceTabInactive:
+          lastVisibilityHiddenAt === 'never-hidden'
+            ? 'never-hidden'
+            : Date.now() - lastVisibilityHiddenAt,
+        visibilityState: document.visibilityState,
+        timeOrigin: performance.timeOrigin,
+        referrer: document.referrer,
       };
       longestInteractionMap.set(interaction.id, interaction);
       longestInteractionList.push(interaction);

@@ -18,6 +18,7 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    "@typescript-eslint/restrict-plus-operands":"off",
     "@typescript-eslint/no-unused-vars":"warn",
     '@typescript-eslint/explicit-function-return-type': 'off',
     'import/no-default-export': 'off',
