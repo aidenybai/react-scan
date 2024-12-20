@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import {
   type MonitoringOptions,
   ReactScanInternals,
-  reportRender,
   setOptions,
   Store,
 } from '..';
