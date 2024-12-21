@@ -1,38 +1,38 @@
-import type { Fiber } from 'react-reconciler';
-import type * as React from 'react';
-import { type Signal, signal } from '@preact/signals';
-import {
-  getDisplayName,
-  getRDTHook,
-  getNearestHostFiber,
-  getTimings,
-  getType,
-  isCompositeFiber,
-  isInstrumentationActive,
-  traverseFiber,
-  detectReactBuildType,
-} from 'bippy';
-import { flushOutlines, type Outline } from '@web-utils/outline';
-import { log, logIntro } from '@web-utils/log';
+import { signal, type Signal } from '@preact/signals';
+import { ICONS } from '@web-assets/svgs/svgs';
 import {
   createInspectElementStateMachine,
   type States,
 } from '@web-inspect-element/inspect-state-machine';
 import { playGeigerClickSound } from '@web-utils/geiger';
-import { ICONS } from '@web-assets/svgs/svgs';
+import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import { log, logIntro } from '@web-utils/log';
+import { flushOutlines, type Outline } from '@web-utils/outline';
+import {
+  detectReactBuildType,
+  getDisplayName,
+  getNearestHostFiber,
+  getRDTHook,
+  getTimings,
+  getType,
+  isCompositeFiber,
+  isInstrumentationActive,
+  traverseFiber,
+} from 'bippy';
+import type * as React from 'react';
+import type { Fiber } from 'react-reconciler';
 import {
   aggregateChanges,
   aggregateRender,
   updateFiberRenderData,
   type RenderData,
 } from 'src/core/utils';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { initReactScanOverlay } from './web/overlay';
 import { createInstrumentation, type Render } from './instrumentation';
-import { createToolbar } from './web/toolbar';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
 import styles from './web/assets/css/styles.css';
+import { initReactScanOverlay } from './web/overlay';
+import { createToolbar } from './web/toolbar';
 
 let toolbarContainer: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -437,11 +437,11 @@ export const isValidFiber = (fiber: Fiber) => {
 };
 
 let flushInterval: ReturnType<typeof setInterval>;
-const startFlushOutlineInterval = (ctx: CanvasRenderingContext2D) => {
+const startFlushOutlineInterval = () => {
   clearInterval(flushInterval);
   setInterval(() => {
     requestAnimationFrame(() => {
-      flushOutlines(ctx);
+      flushOutlines();
     });
   }, 30);
 };
@@ -569,7 +569,7 @@ export const start = () => {
 
         ctx = initReactScanOverlay();
         if (!ctx) return;
-        startFlushOutlineInterval(ctx);
+        startFlushOutlineInterval();
 
         createInspectElementStateMachine(shadowRoot);
 

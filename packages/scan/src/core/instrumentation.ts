@@ -1,20 +1,20 @@
-import type { Fiber, FiberRoot } from 'react-reconciler';
+import { signal, type Signal } from '@preact/signals';
 import {
-  getTimings,
-  hasMemoCache,
-  traverseContexts,
-  traverseState,
-  instrument,
   createFiberVisitor,
-  getDisplayName,
-  getType,
-  isValidElement,
   didFiberCommit,
+  getDisplayName,
   getMutatedHostFibers,
+  getTimings,
+  getType,
+  hasMemoCache,
+  instrument,
+  isValidElement,
+  traverseContexts,
   traverseProps,
+  traverseState,
 } from 'bippy';
-import { type Signal, signal } from '@preact/signals';
-import { isProduction, ReactScanInternals, Store } from './index';
+import type { Fiber, FiberRoot } from 'react-reconciler';
+import { ReactScanInternals, Store, isProduction } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
