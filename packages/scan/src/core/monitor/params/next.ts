@@ -2,7 +2,10 @@
 
 import { useParams, usePathname, useSearchParams } from 'next/navigation.js';
 import { createElement, Suspense } from 'react';
-import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps } from '..';
+import {
+  Monitoring as BaseMonitoring,
+  type MonitoringWithoutRouteProps,
+} from '..';
 import { computeRoute } from './utils';
 
 /**
@@ -53,7 +56,7 @@ export function MonitoringInner(props: MonitoringWithoutRouteProps) {
  */
 export const Monitoring = /* @__PURE__ */ (() => {
   'use client';
-  return function Monitoring(props: { url?: string; apiKey: string }) {
+  return function Monitoring(props: MonitoringWithoutRouteProps) {
     return createElement(
       Suspense,
       { fallback: null },

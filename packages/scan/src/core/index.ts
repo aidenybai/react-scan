@@ -130,6 +130,24 @@ export interface Options {
    */
   animationSpeed?: 'slow' | 'fast' | 'off';
 
+  /**
+   * Smoothly animate the re-render outline when the element moves
+   *
+   * @default true
+   */
+  smoothlyAnimateOutlines?: boolean;
+
+  /**
+   * Track unnecessary renders, and mark their outlines gray when detected
+   *
+   * An unnecessary render is defined as the component re-rendering with no change to the component's
+   * corresponding dom subtree
+   *
+   *  @default false
+   *  @warning tracking unnecessary renders can add meaningful overhead to react-scan
+   */
+  trackUnnecessaryRenders?: boolean;
+
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
@@ -214,6 +232,8 @@ export const ReactScanInternals: Internals = {
     alwaysShowLabels: false,
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
+    smoothlyAnimateOutlines: true,
+    trackUnnecessaryRenders: true,
   }),
   onRender: null,
   scheduledOutlines: new Map(),
@@ -278,6 +298,17 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
           (validOptions as any)[key] = value;
         }
         break;
+      case 'trackUnnecessaryRenders': {
+        validOptions['trackUnnecessaryRenders'] =
+          typeof value === 'boolean' ? value : false;
+        break;
+      }
+
+      case 'smoothlyAnimateOutlines': {
+        validOptions['smoothlyAnimateOutlines'] =
+          typeof value === 'boolean' ? value : false;
+        break;
+      }
       default:
         errors.push(`- Unknown option "${key}"`);
     }
@@ -414,6 +445,46 @@ const startFlushOutlineInterval = () => {
     });
   }, 30);
 };
+
+const updateScheduledOutlines = (fiber: Fiber, renders: Array<Render>) => {
+  for (let i = 0, len = renders.length; i < len; i++) {
+    const render = renders[i];
+    const domFiber = getNearestHostFiber(fiber);
+    if (!domFiber || !domFiber.stateNode) continue;
+
+    if (ReactScanInternals.scheduledOutlines.has(fiber)) {
+      const existingOutline = ReactScanInternals.scheduledOutlines.get(fiber)!;
+      aggregateRender(render, existingOutline.aggregatedRender);
+    } else {
+      ReactScanInternals.scheduledOutlines.set(fiber, {
+        domNode: domFiber.stateNode,
+        aggregatedRender: {
+          computedCurrent: null,
+          name:
+            renders.find((render) => render.componentName)?.componentName ??
+            'N/A',
+          aggregatedCount: 1,
+          changes: aggregateChanges(render.changes),
+          didCommit: render.didCommit,
+          forget: render.forget,
+          fps: render.fps,
+          phase: new Set([render.phase]),
+          time: render.time,
+          unnecessary: render.unnecessary,
+          frame: 0,
+          computedKey: null,
+        },
+        alpha: null,
+        groupedAggregatedRender: null,
+        target: null,
+        current: null,
+        totalFrames: null,
+        estimatedTextWidth: null,
+      });
+    }
+  }
+};
+export let isProduction = false;
 export const start = () => {
   if (typeof window === 'undefined') return;
 
@@ -445,7 +516,6 @@ export const start = () => {
     onActive() {
       if (!Store.monitor.value) {
         const rdtHook = getRDTHook();
-        let isProduction = false;
         for (const renderer of rdtHook.renderers.values()) {
           const buildType = detectReactBuildType(renderer);
           if (buildType === 'production') {
@@ -545,6 +615,7 @@ export const start = () => {
     },
     isValidFiber,
     onRender(fiber, renders) {
+      // todo: don't track renders at all if paused, reduce overhead
       if (
         Boolean(ReactScanInternals.instrumentation?.isPaused.value) ||
         !ctx ||
@@ -575,43 +646,9 @@ export const start = () => {
 
       ReactScanInternals.options.value.onRender?.(fiber, renders);
 
+      updateScheduledOutlines(fiber, renders);
       for (let i = 0, len = renders.length; i < len; i++) {
         const render = renders[i];
-        const domFiber = getNearestHostFiber(fiber);
-        if (!domFiber || !domFiber.stateNode) continue;
-
-        if (ReactScanInternals.scheduledOutlines.has(fiber)) {
-          const existingOutline =
-            ReactScanInternals.scheduledOutlines.get(fiber)!;
-          aggregateRender(render, existingOutline.aggregatedRender);
-        } else {
-          ReactScanInternals.scheduledOutlines.set(fiber, {
-            domNode: domFiber.stateNode,
-            aggregatedRender: {
-              name:
-                renders.find((render) => render.componentName)?.componentName ??
-                'Unknown',
-              aggregatedCount: 1,
-              changes: aggregateChanges(render.changes),
-              didCommit: render.didCommit,
-              forget: render.forget,
-              fps: render.fps,
-              phase: new Set([render.phase]),
-              time: render.time,
-              // todo: add back a when clear use case in the UI is needed for isRenderUnnecessary, or performance is optimized
-              // unnecessary: isRenderUnnecessary(fiber),
-              unnecessary: false,
-              frame: 0,
-
-              computedKey: null,
-            },
-            alpha: null,
-            groupedAggregatedRender: null,
-            rect: null,
-            totalFrames: null,
-            estimatedTextWidth: null,
-          });
-        }
 
         // - audio context can take up an insane amount of cpu, todo: figure out why
         // - we may want to take this out of hot path

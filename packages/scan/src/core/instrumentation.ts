@@ -14,7 +14,7 @@ import {
   traverseState,
 } from 'bippy';
 import type { Fiber, FiberRoot } from 'react-reconciler';
-import { ReactScanInternals, Store } from './index';
+import { ReactScanInternals, Store, isProduction } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -304,6 +304,29 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
   return true;
 };
 
+const shouldRunUnnecessaryRenderCheck = () => {
+  // yes, this can be condensed into one conditional, but ifs are easier to reason/build on than long boolean expressions
+  if (!ReactScanInternals.options.value.trackUnnecessaryRenders) {
+    return false;
+  }
+
+  // only run unnecessaryRenderCheck when monitoring is active in production if the user set dangerouslyForceRunInProduction
+  if (
+    isProduction &&
+    Store.monitor.value &&
+    ReactScanInternals.options.value.dangerouslyForceRunInProduction &&
+    ReactScanInternals.options.value.trackUnnecessaryRenders
+  ) {
+    return true;
+  }
+
+  if (isProduction && Store.monitor.value) {
+    return false;
+  }
+
+  return ReactScanInternals.options.value.trackUnnecessaryRenders;
+};
+
 export const createInstrumentation = (
   instanceKey: string,
   config: InstrumentationConfig,
@@ -364,7 +387,12 @@ export const createInstrumentation = (
           changes,
           time: selfTime,
           forget: hasMemoCache(fiber),
-          unnecessary: Store.monitor ? null : isRenderUnnecessary(fiber),
+          // todo: allow this to be toggle-able through toolbar
+          // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
+          unnecessary: shouldRunUnnecessaryRenderCheck()
+            ? isRenderUnnecessary(fiber)
+            : null,
+
           didCommit: didFiberCommit(fiber),
           fps,
         };

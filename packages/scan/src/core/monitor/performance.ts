@@ -27,11 +27,8 @@ const DEFAULT_FILTERS: PathFilters = {
 
 const FILTER_PATTERNS = {
   providers: [/Provider$/, /^Provider$/, /^Context$/],
-
   hocs: [/^with[A-Z]/, /^forward(?:Ref)?$/i, /^Forward(?:Ref)?\(/],
-
   containers: [/^(?:App)?Container$/, /^Root$/, /^ReactDev/],
-
   utilities: [
     /^Fragment$/,
     /^Suspense$/,
@@ -42,16 +39,14 @@ const FILTER_PATTERNS = {
     /^Router/,
     /^Hydration/,
   ],
-
   boundaries: [/^Boundary$/, /Boundary$/, /^Provider$/, /Provider$/],
 };
 
-function shouldIncludeInPath(
+const shouldIncludeInPath = (
   name: string,
   filters: PathFilters = DEFAULT_FILTERS,
-): boolean {
+): boolean => {
   const patternsToCheck: Array<RegExp> = [];
-
   if (filters.skipProviders) patternsToCheck.push(...FILTER_PATTERNS.providers);
   if (filters.skipHocs) patternsToCheck.push(...FILTER_PATTERNS.hocs);
   if (filters.skipContainers)
@@ -59,24 +54,24 @@ function shouldIncludeInPath(
   if (filters.skipUtilities) patternsToCheck.push(...FILTER_PATTERNS.utilities);
   if (filters.skipBoundaries)
     patternsToCheck.push(...FILTER_PATTERNS.boundaries);
-
   return !patternsToCheck.some((pattern) => pattern.test(name));
-}
+};
+
+const minifiedPatterns = [
+  /^[a-z]$/, // Single lowercase letter
+  /^[a-z][0-9]$/, // Lowercase letter followed by number
+  /^_+$/, // Just underscores
+  /^[A-Za-z][_$]$/, // Letter followed by underscore or dollar
+  /^[a-z]{1,2}$/, // 1-2 lowercase letters
+];
+
 const isMinified = (name: string): boolean => {
   if (!name || typeof name !== 'string') {
     return true;
   }
 
-  const minifiedPatterns = [
-    /^[a-z]$/, // Single lowercase letter
-    /^[a-z][0-9]$/, // Lowercase letter followed by number
-    /^_+$/, // Just underscores
-    /^[A-Za-z][_$]$/, // Letter followed by underscore or dollar
-    /^[a-z]{1,2}$/, // 1-2 lowercase letters
-  ];
-
-  if (minifiedPatterns.some((pattern) => pattern.test(name))) {
-    return true;
+  for (let i = 0; i < minifiedPatterns.length; i++) {
+    if (minifiedPatterns[i].test(name)) return true;
   }
 
   const hasNoVowels = !/[aeiou]/i.test(name);
@@ -84,45 +79,45 @@ const isMinified = (name: string): boolean => {
   const isSingleWordLowerCase = /^[a-z]+$/.test(name);
   const hasRandomLookingChars = /[$_]{2,}/.test(name);
 
-  const suspiciousTraits = [
-    hasNoVowels,
-    hasMostlyNumbers,
-    isSingleWordLowerCase,
-    hasRandomLookingChars,
-  ].filter(Boolean).length;
-
-  return suspiciousTraits >= 2;
+  // If more than 2 of the following are true, we consider the name minified
+  return (
+    Number(hasNoVowels) +
+      Number(hasMostlyNumbers) +
+      Number(isSingleWordLowerCase) +
+      Number(hasRandomLookingChars) >=
+    2
+  );
 };
-export function getInteractionPath(
+
+export const getInteractionPath = (
   fiber: Fiber | null,
   filters: PathFilters = DEFAULT_FILTERS,
-): Array<string> {
+): Array<string> => {
   if (!fiber) return [];
 
-  const fullPath: Array<string> = [];
-
   const currentName = getDisplayName(fiber.type);
-  if (currentName) {
-    fullPath.unshift(currentName);
-  }
+  if (!currentName) return [];
 
-  let current = fiber.return;
-  while (current) {
-    if (current.type && typeof current.type === 'function') {
-      const name = getCleanComponentName(current.type);
-      if (name && !isMinified(name) && shouldIncludeInPath(name, filters)) {
-        fullPath.unshift(name);
-      }
+  const stack = new Array<string>();
+  while (fiber.return) {
+    const name = getCleanComponentName(fiber.type);
+    if (name && !isMinified(name) && shouldIncludeInPath(name, filters)) {
+      stack.push(name);
     }
-    current = current.return;
+    fiber = fiber.return;
   }
-
+  const fullPath = new Array<string>(stack.length);
+  for (let i = 0; i < stack.length; i++) {
+    fullPath[i] = stack[stack.length - i - 1];
+  }
   return fullPath;
-}
+};
 
 let currentMouseOver: Element;
 
-function getCleanComponentName(component: any): string {
+const getCleanComponentName = (
+  component: any /** fiber.type is any */,
+): string => {
   const name = getDisplayName(component);
   if (!name) return '';
 
@@ -130,19 +125,17 @@ function getCleanComponentName(component: any): string {
     /^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/,
     '$<inner>',
   );
-}
+};
 
-export function normalizePath(path: Array<string>): string {
+// For future use, normalization of paths happens on server side now using path property of interaction
+const _normalizePath = (path: Array<string>): string => {
   const cleaned = path.filter(Boolean);
-
   const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);
-
   return deduped.join('.');
-}
+};
+
 const handleMouseover = (event: Event) => {
-  if (!(event.target instanceof Element)) {
-    return;
-  }
+  if (!(event.target instanceof Element)) return;
   currentMouseOver = event.target;
 };
 
@@ -165,12 +158,12 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   return parentCompositeFiber;
 };
 
-let unsubscribeTrackVisibilityChange: () => void;
+let unsubscribeTrackVisibilityChange: (() => void) | undefined;
 // fixme: compress me if this stays here for bad interaction time checks
 let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
 
 const trackVisibilityChange = () => {
-  unsubscribeTrackVisibilityChange();
+  unsubscribeTrackVisibilityChange?.();
   const onVisibilityChange = () => {
     if (document.hidden) {
       lastVisibilityHiddenAt = Date.now();
@@ -229,11 +222,22 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
   };
 }
 
+const getInteractionType = (
+  eventName: string,
+): 'pointer' | 'keyboard' | null => {
+  if (['pointerdown', 'pointerup', 'click'].includes(eventName)) {
+    return 'pointer';
+  }
+  if (['keydown', 'keyup'].includes(eventName)) {
+    return 'keyboard';
+  }
+  return null;
+};
+
 const setupPerformanceListener = (
   onEntry: (interaction: PerformanceInteraction) => void,
 ) => {
   trackVisibilityChange();
-  const longestInteractionList: Array<PerformanceInteraction> = [];
   const longestInteractionMap = new Map<string, PerformanceInteraction>();
   const interactionTargetMap = new Map<string, Element>();
 
@@ -262,9 +266,8 @@ const setupPerformanceListener = (
       }
     } else {
       const interactionType = getInteractionType(entry.name);
-      if (!interactionType) {
-        return;
-      }
+      if (!interactionType) return;
+
       const interaction: PerformanceInteraction = {
         id: entry.interactionId,
         latency: entry.duration,
@@ -289,32 +292,17 @@ const setupPerformanceListener = (
         referrer: document.referrer,
       };
       longestInteractionMap.set(interaction.id, interaction);
-      longestInteractionList.push(interaction);
 
       onEntry(interaction);
     }
-
-    longestInteractionList.sort((a, b) => b.latency - a.latency);
-  };
-
-  const getInteractionType = (
-    eventName: string,
-  ): 'pointer' | 'keyboard' | null => {
-    if (['pointerdown', 'pointerup', 'click'].includes(eventName)) {
-      return 'pointer';
-    }
-    if (['keydown', 'keyup'].includes(eventName)) {
-      return 'keyboard';
-    }
-    return null;
   };
 
   const po = new PerformanceObserver((list) => {
-    list
-      .getEntries()
-      .forEach((entry) =>
-        processInteractionEntry(entry as PerformanceInteractionEntry),
-      );
+    const entries = list.getEntries();
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      processInteractionEntry(entry as PerformanceInteractionEntry);
+    }
   });
 
   try {
@@ -331,7 +319,5 @@ const setupPerformanceListener = (
     /* Should collect error logs*/
   }
 
-  return () => {
-    po.disconnect();
-  };
+  return () => po.disconnect();
 };
