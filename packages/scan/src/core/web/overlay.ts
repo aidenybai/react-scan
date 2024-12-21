@@ -1,5 +1,5 @@
-import { outlineWorker } from '@web-utils/outline-worker';
 import { recalcOutlines } from '@web-utils/outline';
+import { outlineWorker } from '@web-utils/outline-worker';
 
 export const initReactScanOverlay = () => {
   const container = document.getElementById('react-scan-root');
@@ -64,7 +64,11 @@ export const initReactScanOverlay = () => {
     recalcOutlines();
   });
 
-  const offscreen = overlayElement.transferControlToOffscreen();
+  outlineWorker.sync = !('OffscreenCanvas' in window);
+
+  const offscreen = outlineWorker.sync
+    ? (overlayElement as unknown as OffscreenCanvas)
+    : overlayElement.transferControlToOffscreen();
 
   outlineWorker
     .call(
@@ -76,7 +80,7 @@ export const initReactScanOverlay = () => {
         transfer: [offscreen],
       },
     )
-    .then(console.log, console.error);
+    .catch(console.error);
 
   updateCanvasSize();
 

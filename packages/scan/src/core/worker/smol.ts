@@ -1,4 +1,4 @@
-import { type Deferred, createDeferred } from './deferred';
+import { createDeferred, type Deferred } from './deferred';
 
 export type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
 
@@ -47,6 +47,8 @@ export class SmolWorker<T, R> {
 
   private setup?: (arg: T) => Promise<R>;
 
+  public sync = false;
+
   constructor(private callback: SmolWorkerCallback<T, R>) {}
 
   setupWorker(worker: Worker): void {
@@ -72,10 +74,9 @@ export class SmolWorker<T, R> {
     data: T,
     options?: {
       transfer?: Array<Transferable>;
-      sync?: boolean;
     },
   ): Promise<R> {
-    if (options?.sync) {
+    if (this.sync) {
       if (!this.setup) {
         this.setup = this.callback();
       }
