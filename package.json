@@ -2,27 +2,31 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "WORKSPACE_BUILD=true pnpm --parallel build",
+    "build": "WORKSPACE_BUILD=true node scripts/workspace.mjs build",
     "postbuild": "node scripts/version-warning.mjs",
-    "dev": "pnpm --parallel dev",
-    "pack": "pnpm --parallel pack",
+    "dev": "node scripts/workspace.mjs dev",
+    "pack": "node scripts/workspace.mjs pack",
     "pack:bump": "pnpm --filter scan pack:bump",
-    "lint": "pnpm --parallel lint",
+    "lint": "node scripts/workspace.mjs lint",
     "eslint:fix": "eslint --fix packages/*"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vercel/style-guide": "^6.0.0",
+    "autoprefixer": "^10.4.20",
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-jsonc": "^2.18.2",
     "eslint-plugin-tailwindcss": "^3.17.5",
-		"@biomejs/biome": "^1.9.4",
-    "typescript": "5.4.5"
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "5.4.5",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "packageManager": "pnpm@9.1.0",
   "dependencies": {
