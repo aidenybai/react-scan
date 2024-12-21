@@ -84,13 +84,20 @@ export const getLabelText = (
   let cumulativeTime = 0;
   for (const count of sortedCounts) {
     const componentGroup = componentsByCount.get(count)!;
-    const names = componentGroup.map(({ name }) => name).join(', ');
+    const names = componentGroup
+      .slice(0, 4)
+      .map(({ name }) => name)
+      .join(', ');
     let text = names;
 
     const totalTime = componentGroup.reduce((sum, { time }) => sum + time, 0);
     const hasForget = componentGroup.some(({ forget }) => forget);
 
     cumulativeTime += totalTime;
+
+    if (componentGroup.length > 4) {
+      text += '...';
+    }
 
     if (count > 1) {
       text += ` ×${count}`;

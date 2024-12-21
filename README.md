@@ -250,6 +250,23 @@ export interface Options {
    */
   animationSpeed?: 'slow' | 'fast' | 'off';
 
+    /**
+   * Smoothly animate the re-render outline when the element moves
+   *
+   * @default true
+   */
+  smoothlyAnimateOutlines?: boolean;
+
+  /**
+   * Track unnecessary renders, and mark their outlines gray when detected
+   *
+   * An unnecessary render is defined as a component re-rendering with no change to the component's corresponding dom subtree (e.g. a component re-rendered, but nothing in the components UI did not change)
+   *
+   *  @default false
+   *  @warning tracking unnecessary renders can add meaningful overhead to react-scan
+   */
+  trackUnnecessaryRenders?: boolean;
+
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, render: Render) => void;
   onCommitFinish?: () => void;
