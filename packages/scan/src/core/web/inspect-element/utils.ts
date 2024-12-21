@@ -121,9 +121,12 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
   return changes;
 };
 
+// Compile regex once outside the function
+const STATE_NAME_REGEX = /\[(?<name>\w+),\s*set\w+\]/g;
+
 export const getStateFromFiber = (fiber: Fiber): any => {
   if (!fiber) return {};
-  // only funtional components have memo tags,
+  // only functional components have memo tags
   if (
     fiber.tag === FunctionComponentTag ||
     fiber.tag === ForwardRefTag ||
@@ -135,9 +138,16 @@ export const getStateFromFiber = (fiber: Fiber): any => {
     const state: any = {};
     let index = 0;
 
+    const componentSource = fiber.type?.toString?.() || '';
+    const stateNames = componentSource ? Array.from(
+      componentSource.matchAll(STATE_NAME_REGEX),
+      (m: RegExpMatchArray) => m.groups?.name ?? ''
+    ) : [];
+
     while (memoizedState) {
       if (memoizedState.queue && memoizedState.memoizedState !== undefined) {
-        state[index] = memoizedState.memoizedState;
+        const name = stateNames[index] ?? `state${index}`;
+        state[name] = memoizedState.memoizedState;
       }
       memoizedState = memoizedState.next;
       index++;
