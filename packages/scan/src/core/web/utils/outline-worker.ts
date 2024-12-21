@@ -86,11 +86,9 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
 
           for (let i = 0, len = mergedLabels.length; i < len; i++) {
             const { alpha, rect, color, reasons, labelText } = mergedLabels[i];
-            const conditionalText =
-              reasons.includes('unstable') &&
-              (reasons.includes('commit') || reasons.includes('unnecessary'))
-                ? `⚠️${labelText}`
-                : labelText;
+            const conditionalText = reasons.includes('unnecessary')
+              ? `${labelText}⚠️`
+              : labelText;
             ctx.save();
 
             ctx.font = `11px ${MONO_FONT}`;
@@ -106,8 +104,6 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
 
             ctx.fillStyle = `rgba(255,255,255,${alpha})`;
             ctx.fillText(conditionalText, labelX + 2, labelY + textHeight);
-
-            ctx.restore();
           }
         }
         break;
