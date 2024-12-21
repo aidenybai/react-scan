@@ -17,7 +17,12 @@ declare global {
   };
 
   type TTimer = ReturnType<typeof setTimeout> | undefined;
+
+  interface Window {
+    isReactScanExtension?: boolean;
+  }
 }
+
 
 declare module '*.css' {
   const content: string;
@@ -28,3 +33,5 @@ interface StoreType {
   // ... existing properties ...
   wasDetailsOpen?: boolean;
 }
+
+export {};

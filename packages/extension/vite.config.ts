@@ -1,6 +1,7 @@
 import { defineConfig, UserConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import webExtension, { readJsonFile } from 'vite-plugin-web-extension';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 // Browser types
 const BROWSER_TYPES = {
@@ -76,6 +77,7 @@ export default defineConfig(({ mode }): UserConfig => {
     },
     plugins: [
       react(),
+      tsconfigPaths(),
       webExtension({
         manifest: generateManifest,
         // Use Chrome config for Brave
@@ -90,5 +92,8 @@ export default defineConfig(({ mode }): UserConfig => {
         },
       }),
     ],
+    optimizeDeps: {
+      exclude: ['react-scan'],
+    },
   };
 });
