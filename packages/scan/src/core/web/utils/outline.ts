@@ -1,8 +1,8 @@
-import { type Fiber } from 'react-reconciler';
 import { throttle } from '@web-utils/helpers';
-import { type DrawingQueue, outlineWorker } from '@web-utils/outline-worker';
+import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
+import { type Fiber } from 'react-reconciler';
 import { type AggregatedChange } from 'src/core/instrumentation';
-import { type OutlineKey, ReactScanInternals } from '../../index';
+import { ReactScanInternals, type OutlineKey } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
 
 export interface OutlineLabel {
@@ -499,11 +499,15 @@ const activateOutlines = async () => {
       });
     }
 
-    existingOutline.alpha = Math.max(existingOutline.alpha, outline.alpha);
+    // FIXME(Alexis): `|| 0` just for tseslint to shutup
+    existingOutline.alpha = Math.max(
+      existingOutline.alpha || 0,
+      outline.alpha || 0,
+    );
 
     existingOutline.totalFrames = Math.max(
-      existingOutline.totalFrames,
-      outline.totalFrames,
+      existingOutline.totalFrames || 0,
+      outline.totalFrames || 0,
     );
   }
 };
