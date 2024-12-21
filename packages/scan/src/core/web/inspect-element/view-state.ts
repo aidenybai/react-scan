@@ -17,6 +17,45 @@ export const cumulativeChanges = {
   context: new Map<string, number>(),
 };
 
+const getProxyValue = (proxy: any) => {
+  try {
+    if (!proxy || typeof proxy !== 'object') {
+      return proxy;
+    }
+
+    // Handle URLSearchParams-like objects
+    if (typeof proxy.entries === 'function' && typeof proxy.get === 'function') {
+      try {
+        const entries = Array.from(proxy.entries() as Iterable<[string, any]>);
+        return Object.fromEntries(entries);
+      } catch (err) {
+        return proxy;
+      }
+    }
+
+    // Handle regular objects more efficiently
+    try {
+      const descriptors = Object.getOwnPropertyDescriptors(proxy);
+      const result: Record<string, any> = {};
+
+      // Using for...in is faster than reduce for this case
+      for (const key in descriptors) {
+        const descriptor = descriptors[key];
+        if (typeof key === 'string' && 'value' in descriptor) {
+          result[key] = descriptor.value;
+        }
+      }
+
+      return result;
+    } catch (err) {
+      return proxy;
+    }
+
+  } catch (err) {
+    return proxy;
+  }
+};
+
 export const renderPropsAndState = (didRender: boolean, fiber: any) => {
   const propContainer = Store.inspectState.value.propContainer;
 
@@ -380,6 +419,7 @@ export const createPropertyElement = (
     if (isExpandable) {
       const isExpanded = EXPANDED_PATHS.has(currentPath);
 
+      // Check for circular references first
       if (typeof value === 'object' && value !== null) {
         let paths = objectPathMap.get(value);
         if (!paths) {
@@ -392,6 +432,28 @@ export const createPropertyElement = (
         paths.add(currentPath);
       }
 
+      const unwrapped = getProxyValue(value);
+      const isNonExpandable = (unwrapped === value &&
+        value &&
+        Object.getPrototypeOf(value)?.constructor?.name === 'Proxy') ||
+        value instanceof Promise;
+
+      // For non-expandable items, render like a simple property
+      if (isNonExpandable) {
+        const preview = document.createElement('div');
+        preview.className = 'react-scan-preview-line';
+        preview.dataset.key = key;
+        preview.dataset.section = section;
+        preview.innerHTML = `
+          <span style="width: 8px; display: inline-block"></span>
+          <span class="react-scan-key">${key}:&nbsp;</span>
+          <span class="${getValueClassName(value)}">${getValuePreview(value)}</span>
+        `;
+        container.appendChild(preview);
+        return container;
+      }
+
+      // Normal expandable logic for other objects
       container.classList.add('react-scan-expandable');
       if (isExpanded) {
         container.classList.add('react-scan-expanded');
@@ -469,67 +531,77 @@ export const createPropertyElement = (
         }
       }
 
-      arrow.addEventListener('click', (e) => {
-        e.stopPropagation();
+      if (!isNonExpandable) {
+        arrow.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isExpanding = !container.classList.contains('react-scan-expanded');
 
-        const isExpanding = !container.classList.contains(
-          'react-scan-expanded',
-        );
+          if (isExpanding) {
+            EXPANDED_PATHS.add(currentPath);
+            container.classList.add('react-scan-expanded');
+            content.classList.remove('react-scan-hidden');
 
-        if (isExpanding) {
-          EXPANDED_PATHS.add(currentPath);
-          container.classList.add('react-scan-expanded');
-          content.classList.remove('react-scan-hidden');
-
-          if (!content.hasChildNodes()) {
-            if (Array.isArray(value)) {
-              value.forEach((item, index) => {
-                const el = createPropertyElement(
-                  componentName,
-                  didRender,
-                  propsContainer,
-                  fiber,
-                  index.toString(),
-                  item,
-                  section,
-                  level + 1,
-                  changedKeys,
-                  currentPath,
-                  new WeakMap(),
-                );
-                if (!el) {
-                  return;
-                }
-                content.appendChild(el);
-              });
-            } else {
-              Object.entries(value).forEach(([k, v]) => {
-                const el = createPropertyElement(
-                  componentName,
-                  didRender,
-                  propsContainer,
-                  fiber,
-                  k,
-                  v,
-                  section,
-                  level + 1,
-                  changedKeys,
-                  currentPath,
-                  new WeakMap(),
-                );
-                if (!el) {
-                  return;
-                }
-                content.appendChild(el);
-              });
+            if (!content.hasChildNodes()) {
+              if (Array.isArray(value)) {
+                const arrayContainer = document.createElement('div');
+                arrayContainer.className = 'react-scan-array-container';
+                value.forEach((item, index) => {
+                  const el = createPropertyElement(
+                    componentName,
+                    didRender,
+                    propsContainer,
+                    fiber,
+                    index.toString(),
+                    item,
+                    section,
+                    level + 1,
+                    changedKeys,
+                    currentPath,
+                    new WeakMap(),
+                  );
+                  if (!el) {
+                    return;
+                  }
+                  arrayContainer.appendChild(el);
+                });
+                content.appendChild(arrayContainer);
+              } else {
+                Object.entries(value).forEach(([k, v]) => {
+                  const el = createPropertyElement(
+                    componentName,
+                    didRender,
+                    propsContainer,
+                    fiber,
+                    k,
+                    v,
+                    section,
+                    level + 1,
+                    changedKeys,
+                    currentPath,
+                    new WeakMap(),
+                  );
+                  if (!el) {
+                    return;
+                  }
+                  content.appendChild(el);
+                });
+              }
             }
+          } else {
+            EXPANDED_PATHS.delete(currentPath);
+            container.classList.remove('react-scan-expanded');
+            content.classList.add('react-scan-hidden');
           }
-        } else {
-          EXPANDED_PATHS.delete(currentPath);
-          container.classList.remove('react-scan-expanded');
-          content.classList.add('react-scan-hidden');
-        }
-      });
+
+          requestAnimationFrame(() => {
+            const inspector = propsContainer.firstElementChild as HTMLElement;
+            if (inspector) {
+              const contentHeight = inspector.getBoundingClientRect().height;
+              propsContainer.style.maxHeight = `${contentHeight}px`;
+            }
+          });
+        });
+      }
     } else {
       const preview = document.createElement('div');
       preview.className = 'react-scan-preview-line';
@@ -663,30 +735,54 @@ export const getValueClassName = (value: any) => {
 };
 
 export const getValuePreview = (value: any) => {
-  if (Array.isArray(value)) {
-    return `Array(${value.length})`;
-  }
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
-  switch (typeof value) {
-    case 'string':
-      return `&quot;${value}&quot;`;
-    case 'number':
-      return value.toString();
-    case 'boolean':
-      return value.toString();
-    case 'object': {
-      if (value instanceof Promise) {
-        return 'Promise';
-      }
-      const keys = Object.keys(value);
-      if (keys.length <= 3) {
-        return `{${keys.join(', ')}}`;
-      }
-      return `{${keys.slice(0, 8).join(', ')}, ...}`;
+
+  try {
+    if (Array.isArray(value)) {
+      return `Array(${value.length})`;
     }
-    default:
-      return typeof value;
+
+    switch (typeof value) {
+      case 'string':
+        return `"${value}"`;
+      case 'number':
+      case 'boolean':
+        return String(value);
+      case 'object': {
+        // Check for Promise using typeof for better cross-realm support
+        if (value && typeof value.then === 'function') {
+          return '[Promise]';
+        }
+
+        // Fast constructor checks for built-in types
+        const constructor = value.constructor;
+        if (constructor === Set) {
+          return `Set(${value.size ?? '?'})`;
+        }
+        if (constructor === Map) {
+          return `Map(${value.size ?? '?'})`;
+        }
+        if (constructor === URLSearchParams) {
+          return '[URLSearchParams]';
+        }
+
+        // Handle regular objects
+        try {
+          const keys = Object.keys(value);
+          if (keys.length <= 3) {
+            return `{${keys.join(', ')}}`;
+          }
+          return `{${keys.slice(0, 3).join(', ')}, ...}`;
+        } catch {
+          return '{...}';
+        }
+      }
+      default:
+        return typeof value;
+    }
+  } catch {
+    return String(value);
   }
 };
 
