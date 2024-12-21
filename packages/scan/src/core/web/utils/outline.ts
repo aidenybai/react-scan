@@ -1,7 +1,8 @@
-import { type Fiber } from 'react-reconciler';
 import { throttle } from '@web-utils/helpers';
+import { LRUMap } from '@web-utils/lru';
+import { type Fiber } from 'react-reconciler';
 import { type AggregatedChange } from 'src/core/instrumentation';
-import { type OutlineKey, ReactScanInternals } from '../../index';
+import { ReactScanInternals, type OutlineKey } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
 
 const enum Reason {
@@ -692,7 +693,7 @@ function applyLabelTransform(
   return new DOMRect(labelX, labelY, estimatedTextWidth + 4, textHeight + 4);
 }
 
-const textMeasurementCache = new Map<string, TextMetrics>();
+const textMeasurementCache = new LRUMap<string, TextMetrics>(100);
 
 export const measureTextCached = (
   text: string,
