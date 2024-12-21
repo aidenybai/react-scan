@@ -1,50 +1,24 @@
-import { cn, toggleMultipleClasses } from '@web-utils/helpers';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import { cn } from '@web-utils/helpers';
 import { getFPS } from '../../../instrumentation';
 
 export const FpsMeter = () => {
-  const refContainer = useRef<HTMLSpanElement>(null);
+  const [fps, setFps] = useState<number | null>(null);
 
   useEffect(() => {
-    let rafId: number;
-    let lastUpdate = performance.now();
-    const UPDATE_INTERVAL = 100;
+    const intervalId = setInterval(() => {
+      setFps(getFPS());
+    }, 100);
 
-    const updateFPS = () => {
-      const now = performance.now();
-      if (now - lastUpdate >= UPDATE_INTERVAL) {
-        if (!refContainer.current) return;
-        const fps = getFPS();
-        refContainer.current.dataset.text = fps.toString();
-        if (fps < 10) {
-          toggleMultipleClasses(refContainer.current, [
-            'text-white',
-            'bg-red-500',
-            'text-black',
-            'bg-yellow-300',
-          ]);
-        } else if (fps < 30) {
-          toggleMultipleClasses(refContainer.current, [
-            'text-white',
-            'bg-red-500',
-            'text-black',
-            'bg-yellow-300',
-          ]);
-        }
-
-        lastUpdate = now;
-      }
-      rafId = requestAnimationFrame(updateFPS);
-    };
-
-    rafId = requestAnimationFrame(updateFPS);
-    return () => cancelAnimationFrame(rafId);
+  return () => clearInterval(intervalId);
   }, []);
 
   return (
     <span
-      ref={refContainer}
-      data-text="120"
+      style={{
+        width: 'fit-content',
+      }}
+      data-text={String(fps)}
       className={cn(
         'with-data-text',
         'flex gap-1 items-center',
