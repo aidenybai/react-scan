@@ -254,7 +254,8 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
   const errors: Array<string> = [];
   const validOptions: Partial<Options> = {};
 
-  Object.entries(options).forEach(([key, value]) => {
+  for (const key in options) {
+    const value = options[key as keyof Options];
     switch (key) {
       case 'enabled':
       case 'includeChildren':
@@ -312,7 +313,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       default:
         errors.push(`- Unknown option "${key}"`);
     }
-  });
+  }
 
   if (errors.length > 0) {
     // eslint-disable-next-line no-console

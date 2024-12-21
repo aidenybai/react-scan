@@ -1,5 +1,5 @@
-import { type Fiber } from 'react-reconciler';
 import { getDisplayName } from 'bippy';
+import { type Fiber } from 'react-reconciler';
 import { Store } from '../..';
 import { getCompositeComponentFromElement } from '../web/inspect-element/utils';
 import type {
@@ -299,7 +299,7 @@ const setupPerformanceListener = (
 
   const po = new PerformanceObserver((list) => {
     const entries = list.getEntries();
-    for (let i = 0; i < entries.length; i++) {
+    for (let i = 0, len = entries.length; i < len; i++) {
       const entry = entries[i];
       processInteractionEntry(entry as PerformanceInteractionEntry);
     }

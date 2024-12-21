@@ -1,11 +1,12 @@
-import { fastSerialize } from '../../instrumentation';
+import { createHTMLTemplate } from '@web-utils/html-template';
 import { Store } from '../../index';
+import { fastSerialize } from '../../instrumentation';
 import {
   getAllFiberContexts,
   getChangedProps,
   getChangedState,
-  getStateFromFiber,
   getOverrideMethods,
+  getStateFromFiber,
 } from './utils';
 
 const EXPANDED_PATHS = new Set<string>();
@@ -16,6 +17,31 @@ export const cumulativeChanges = {
   state: new Map<string, number>(),
   context: new Map<string, number>(),
 };
+
+const createWhatsChangedSection = createHTMLTemplate<HTMLDetailsElement>(
+  '<details class=react-scan-what-changed style="background-color:#b8860b;color:#ffff00;padding:5px"><summary class=font-bold>What changed?',
+  false,
+);
+
+const createPropsHeader = createHTMLTemplate<HTMLDivElement>(
+  '<div>Props:',
+  false,
+);
+
+const createChangeList = createHTMLTemplate<HTMLUListElement>(
+  '<ul style="list-style-type:disc;padding-left:20px">',
+  false,
+);
+
+const createStateHeader = createHTMLTemplate<HTMLDivElement>(
+  '<div>State:',
+  false,
+);
+
+const createContextHeader = createHTMLTemplate<HTMLDivElement>(
+  '<div>State:',
+  false,
+);
 
 export const renderPropsAndState = (didRender: boolean, fiber: any) => {
   const propContainer = Store.inspectState.value.propContainer;
@@ -36,109 +62,93 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
 
   const changedProps = new Set(getChangedProps(fiber));
   const changedState = new Set(getChangedState(fiber));
+  // Empty??
   const changedContext = new Set<string>();
 
-  changedProps.forEach((key) => {
+  for (const key of changedProps) {
     cumulativeChanges.props.set(
       key,
       (cumulativeChanges.props.get(key) ?? 0) + 1,
     );
-  });
+  }
 
-  changedState.forEach((key) => {
+  for (const key of changedState) {
     cumulativeChanges.state.set(
       key,
       (cumulativeChanges.state.get(key) ?? 0) + 1,
     );
-  });
+  }
 
-  changedContext.forEach((key) => {
+  // FIXME(Alexis): changedContext is empty, this block is no-op
+  for (const key of changedContext) {
     cumulativeChanges.context.set(
       key,
       (cumulativeChanges.context.get(key) ?? 0) + 1,
     );
-  });
+  }
 
   propContainer.innerHTML = '';
 
   const changedItems: Array<string> = [];
 
   if (cumulativeChanges.props.size > 0) {
-    cumulativeChanges.props.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.props) {
       changedItems.push(`Prop: ${key} ×${count}`);
-    });
+    }
   }
 
   if (cumulativeChanges.state.size > 0) {
-    cumulativeChanges.state.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.state) {
       changedItems.push(`State: ${key} ×${count}`);
-    });
+    }
   }
 
   if (cumulativeChanges.context.size > 0) {
-    cumulativeChanges.context.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.context) {
       changedItems.push(`Context: ${key} ×${count}`);
-    });
+    }
   }
 
-  const whatChangedSection = document.createElement('details');
-  whatChangedSection.className = 'react-scan-what-changed';
-  whatChangedSection.style.backgroundColor = '#b8860b';
-  whatChangedSection.style.color = '#ffff00';
-  whatChangedSection.style.padding = '5px';
+  const whatChangedSection = createWhatsChangedSection();
   whatChangedSection.open = Store.wasDetailsOpen.value;
 
-  const summary = document.createElement('summary');
-  summary.textContent = 'What changed?';
-  summary.className = 'font-bold';
-  whatChangedSection.appendChild(summary);
-
   if (cumulativeChanges.props.size > 0) {
-    const propsHeader = document.createElement('div');
-    propsHeader.textContent = 'Props:';
-    const propsList = document.createElement('ul');
-    propsList.style.listStyleType = 'disc';
-    propsList.style.paddingLeft = '20px';
+    const propsHeader = createPropsHeader();
+    const propsList = createChangeList();
 
-    cumulativeChanges.props.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.props) {
       const li = document.createElement('li');
       li.textContent = `${key} ×${count}`;
       propsList.appendChild(li);
-    });
+    }
 
     whatChangedSection.appendChild(propsHeader);
     whatChangedSection.appendChild(propsList);
   }
 
   if (cumulativeChanges.state.size > 0) {
-    const stateHeader = document.createElement('div');
-    stateHeader.textContent = 'State:';
-    const stateList = document.createElement('ul');
-    stateList.style.listStyleType = 'disc';
-    stateList.style.paddingLeft = '20px';
+    const stateHeader = createStateHeader();
+    const stateList = createChangeList();
 
-    cumulativeChanges.state.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.state) {
       const li = document.createElement('li');
       li.textContent = `${key} ×${count}`;
       stateList.appendChild(li);
-    });
+    }
 
     whatChangedSection.appendChild(stateHeader);
     whatChangedSection.appendChild(stateList);
   }
 
   if (cumulativeChanges.context.size > 0) {
-    const contextHeader = document.createElement('div');
-    contextHeader.textContent = 'Context:';
-    const contextList = document.createElement('ul');
-    contextList.style.listStyleType = 'disc';
-    contextList.style.paddingLeft = '20px';
+    const contextHeader = createContextHeader();
+    const contextList = createChangeList();
 
-    cumulativeChanges.context.forEach((count, key) => {
+    for (const [key, count] of cumulativeChanges.context) {
       const li = document.createElement('li');
       li.textContent = `${key} ×${count}`;
       contextList.appendChild(li);
-    });
+    }
 
     whatChangedSection.appendChild(contextHeader);
     whatChangedSection.appendChild(contextList);
@@ -257,7 +267,9 @@ export const renderPropsAndState = (didRender: boolean, fiber: any) => {
     }, null);
   }
 
-  sections.forEach((section) => content.appendChild(section.element));
+  for (const section of sections) {
+    content.appendChild(section.element);
+  }
 
   inspector.appendChild(content);
 
@@ -277,9 +289,8 @@ const renderSection = (
   section.className = 'react-scan-section';
   section.dataset.section = title;
 
-  const entries = Object.entries(data);
-
-  entries.forEach(([key, value]) => {
+  for (const key in data) {
+    const value = data[key];
     const el = createPropertyElement(
       componentName,
       didRender,
@@ -293,11 +304,10 @@ const renderSection = (
       '',
       new WeakMap(),
     );
-    if (!el) {
-      return;
+    if (el) {
+      section.appendChild(el);
     }
-    section.appendChild(el);
-  });
+  }
 
   return section;
 };
@@ -332,6 +342,36 @@ const isPromise = (value: any): value is Promise<unknown> => {
   );
 };
 
+const createScanPropertyContainer = createHTMLTemplate<HTMLDivElement>(
+  '<div class=react-scan-property>',
+  false,
+);
+
+const createScanArrow = createHTMLTemplate<HTMLSpanElement>(
+  '<span class=react-scan-arrow>',
+  false,
+);
+
+const createScanPropertyContent = createHTMLTemplate<HTMLDivElement>(
+  '<div class=react-scan-property-content>',
+  false,
+);
+
+const createScanPreviewLine = createHTMLTemplate<HTMLDivElement>(
+  '<div class=react-scan-preview-line>',
+  false,
+);
+
+const createScanInput = createHTMLTemplate<HTMLInputElement>(
+  '<input type=text class=react-scan-input>',
+  false,
+);
+
+const createScanFlashOverlay = createHTMLTemplate<HTMLDivElement>(
+  '<div class=react-scan-flash-overlay>',
+  false,
+);
+
 export const createPropertyElement = (
   componentName: string,
   didRender: boolean,
@@ -348,15 +388,14 @@ export const createPropertyElement = (
   try {
     if (!changedAtInterval) {
       changedAtInterval = setInterval(() => {
-        changedAt.forEach((value, key) => {
+        for (const [key, value] of changedAt) {
           if (Date.now() - value > 450) {
             changedAt.delete(key);
           }
-        });
+        }
       }, 200);
     }
-    const container = document.createElement('div');
-    container.className = 'react-scan-property';
+    const container = createScanPropertyContainer();
 
     const isExpandable =
       !isPromise(value) &&
@@ -397,18 +436,13 @@ export const createPropertyElement = (
         container.classList.add('react-scan-expanded');
       }
 
-      const arrow = document.createElement('span');
-      arrow.className = 'react-scan-arrow';
-      container.appendChild(arrow);
-
-      const contentWrapper = document.createElement('div');
-      contentWrapper.className = 'react-scan-property-content';
-
-      const preview = document.createElement('div');
-      preview.className = 'react-scan-preview-line';
+      const arrow = createScanArrow();
+      const contentWrapper = createScanPropertyContent();
+      const preview = createScanPreviewLine();
       preview.dataset.key = key;
       preview.dataset.section = section;
 
+      // TODO(Alexis): perhaps appendChild
       preview.innerHTML = `
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
         <span class="react-scan-key">${key}:&nbsp;</span><span class="${getValueClassName(
@@ -427,27 +461,28 @@ export const createPropertyElement = (
 
       if (isExpanded) {
         if (Array.isArray(value)) {
-          value.forEach((item, index) => {
+          for (let i = 0, len = value.length; i < len; i++) {
             const el = createPropertyElement(
               componentName,
               didRender,
               propsContainer,
               fiber,
-              index.toString(),
-              item,
+              `${i}`,
+              value[i],
               section,
               level + 1,
               changedKeys,
               currentPath,
               objectPathMap,
             );
-            if (!el) {
-              return;
+            if (el) {
+              content.appendChild(el);
             }
-            content.appendChild(el);
-          });
+          }
         } else {
-          Object.entries(value).forEach(([k, v]) => {
+          for (const k in value) {
+            const v = value[key];
+
             const el = createPropertyElement(
               componentName,
               didRender,
@@ -461,11 +496,10 @@ export const createPropertyElement = (
               currentPath,
               objectPathMap,
             );
-            if (!el) {
-              return;
+            if (el) {
+              content.appendChild(el);
             }
-            content.appendChild(el);
-          });
+          }
         }
       }
 
@@ -483,27 +517,27 @@ export const createPropertyElement = (
 
           if (!content.hasChildNodes()) {
             if (Array.isArray(value)) {
-              value.forEach((item, index) => {
+              for (let i = 0, len = value.length; i < len; i++) {
                 const el = createPropertyElement(
                   componentName,
                   didRender,
                   propsContainer,
                   fiber,
-                  index.toString(),
-                  item,
+                  `${i}`,
+                  value[i],
                   section,
                   level + 1,
                   changedKeys,
                   currentPath,
                   new WeakMap(),
                 );
-                if (!el) {
-                  return;
+                if (el) {
+                  content.appendChild(el);
                 }
-                content.appendChild(el);
-              });
+              }
             } else {
-              Object.entries(value).forEach(([k, v]) => {
+              for (const k in value) {
+                const v = value[k];
                 const el = createPropertyElement(
                   componentName,
                   didRender,
@@ -517,11 +551,10 @@ export const createPropertyElement = (
                   currentPath,
                   new WeakMap(),
                 );
-                if (!el) {
-                  return;
+                if (el) {
+                  content.appendChild(el);
                 }
-                content.appendChild(el);
-              });
+              }
             }
           }
         } else {
@@ -531,10 +564,10 @@ export const createPropertyElement = (
         }
       });
     } else {
-      const preview = document.createElement('div');
-      preview.className = 'react-scan-preview-line';
+      const preview = createScanPreviewLine();
       preview.dataset.key = key;
       preview.dataset.section = section;
+      // TODO(Alexis): perhaps appendChild
       preview.innerHTML = `
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
         <span class="react-scan-key">${key}:&nbsp;</span><span class="${getValueClassName(
@@ -560,10 +593,8 @@ export const createPropertyElement = (
           valueElement.addEventListener('click', (e) => {
             e.stopPropagation();
 
-            const input = document.createElement('input');
-            input.type = 'text';
+            const input = createScanInput();
             input.value = value.toString();
-            input.className = 'react-scan-input';
 
             const updateValue = () => {
               const newValue = input.value;
@@ -605,8 +636,7 @@ export const createPropertyElement = (
       changedAt.set(currentPath, Date.now());
     }
     if (changedAt.has(currentPath)) {
-      const flashOverlay = document.createElement('div');
-      flashOverlay.className = 'react-scan-flash-overlay';
+      const flashOverlay = createScanFlashOverlay();
       container.appendChild(flashOverlay);
 
       flashOverlay.style.opacity = '.9';
@@ -633,11 +663,10 @@ export const createPropertyElement = (
 };
 
 const createCircularReferenceElement = (key: string) => {
-  const container = document.createElement('div');
-  container.className = 'react-scan-property';
+  const container = createScanPropertyContainer();
 
-  const preview = document.createElement('div');
-  preview.className = 'react-scan-preview-line';
+  const preview = createScanPreviewLine();
+  // TODO(Alexis): perhaps appendChild
   preview.innerHTML = `
     <span class="react-scan-key">${key}:&nbsp;</span><span class="react-scan-circular">[Circular Reference]</span>
   `;
@@ -698,18 +727,18 @@ export const replayComponent = async (fiber: any) => {
     const currentProps = fiber.memoizedProps || {};
 
     try {
-      Object.keys(currentProps).forEach((key) => {
+      for (const key in currentProps) {
         overrideProps(fiber, [key], currentProps[key]);
-      });
+      }
     } catch (e) {
       /**/
     }
 
     try {
       const state = getStateFromFiber(fiber) || {};
-      Object.keys(state).forEach((key) => {
+      for (const key in state) {
         overrideHookState(fiber, key, [], state[key]);
-      });
+      }
     } catch (e) {
       /**/
     }

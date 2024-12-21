@@ -1,20 +1,22 @@
-import type { Fiber, FiberRoot } from 'react-reconciler';
+import { signal, type Signal } from '@preact/signals';
 import {
-  getTimings,
-  hasMemoCache,
-  traverseContexts,
-  traverseState,
-  instrument,
   createFiberVisitor,
-  getDisplayName,
-  getType,
-  isValidElement,
   didFiberCommit,
+  getDisplayName,
   getMutatedHostFibers,
+  getTimings,
+  getType,
+  hasMemoCache,
+  instrument,
+  isValidElement,
+  traverseContexts,
   traverseProps,
+  traverseState,
 } from 'bippy';
-import { type Signal, signal } from '@preact/signals';
-import { isProduction, ReactScanInternals, Store } from './index';
+import type * as React from 'react';
+import type { Fiber, FiberRoot } from 'react-reconciler';
+import { isEqual } from 'src/core/utils';
+import { ReactScanInternals, Store, isProduction } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -180,7 +182,7 @@ export const getPropsChanges = (fiber: Fiber) => {
     const nextValue = nextProps?.[propName];
 
     if (
-      Object.is(prevValue, nextValue) ||
+      isEqual(prevValue, nextValue) ||
       isValidElement(prevValue) ||
       isValidElement(nextValue)
     ) {
@@ -203,51 +205,72 @@ export const getPropsChanges = (fiber: Fiber) => {
   return changes;
 };
 
+interface FiberState {
+  memoizedState: unknown;
+}
+
+function getStateChangesTraversal(
+  this: Array<RenderChange>,
+  prevState: FiberState,
+  nextState: FiberState,
+): void {
+  if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
+  const change: RenderChange = {
+    type: 'state',
+    name: '', // bad interface should make this a discriminated union
+    prevValue: prevState.memoizedState,
+    nextValue: nextState.memoizedState,
+    unstable: false,
+  };
+  this.push(change);
+}
+
 export const getStateChanges = (fiber: Fiber) => {
   const changes: Array<RenderChange> = [];
 
-  traverseState(fiber, (prevState, nextState) => {
-    if (Object.is(prevState.memoizedState, nextState.memoizedState)) return;
-    const change: RenderChange = {
-      type: 'state',
-      name: '', // bad interface should make this a discriminated union
-      prevValue: prevState.memoizedState,
-      nextValue: nextState.memoizedState,
-      unstable: false,
-    };
-    changes.push(change);
-  });
+  traverseState(fiber, getStateChangesTraversal.bind(changes));
 
   return changes;
 };
 
+interface FiberContext {
+  context: React.Context<unknown>;
+  memoizedValue: unknown;
+}
+
+function getContextChangesTraversal(
+  this: Array<RenderChange>,
+  prevContext: FiberContext,
+  nextContext: FiberContext,
+): void {
+  const prevValue = prevContext.memoizedValue;
+  const nextValue = nextContext.memoizedValue;
+
+  const change: RenderChange = {
+    type: 'context',
+    name: '',
+    prevValue,
+    nextValue,
+    unstable: false,
+  };
+  this.push(change);
+
+  const prevValueString = fastSerialize(prevValue);
+  const nextValueString = fastSerialize(nextValue);
+
+  if (
+    unstableTypes.includes(typeof prevValue) &&
+    unstableTypes.includes(typeof nextValue) &&
+    prevValueString === nextValueString
+  ) {
+    change.unstable = true;
+  }
+}
+
 export const getContextChanges = (fiber: Fiber) => {
   const changes: Array<RenderChange> = [];
 
-  traverseContexts(fiber, (prevContext, nextContext) => {
-    const prevValue = prevContext.memoizedValue;
-    const nextValue = nextContext.memoizedValue;
-
-    const change: RenderChange = {
-      type: 'context',
-      name: '',
-      prevValue,
-      nextValue,
-      unstable: false,
-    };
-    changes.push(change);
-
-    const prevValueString = fastSerialize(prevValue);
-    const nextValueString = fastSerialize(nextValue);
-
-    if (
-      unstableTypes.includes(typeof prevValue) &&
-      unstableTypes.includes(typeof nextValue) &&
-      prevValueString === nextValueString
-    ) {
-      change.unstable = true;
-    }
-  });
+  traverseContexts(fiber, getContextChangesTraversal.bind(changes));
 
   return changes;
 };
@@ -284,22 +307,33 @@ let inited = false;
 
 const getAllInstances = () => Array.from(instrumentationInstances.values());
 
-// FIXME: calculation is slow
+interface IsRenderUnnecessaryState {
+  isRequiredChange: boolean;
+}
+
+function isRenderUnnecessaryTraversal(
+  this: IsRenderUnnecessaryState,
+  prevValue: unknown,
+  nextValue: unknown,
+): void {
+  if (
+    !isEqual(prevValue, nextValue) &&
+    !isValueUnstable(prevValue, nextValue)
+  ) {
+    this.isRequiredChange = true;
+  }
+}
+
 export const isRenderUnnecessary = (fiber: Fiber) => {
   if (!didFiberCommit(fiber)) return true;
 
   const mutatedHostFibers = getMutatedHostFibers(fiber);
   for (const mutatedHostFiber of mutatedHostFibers) {
-    let isRequiredChange = false;
-    traverseProps(mutatedHostFiber, (prevValue, nextValue) => {
-      if (
-        !Object.is(prevValue, nextValue) &&
-        !isValueUnstable(prevValue, nextValue)
-      ) {
-        isRequiredChange = true;
-      }
-    });
-    if (isRequiredChange) return false;
+    const state: IsRenderUnnecessaryState = {
+      isRequiredChange: false,
+    };
+    traverseProps(mutatedHostFiber, isRenderUnnecessaryTraversal.bind(state));
+    if (state.isRequiredChange) return false;
   }
   return true;
 };

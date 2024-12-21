@@ -1,4 +1,4 @@
-import { type ClassValue, clsx } from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export const cn = (...inputs: Array<ClassValue>): string => {
@@ -114,7 +114,9 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
 
 export const toggleMultipleClasses = (
   element: HTMLElement,
-  ...classes: Array<string>
+  classes: Array<string>,
 ) => {
-  classes.forEach((cls) => element.classList.toggle(cls));
+  for (const cls of classes) {
+    element.classList.toggle(cls);
+  }
 };

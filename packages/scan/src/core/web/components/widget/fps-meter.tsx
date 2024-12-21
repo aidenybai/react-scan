@@ -10,7 +10,7 @@ export const FpsMeter = () => {
       setFps(getFPS());
     }, 100);
 
-    return () => clearInterval(intervalId);
+  return () => clearInterval(intervalId);
   }, []);
 
   return (
