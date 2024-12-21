@@ -411,7 +411,7 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
       (unsubscribeFns as any)[Store.inspectState.value.kind] = unSub;
     }
     previousState = Store.inspectState.value.kind;
-  }, 16);
+  }, 70);
 
   Store.inspectState.subscribe(repaint);
   Store.lastReportTime.subscribe(repaint);

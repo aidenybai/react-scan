@@ -16,7 +16,7 @@ import {
 import type * as React from 'react';
 import type { Fiber, FiberRoot } from 'react-reconciler';
 import { isEqual } from 'src/core/utils';
-import { ReactScanInternals, Store, isProduction } from './index';
+import { getIsProduction, ReactScanInternals, Store } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -289,6 +289,10 @@ interface InstrumentationConfig {
   onCommitFinish: OnCommitFinishHandler;
   onError: OnErrorHandler;
   onActive?: OnActiveHandler;
+  // monitoring does not need to track changes, and it adds overhead to leave it on
+  trackChanges: boolean;
+  // allows monitoring to continue tracking renders even if react scan dev mode is disabled
+  forceAlwaysTrackRenders?: boolean;
 }
 
 interface InstrumentationInstance {
@@ -338,15 +342,17 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
   return true;
 };
 
-const shouldRunUnnecessaryRenderCheck = () => {
+const shouldTrackUnnecessaryRenders = () => {
   // yes, this can be condensed into one conditional, but ifs are easier to reason/build on than long boolean expressions
   if (!ReactScanInternals.options.value.trackUnnecessaryRenders) {
     return false;
   }
 
-  // only run unnecessaryRenderCheck when monitoring is active in production if the user set dangerouslyForceRunInProduction
+  const isProd = getIsProduction();
+
+  // only run advanced render checks when monitoring is active in production if the user set dangerouslyForceRunInProduction
   if (
-    isProduction &&
+    isProd &&
     Store.monitor.value &&
     ReactScanInternals.options.value.dangerouslyForceRunInProduction &&
     ReactScanInternals.options.value.trackUnnecessaryRenders
@@ -354,7 +360,7 @@ const shouldRunUnnecessaryRenderCheck = () => {
     return true;
   }
 
-  if (isProduction && Store.monitor.value) {
+  if (isProd && Store.monitor.value) {
     return false;
   }
 
@@ -393,21 +399,23 @@ export const createInstrumentation = (
 
         const changes: Array<RenderChange> = [];
 
-        const propsChanges = getPropsChanges(fiber);
-        const stateChanges = getStateChanges(fiber);
-        const contextChanges = getContextChanges(fiber);
+        if (config.trackChanges) {
+          const propsChanges = getPropsChanges(fiber);
+          const stateChanges = getStateChanges(fiber);
+          const contextChanges = getContextChanges(fiber);
 
-        for (let i = 0, len = propsChanges.length; i < len; i++) {
-          const change = propsChanges[i];
-          changes.push(change);
-        }
-        for (let i = 0, len = stateChanges.length; i < len; i++) {
-          const change = stateChanges[i];
-          changes.push(change);
-        }
-        for (let i = 0, len = contextChanges.length; i < len; i++) {
-          const change = contextChanges[i];
-          changes.push(change);
+          for (let i = 0, len = propsChanges.length; i < len; i++) {
+            const change = propsChanges[i];
+            changes.push(change);
+          }
+          for (let i = 0, len = stateChanges.length; i < len; i++) {
+            const change = stateChanges[i];
+            changes.push(change);
+          }
+          for (let i = 0, len = contextChanges.length; i < len; i++) {
+            const change = contextChanges[i];
+            changes.push(change);
+          }
         }
 
         const { selfTime } = getTimings(fiber);
@@ -423,7 +431,7 @@ export const createInstrumentation = (
           forget: hasMemoCache(fiber),
           // todo: allow this to be toggle-able through toolbar
           // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
-          unnecessary: shouldRunUnnecessaryRenderCheck()
+          unnecessary: shouldTrackUnnecessaryRenders()
             ? isRenderUnnecessary(fiber)
             : null,
 
@@ -448,6 +456,14 @@ export const createInstrumentation = (
       name: 'react-scan',
       onActive: config.onActive,
       onCommitFiberRoot(rendererID, root) {
+        if (
+          ReactScanInternals.instrumentation?.isPaused.value &&
+          (Store.inspectState.value.kind === 'inspect-off' ||
+            Store.inspectState.value.kind === 'uninitialized') &&
+          !config.forceAlwaysTrackRenders
+        ) {
+          return;
+        }
         const allInstances = getAllInstances();
         for (const instance of allInstances) {
           instance.config.onCommitStart();

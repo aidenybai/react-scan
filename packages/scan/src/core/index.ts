@@ -233,7 +233,7 @@ export const ReactScanInternals: Internals = {
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
     smoothlyAnimateOutlines: true,
-    trackUnnecessaryRenders: true,
+    trackUnnecessaryRenders: false,
   }),
   onRender: null,
   scheduledOutlines: new Map(),
@@ -485,14 +485,43 @@ const updateScheduledOutlines = (fiber: Fiber, renders: Array<Render>) => {
     }
   }
 };
-export let isProduction = false;
+// we only need to run this check once and will read the value in hot path
+let isProduction = false;
+let rdtHook: ReturnType<typeof getRDTHook>;
+export const getIsProduction = () => {
+  rdtHook ??= getRDTHook();
+  for (const renderer of rdtHook.renderers.values()) {
+    const buildType = detectReactBuildType(renderer);
+    if (buildType === 'production') {
+      isProduction = true;
+    }
+  }
+  return isProduction;
+};
+
 export const start = () => {
   if (typeof window === 'undefined') return;
 
+  if (
+    getIsProduction() &&
+    !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+  ) {
+    return;
+  }
+
+  const rdtHook = getRDTHook();
+  for (const renderer of rdtHook.renderers.values()) {
+    const buildType = detectReactBuildType(renderer);
+    if (buildType === 'production') {
+      isProduction = true;
+    }
+  }
   const localStorageOptions =
     readLocalStorage<LocalStorageOptions>('react-scan-options');
+
   if (localStorageOptions) {
-    const validLocalOptions = validateOptions(localStorageOptions);
+    const { enabled, playSound } = localStorageOptions;
+    const validLocalOptions = validateOptions({ enabled, playSound });
     if (Object.keys(validLocalOptions).length > 0) {
       ReactScanInternals.options.value = {
         ...ReactScanInternals.options.value,
@@ -511,81 +540,58 @@ export const start = () => {
       : null;
 
   let ctx: ReturnType<typeof initReactScanOverlay> | null = null;
-  // TODO: dynamic enable, and inspect-off check
-
   const instrumentation = createInstrumentation('devtools', {
     onActive() {
-      if (!Store.monitor.value) {
-        const rdtHook = getRDTHook();
-        for (const renderer of rdtHook.renderers.values()) {
-          const buildType = detectReactBuildType(renderer);
-          if (buildType === 'production') {
-            isProduction = true;
-          }
-        }
-        if (
-          isProduction &&
-          !ReactScanInternals.options.value.dangerouslyForceRunInProduction
-        ) {
-          setOptions({ enabled: false, showToolbar: false });
-          // eslint-disable-next-line no-console
-          console.warn(
-            '[React Scan] Running in production mode is not recommended.\n' +
-              'If you really need this, set dangerouslyForceRunInProduction: true in options.',
-          );
-          return;
-        }
+      const existingRoot = document.querySelector('react-scan-root');
+      if (existingRoot) {
+        return;
+      }
 
-        const existingRoot = document.querySelector('react-scan-root');
-        if (existingRoot) {
-          return;
-        }
+      const container = document.createElement('div');
+      container.id = 'react-scan-root';
 
-        const container = document.createElement('div');
-        container.id = 'react-scan-root';
+      shadowRoot = container.attachShadow({ mode: 'open' });
 
-        shadowRoot = container.attachShadow({ mode: 'open' });
+      const fragment = document.createDocumentFragment();
 
-        const fragment = document.createDocumentFragment();
+      const cssStyles = document.createElement('style');
+      cssStyles.textContent = styles;
 
-        const cssStyles = document.createElement('style');
-        cssStyles.textContent = styles;
+      const iconSprite = new DOMParser().parseFromString(
+        ICONS,
+        'image/svg+xml',
+      ).documentElement;
+      shadowRoot.appendChild(iconSprite);
 
-        const iconSprite = new DOMParser().parseFromString(
-          ICONS,
-          'image/svg+xml',
-        ).documentElement;
-        shadowRoot.appendChild(iconSprite);
+      const root = document.createElement('div');
+      root.id = 'react-scan-toolbar-root';
+      root.className = 'absolute z-2147483647';
 
-        const root = document.createElement('div');
-        root.id = 'react-scan-toolbar-root';
-        root.className = 'absolute z-2147483647';
+      fragment.appendChild(cssStyles);
+      fragment.appendChild(root);
 
-        fragment.appendChild(cssStyles);
-        fragment.appendChild(root);
+      shadowRoot.appendChild(fragment);
 
-        shadowRoot.appendChild(fragment);
+      document.documentElement.appendChild(container);
 
-        document.documentElement.appendChild(container);
+      ctx = initReactScanOverlay();
+      if (!ctx) return;
+      startFlushOutlineInterval(ctx);
 
-        ctx = initReactScanOverlay();
-        if (!ctx) return;
-        startFlushOutlineInterval(ctx);
+      createInspectElementStateMachine(shadowRoot);
 
-        createInspectElementStateMachine(shadowRoot);
+      globalThis.__REACT_SCAN__ = {
+        ReactScanInternals,
+      };
 
-        globalThis.__REACT_SCAN__ = {
-          ReactScanInternals,
-        };
+      if (ReactScanInternals.options.value.showToolbar) {
+        toolbarContainer = createToolbar(shadowRoot);
+      }
 
-        if (ReactScanInternals.options.value.showToolbar) {
-          toolbarContainer = createToolbar(shadowRoot);
-        }
+      container.setAttribute('part', 'scan-root');
 
-        container.setAttribute('part', 'scan-root');
-
-        const mainStyles = document.createElement('style');
-        mainStyles.textContent = `
+      const mainStyles = document.createElement('style');
+      mainStyles.textContent = `
           html[data-theme="light"] react-scan-root::part(scan-root) {
             --icon-color: rgba(0, 0, 0, 0.8);
           }
@@ -594,18 +600,17 @@ export const start = () => {
             --icon-color: rgba(255, 255, 255, 0.8);
           }
         `;
-        document.head.appendChild(mainStyles);
+      document.head.appendChild(mainStyles);
 
-        const existingOverlay = document.querySelector('react-scan-overlay');
-        if (existingOverlay) {
-          return;
-        }
-        const overlayElement = document.createElement('react-scan-overlay');
-
-        document.documentElement.appendChild(overlayElement);
-
-        logIntro();
+      const existingOverlay = document.querySelector('react-scan-overlay');
+      if (existingOverlay) {
+        return;
       }
+      const overlayElement = document.createElement('react-scan-overlay');
+
+      document.documentElement.appendChild(overlayElement);
+
+      logIntro();
     },
     onCommitStart() {
       ReactScanInternals.options.value.onCommitStart?.();
@@ -618,7 +623,9 @@ export const start = () => {
     onRender(fiber, renders) {
       // todo: don't track renders at all if paused, reduce overhead
       if (
-        Boolean(ReactScanInternals.instrumentation?.isPaused.value) ||
+        (Boolean(ReactScanInternals.instrumentation?.isPaused.value) &&
+          (Store.inspectState.value.kind === 'inspect-off' ||
+            Store.inspectState.value.kind === 'uninitialized')) ||
         !ctx ||
         document.visibilityState !== 'visible'
       ) {
@@ -667,6 +674,7 @@ export const start = () => {
     onCommitFinish() {
       ReactScanInternals.options.value.onCommitFinish?.();
     },
+    trackChanges: true,
   });
 
   ReactScanInternals.instrumentation = instrumentation;
