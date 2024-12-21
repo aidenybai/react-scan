@@ -665,19 +665,29 @@ function applyLabelTransform(
 
 const textMeasurementCache = new Map<string, TextMetrics>();
 
+let offscreenContext: OffscreenCanvasRenderingContext2D;
+
+function getMeasuringContext(): OffscreenCanvasRenderingContext2D {
+  if (!offscreenContext) {
+    const dpi = window.devicePixelRatio || 1;
+    const canvas = new OffscreenCanvas(
+      dpi * window.innerWidth,
+      dpi * window.innerHeight,
+    );
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('unreachable');
+    }
+    offscreenContext = ctx;
+  }
+  return offscreenContext;
+}
+
 export const measureTextCached = (text: string): TextMetrics => {
   if (textMeasurementCache.has(text)) {
     return textMeasurementCache.get(text)!;
   }
-  const dpi = window.devicePixelRatio || 1;
-  const canvas = new OffscreenCanvas(
-    dpi * window.innerWidth,
-    dpi * window.innerHeight,
-  );
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('unreachable');
-  }
+  const ctx = getMeasuringContext();
   ctx.font = `11px ${MONO_FONT}`;
   const metrics = ctx.measureText(text);
   textMeasurementCache.set(text, metrics);
