@@ -170,7 +170,7 @@ let unsubscribeTrackVisibilityChange: () => void;
 let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
 
 const trackVisibilityChange = () => {
-  trackVisibilityChange();
+  unsubscribeTrackVisibilityChange();
   const onVisibilityChange = () => {
     if (document.hidden) {
       lastVisibilityHiddenAt = Date.now();
