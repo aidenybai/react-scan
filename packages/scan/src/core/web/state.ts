@@ -5,25 +5,27 @@ import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from './constants';
 
 export const signalRefContainer = signal<HTMLDivElement | null>(null);
 
-const getInitialWidgetConfig = (): WidgetConfig => {
-  if (typeof window === 'undefined') {
-    return {
-      corner: 'top-left' as Corner,
-      dimensions: {
-        isFullWidth: false,
-        isFullHeight: false,
-        width: MIN_SIZE.width,
-        height: MIN_SIZE.height,
-        position: { x: SAFE_AREA, y: SAFE_AREA }
-      },
-      lastDimensions: {
-        isFullWidth: false,
-        isFullHeight: false,
-        width: MIN_SIZE.width,
-        height: MIN_SIZE.height * 12,
-        position: { x: SAFE_AREA, y: SAFE_AREA }
-      }
-    };
+export const defaultWidgetConfig = {
+  corner: 'top-left' as Corner,
+  dimensions: {
+    isFullWidth: false,
+    isFullHeight: false,
+    width: MIN_SIZE.width,
+    height: MIN_SIZE.height,
+    position: { x: SAFE_AREA, y: SAFE_AREA }
+  },
+  lastDimensions: {
+    isFullWidth: false,
+    isFullHeight: false,
+    width: MIN_SIZE.width,
+    height: MIN_SIZE.height,
+    position: { x: SAFE_AREA, y: SAFE_AREA }
+  }
+} as WidgetConfig;
+
+export const getInitialWidgetConfig = (s = false): WidgetConfig => {
+  if (typeof window === 'undefined' && s) {
+    return defaultWidgetConfig;
   }
 
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);

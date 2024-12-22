@@ -300,13 +300,13 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
         }
         break;
       case 'trackUnnecessaryRenders': {
-        validOptions['trackUnnecessaryRenders'] =
+        validOptions.trackUnnecessaryRenders =
           typeof value === 'boolean' ? value : false;
         break;
       }
 
       case 'smoothlyAnimateOutlines': {
-        validOptions['smoothlyAnimateOutlines'] =
+        validOptions.smoothlyAnimateOutlines =
           typeof value === 'boolean' ? value : false;
         break;
       }
@@ -590,20 +590,6 @@ export const start = () => {
       if (ReactScanInternals.options.value.showToolbar) {
         toolbarContainer = createToolbar(shadowRoot);
       }
-
-      container.setAttribute('part', 'scan-root');
-
-      const mainStyles = document.createElement('style');
-      mainStyles.textContent = `
-          html[data-theme="light"] react-scan-root::part(scan-root) {
-            --icon-color: rgba(0, 0, 0, 0.8);
-          }
-
-          html[data-theme="dark"] react-scan-root::part(scan-root) {
-            --icon-color: rgba(255, 255, 255, 0.8);
-          }
-        `;
-      document.head.appendChild(mainStyles);
 
       const existingOverlay = document.querySelector('react-scan-overlay');
       if (existingOverlay) {

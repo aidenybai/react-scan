@@ -1,89 +1,58 @@
-import styles from '../assets/css/styles.css?inline';
+import browser from 'webextension-polyfill';
 import { BroadcastSchema } from '../types/messages';
-import { loadCss, broadcast } from '../utils/helpers';
+import { broadcast, readLocalStorage } from '../utils/helpers';
 
-const isIframe = window !== window.top;
-const isPopup = window.opener !== null;
-
-chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (message: unknown, _sender, sendResponse) => {
   const result = BroadcastSchema.safeParse(message);
-
-  if (result.success) {
-    const data = result.data;
-
-    if (data.type === 'react-scan:ping') {
-      sendResponse(true);
-      return false;
-    }
-
-    if (data.type === 'react-scan:check-version') {
-      broadcast.onmessage = (type, msgData) => {
-        if (type === 'react-scan:update') {
-          const response = {
-            isReactDetected: !['Unknown', 'Not Found'].includes(msgData.reactVersion),
-            version: msgData.reactVersion
-          };
-          sendResponse(response);
-        }
-      };
-
-      // Send the check message
-      broadcast.postMessage('react-scan:check-version', {});
-
-      return true; // Keep the message channel open
-    }
-
-    if (data.type === 'react-scan:csp-rules-changed') {
-      window.location.reload();
-    }
-  }
-  return true;
-});
-
-const getCSPRulesState = async () => chrome.runtime.sendMessage({
-  type: 'react-scan:is-csp-rules-enabled',
-  data: {
-    domain: window.location.origin,
-  },
-}).then((cspRulesEnabled) => {
-  if (isIframe || isPopup) {
+  if (!result.success) {
     return false;
   }
 
-  broadcast.postMessage('react-scan:is-csp-rules-enabled', cspRulesEnabled);
+  const data = result.data;
 
-  return cspRulesEnabled.enabled;
+  if (data.type === 'react-scan:ping') {
+    sendResponse({ pong: true });
+    return false;
+  }
+
+  if (data.type === 'react-scan:is-running') {
+    const options = readLocalStorage<{ enabled: boolean; showToolbar: boolean }>('react-scan-options');
+    const response = { isRunning: options?.enabled && options?.showToolbar };
+    sendResponse(response);
+    return false;
+  }
+
+  if (data.type === 'react-scan:toggle-state') {
+    let toggledState = false;
+
+    const options = readLocalStorage<{ showToolbar: boolean }>('react-scan-options');
+    if (options !== null) {
+      toggledState = !options?.showToolbar;
+    }
+
+
+    broadcast.onmessage = (type, data) => {
+      if (type === 'react-scan:react-version' && data.version) {
+        sendResponse({ hasReact: toggledState });
+      }
+    };
+
+    broadcast.postMessage('react-scan:toggle-state', { state: toggledState });
+    return true;
+  }
+
+  return false;
 });
 
-const init = (() => {
-  let isInitialized = false;
-
-  return async () => {
-    if (isInitialized) {
-      return;
-    }
-
-    isInitialized = true;
-
-    loadCss(styles);
-
-    const isCSPRulesEnabled = await getCSPRulesState();
-    if (isCSPRulesEnabled) {
-      setTimeout(() => {
-        const toolbar = document.getElementById('react-scan-toolbar');
-        if (toolbar) {
-          // toolbar.appendChild(el);
-          toolbar.style.opacity = '1';
+window.addEventListener('DOMContentLoaded', (event) => {
+  broadcast.onmessage = (type, data) => {
+    if (type === 'react-scan:is-focused') {
+      browser.runtime.sendMessage({
+        type: 'react-scan:is-focused',
+        data: {
+          state: data.state
         }
-      }, 400);
+      });
     }
   };
-})();
-
-broadcast.onmessage = (type, data) => {
-  if (type === 'react-scan:update') {
-    if (!['Unknown', 'Not Found'].includes(data.reactVersion)) {
-      void init();
-    }
-  }
-};
+});

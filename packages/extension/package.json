@@ -18,6 +18,7 @@
     "pack:all": "rm -rf build && pnpm pack:chrome && pnpm pack:firefox && pnpm pack:brave"
   },
   "dependencies": {
+    "react-scan": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zod": "^3.23.8"

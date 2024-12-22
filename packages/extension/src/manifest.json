@@ -74,22 +74,20 @@
     {
       "matches": ["<all_urls>"],
       "js": [
-        "src/inject/dev-tools-hook.ts"
+        "src/inject/react-scan.ts"
       ],
       "run_at": "document_start",
-      "world": "MAIN",
-      "{{firefox}}.all_frames": true,
-      "{{firefox}}.match_about_blank": true
+      "world": "MAIN"
     },
     {
       "matches": [
         "<all_urls>"
       ],
-      "js": ["src/inject/index.ts"],
+      "js": [
+        "src/inject/index.ts"
+      ],
       "run_at": "document_start",
-      "world": "MAIN",
-      "{{firefox}}.all_frames": true,
-      "{{firefox}}.match_about_blank": true
+      "world": "MAIN"
     },
     {
       "matches": ["<all_urls>"],
