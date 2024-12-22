@@ -1,14 +1,21 @@
 import { throttle } from '@web-utils/helpers';
 import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
+import { LRUMap } from '@web-utils/lru';
 import { type Fiber } from 'react-reconciler';
 import { type AggregatedChange } from 'src/core/instrumentation';
 import { ReactScanInternals, type OutlineKey } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
 
+const enum Reason {
+  Commit = 0b001,
+  Unstable = 0b010,
+  Unnecessary = 0b100,
+}
+
 export interface OutlineLabel {
   alpha: number;
   color: { r: number; g: number; b: number };
-  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  reasons: number; // based on Reason enum
   labelText: string;
   textWidth: number;
   activeOutline: Outline;
@@ -121,7 +128,6 @@ export const fadeOutOutline = () => {
   const drawingQueue: Array<DrawingQueue> = [];
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
   const phases = new Set<string>();
-
   const activeOutlines = ReactScanInternals.activeOutlines;
 
   for (const [key, activeOutline] of activeOutlines) {
@@ -162,11 +168,10 @@ export const fadeOutOutline = () => {
     const b = Math.round(START_COLOR.b + t * (END_COLOR.b - START_COLOR.b));
     const color = { r, g, b };
 
-    const reasons: Array<'unstable' | 'commit' | 'unnecessary'> = [];
+    let reasons = 0;
 
     // don't re-create to avoid gc time
     phases.clear();
-    reasons.length = 0;
 
     let didCommit = false;
     let unstable = false;
@@ -184,11 +189,11 @@ export const fadeOutOutline = () => {
       }
     }
 
-    if (didCommit) reasons.push('commit');
-    if (unstable) reasons.push('unstable');
+    if (didCommit) reasons |= Reason.Commit;
+    if (unstable) reasons |= Reason.Unstable;
 
     if (isUnnecessary) {
-      reasons.push('unnecessary');
+      reasons |= Reason.Unnecessary;
       color.r = 128;
       color.g = 128;
       color.b = 128;
@@ -251,7 +256,7 @@ export const fadeOutOutline = () => {
     );
 
     if (
-      reasons.length &&
+      reasons > 0 &&
       labelText &&
       !(phases.has('mount') && phases.size === 1)
     ) {
@@ -386,26 +391,30 @@ const activateOutlines = async () => {
 
   // fiber alternate merging
   for (const activeOutline of ReactScanInternals.activeOutlines.values()) {
-    activeOutline.groupedAggregatedRender?.forEach(
-      (aggregatedRender, fiber) => {
-        if (fiber.alternate && activeFibers.has(fiber.alternate)) {
-          // if it already exists, copy it over
-          const alternateAggregatedRender = activeFibers.get(fiber.alternate);
+    if (!activeOutline.groupedAggregatedRender) {
+      continue;
+    }
+    for (const [
+      fiber,
+      aggregatedRender,
+    ] of activeOutline.groupedAggregatedRender) {
+      if (fiber.alternate && activeFibers.has(fiber.alternate)) {
+        // if it already exists, copy it over
+        const alternateAggregatedRender = activeFibers.get(fiber.alternate);
 
-          if (alternateAggregatedRender) {
-            joinAggregations({
-              from: alternateAggregatedRender,
-              to: aggregatedRender,
-            });
-          }
-          // fixme: this seems to leave a label/outline alive for an extra frame in some cases
-          activeOutline.groupedAggregatedRender?.delete(fiber);
-          activeFibers.delete(fiber.alternate);
+        if (alternateAggregatedRender) {
+          joinAggregations({
+            from: alternateAggregatedRender,
+            to: aggregatedRender,
+          });
         }
-        // match the current render to its fiber
-        activeFibers.set(fiber, aggregatedRender);
-      },
-    );
+        // fixme: this seems to leave a label/outline alive for an extra frame in some cases
+        activeOutline.groupedAggregatedRender?.delete(fiber);
+        activeFibers.delete(fiber.alternate);
+      }
+      // match the current render to its fiber
+      activeFibers.set(fiber, aggregatedRender);
+    }
   }
 
   for (const [fiber, outline] of scheduledOutlines) {
@@ -515,7 +524,7 @@ const activateOutlines = async () => {
 export interface MergedOutlineLabel {
   alpha: number;
   color: { r: number; g: number; b: number };
-  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  reasons: number;
   groupedAggregatedRender: Array<AggregatedRender>;
   rect: DOMRect;
 }
@@ -585,7 +594,7 @@ function toMergedLabel(
   return {
     alpha: label.alpha,
     color: label.color,
-    reasons: label.reasons.slice(),
+    reasons: label.reasons,
     groupedAggregatedRender: groupedArray,
     rect,
   };
@@ -601,7 +610,7 @@ function mergeTwoLabels(
     b.groupedAggregatedRender,
   );
 
-  const mergedReasons = Array.from(new Set([...a.reasons, ...b.reasons]));
+  const mergedReasons = a.reasons | b.reasons;
 
   return {
     alpha: Math.max(a.alpha, b.alpha),
@@ -663,7 +672,7 @@ function applyLabelTransform(
   return new DOMRect(labelX, labelY, estimatedTextWidth + 4, textHeight + 4);
 }
 
-const textMeasurementCache = new Map<string, TextMetrics>();
+const textMeasurementCache = new LRUMap<string, TextMetrics>(100);
 
 type MeasuringContext = CanvasTextDrawingStyles & CanvasText;
 

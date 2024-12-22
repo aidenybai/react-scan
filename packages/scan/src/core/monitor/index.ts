@@ -121,11 +121,6 @@ export const startMonitoring = () => {
       return true;
     },
     onRender(fiber, renders) {
-      if (ReactScanInternals.instrumentation?.isPaused.value) {
-        // don't draw if it's paused
-        return;
-      }
-
       updateFiberRenderData(fiber, renders);
 
       if (isCompositeFiber(fiber)) {
@@ -136,6 +131,8 @@ export const startMonitoring = () => {
     onCommitFinish() {
       ReactScanInternals.options.value.onCommitFinish?.();
     },
+    trackChanges: false,
+    forceAlwaysTrackRenders: true,
   });
 
   ReactScanInternals.instrumentation = instrumentation;

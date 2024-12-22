@@ -28,8 +28,8 @@ describe('fastSerialize', () => {
 
   it('serializes functions', () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    function testFunc() {}
-    expect(fastSerialize(testFunc)).toBe('function');
+    const testFunc = (x:2) => 3
+    expect(fastSerialize(testFunc)).toBe('(x) => 3');
   });
 
   it('serializes arrays', () => {

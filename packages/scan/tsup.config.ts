@@ -150,7 +150,7 @@ export default defineConfig([
         addDirectivesToChunkFiles(`${DIST_PATH}/core/monitor`),
       ]);
     },
-    minify: process.env.NODE_ENV === 'production' ? 'terser' : false,
+    minify: false,
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
       NPM_PACKAGE_VERSION: JSON.parse(

@@ -61,35 +61,39 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
     }
   }, [Store.inspectState.value]);
 
-  const findNextElement = useCallback((
-    currentElement: HTMLElement,
-    direction: 'next' | 'previous'
-  ) => {
-    const allElements = Array.from(document.querySelectorAll('*')).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement,
-    );
-    const currentIndex = allElements.indexOf(currentElement);
-    if (currentIndex === -1) return null;
+  const findNextElement = useCallback(
+    (currentElement: HTMLElement, direction: 'next' | 'previous') => {
+      const allElements = Array.from(document.querySelectorAll('*')).filter(
+        (el): el is HTMLElement => el instanceof HTMLElement,
+      );
+      const currentIndex = allElements.indexOf(currentElement);
+      if (currentIndex === -1) return null;
 
-    const currentFiber = getNearestFiberFromElement(currentElement);
-    const increment = direction === 'next' ? 1 : -1;
-    let index = currentIndex + increment;
+      const currentFiber = getNearestFiberFromElement(currentElement);
+      const increment = direction === 'next' ? 1 : -1;
+      let index = currentIndex + increment;
 
-    while (index >= 0 && index < allElements.length) {
-      const fiber = getNearestFiberFromElement(allElements[index]);
-      if (fiber && fiber !== currentFiber) {
-        return allElements[index];
+      while (index >= 0 && index < allElements.length) {
+        const fiber = getNearestFiberFromElement(allElements[index]);
+        if (fiber && fiber !== currentFiber) {
+          return allElements[index];
+        }
+        index += increment;
       }
-      index += increment;
-    }
-    return null;
-  }, []);
+      return null;
+    },
+    [],
+  );
 
   const onPreviousFocus = useCallback(() => {
     const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement) return;
+    if (currentState.kind !== 'focused' || !currentState.focusedDomElement)
+      return;
 
-    const prevElement = findNextElement(currentState.focusedDomElement, 'previous');
+    const prevElement = findNextElement(
+      currentState.focusedDomElement,
+      'previous',
+    );
     if (prevElement) {
       Store.inspectState.value = {
         kind: 'focused',
@@ -101,7 +105,8 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
 
   const onNextFocus = useCallback(() => {
     const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement) return;
+    if (currentState.kind !== 'focused' || !currentState.focusedDomElement)
+      return;
 
     const nextElement = findNextElement(currentState.focusedDomElement, 'next');
     if (nextElement) {
@@ -115,10 +120,10 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
 
   const onToggleActive = useCallback(() => {
     if (ReactScanInternals.instrumentation) {
-      ReactScanInternals.instrumentation.isPaused.value = !ReactScanInternals.instrumentation.isPaused.value;
+      ReactScanInternals.instrumentation.isPaused.value =
+        !ReactScanInternals.instrumentation.isPaused.value;
     }
   }, [ReactScanInternals.instrumentation]);
-
 
   const onSoundToggle = useCallback(() => {
     const newSoundState = !ReactScanInternals.options.value.playSound;
@@ -157,55 +162,56 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
           'text-[#999]': ReactScanInternals.instrumentation?.isPaused.value,
         })}
       >
-        <Icon name={`icon-${ReactScanInternals.instrumentation?.isPaused.value ? 'eye-off' : 'eye'}`} />
+        <Icon
+          name={`icon-${ReactScanInternals.instrumentation?.isPaused.value ? 'eye-off' : 'eye'}`}
+        />
       </button>
       <button
         id="react-scan-sound-toggle"
         onClick={onSoundToggle}
-        title={ReactScanInternals.options.value.playSound ? 'Sound On' : 'Sound Off'}
-        className={cn(
-          'flex items-center justify-center px-3',
-          {
-            'text-white': ReactScanInternals.options.value.playSound,
-            'text-[#999]': !ReactScanInternals.options.value.playSound,
-          },
-        )}
+        title={
+          ReactScanInternals.options.value.playSound ? 'Sound On' : 'Sound Off'
+        }
+        className={cn('flex items-center justify-center px-3', {
+          'text-white': ReactScanInternals.options.value.playSound,
+          'text-[#999]': !ReactScanInternals.options.value.playSound,
+        })}
       >
-        <Icon name={`icon-${ReactScanInternals.options.value.playSound ? 'volume-on' : 'volume-off'}`} />
+        <Icon
+          name={`icon-${ReactScanInternals.options.value.playSound ? 'volume-on' : 'volume-off'}`}
+        />
       </button>
 
-      {
-        isInspectFocused && (
-          <div
-            className={cn(
-              'flex items-stretch justify-between',
-              'ml-auto',
-              'border-l-1 border-white/10 text-[#999]',
-              'overflow-hidden',
-            )}
+      {isInspectFocused && (
+        <div
+          className={cn(
+            'flex items-stretch justify-between',
+            'ml-auto',
+            'border-l-1 border-white/10 text-[#999]',
+            'overflow-hidden',
+          )}
+        >
+          <button
+            id="react-scan-previous-focus"
+            title="Previous element"
+            onClick={onPreviousFocus}
+            className="flex items-center justify-center px-3"
           >
-            <button
-              id="react-scan-previous-focus"
-              title="Previous element"
-              onClick={onPreviousFocus}
-              className="flex items-center justify-center px-3"
-            >
-              <Icon name="icon-previous" />
-            </button>
-            <button
-              id="react-scan-next-focus"
-              title="Next element"
-              onClick={onNextFocus}
-              className="flex items-center justify-center px-3"
-            >
-              <Icon name="icon-next" />
-            </button>
-          </div>
-        )
-      }
+            <Icon name="icon-previous" />
+          </button>
+          <button
+            id="react-scan-next-focus"
+            title="Next element"
+            onClick={onNextFocus}
+            className="flex items-center justify-center px-3"
+          >
+            <Icon name="icon-next" />
+          </button>
+        </div>
+      )}
       <div
         className={cn(
-          'flex items-center justify-center whitespace-nowrap py-1.5 px-3 text-sm text-white',
+          'flex items-center justify-center whitespace-nowrap py-1.5 px-2 text-sm text-white',
           {
             'ml-auto': !isInspectFocused,
           },
