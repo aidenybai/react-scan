@@ -15,7 +15,7 @@ export interface SerializedOutlineLabel {
   alpha: number;
   rect: DOMRect;
   color: { r: number; g: number; b: number };
-  reasons: Array<'unstable' | 'commit' | 'unnecessary'>;
+  reasons: number;
   labelText: string;
 }
 
@@ -42,6 +42,12 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
   const MONO_FONT =
     'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
   let ctx: OffscreenCanvasRenderingContext2D | undefined;
+
+  const enum Reason {
+    Commit = 0b001,
+    Unstable = 0b010,
+    Unnecessary = 0b100,
+  }
 
   return async (action: OutlineWorkerAction): Promise<void> => {
     switch (action.type) {
@@ -86,9 +92,8 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
 
           for (let i = 0, len = mergedLabels.length; i < len; i++) {
             const { alpha, rect, color, reasons, labelText } = mergedLabels[i];
-            const conditionalText = reasons.includes('unnecessary')
-              ? `${labelText}⚠️`
-              : labelText;
+            const conditionalText =
+              reasons & Reason.Unnecessary ? `${labelText}⚠️` : labelText;
             ctx.save();
 
             ctx.font = `11px ${MONO_FONT}`;
