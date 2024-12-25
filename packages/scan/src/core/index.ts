@@ -554,11 +554,9 @@ export const start = () => {
         )();
 
         void audioContext.resume();
-        window.removeEventListener('pointerdown', createAudioContextOnInteraction);
       };
 
       window.addEventListener('pointerdown', createAudioContextOnInteraction, { once: true });
-
 
       const container = document.createElement('div');
       container.id = 'react-scan-root';

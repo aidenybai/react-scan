@@ -3,6 +3,7 @@ import { createHTMLTemplate } from '@web-utils/html-template';
 import { Store } from 'src/core';
 import { getOverrideMethods } from '@web-inspect-element/utils';
 import { tryOrElse } from '@web-utils/helpers';
+import { isEqual } from 'src/core/utils';
 import {
   getChangedProps,
   getChangedState,
@@ -694,7 +695,7 @@ export const createPropertyElement = ({
                     inputValue;
               }, value);
 
-              if (Object.is(value, newValue)) {
+              if (isEqual(value, newValue)) {
                 restoreOriginalElement();
                 return;
               }

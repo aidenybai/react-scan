@@ -6,6 +6,7 @@ import {
 } from 'bippy';
 import { type Fiber } from 'react-reconciler';
 import { type ComponentState } from 'react';
+import { isEqual } from 'src/core/utils';
 
 // Types
 interface ContextDependency<T = unknown> {
@@ -175,7 +176,7 @@ export const getChangedState = (fiber: Fiber): Set<string> => {
         const currentValue = currentState[name];
         const lastValue = lastState[name];
 
-        if (!Object.is(currentValue, lastValue)) {
+        if (!isEqual(currentValue, lastValue)) {
           changes.add(name);
           const count = (stateChangeCounts.get(name) ?? 0) + 1;
           stateChangeCounts.set(name, count);
@@ -233,7 +234,7 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
     const currentValue = currentProps[key];
     const previousValue = previousProps[key];
 
-    if (!Object.is(currentValue, previousValue)) {
+    if (!isEqual(currentValue, previousValue)) {
       changes.add(key);
 
       if (typeof currentValue !== 'function') {
@@ -368,7 +369,7 @@ export const getChangedContext = (fiber: Fiber): Set<string> => {
       const currentProviderValue = providerFiber.memoizedProps?.value;
       const alternateValue = providerFiber.alternate.memoizedProps?.value;
 
-      if (!Object.is(currentProviderValue, alternateValue)) {
+      if (!isEqual(currentProviderValue, alternateValue)) {
         changes.add(contextName);
         contextChangeCounts.set(contextName, (contextChangeCounts.get(contextName) ?? 0) + 1);
       }

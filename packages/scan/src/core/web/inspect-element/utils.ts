@@ -5,6 +5,7 @@ import {
 } from 'bippy';
 import { type Fiber } from 'react-reconciler';
 import { ReactScanInternals } from '../../index';
+import { isEqual } from '../../utils';
 
 interface ReactRootContainer {
   _reactRootContainer?: {
@@ -181,7 +182,7 @@ export const getChangedPropsDetailed = (fiber: Fiber): Array<PropChange> => {
     const currentValue = currentProps[key];
     const prevValue = previousProps[key];
 
-    if (!Object.is(currentValue, prevValue)) {
+    if (!isEqual(currentValue, prevValue)) {
       changes.push({
         name: key,
         value: currentValue,
