@@ -75,21 +75,25 @@ export const Widget = () => {
     const container = refContainer.current;
     const containerStyle = container.style;
 
+    let rafId: number | null = null;
     const onTransitionEnd = () => {
       containerStyle.transition = 'none';
-
       updateDimensions();
       container.removeEventListener('transitionend', onTransitionEnd);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
     };
 
     container.addEventListener('transitionend', onTransitionEnd);
-
     containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 
-    requestAnimationFrame(() => {
+    rafId = requestAnimationFrame(() => {
       containerStyle.width = `${newWidth}px`;
       containerStyle.height = `${newHeight}px`;
       containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
+      rafId = null;
     });
 
     const newDimensions = {
@@ -121,123 +125,125 @@ export const Widget = () => {
     updateDimensions();
   }, []);
 
-  const handleMouseDown = useCallback(
-    (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
-      e.preventDefault();
+  const handleDrag = useCallback((e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
 
-      if (!refContainer.current || (e.target as HTMLElement).closest('button'))
-        return;
+    if (!refContainer.current || (e.target as HTMLElement).closest('button'))
+      return;
 
-      const container = refContainer.current;
-      const containerStyle = container.style;
-      const { dimensions } = signalWidget.value;
+    const container = refContainer.current;
+    const containerStyle = container.style;
+    const { dimensions } = signalWidget.value;
 
-      const initialMouseX = e.clientX;
-      const initialMouseY = e.clientY;
+    const initialMouseX = e.clientX;
+    const initialMouseY = e.clientY;
 
-      const initialX = dimensions.position.x;
-      const initialY = dimensions.position.y;
+    const initialX = dimensions.position.x;
+    const initialY = dimensions.position.y;
 
-      let currentX = initialX;
-      let currentY = initialY;
-      let rafId: number | null = null;
-      let hasMoved = false;
-      let lastMouseX = initialMouseX;
-      let lastMouseY = initialMouseY;
+    let currentX = initialX;
+    let currentY = initialY;
+    let rafId: number | null = null;
+    let hasMoved = false;
+    let lastMouseX = initialMouseX;
+    let lastMouseY = initialMouseY;
 
-      const handleMouseMove = (e: globalThis.MouseEvent) => {
-        if (rafId) return;
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
+      if (rafId) return;
 
-        hasMoved = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+      hasMoved = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
 
-        rafId = requestAnimationFrame(() => {
-          const deltaX = lastMouseX - initialMouseX;
-          const deltaY = lastMouseY - initialMouseY;
+      rafId = requestAnimationFrame(() => {
+        const deltaX = lastMouseX - initialMouseX;
+        const deltaY = lastMouseY - initialMouseY;
 
-          currentX = Number(initialX) + deltaX;
-          currentY = Number(initialY) + deltaY;
+        currentX = Number(initialX) + deltaX;
+        currentY = Number(initialY) + deltaY;
 
-          containerStyle.transition = 'none';
-          containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-          rafId = null;
-        });
-      };
+        containerStyle.transition = 'none';
+        containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        rafId = null;
+      });
+    };
 
-      const handleMouseUp = () => {
-        if (!container) return;
-        if (rafId) cancelAnimationFrame(rafId);
+    const handleMouseUp = () => {
+      if (!container) return;
 
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
 
-        if (!hasMoved) return;
+      if (!hasMoved) return;
 
-        const newCorner = getBestCorner(
-          lastMouseX,
-          lastMouseY,
-          initialMouseX,
-          initialMouseY,
-          Store.inspectState.value.kind === 'focused' ? 80 : 40,
-        );
+      const newCorner = getBestCorner(
+        lastMouseX,
+        lastMouseY,
+        initialMouseX,
+        initialMouseY,
+        Store.inspectState.value.kind === 'focused' ? 80 : 40,
+      );
 
-        if (newCorner === signalWidget.value.corner) {
-          containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-          const currentPosition = signalWidget.value.dimensions.position;
-          requestAnimationFrame(() => {
-            containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
-          });
-          return;
-        }
-
-        const snappedPosition = calculatePosition(
-          newCorner,
-          dimensions.width,
-          dimensions.height,
-        );
-
-        if (currentX === initialX && currentY === initialY) return;
-
-        const onTransitionEnd = () => {
-          containerStyle.transition = 'none';
-          updateDimensions();
-
-          container.removeEventListener('transitionend', onTransitionEnd);
-        };
-
-        container.addEventListener('transitionend', onTransitionEnd);
-
+      if (newCorner === signalWidget.value.corner) {
         containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-
+        const currentPosition = signalWidget.value.dimensions.position;
         requestAnimationFrame(() => {
-          containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;
+          containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
         });
+        return;
+      }
 
-        signalWidget.value = {
-          corner: newCorner,
-          dimensions: {
-            isFullWidth: dimensions.isFullWidth,
-            isFullHeight: dimensions.isFullHeight,
-            width: dimensions.width,
-            height: dimensions.height,
-            position: snappedPosition,
-          },
-          lastDimensions: signalWidget.value.lastDimensions,
-        };
+      const snappedPosition = calculatePosition(
+        newCorner,
+        dimensions.width,
+        dimensions.height,
+      );
 
-        saveLocalStorage(LOCALSTORAGE_KEY, {
-          corner: newCorner,
-          dimensions: signalWidget.value.dimensions,
-          lastDimensions: signalWidget.value.lastDimensions,
-        });
+      if (currentX === initialX && currentY === initialY) return;
+
+      const onTransitionEnd = () => {
+        containerStyle.transition = 'none';
+        updateDimensions();
+        container.removeEventListener('transitionend', onTransitionEnd);
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
       };
 
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    },
-    [],
-  );
+      container.addEventListener('transitionend', onTransitionEnd);
+      containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      requestAnimationFrame(() => {
+        containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;
+      });
+
+      signalWidget.value = {
+        corner: newCorner,
+        dimensions: {
+          isFullWidth: dimensions.isFullWidth,
+          isFullHeight: dimensions.isFullHeight,
+          width: dimensions.width,
+          height: dimensions.height,
+          position: snappedPosition,
+        },
+        lastDimensions: signalWidget.value.lastDimensions,
+      };
+
+      saveLocalStorage(LOCALSTORAGE_KEY, {
+        corner: newCorner,
+        dimensions: signalWidget.value.dimensions,
+        lastDimensions: signalWidget.value.lastDimensions,
+      });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove, { passive: true });
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   useEffect(() => {
     if (!refContainer.current || !refFooter.current) return;
@@ -308,19 +314,11 @@ export const Widget = () => {
       },
     );
 
-    let resizeTimeout: number;
-
     const handleWindowResize = debounce(() => {
-      if (resizeTimeout) cancelAnimationFrame(resizeTimeout);
-      resizeTimeout = requestAnimationFrame(() => {
-        const container = refContainer.current;
-        if (!container) return;
-        updateWidgetPosition(true);
-      });
-    }, 32);
+      updateWidgetPosition(true);
+    }, 100);
 
-    window.addEventListener('resize', handleWindowResize);
-
+    window.addEventListener('resize', handleWindowResize, { passive: true });
     updateWidgetPosition(false);
 
     return () => {
@@ -339,7 +337,7 @@ export const Widget = () => {
     <div
       id="react-scan-toolbar"
       ref={refContainer}
-      onMouseDown={handleMouseDown}
+      onMouseDown={handleDrag}
       className={cn(
         'fixed inset-0 rounded-lg shadow-lg',
         'flex flex-col',

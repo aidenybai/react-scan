@@ -1,13 +1,4 @@
 import { signal, type Signal } from '@preact/signals';
-import { ICONS } from '@web-assets/svgs/svgs';
-import {
-  createInspectElementStateMachine,
-  type States,
-} from '@web-inspect-element/inspect-state-machine';
-import { playGeigerClickSound } from '@web-utils/geiger';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { log, logIntro } from '@web-utils/log';
-import { flushOutlines, type Outline } from '@web-utils/outline';
 import {
   detectReactBuildType,
   getDisplayName,
@@ -21,6 +12,15 @@ import {
 } from 'bippy';
 import type * as React from 'react';
 import type { Fiber } from 'react-reconciler';
+import { ICONS } from '@web-assets/svgs/svgs';
+import {
+  createInspectElementStateMachine,
+  type States,
+} from '@web-inspect-element/inspect-state-machine';
+import { playGeigerClickSound } from '@web-utils/geiger';
+import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import { log, logIntro } from '@web-utils/log';
+import { flushOutlines, type Outline } from '@web-utils/outline';
 import {
   aggregateChanges,
   aggregateRender,
@@ -36,6 +36,7 @@ import { createToolbar } from './web/toolbar';
 
 let toolbarContainer: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
+let audioContext: AudioContext | null = null;
 
 export interface Options {
   /**
@@ -179,15 +180,15 @@ interface Monitor {
   branch: string | null;
 }
 
-interface StoreType {
-  wasDetailsOpen: Signal<boolean>;
-  isInIframe: Signal<boolean>;
+export interface StoreType {
   inspectState: Signal<States>;
+  wasDetailsOpen: Signal<boolean>;
+  lastReportTime: Signal<number>;
+  isInIframe: Signal<boolean>;
   monitor: Signal<Monitor | null>;
   fiberRoots: WeakSet<Fiber>;
   reportData: WeakMap<Fiber, RenderData>;
   legacyReportData: Map<string, RenderData>;
-  lastReportTime: Signal<number>;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -365,7 +366,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
       toolbarContainer.remove();
     }
 
-    if (newOptions.showToolbar && toolbarContainer && shadowRoot) {
+    if (newOptions.showToolbar && shadowRoot) {
       toolbarContainer = createToolbar(shadowRoot);
     }
   }
@@ -375,26 +376,33 @@ export const getOptions = () => ReactScanInternals.options;
 
 export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
   const reportFiber = fiber;
-  const { selfTime } = getTimings(fiber.type);
+  const { selfTime } = getTimings(fiber);
   const displayName = getDisplayName(fiber.type);
 
-  Store.lastReportTime.value = Date.now();
+  // Get data from both current and alternate fibers
+  const currentData = Store.reportData.get(reportFiber);
+  const alternateData = fiber.alternate ? Store.reportData.get(fiber.alternate) : null;
 
-  const currentFiberData = Store.reportData.get(reportFiber) ?? {
-    count: 0,
-    time: 0,
-    renders: [],
+  // More efficient null checks and Math.max
+  const existingCount = Math.max(
+    (currentData && currentData.count) || 0,
+    (alternateData && alternateData.count) || 0
+  );
+
+  // Create single shared object for both fibers
+  const fiberData: RenderData = {
+    count: existingCount + renders.length,
+    time: selfTime || 0,
+    renders,
     displayName,
-    type: null,
+    type: getType(fiber.type) || null
   };
 
-  currentFiberData.count =
-    Number(currentFiberData.count || 0) + Number(renders.length);
-  currentFiberData.time =
-    Number(currentFiberData.time || 0) + Number(selfTime || 0);
-  currentFiberData.renders = renders;
-
-  Store.reportData.set(reportFiber, currentFiberData);
+  // Store in both fibers
+  Store.reportData.set(reportFiber, fiberData);
+  if (fiber.alternate) {
+    Store.reportData.set(fiber.alternate, fiberData);
+  }
 
   if (displayName && ReactScanInternals.options.value.report) {
     const existingLegacyData = Store.legacyReportData.get(displayName) ?? {
@@ -405,12 +413,14 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
       type: getType(fiber.type) || fiber.type,
     };
 
-    existingLegacyData.count = existingLegacyData.time =
-      Number(existingLegacyData.time || 0) + Number(selfTime || 0);
+    existingLegacyData.count = existingLegacyData.count + renders.length;
+    existingLegacyData.time = existingLegacyData.time + (selfTime || 0);
     existingLegacyData.renders = renders;
 
     Store.legacyReportData.set(displayName, existingLegacyData);
   }
+
+  Store.lastReportTime.value = Date.now();
 };
 
 export const isValidFiber = (fiber: Fiber) => {
@@ -512,13 +522,6 @@ export const start = () => {
     return;
   }
 
-  const rdtHook = getRDTHook();
-  for (const renderer of rdtHook.renderers.values()) {
-    const buildType = detectReactBuildType(renderer);
-    if (buildType === 'production') {
-      isProduction = true;
-    }
-  }
   const localStorageOptions =
     readLocalStorage<LocalStorageOptions>('react-scan-options');
 
@@ -533,22 +536,29 @@ export const start = () => {
     }
   }
 
-  const audioContext =
-    typeof window !== 'undefined'
-      ? new (
-          window.AudioContext ||
-          // @ts-expect-error -- This is a fallback for Safari
-          window.webkitAudioContext
-        )()
-      : null;
-
   let ctx: ReturnType<typeof initReactScanOverlay> | null = null;
+
   const instrumentation = createInstrumentation('devtools', {
     onActive() {
       const existingRoot = document.querySelector('react-scan-root');
       if (existingRoot) {
         return;
       }
+
+      // Create audio context on first user interaction
+      const createAudioContextOnInteraction = () => {
+        audioContext = new (
+          window.AudioContext ||
+          // @ts-expect-error -- This is a fallback for Safari
+          window.webkitAudioContext
+        )();
+
+        void audioContext.resume();
+        window.removeEventListener('pointerdown', createAudioContextOnInteraction);
+      };
+
+      window.addEventListener('pointerdown', createAudioContextOnInteraction, { once: true });
+
 
       const container = document.createElement('div');
       container.id = 'react-scan-root';
@@ -591,10 +601,6 @@ export const start = () => {
         toolbarContainer = createToolbar(shadowRoot);
       }
 
-      const existingOverlay = document.querySelector('react-scan-overlay');
-      if (existingOverlay) {
-        return;
-      }
       const overlayElement = document.createElement('react-scan-overlay');
 
       document.documentElement.appendChild(overlayElement);
@@ -621,6 +627,7 @@ export const start = () => {
         // don't draw if it's paused or tab is not active
         return;
       }
+
       updateFiberRenderData(fiber, renders);
       if (ReactScanInternals.options.value.log) {
         // this can be expensive given enough re-renders
@@ -647,8 +654,6 @@ export const start = () => {
       for (let i = 0, len = renders.length; i < len; i++) {
         const render = renders[i];
 
-        // - audio context can take up an insane amount of cpu, todo: figure out why
-        // - we may want to take this out of hot path
         if (ReactScanInternals.options.value.playSound && audioContext) {
           const renderTimeThreshold = 10;
           const amplitude = Math.min(
@@ -669,7 +674,8 @@ export const start = () => {
   ReactScanInternals.instrumentation = instrumentation;
 
   // TODO: add an visual error indicator that it didn't load
-  if (!Store.monitor.value) {
+  const isUsedInBrowserExtension = typeof window !== 'undefined';
+  if (!Store.monitor.value && !isUsedInBrowserExtension) {
     setTimeout(() => {
       if (isInstrumentationActive()) return;
       // eslint-disable-next-line no-console

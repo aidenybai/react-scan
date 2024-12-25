@@ -132,7 +132,6 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
   let previousState: typeof Store.inspectState.value.kind;
 
   const repaint = throttle(() => {
-    // todo: make inspect-off state act as 0 perf hit since it does nothing
     const unSub = (() => {
       const inspectState = Store.inspectState.value;
       switch (inspectState.kind) {
@@ -223,6 +222,13 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
 
             drawHoverOverlay(el as HTMLElement, canvas, ctx, 'locked');
 
+            // Get initial props and state
+            const { parentCompositeFiber } = getCompositeComponentFromElement(el as HTMLElement);
+            if (parentCompositeFiber) {
+              const didRender = didFiberRender(parentCompositeFiber);
+              renderPropsAndState(didRender, parentCompositeFiber);
+            }
+
             Store.inspectState.value = {
               kind: 'focused',
               focusedDomElement: el as HTMLElement,
@@ -274,8 +280,18 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
           };
         }
         case 'focused': {
-          unsubscribeAll(); // potential optimization: only unSub if inspectStateKind transitioned
+          unsubscribeAll();
           recursiveRaf(() => {
+            // Check if element still exists in DOM
+            if (!document.contains(inspectState.focusedDomElement)) {
+              cancelAnimationFrame(animationId);
+              clearCanvas();
+              Store.inspectState.value = {
+                kind: 'inspect-off',
+                propContainer: inspectState.propContainer,
+              };
+              return;
+            }
             drawHoverOverlay(
               inspectState.focusedDomElement,
               canvas,
@@ -283,37 +299,14 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
               'locked',
             );
           });
-          if (!document.contains(inspectState.focusedDomElement)) {
-            setTimeout(() => {
-              // potential race condition solution for some websites
-              clearCanvas();
-            }, 500);
 
-            Store.inspectState.value = {
-              kind: 'inspect-off',
-              propContainer: inspectState.propContainer,
-            };
-            return;
-          }
+          // Remove the redundant check since we're already checking in RAF
           drawHoverOverlay(
             inspectState.focusedDomElement,
             canvas,
             ctx,
             'locked',
           );
-
-          const element = inspectState.focusedDomElement;
-
-          const { parentCompositeFiber } =
-            getCompositeComponentFromElement(element);
-
-          if (!parentCompositeFiber) {
-            return;
-          }
-
-          const didRender = didFiberRender(parentCompositeFiber); // because we react to any change, not just this fibers change, we need this check to know if the current fiber re-rendered for this publish
-
-          renderPropsAndState(didRender, parentCompositeFiber);
 
           const keyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -411,10 +404,27 @@ export const createInspectElementStateMachine = (shadow: ShadowRoot) => {
       (unsubscribeFns as any)[Store.inspectState.value.kind] = unSub;
     }
     previousState = Store.inspectState.value.kind;
-  }, 70);
+  }, 0);
 
+  // Simple subscriptions
   Store.inspectState.subscribe(repaint);
-  Store.lastReportTime.subscribe(repaint);
+
+  let rafId: ReturnType<typeof requestAnimationFrame>;
+  Store.lastReportTime.subscribe(() => {
+    cancelAnimationFrame(rafId);
+    const inspectState = Store.inspectState.value;
+    if (inspectState.kind === 'focused') {
+      const element = inspectState.focusedDomElement;
+      const { parentCompositeFiber } = getCompositeComponentFromElement(element);
+
+      if (parentCompositeFiber) {
+        const didRender = didFiberRender(parentCompositeFiber);
+        rafId = requestAnimationFrame(() => {
+          renderPropsAndState(didRender, parentCompositeFiber);
+        });
+      }
+    }
+  });
 
   return () => {
     /**/

@@ -1,8 +1,17 @@
 import { getType } from 'bippy';
-import type { Fiber } from 'react-reconciler';
+import { type Fiber } from 'react-reconciler';
 import type { AggregatedRender } from '@web-utils/outline';
 import { ReactScanInternals } from '..';
 import type { AggregatedChange, Render, RenderChange } from './instrumentation';
+
+// Helper function for Set union
+const unionSets = <T>(setA: Set<T>, setB: Set<T>): Set<T> => {
+  const union = new Set(setA);
+  for (const elem of setB) {
+    union.add(elem);
+  }
+  return union;
+};
 
 export const aggregateChanges = (
   changes: Array<RenderChange>,
@@ -14,11 +23,12 @@ export const aggregateChanges = (
   };
   for (const change of changes) {
     newChange.type.add(change.type);
-    newChange.unstable = newChange.unstable || change.unstable;
+    newChange.unstable = newChange.unstable || (change.unstable ?? false);
   }
 
   return newChange;
 };
+
 export const joinAggregations = ({
   from,
   to,
@@ -26,17 +36,18 @@ export const joinAggregations = ({
   from: AggregatedRender;
   to: AggregatedRender;
 }) => {
-  to.changes.type = to.changes.type.union(from.changes.type);
+  to.changes.type = unionSets(to.changes.type, from.changes.type);
   to.changes.unstable = to.changes.unstable || from.changes.unstable;
   to.aggregatedCount += 1;
   to.didCommit = to.didCommit || from.didCommit;
   to.forget = to.forget || from.forget;
   to.fps = to.fps + from.fps;
-  to.phase = to.phase.union(from.phase);
+  to.phase = unionSets(to.phase, from.phase);
   to.time = (to.time ?? 0) + (from.time ?? 0);
 
   to.unnecessary = to.unnecessary || from.unnecessary;
 };
+
 export const aggregateRender = (
   newRender: Render,
   prevAggregated: AggregatedRender,
@@ -148,6 +159,7 @@ export interface RenderData {
   renders: Array<Render>;
   displayName: string | null;
   type: React.ComponentType<any> | null;
+  changes?: Array<RenderChange>;
 }
 
 export function isEqual(a: unknown, b: unknown): boolean {

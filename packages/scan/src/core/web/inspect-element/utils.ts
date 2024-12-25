@@ -1,30 +1,30 @@
 import {
-  ClassComponentTag,
-  ForwardRefTag,
-  FunctionComponentTag,
-  MemoComponentTag,
-  SimpleMemoComponentTag,
   isCompositeFiber,
   isHostFiber,
   traverseFiber,
 } from 'bippy';
-import type { Fiber } from 'react-reconciler';
-import { ReactScanInternals, Store } from '../../index';
+import { type Fiber } from 'react-reconciler';
+import { ReactScanInternals } from '../../index';
 
-interface OverrideMethods {
-  overrideProps:
-    | ((fiber: Fiber, path: Array<string>, value: any) => void)
-    | null;
-  overrideHookState:
-    | ((fiber: Fiber, id: string, path: Array<any>, value: any) => void)
-    | null;
+interface ReactRootContainer {
+  _reactRootContainer?: {
+    _internalRoot?: {
+      current?: {
+        child: Fiber;
+      };
+    };
+  };
+}
+
+interface ReactInternalProps {
+  [key: string]: Fiber;
 }
 
 export const getFiberFromElement = (element: Element): Fiber | null => {
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
     const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (!renderers) return null;
-    for (const [_, renderer] of Array.from(renderers)) {
+    for (const [, renderer] of Array.from(renderers)) {
       try {
         // @ts-expect-error - renderer.findFiberByHostInstance is not typed
         const fiber = renderer.findFiberByHostInstance(element);
@@ -36,8 +36,9 @@ export const getFiberFromElement = (element: Element): Fiber | null => {
   }
 
   if ('_reactRootContainer' in element) {
-    // @ts-expect-error - Property '_reactRootContainer' does not exist on type 'HTMLElement'
-    return element._reactRootContainer?._internalRoot?.current?.child;
+    const elementWithRoot = element as unknown as ReactRootContainer;
+    const rootContainer = elementWithRoot._reactRootContainer;
+    return rootContainer?._internalRoot?.current?.child ?? null;
   }
 
   for (const key in element) {
@@ -45,7 +46,8 @@ export const getFiberFromElement = (element: Element): Fiber | null => {
       key.startsWith('__reactInternalInstance$') ||
       key.startsWith('__reactFiber')
     ) {
-      return element[key as keyof Element] as unknown as Fiber;
+      const elementWithFiber = element as unknown as ReactInternalProps;
+      return elementWithFiber[key];
     }
   }
   return null;
@@ -77,19 +79,18 @@ export const getFirstStateNode = (fiber: Fiber): Element | null => {
   return null;
 };
 
-export const getNearestFiberFromElement = (element: Element | null) => {
+export const getNearestFiberFromElement = (element: Element | null): Fiber | null => {
   if (!element) return null;
-  const target: Element | null = element;
-  const originalFiber = getFiberFromElement(target);
-  if (!originalFiber) {
-    return null;
-  }
-  const res = getParentCompositeFiber(originalFiber);
-  if (!res) {
-    return null;
-  }
 
-  return res[0];
+  try {
+    const fiber = getFiberFromElement(element);
+    if (!fiber) return null;
+
+    const res = getParentCompositeFiber(fiber);
+    return res ? res[0] : null;
+  } catch (error) {
+    return null;
+  }
 };
 
 export const getParentCompositeFiber = (fiber: Fiber) => {
@@ -105,68 +106,6 @@ export const getParentCompositeFiber = (fiber: Fiber) => {
     }
     curr = curr.return;
   }
-};
-
-export const getChangedProps = (fiber: Fiber): Set<string> => {
-  const changes = new Set<string>();
-  const currentProps = fiber.memoizedProps || {};
-  const previousProps = fiber.alternate?.memoizedProps || {};
-
-  // TODO(Alexis): no union of keys check?
-  for (const key in currentProps) {
-    if (currentProps[key] !== previousProps[key] && key !== 'children') {
-      changes.add(key);
-    }
-  }
-
-  return changes;
-};
-
-export const getStateFromFiber = (fiber: Fiber): any => {
-  if (!fiber) return {};
-  // only funtional components have memo tags,
-  if (
-    fiber.tag === FunctionComponentTag ||
-    fiber.tag === ForwardRefTag ||
-    fiber.tag === SimpleMemoComponentTag ||
-    fiber.tag === MemoComponentTag
-  ) {
-    // Functional component, need to traverse hooks
-    let memoizedState = fiber.memoizedState;
-    const state: any = {};
-    let index = 0;
-
-    while (memoizedState) {
-      if (memoizedState.queue && memoizedState.memoizedState !== undefined) {
-        state[index] = memoizedState.memoizedState;
-      }
-      memoizedState = memoizedState.next;
-      index++;
-    }
-
-    return state;
-  } else if (fiber.tag === ClassComponentTag) {
-    // Class component, memoizedState is the component state
-    return fiber.memoizedState || {};
-  }
-  return {};
-};
-
-export const getChangedState = (fiber: Fiber): Set<string> => {
-  const changes = new Set<string>();
-
-  const currentState = getStateFromFiber(fiber);
-  const previousState = fiber.alternate
-    ? getStateFromFiber(fiber.alternate)
-    : {};
-
-  for (const key in currentState) {
-    if (currentState[key] !== previousState[key]) {
-      changes.add(key);
-    }
-  }
-
-  return changes;
 };
 
 const isFiberInTree = (fiber: Fiber, root: Fiber): boolean => {
@@ -225,74 +164,39 @@ export const getCompositeComponentFromElement = (element: Element) => {
   };
 };
 
-export const getAllFiberContexts = (fiber: Fiber): Map<any, unknown> => {
-  const contexts = new Map<any, unknown>();
+interface PropChange {
+  name: string;
+  value: unknown;
+  prevValue?: unknown;
+}
 
-  if (!fiber) return contexts;
+export const getChangedPropsDetailed = (fiber: Fiber): Array<PropChange> => {
+  const currentProps = fiber.memoizedProps ?? {};
+  const previousProps = fiber.alternate?.memoizedProps ?? {};
+  const changes: Array<PropChange> = [];
 
-  let currentFiber: Fiber | null = fiber;
+  for (const key in currentProps) {
+    if (key === 'children') continue;
 
-  while (currentFiber) {
-    const dependencies = currentFiber.dependencies;
-    if (dependencies?.firstContext) {
-      let contextItem: any = dependencies.firstContext;
+    const currentValue = currentProps[key];
+    const prevValue = previousProps[key];
 
-      while (contextItem) {
-        const contextType = contextItem.context;
-        // The actual value is stored in _currentValue or _currentValue2 depending on the thread
-        const contextValue = contextType._currentValue;
-
-        if (!contexts.has(contextType)) {
-          contexts.set(contextType, contextValue);
-        }
-
-        contextItem = contextItem.next;
-      }
+    if (!Object.is(currentValue, prevValue)) {
+      changes.push({
+        name: key,
+        value: currentValue,
+        prevValue
+      });
     }
-
-    // Check for context providers
-    if (currentFiber.type?._context) {
-      const providerContext = currentFiber.type._context;
-      const providerValue = currentFiber.memoizedProps?.value;
-
-      if (!contexts.has(providerContext)) {
-        contexts.set(providerContext, providerValue);
-      }
-    }
-
-    currentFiber = currentFiber.return;
   }
 
-  return contexts;
+  return changes;
 };
 
-export const hasValidParent = () => {
-  if (Store.inspectState.value.kind !== 'focused') {
-    return false;
-  }
-
-  const { focusedDomElement } = Store.inspectState.value;
-  if (!focusedDomElement) {
-    return false;
-  }
-
-  let hasValidParent = false;
-  if (focusedDomElement.parentElement) {
-    const currentFiber = getNearestFiberFromElement(focusedDomElement);
-    let nextParent: typeof focusedDomElement.parentElement | null =
-      focusedDomElement.parentElement;
-
-    while (nextParent) {
-      const parentFiber = getNearestFiberFromElement(nextParent);
-      if (!parentFiber || parentFiber !== currentFiber) {
-        hasValidParent = true;
-        break;
-      }
-      nextParent = nextParent.parentElement;
-    }
-  }
-  return hasValidParent;
-};
+interface OverrideMethods {
+  overrideProps: ((fiber: Fiber, path: Array<string>, value: unknown) => void) | null;
+  overrideHookState: ((fiber: Fiber, id: string, path: Array<unknown>, value: unknown) => void) | null;
+}
 
 export const getOverrideMethods = (): OverrideMethods => {
   let overrideProps = null;
@@ -302,28 +206,13 @@ export const getOverrideMethods = (): OverrideMethods => {
     if (renderers) {
       for (const [_, renderer] of Array.from(renderers)) {
         try {
-          if (overrideProps) {
-            const prevOverrideProps = overrideProps;
-            overrideProps = (fiber: Fiber, key: string, value: any) => {
-              prevOverrideProps(fiber, key, value);
-              // @ts-expect-error - renderer.overrideProps is not typed
-              renderer.overrideProps(fiber, key, value);
-            };
-          } else {
-            // @ts-expect-error - renderer.overrideProps is not typed
-            overrideProps = renderer.overrideProps;
-          }
-
-          if (overrideHookState) {
-            const prevOverrideHookState = overrideHookState;
-            overrideHookState = (fiber: Fiber, key: string, value: any) => {
-              prevOverrideHookState(fiber, key, value);
-              // @ts-expect-error - renderer.overrideHookState is not typed
-              renderer.overrideHookState(fiber, key, value);
-            };
-          } else {
-            // @ts-expect-error - renderer.overrideHookState is not typed
-            overrideHookState = renderer.overrideHookState;
+          // @ts-expect-error - renderer methods are not typed
+          if (renderer.overrideProps && renderer.overrideHookState) {
+            // @ts-expect-error - renderer methods are not typed
+            overrideProps = renderer.overrideProps.bind(renderer);
+            // @ts-expect-error - renderer methods are not typed
+            overrideHookState = renderer.overrideHookState.bind(renderer);
+            break;
           }
         } catch (e) {
           /**/

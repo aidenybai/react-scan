@@ -83,11 +83,11 @@ export const createElement = (htmlString: string): HTMLElement => {
   return template.content.firstElementChild as HTMLElement;
 };
 
-export const tryOrElse = <T, E>(cb: () => T, val: E) => {
+export const tryOrElse = <T>(fn: () => T, defaultValue: T): T => {
   try {
-    return cb();
-  } catch (e) {
-    return val;
+    return fn();
+  } catch {
+    return defaultValue;
   }
 };
 
