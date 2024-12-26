@@ -339,6 +339,18 @@ export const getCurrentContext = (fiber: Fiber) => {
   return contextObj;
 };
 
+const getContextDisplayName = (contextType: unknown): string => {
+  if (typeof contextType !== 'object' || contextType === null) {
+    return String(contextType);
+  }
+
+  return (contextType as any)?.displayName ??
+    (contextType as any)?.Provider?.displayName ??
+    (contextType as any)?.Consumer?.displayName ??
+    (contextType as any)?.type?.name?.replace('Provider', '') ??
+    'Unnamed';
+};
+
 export const getChangedContext = (fiber: Fiber): Set<string> => {
   const changes = new Set<string>();
   if (!fiber.alternate) return changes;
@@ -346,13 +358,7 @@ export const getChangedContext = (fiber: Fiber): Set<string> => {
   const currentContexts = getAllFiberContexts(fiber);
 
   currentContexts.forEach((_currentValue, contextType) => {
-    const contextName = (typeof contextType === 'object' && contextType !== null)
-      ? (contextType as any)?.displayName ??
-      (contextType as any)?.Provider?.displayName ??
-      (contextType as any)?.Consumer?.displayName ??
-      (contextType as any)?.type?.name?.replace('Provider', '') ??
-      'Unnamed'
-      : contextType;
+    const contextName = getContextDisplayName(contextType);
 
     let searchFiber: Fiber | null = fiber;
     let providerFiber: Fiber | null = null;
