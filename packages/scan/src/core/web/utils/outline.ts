@@ -248,7 +248,7 @@ export const fadeOutOutline = () => {
     }
 
     drawingQueue.push({
-      rect: invariant_activeOutline.current,
+      rect: invariantActiveOutline.current,
       color,
       alpha,
       fillAlpha,
