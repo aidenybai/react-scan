@@ -20,8 +20,8 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
+*.sln
 
 # Config files
 .webextrc

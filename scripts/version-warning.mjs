@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -26,6 +26,7 @@ export const log = (renders: Array<Render>) => {
           unstable: render.changes.some((change) => change.unstable),
         },
         phase: new Set([render.phase]),
+        computedCurrent: null,
       },
     ]);
     if (!labelText) continue;

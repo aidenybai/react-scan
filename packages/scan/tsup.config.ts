@@ -61,8 +61,8 @@ void (async () => {
   }
 
   const createFn = (name: string) =>
-    `let ${name}=()=>{console.error('Do not use ${name} directly in a Server Component module. It should only be used in a Client Component.');return undefined}`;
-  const createVar = (name: string) => `let ${name}=undefined`;
+    `export let ${name}=()=>{console.error('Do not use ${name} directly in a Server Component module. It should only be used in a Client Component.');return undefined}`;
+  const createVar = (name: string) => `export let ${name}=undefined`;
 
   let script = '';
   for (const name of names) {

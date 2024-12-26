@@ -83,7 +83,7 @@ button {
   @apply select-none;
   @apply cursor-move;
   @apply opacity-0;
-  @apply z-[999999999];
+  @apply z-[2147483678];
   @apply animate-fade-in animation-duration-300 animation-delay-300;
   @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
 }

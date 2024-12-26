@@ -1,6 +1,6 @@
 import { throttle } from '@web-utils/helpers';
-import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
 import { LRUMap } from '@web-utils/lru';
+import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
 import { type Fiber } from 'react-reconciler';
 import { type AggregatedChange } from 'src/core/instrumentation';
 import { ReactScanInternals, type OutlineKey } from '../../index';
@@ -32,10 +32,7 @@ export const getOutlineKey = (rect: DOMRect): string => {
   return `${rect.top}-${rect.left}-${rect.width}-${rect.height}`;
 };
 
-let currentFrameId = 0;
-
 function incrementFrameId() {
-  currentFrameId++;
   requestAnimationFrame(incrementFrameId);
 }
 
@@ -60,6 +57,12 @@ export const recalcOutlines = throttle(async () => {
   }
 }, DEFAULT_THROTTLE_TIME);
 
+// using intersection observer lets us get the boundingClientRect asynchronously without forcing a reflow.
+// The browser can internally optimize the bounding rect query, so this will be faster then meticulously
+// Batching getBoundingClientRect at the right time in the browser rendering pipeline.
+// batchGetBoundingRects function can return in sub <10ms under good conditions, but may take much longer under poor conditions.
+// We interpolate the outline rects to avoid the appearance of jitter
+// reference: https://w3c.github.io/IntersectionObserver/
 export const batchGetBoundingRects = (
   elements: Array<HTMLElement>,
 ): Promise<Map<HTMLElement, DOMRect>> => {
@@ -132,12 +135,12 @@ export const fadeOutOutline = () => {
 
   for (const [key, activeOutline] of activeOutlines) {
     // invariant: active outline has "active" info non nullable at this point of the program b/c they must be activated
-    const invariant_activeOutline = activeOutline as {
+    const invariantActiveOutline = activeOutline as {
       [K in keyof Outline]: NonNullable<Outline[K]>;
     };
     let frame;
 
-    for (const aggregatedRender of invariant_activeOutline.groupedAggregatedRender.values()) {
+    for (const aggregatedRender of invariantActiveOutline.groupedAggregatedRender.values()) {
       aggregatedRender.frame! += 1;
 
       frame = frame
@@ -154,12 +157,12 @@ export const fadeOutOutline = () => {
 
     const THRESHOLD_FPS = 60;
     const avgFps =
-      invariant_activeOutline.aggregatedRender.fps /
-      invariant_activeOutline.aggregatedRender.aggregatedCount;
+      invariantActiveOutline.aggregatedRender.fps /
+      invariantActiveOutline.aggregatedRender.aggregatedCount;
     const averageScore = Math.max(
       (THRESHOLD_FPS - Math.min(avgFps, THRESHOLD_FPS)) / THRESHOLD_FPS,
-      invariant_activeOutline.aggregatedRender.time ??
-        0 / invariant_activeOutline.aggregatedRender.aggregatedCount / 16,
+      invariantActiveOutline.aggregatedRender.time ??
+        0 / invariantActiveOutline.aggregatedRender.aggregatedCount / 16,
     );
 
     const t = Math.min(averageScore, 1);
@@ -177,7 +180,7 @@ export const fadeOutOutline = () => {
     let unstable = false;
     let isUnnecessary = false;
 
-    for (const render of invariant_activeOutline.groupedAggregatedRender.values()) {
+    for (const render of invariantActiveOutline.groupedAggregatedRender.values()) {
       if (render.unnecessary) {
         isUnnecessary = true;
       }
@@ -200,22 +203,22 @@ export const fadeOutOutline = () => {
     }
 
     const alphaScalar = 0.8;
-    invariant_activeOutline.alpha =
-      alphaScalar * (1 - frame / invariant_activeOutline.totalFrames);
+    invariantActiveOutline.alpha =
+      alphaScalar * (1 - frame / invariantActiveOutline.totalFrames);
 
-    const alpha = invariant_activeOutline.alpha;
+    const alpha = invariantActiveOutline.alpha;
     const fillAlpha = alpha * 0.1;
-    const target = invariant_activeOutline.target;
+    const target = invariantActiveOutline.target;
 
     const shouldSkip = shouldSkipInterpolation(target);
     if (shouldSkip) {
-      invariant_activeOutline.current = target;
-      invariant_activeOutline.groupedAggregatedRender.forEach((v) => {
+      invariantActiveOutline.current = target;
+      invariantActiveOutline.groupedAggregatedRender.forEach((v) => {
         v.computedCurrent = target;
       });
     } else {
-      if (!invariant_activeOutline.current) {
-        invariant_activeOutline.current = new DOMRect(
+      if (!invariantActiveOutline.current) {
+        invariantActiveOutline.current = new DOMRect(
           target.x,
           target.y,
           target.width,
@@ -224,7 +227,7 @@ export const fadeOutOutline = () => {
       }
 
       const INTERPOLATION_SPEED = 0.2;
-      const current = invariant_activeOutline.current;
+      const current = invariantActiveOutline.current;
 
       const lerp = (start: number, end: number) => {
         return start + (end - start) * INTERPOLATION_SPEED;
@@ -237,9 +240,9 @@ export const fadeOutOutline = () => {
         lerp(current.height, target.height),
       );
 
-      invariant_activeOutline.current = computedCurrent;
+      invariantActiveOutline.current = computedCurrent;
 
-      invariant_activeOutline.groupedAggregatedRender.forEach((v) => {
+      invariantActiveOutline.groupedAggregatedRender.forEach((v) => {
         v.computedCurrent = computedCurrent;
       });
     }
@@ -252,7 +255,7 @@ export const fadeOutOutline = () => {
     });
 
     const labelText = getLabelText(
-      Array.from(invariant_activeOutline.groupedAggregatedRender.values()),
+      Array.from(invariantActiveOutline.groupedAggregatedRender.values()),
     );
 
     if (
@@ -267,21 +270,21 @@ export const fadeOutOutline = () => {
         reasons,
         labelText,
         textWidth: measured.width,
-        activeOutline: invariant_activeOutline,
+        activeOutline: invariantActiveOutline,
       });
     }
 
-    const totalFrames = invariant_activeOutline.totalFrames;
+    const totalFrames = invariantActiveOutline.totalFrames;
     for (const [
       fiber,
       aggregatedRender,
-    ] of invariant_activeOutline.groupedAggregatedRender) {
+    ] of invariantActiveOutline.groupedAggregatedRender) {
       if (aggregatedRender.frame! >= totalFrames) {
-        invariant_activeOutline.groupedAggregatedRender.delete(fiber);
+        invariantActiveOutline.groupedAggregatedRender.delete(fiber);
       }
     }
 
-    if (invariant_activeOutline.groupedAggregatedRender.size === 0) {
+    if (invariantActiveOutline.groupedAggregatedRender.size === 0) {
       activeOutlines.delete(key);
     }
   }
@@ -321,9 +324,9 @@ export interface Outline {
   /* Active Info- we re-use the Outline object to avoid over-allocing objects, which is why we have a singular aggregatedRender and collection of it (groupedAggregatedRender) */
   alpha: number | null;
   totalFrames: number | null;
-  /* 
-    - Invariant: This scales at a rate of O(unique components rendered at the same (x,y) coordinates) 
-    - renders with the same x/y position but different fibers will be a different fiber -> aggregated render entry. 
+  /*
+    - Invariant: This scales at a rate of O(unique components rendered at the same (x,y) coordinates)
+    - renders with the same x/y position but different fibers will be a different fiber -> aggregated render entry.
   */
   groupedAggregatedRender: Map<Fiber, AggregatedRender> | null;
 
@@ -419,7 +422,7 @@ const activateOutlines = async () => {
 
   for (const [fiber, outline] of scheduledOutlines) {
     const existingAggregatedRender =
-      activeFibers.get(fiber) ||
+      activeFibers.get(fiber) ??
       (fiber.alternate && activeFibers.get(fiber.alternate));
     if (existingAggregatedRender) {
       joinAggregations({
@@ -450,7 +453,7 @@ const activateOutlines = async () => {
     }
 
     const prevAggregatedRender =
-      activeFibers.get(fiber) ||
+      activeFibers.get(fiber) ??
       (fiber.alternate && activeFibers.get(fiber.alternate));
 
     const isOffScreen = getIsOffscreen(rect);
@@ -486,7 +489,9 @@ const activateOutlines = async () => {
               value.frame = 45; // todo: make this max frame, not hardcoded
 
               // for interpolation reference equality
-              existingOutline!.current = value.computedCurrent!;
+              if (existingOutline) {
+                existingOutline.current = value.computedCurrent!;
+              }
             }
           },
         );

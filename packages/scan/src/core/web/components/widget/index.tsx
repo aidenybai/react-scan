@@ -1,3 +1,5 @@
+import { type JSX } from 'preact';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { getCompositeComponentFromElement } from '@web-inspect-element/utils';
 import {
   cn,
@@ -5,11 +7,10 @@ import {
   saveLocalStorage,
   toggleMultipleClasses,
 } from '@web-utils/helpers';
-import { type JSX } from 'preact';
-import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { Store } from 'src/core';
 import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../../constants';
 import {
+  defaultWidgetConfig,
   signalRefContainer,
   signalWidget,
   updateDimensions,
@@ -326,6 +327,11 @@ export const Widget = () => {
       window.removeEventListener('resize', handleWindowResize);
       unsubscribeStoreInspectState();
       unsubscribeSignalWidget();
+
+      saveLocalStorage(LOCALSTORAGE_KEY, {
+        ...defaultWidgetConfig,
+        corner: signalWidget.value.corner,
+      });
     };
   }, []);
 

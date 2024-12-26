@@ -1,6 +1,6 @@
-import type { AggregatedRender } from '@web-utils/outline';
 import { getType } from 'bippy';
 import type { Fiber } from 'react-reconciler';
+import type { AggregatedRender } from '@web-utils/outline';
 import { ReactScanInternals } from '..';
 import type { AggregatedChange, Render, RenderChange } from './instrumentation';
 
@@ -96,7 +96,7 @@ export const getLabelText = (
     cumulativeTime += totalTime;
 
     if (componentGroup.length > 4) {
-      text += '...';
+      text += '…';
     }
 
     if (count > 1) {

@@ -1,10 +1,5 @@
 import { Store } from '../..';
-import {
-  FLOAT_MAX_LEN,
-  GZIP_MIN_LEN,
-  GZIP_MAX_LEN,
-  MAX_PENDING_REQUESTS,
-} from './constants';
+import { GZIP_MIN_LEN, GZIP_MAX_LEN, MAX_PENDING_REQUESTS } from './constants';
 import { getSession } from './utils';
 import type {
   Interaction,
@@ -14,6 +9,9 @@ import type {
 } from './types';
 
 const INTERACTION_TIME_TILL_COMPLETED = 4000;
+
+const truncate = (value: number, decimalPlaces = 4) =>
+  Number(value.toFixed(decimalPlaces));
 
 export const flush = async (): Promise<void> => {
   const monitor = Store.monitor.value;
@@ -34,10 +32,11 @@ export const flush = async (): Promise<void> => {
   const interactions = monitor.interactions;
   for (let i = 0; i < interactions.length; i++) {
     const interaction = interactions[i];
-    if (
-      now - interaction.performanceEntry.startTime <=
-      INTERACTION_TIME_TILL_COMPLETED
-    ) {
+    const timeSinceStart = now - interaction.performanceEntry.startTime;
+    // these interactions were retried enough and should be discarded to avoid mem leak
+    if (timeSinceStart > 30000) {
+      continue;
+    } else if (timeSinceStart <= INTERACTION_TIME_TILL_COMPLETED) {
       pendingInteractions.push(interaction);
     } else {
       completedInteractions.push(interaction);
@@ -73,7 +72,6 @@ export const flush = async (): Promise<void> => {
       processingStart,
       referrer,
       startTime,
-      target,
       timeOrigin,
       timeSinceTabInactive,
       timestamp,
@@ -84,7 +82,7 @@ export const flush = async (): Promise<void> => {
       id: i,
       path: interaction.componentPath,
       name: interaction.componentName,
-      time: duration,
+      time: truncate(duration),
       timestamp,
       type,
       // fixme: we can aggregate around url|route|commit|branch better to compress payload
@@ -96,19 +94,18 @@ export const flush = async (): Promise<void> => {
       meta: {
         performanceEntry: {
           id,
-          inputDelay,
-          latency,
-          presentationDelay,
-          processingDuration,
+          inputDelay: truncate(inputDelay),
+          latency: truncate(latency),
+          presentationDelay: truncate(presentationDelay),
+          processingDuration: truncate(processingDuration),
           processingEnd,
           processingStart,
           referrer,
           startTime,
-          target,
           timeOrigin,
           timeSinceTabInactive,
           visibilityState,
-          duration: duration,
+          duration: truncate(duration),
           entries: entries.map((entry) => {
             const {
               duration,
@@ -120,7 +117,7 @@ export const flush = async (): Promise<void> => {
               startTime,
             } = entry;
             return {
-              duration,
+              duration: truncate(duration),
               entryType,
               interactionId,
               name,
@@ -141,7 +138,14 @@ export const flush = async (): Promise<void> => {
         instances: component.fibers.size,
         interactionId: i,
         renders: component.renders,
-        totalTime: component.totalTime,
+        selfTime:
+          typeof component.selfTime === 'number'
+            ? truncate(component.selfTime)
+            : component.selfTime,
+        totalTime:
+          typeof component.totalTime === 'number'
+            ? truncate(component.totalTime)
+            : component.totalTime,
       });
     }
   }
@@ -198,29 +202,7 @@ export const transport = async (
   payload: IngestRequest,
 ): Promise<{ ok: boolean }> => {
   const fail = { ok: false };
-  /**
-   * JSON.stringify replacer function is ~60-80% slower than JSON.stringify
-   *
-   * Perflink: https://dub.sh/json-replacer-fn
-   */
-  const json = JSON.stringify(payload, (key, value) => {
-    // Truncate floats to 5 decimal places (long floats cause error in ClickHouse)
-    if (
-      typeof value === 'number' &&
-      parseInt(value as any) !== value /* float check */
-    ) {
-      value = ~~(value * FLOAT_MAX_LEN) / FLOAT_MAX_LEN;
-    }
-    // Remove falsy (e.g. undefined, null, []), and keys starting with "_"
-    // to reduce the size of the payload
-    if (
-      // eslint-disable-next-line eqeqeq
-      (value != null && value !== false) ||
-      (Array.isArray(value) && value.length)
-    ) {
-      return value;
-    }
-  });
+  const json = JSON.stringify(payload);
   // gzip may not be worth it for small payloads,
   // only use it if the payload is large enough
   const shouldCompress = json.length > GZIP_MIN_LEN;

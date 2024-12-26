@@ -23,17 +23,8 @@ html.freeze #react-scan-toast {
   animation-duration: 300ms;
   opacity: 0;
   pointer-events: none;
+  transition: opacity 500ms;
   z-index: 2147483650;
-}
-
-#react-scan-backdrop.animate-fade-in {
-  opacity: 0;
-  animation: fadeIn 300ms ease-in forwards;
-  pointer-events: bounding-box;
-}
-
-#react-scan-backdrop.animate-fade-out {
-  animation: fadeOut 300ms ease-out forwards;
 }
 
 #react-scan-toast {
@@ -46,8 +37,7 @@ html.freeze #react-scan-toast {
   max-width: 480px;
   color: #fff;
   font-size: 12px;
-  font-family: Menlo, Consolas, Monaco, 'Liberation Mono', 'Lucida Console',
-    monospace;
+  font-family: Menlo, Consolas, Monaco, 'Liberation Mono', 'Lucida Console', monospace;
   line-height: 1.5;
   background: rgba(0, 0, 0, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -55,8 +45,6 @@ html.freeze #react-scan-toast {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transform: translate(-50%, -50%);
   transition: opacity 300ms ease-in-out;
-  opacity: 0;
-  pointer-events: none;
   z-index: 2147483651;
 }
 
@@ -97,32 +85,4 @@ html.freeze #react-scan-toast {
 
 #react-scan-toast-close-button:hover {
   background-color: rgba(255, 255, 255, 0.15);
-}
-
-html.freeze #react-scan-toast {
-  animation: fadeIn 300ms ease-in forwards;
-}
-
-#react-scan-toast.hide {
-  animation: fadeOut 300ms ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 0;
-  }
 }

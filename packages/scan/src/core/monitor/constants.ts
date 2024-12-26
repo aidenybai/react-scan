@@ -54,4 +54,3 @@ export let SESSION_EXPIRE_TIMEOUT = 300000; // 5 minutes
 export let GZIP_MIN_LEN = 1000;
 export let GZIP_MAX_LEN = 60000; // 1 minute
 export let MAX_PENDING_REQUESTS = 15;
-export let FLOAT_MAX_LEN = 1000; // 3 decimal places (for each zero)

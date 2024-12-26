@@ -1,36 +1,25 @@
 import { render } from 'preact';
 import { Widget } from './components/widget';
 
-const defaultWidth = 360;
+export const createToolbar = (root: ShadowRoot): HTMLElement => {
+  const container = document.createElement('div');
+  root.appendChild(container);
 
-export const restoreSizeFromLocalStorage = (): number => {
-  const width = localStorage.getItem('react-scan-toolbar-width');
-  return width ? parseInt(width, 10) : defaultWidth;
+  render(<Widget />, container);
+
+  const originalRemove = container.remove.bind(container);
+
+  container.remove = function () {
+    if (container.hasChildNodes()) {
+      // Double render(null) is needed to fully unmount Preact components.
+      // The first call initiates unmounting, while the second ensures
+      // cleanup of internal VNode references and event listeners.
+      render(null, container);
+      render(null, container);
+    }
+
+    originalRemove();
+  };
+
+  return container;
 };
-
-export function createToolbar(shadow: ShadowRoot): HTMLElement | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const ToolbarWrapper = () => (
-    <>
-      {/* <Toolbar
-        inspectState={Store.inspectState}
-        isPaused={ReactScanInternals.instrumentation?.isPaused!}
-        isSoundOn={isSoundOnSignal}
-        x={toolbarX}
-        y={toolbarY}
-        isDragging={isDragging}
-        isResizing={isResizing}
-      /> */}
-      <Widget />
-    </>
-  );
-
-  const root = document.createElement('div');
-  shadow.appendChild(root);
-  render(<ToolbarWrapper />, root);
-
-  return root;
-}
