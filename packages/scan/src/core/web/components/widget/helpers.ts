@@ -133,55 +133,6 @@ export const calculatePosition = (corner: Corner, width: number, height: number)
   return { x, y };
 };
 
-export const getPositionClasses = (position: ResizeHandleProps['position']): string => {
-  switch (position) {
-    case 'top': return 'top-0 left-0 right-0 -translate-y-3/4';
-    case 'bottom': return 'right-0 bottom-0 left-0 translate-y-3/4';
-    case 'left': return 'top-0 bottom-0 left-0 -translate-x-3/4';
-    case 'right': return 'top-0 right-0 bottom-0 translate-x-3/4';
-    case 'top-left': return 'top-0 left-0 -translate-x-3/4 -translate-y-3/4';
-    case 'top-right': return 'top-0 right-0 translate-x-3/4 -translate-y-3/4';
-    case 'bottom-left': return 'bottom-0 left-0 -translate-x-3/4 translate-y-3/4';
-    case 'bottom-right': return 'bottom-0 right-0 translate-x-3/4 translate-y-3/4';
-    default: return '';
-  }
-};
-
-export const getInteractionClasses = (
-  position: ResizeHandleProps['position'],
-  isLine: boolean,
-): Array<string> => {
-  // Common classes for both line and corner handles
-  const commonClasses = [
-    'transition-[transform,opacity]',
-    'duration-300',
-    'delay-500',
-    'group-hover:delay-0',
-    'group-active:delay-0',
-  ];
-
-  // Line handles
-  if (isLine) {
-    return [
-      ...commonClasses,
-      // Size classes
-      position === 'left' || position === 'right' ? 'w-6' : 'w-full',
-      position === 'left' || position === 'right' ? 'h-full' : 'h-6',
-      // Cursor classes
-      position === 'left' || position === 'right' ? 'cursor-ew-resize' : 'cursor-ns-resize'
-    ];
-  }
-
-  // Corner handles only
-  return [
-    ...commonClasses,
-    'w-6',
-    'h-6',
-    position === 'top-left' || position === 'bottom-right' ? 'cursor-nwse-resize' : 'cursor-nesw-resize',
-    `rounded-${position.split('-').join('')}`
-  ];
-};
-
 const positionMatchesCorner = (position: ResizeHandleProps['position'], corner: Corner): boolean => {
   const [vertical, horizontal] = corner.split('-');
   return position !== vertical && position !== horizontal;
@@ -189,7 +140,6 @@ const positionMatchesCorner = (position: ResizeHandleProps['position'], corner: 
 
 export const getHandleVisibility = (
   position: ResizeHandleProps['position'],
-  isLine: boolean,
   corner: Corner,
   isFullWidth: boolean,
   isFullHeight: boolean
@@ -200,26 +150,17 @@ export const getHandleVisibility = (
 
   // Normal state
   if (!isFullWidth && !isFullHeight) {
-    if (isLine) {
-      return positionMatchesCorner(position, corner);
-    }
-    return position === getOppositeCorner(corner, corner, true);
+    return positionMatchesCorner(position, corner);
   }
 
   // Full width state
   if (isFullWidth) {
-    if (isLine) {
-      return position !== corner.split('-')[0];
-    }
-    return !position.startsWith(corner.split('-')[0]);
+    return position !== corner.split('-')[0];
   }
 
   // Full height state
   if (isFullHeight) {
-    if (isLine) {
-      return position !== corner.split('-')[1];
-    }
-    return !position.endsWith(corner.split('-')[1]);
+    return position !== corner.split('-')[1];
   }
 
   return false;

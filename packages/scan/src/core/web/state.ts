@@ -23,38 +23,16 @@ export const defaultWidgetConfig = {
   }
 } as WidgetConfig;
 
-export const getInitialWidgetConfig = (s = false): WidgetConfig => {
-  if (typeof window === 'undefined' && s) {
-    return defaultWidgetConfig;
-  }
-
+export const getInitialWidgetConfig = (): WidgetConfig => {
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
   if (!stored) {
-    const defaultConfig: WidgetConfig = {
-      corner: 'top-left' as Corner,
-      dimensions: {
-        isFullWidth: false,
-        isFullHeight: false,
-        width: MIN_SIZE.width,
-        height: MIN_SIZE.height,
-        position: { x: 24, y: 24 }
-      },
-      lastDimensions: {
-        isFullWidth: false,
-        isFullHeight: false,
-        width: 360,
-        height: 240,
-        position: { x: 24, y: 24 }
-      }
-    };
-
     saveLocalStorage(LOCALSTORAGE_KEY, {
-      corner: defaultConfig.corner,
-      dimensions: defaultConfig.dimensions,
-      lastDimensions: defaultConfig.lastDimensions
+      corner: defaultWidgetConfig.corner,
+      dimensions: defaultWidgetConfig.dimensions,
+      lastDimensions: defaultWidgetConfig.lastDimensions
     });
 
-    return defaultConfig;
+    return defaultWidgetConfig;
   }
 
   return {

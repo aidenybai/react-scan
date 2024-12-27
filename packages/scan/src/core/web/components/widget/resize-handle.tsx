@@ -3,30 +3,23 @@ import { useCallback, useEffect, useRef } from 'preact/hooks';
 import {
   cn,
   saveLocalStorage,
-  toggleMultipleClasses,
 } from '@web-utils/helpers';
 import { Store } from 'src/core';
+import { Icon } from '@web-components/icon';
 import { LOCALSTORAGE_KEY, MIN_SIZE } from '../../constants';
 import { signalRefContainer, signalWidget } from '../../state';
-import { Icon } from '../icon';
 import {
   calculateNewSizeAndPosition,
   calculatePosition,
   getClosestCorner,
   getHandleVisibility,
-  getInteractionClasses,
   getOppositeCorner,
-  getPositionClasses,
   getWindowDimensions,
 } from './helpers';
 import { type Corner, type ResizeHandleProps } from './types';
 
 export const ResizeHandle = ({ position }: ResizeHandleProps) => {
-  const isLine = !position.includes('-');
-
   const refContainer = useRef<HTMLDivElement>(null);
-  const refLine = useRef<HTMLDivElement>(null);
-  const refCorner = useRef<HTMLDivElement>(null);
 
   const prevWidth = useRef<number | null>(null);
   const prevHeight = useRef<number | null>(null);
@@ -34,8 +27,6 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
 
   useEffect(() => {
     if (!refContainer.current) return;
-    const classes = getInteractionClasses(position, isLine);
-    toggleMultipleClasses(refContainer.current, classes);
 
     const updateVisibility = (isFocused: boolean) => {
       if (!refContainer.current) return;
@@ -43,20 +34,19 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         isFocused &&
         getHandleVisibility(
           position,
-          isLine,
           signalWidget.value.corner,
           signalWidget.value.dimensions.isFullWidth,
           signalWidget.value.dimensions.isFullHeight,
         );
 
-      if (!isVisible) {
-        refContainer.current.classList.add(
+      if (isVisible) {
+        refContainer.current.classList.remove(
           'hidden',
           'pointer-events-none',
           'opacity-0',
         );
       } else {
-        refContainer.current.classList.remove(
+        refContainer.current.classList.add(
           'hidden',
           'pointer-events-none',
           'opacity-0',
@@ -255,32 +245,22 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       isCurrentFullHeight,
     );
 
-    if (isLine) {
-      if (position === 'left' || position === 'right') {
-        newWidth = isCurrentFullWidth ? dimensions.width : maxWidth;
-        if (isPartiallyMaximized) {
-          newWidth = isCurrentFullWidth ? MIN_SIZE.width : maxWidth;
-        }
-      } else {
-        newHeight = isCurrentFullHeight ? dimensions.height : maxHeight;
-        if (isPartiallyMaximized) {
-          newHeight = isCurrentFullHeight ? MIN_SIZE.height * 5 : maxHeight;
-        }
+    if (position === 'left' || position === 'right') {
+      newWidth = isCurrentFullWidth ? dimensions.width : maxWidth;
+      if (isPartiallyMaximized) {
+        newWidth = isCurrentFullWidth ? MIN_SIZE.width : maxWidth;
       }
     } else {
-      newWidth = maxWidth;
-      newHeight = maxHeight;
+      newHeight = isCurrentFullHeight ? dimensions.height : maxHeight;
+      if (isPartiallyMaximized) {
+        newHeight = isCurrentFullHeight ? MIN_SIZE.height * 5 : maxHeight;
+      }
     }
 
     if (isFullScreen) {
-      if (isLine) {
-        if (position === 'left' || position === 'right') {
-          newWidth = MIN_SIZE.width;
-        } else {
-          newHeight = MIN_SIZE.height * 5;
-        }
-      } else {
+      if (position === 'left' || position === 'right') {
         newWidth = MIN_SIZE.width;
+      } else {
         newHeight = MIN_SIZE.height * 5;
       }
     }
@@ -320,71 +300,33 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       onMouseDown={handleResize}
       onDblClick={handleDoubleClick}
       className={cn(
+        'absolute z-50',
         'flex items-center justify-center',
-        'resize-handle absolute',
-        'group overflow-hidden',
-        'transition-opacity select-none z-50',
-        getPositionClasses(position),
+        'group',
+        'transition-colors select-none',
+        'peer',
+        {
+          'resize-left peer/left': position === 'left',
+          'resize-right peer/right': position === 'right',
+          'resize-top peer/top': position === 'top',
+          'resize-bottom peer/bottom': position === 'bottom',
+        }
       )}
     >
-      {isLine ? (
-        <span
-          ref={refLine}
-          className={cn(
-            'absolute',
-            'opacity-0 group-hover:opacity-100 group-active:opacity-100',
-            'transition-[transform, opacity] duration-300',
-            'delay-500 group-hover:delay-0 group-active:delay-0 group-active:opacity-0',
-            {
-              'translate-y-full group-hover:-translate-y-1/4':
-                position === 'top',
-              '-translate-x-full group-hover:translate-x-1/4':
-                position === 'right',
-              '-translate-y-full group-hover:translate-y-1/4':
-                position === 'bottom',
-              'translate-x-full group-hover:-translate-x-1/4':
-                position === 'left',
-            },
-          )}
-        >
+      <span className="resize-line-wrapper">
+        <span className='resize-line'>
           <Icon
-            name="icon-chevrons-up-down"
-            className={cn('text-[#7b51c8]', {
-              'rotate-90': position === 'left' || position === 'right',
-            })}
+            name="icon-ellipsis"
+            size={18}
+            className={cn(
+              'text-white/80',
+              {
+                'rotate-90': position === 'left' || position === 'right',
+              }
+            )}
           />
         </span>
-      ) : (
-        <span
-          ref={refCorner}
-          className={cn(
-            'absolute inset-0',
-            'flex items-center justify-center',
-            'opacity-0 group-hover:opacity-100 group-active:opacity-100',
-            'transition-[transform,opacity] duration-300',
-            'delay-500 group-hover:delay-0 group-active:delay-0',
-            'origin-center',
-            'text-[#7b51c8]',
-            {
-              'top-0 left-0 rotate-[135deg] translate-x-full translate-y-full':
-                position === 'top-left',
-
-              'top-0 right-0 rotate-[225deg] -translate-x-full translate-y-full':
-                position === 'top-right',
-
-              'bottom-0 left-0 rotate-45 translate-x-full -translate-y-full':
-                position === 'bottom-left',
-
-              'bottom-0 right-0 -rotate-45 -translate-x-full -translate-y-full':
-                position === 'bottom-right',
-            },
-            'group-hover:translate-x-0 group-hover:translate-y-0',
-            'group-active:opacity-0',
-          )}
-        >
-          <Icon name="icon-chevrons-up-down" />
-        </span>
-      )}
+      </span>
     </div>
   );
 };

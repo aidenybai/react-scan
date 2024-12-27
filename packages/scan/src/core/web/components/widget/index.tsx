@@ -341,7 +341,6 @@ export const Widget = () => {
       className={cn(
         'fixed inset-0 rounded-lg shadow-lg',
         'flex flex-col',
-        'bg-black',
         'font-mono text-[13px]',
         'user-select-none',
         'opacity-0',
@@ -351,53 +350,65 @@ export const Widget = () => {
         'will-change-transform',
       )}
     >
-      <div
-        ref={refContent}
-        className={cn(
-          'relative',
-          'flex-1',
-          'flex flex-col',
-          'rounded-t-lg',
-          'overflow-hidden',
-          'opacity-100',
-          'transition-opacity duration-150',
-        )}
-      >
-        <Header />
-        <div
-          ref={refPropContainer}
-          className={cn(
-            'react-scan-prop',
-            'flex-1',
-            'text-white',
-            'transition-opacity duration-150 delay-150',
-            'overflow-y-auto overflow-x-hidden',
-          )}
-        />
-      </div>
-
-      <div
-        ref={refFooter}
-        className={cn(
-          'h-9',
-          'flex items-center justify-between',
-          'transition-colors duration-200',
-          'overflow-hidden',
-          'rounded-lg',
-        )}
-      >
-        <Toolbar refPropContainer={refPropContainer} />
-      </div>
-
       <ResizeHandle position="top" />
       <ResizeHandle position="bottom" />
       <ResizeHandle position="left" />
       <ResizeHandle position="right" />
 
-      <ResizeHandle position="top-left" />
-      <ResizeHandle position="top-right" />
-      <ResizeHandle position="bottom-left" />
-      <ResizeHandle position="bottom-right" />
+      <div
+        className={cn(
+          'flex flex-1 flex-col',
+          'overflow-hidden z-10',
+          'rounded-lg',
+          'bg-black',
+          'opacity-100',
+          'transition-[border-radius] duration-150',
+          'peer-hover/left:rounded-l-none',
+          'peer-hover/right:rounded-r-none',
+          'peer-hover/top:rounded-t-none',
+          'peer-hover/bottom:rounded-b-none',
+        )}
+      >
+        <div
+          ref={refContent}
+          className={cn(
+            'relative',
+            'flex-1',
+            'flex flex-col',
+            'rounded-t-lg',
+            'overflow-hidden',
+            'opacity-100',
+            'transition-[opacity] duration-150',
+          )}
+        >
+          <Header />
+          <div
+            ref={refPropContainer}
+            className={cn(
+              'react-scan-prop',
+              'flex-1',
+              'text-white',
+              'transition-opacity duration-150 delay-150',
+              'overflow-y-auto overflow-x-hidden',
+            )}
+          />
+        </div>
+
+        <div
+          ref={refFooter}
+          className={cn(
+            'relative',
+            'h-9',
+            'flex items-center justify-between',
+            'transition-colors duration-200',
+            'overflow-hidden',
+            'rounded-lg',
+            'z-10'
+          )}
+        >
+          <Toolbar refPropContainer={refPropContainer} />
+        </div>
+      </div>
     </div>
   );
 };

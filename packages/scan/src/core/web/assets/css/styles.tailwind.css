@@ -86,15 +86,125 @@ button {
   @apply z-[2147483678];
   @apply animate-fade-in animation-duration-300 animation-delay-300;
   @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
+
+  button {
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
 }
 
+.resize-line-wrapper {
+  @apply absolute;
+  @apply overflow-hidden;
+}
+
+.resize-line {
+  @apply absolute inset-0;
+  @apply overflow-hidden;
+  @apply bg-black/90;
+  @apply transition-all duration-150;
+
+  svg {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
+  }
+}
+
+.resize-right,
+.resize-left {
+  @apply inset-y-0;
+  @apply w-6;
+  @apply cursor-ew-resize;
+
+  .resize-line-wrapper {
+    @apply inset-y-0;
+    @apply w-1/2;
+  }
+
+  &:hover {
+    .resize-line {
+      @apply translate-x-0;
+    }
+  }
+}
+.resize-right {
+  @apply right-0;
+  @apply translate-x-1/2;
+
+  .resize-line-wrapper {
+    @apply right-0;
+  }
+  .resize-line {
+    @apply rounded-r-lg;
+    @apply -translate-x-full;
+  }
+}
+
+.resize-left {
+  @apply left-0;
+  @apply -translate-x-1/2;
+
+  .resize-line-wrapper {
+    @apply left-0;
+  }
+  .resize-line {
+    @apply rounded-l-lg;
+    @apply translate-x-full;
+  }
+}
+
+.resize-top,
+.resize-bottom {
+  @apply inset-x-0;
+  @apply h-6;
+  @apply cursor-ns-resize;
+
+  .resize-line-wrapper {
+    @apply inset-x-0;
+    @apply h-1/2;
+  }
+
+  &:hover {
+    .resize-line {
+      @apply translate-y-0;
+    }
+  }
+}
+.resize-top {
+  @apply top-0;
+  @apply -translate-y-1/2;
+
+  .resize-line-wrapper {
+    @apply top-0;
+  }
+  .resize-line {
+    @apply rounded-t-lg;
+    @apply translate-y-full;
+  }
+}
+
+.resize-bottom {
+  @apply bottom-0;
+  @apply translate-y-1/2;
+
+  .resize-line-wrapper {
+    @apply bottom-0;
+  }
+  .resize-line {
+    @apply rounded-b-lg;
+    @apply -translate-y-full;
+  }
+}
 
 /* HEADER */
 .react-scan-header {
   @apply flex items-center gap-x-2;
   @apply pl-3 pr-2;
   @apply min-h-9;
-  @apply rounded-t-lg;
   @apply border-b-1 border-white/10;
   @apply whitespace-nowrap overflow-hidden;
 }
@@ -282,25 +392,4 @@ button {
 .react-scan-flash-active {
   opacity: 0.4;
   transition: opacity 300ms ease-in-out;
-}
-
-#react-scan-toolbar button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-#react-scan-toolbar button:active {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-#react-scan-toolbar button:focus-visible {
-  outline: 2px solid #0070f3;
-  outline-offset: -2px;
-}
-
-.nav-button {
-  opacity: var(--nav-opacity, 1);
-}
-
-.react-scan-toolbar {
-  border: 1px solid blue;
 }
