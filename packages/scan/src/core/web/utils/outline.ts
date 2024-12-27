@@ -1,7 +1,7 @@
+import { type Fiber } from 'react-reconciler';
 import { throttle } from '@web-utils/helpers';
 import { LRUMap } from '@web-utils/lru';
 import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
-import { type Fiber } from 'react-reconciler';
 import { type AggregatedChange } from 'src/core/instrumentation';
 import { ReactScanInternals, type OutlineKey } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
@@ -336,6 +336,7 @@ export interface Outline {
   /* This value is computed before the full rendered text is shown, so its only considered an estimate */
   estimatedTextWidth: number | null; // todo: estimated is stupid just make it the actual
 }
+
 export interface AggregatedRender {
   name: ComponentName;
   frame: number | null;

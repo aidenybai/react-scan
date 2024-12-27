@@ -1,21 +1,21 @@
-import type { Fiber, FiberRoot } from 'react-reconciler';
-import { type Signal, signal } from '@preact/signals';
+import { signal, type Signal } from '@preact/signals';
+import { getChangedPropsDetailed } from '@web-inspect-element/utils';
 import {
-  getDisplayName,
-  traverseState,
-  traverseContexts,
-  didFiberCommit,
-  getMutatedHostFibers,
-  traverseProps,
   createFiberVisitor,
-  getType,
+  didFiberCommit,
+  getDisplayName,
+  getMutatedHostFibers,
   getTimings,
+  getType,
   hasMemoCache,
   instrument,
+  traverseContexts,
+  traverseProps,
+  traverseState,
 } from 'bippy';
 import { isValidElement } from 'preact';
+import type { Fiber, FiberRoot } from 'react-reconciler';
 import { isEqual } from 'src/core/utils';
-import { getChangedPropsDetailed } from '@web-inspect-element/utils';
 import { ReactScanInternals, Store, getIsProduction } from './index';
 
 let fps = 0;
@@ -77,8 +77,14 @@ export const isElementInViewport = (
   return isVisible && rect.width && rect.height;
 };
 
+export const enum ChangeReason {
+  Props = 0b001,
+  State = 0b010,
+  Context = 0b100,
+}
+
 export interface RenderChange {
-  type: 'props' | 'state' | 'context';
+  type: ChangeReason;
   name: string;
   value: any;
   prevValue?: unknown;
@@ -88,7 +94,7 @@ export interface RenderChange {
 }
 
 export interface AggregatedChange {
-  type: Set<'props' | 'state' | 'context'>;
+  type: number; // union of AggregatedChangeReason
   unstable: boolean;
 }
 
@@ -188,7 +194,7 @@ export const getPropsChanges = (fiber: Fiber) => {
       continue;
     }
     const change: RenderChange = {
-      type: 'props',
+      type: ChangeReason.Props,
       name: propName,
       value: nextValue,
       unstable: false,
@@ -209,7 +215,7 @@ export const getStateChanges = (fiber: Fiber) => {
   traverseState(fiber, (prevState, nextState) => {
     if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
     const change: RenderChange = {
-      type: 'state',
+      type: ChangeReason.State,
       name: '', // bad interface should make this a discriminated union
       value: nextState.memoizedState,
       unstable: false,
@@ -228,7 +234,7 @@ export const getContextChanges = (fiber: Fiber) => {
     const nextValue = nextContext.memoizedValue;
 
     const change: RenderChange = {
-      type: 'context',
+      type: ChangeReason.Context,
       name: '',
       value: nextValue,
       unstable: false,
@@ -361,30 +367,30 @@ export const createInstrumentation = (
 
         const changes: Array<RenderChange> = [];
 
-        const propsChanges = getChangedPropsDetailed(fiber).map(change => ({
-          type: 'props' as const,
+        const propsChanges = getChangedPropsDetailed(fiber).map((change) => ({
+          type: ChangeReason.Props,
           name: change.name,
           value: change.value,
           prevValue: change.prevValue,
-          unstable: false
+          unstable: false,
         }));
 
-        const stateChanges = getStateChanges(fiber).map(change => ({
-          type: 'state' as const,
+        const stateChanges = getStateChanges(fiber).map((change) => ({
+          type: ChangeReason.State,
           name: change.name,
           value: change.value,
           prevValue: change.prevValue,
           count: change.count,
-          unstable: false
+          unstable: false,
         }));
 
-        const contextChanges = getContextChanges(fiber).map(change => ({
-          type: 'context' as const,
+        const contextChanges = getContextChanges(fiber).map((change) => ({
+          type: ChangeReason.Context,
           name: change.name,
           value: change.value,
           prevValue: change.prevValue,
           count: change.count,
-          unstable: false
+          unstable: false,
         }));
 
         changes.push(...propsChanges, ...stateChanges, ...contextChanges);

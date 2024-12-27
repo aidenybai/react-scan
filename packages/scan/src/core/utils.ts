@@ -1,6 +1,6 @@
+import type { AggregatedRender } from '@web-utils/outline';
 import { getType } from 'bippy';
 import { type Fiber } from 'react-reconciler';
-import type { AggregatedRender } from '@web-utils/outline';
 import { ReactScanInternals } from '..';
 import type { AggregatedChange, Render, RenderChange } from './instrumentation';
 
@@ -18,11 +18,11 @@ export const aggregateChanges = (
   prevAggregatedChange?: AggregatedChange,
 ) => {
   const newChange = {
-    type: prevAggregatedChange?.type ?? new Set(),
+    type: prevAggregatedChange?.type ?? 0,
     unstable: prevAggregatedChange?.unstable ?? false,
   };
   for (const change of changes) {
-    newChange.type.add(change.type);
+    newChange.type |= change.type;
     newChange.unstable = newChange.unstable || (change.unstable ?? false);
   }
 
@@ -36,7 +36,7 @@ export const joinAggregations = ({
   from: AggregatedRender;
   to: AggregatedRender;
 }) => {
-  to.changes.type = unionSets(to.changes.type, from.changes.type);
+  to.changes.type |= from.changes.type;
   to.changes.unstable = to.changes.unstable || from.changes.unstable;
   to.aggregatedCount += 1;
   to.didCommit = to.didCommit || from.didCommit;
