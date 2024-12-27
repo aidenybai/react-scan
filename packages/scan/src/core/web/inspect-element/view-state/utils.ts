@@ -1,11 +1,11 @@
 import {
-  FunctionComponentTag,
   ForwardRefTag,
-  SimpleMemoComponentTag,
+  FunctionComponentTag,
   MemoComponentTag,
+  SimpleMemoComponentTag,
 } from 'bippy';
-import { type Fiber } from 'react-reconciler';
 import { type ComponentState } from 'react';
+import { type Fiber } from 'react-reconciler';
 import { isEqual } from 'src/core/utils';
 
 // Types
@@ -59,19 +59,24 @@ export const resetStateTracking = (): void => {
   lastRenderedStates = new WeakMap<Fiber>();
 };
 
-export const getStateChangeCount = (name: string): number => stateChangeCounts.get(name) ?? 0;
-export const getPropsChangeCount = (name: string): number => propsChangeCounts.get(name) ?? 0;
-export const getContextChangeCount = (name: string): number => contextChangeCounts.get(name) ?? 0;
+export const getStateChangeCount = (name: string): number =>
+  stateChangeCounts.get(name) ?? 0;
+export const getPropsChangeCount = (name: string): number =>
+  propsChangeCounts.get(name) ?? 0;
+export const getContextChangeCount = (name: string): number =>
+  contextChangeCounts.get(name) ?? 0;
 
 // States
 export const getStateNames = (fiber: Fiber): Array<string> => {
   const componentSource = fiber.type?.toString?.() || '';
   // Return the matches if we found any, otherwise return empty array
   // Empty array means we'll use numeric indices as fallback
-  return componentSource ? Array.from(
-    componentSource.matchAll(STATE_NAME_REGEX),
-    (m: RegExpMatchArray) => m.groups?.name ?? ''
-  ) : [];
+  return componentSource
+    ? Array.from(
+        componentSource.matchAll(STATE_NAME_REGEX),
+        (m: RegExpMatchArray) => m.groups?.name ?? '',
+      )
+    : [];
 };
 
 export const getCurrentState = (fiber: Fiber | null) => {
@@ -84,13 +89,15 @@ export const getCurrentState = (fiber: Fiber | null) => {
       fiber.tag === SimpleMemoComponentTag ||
       fiber.tag === MemoComponentTag
     ) {
-      const currentIsNewer = fiber && fiber.alternate
-        ? (fiber.actualStartTime ?? 0) > (fiber.alternate?.actualStartTime ?? 0)
-        : true;
+      const currentIsNewer =
+        fiber && fiber.alternate
+          ? (fiber.actualStartTime ?? 0) >
+            (fiber.alternate?.actualStartTime ?? 0)
+          : true;
 
       let memoizedState = currentIsNewer
         ? fiber.memoizedState
-        : fiber.alternate?.memoizedState ?? fiber.memoizedState;
+        : (fiber.alternate?.memoizedState ?? fiber.memoizedState);
 
       const state: ComponentState = {};
       const stateNames = getStateNames(fiber);
@@ -107,9 +114,10 @@ export const getCurrentState = (fiber: Fiber | null) => {
             let update = pending.next;
             do {
               if (update?.payload) {
-                value = typeof update.payload === 'function'
-                  ? update.payload(value)
-                  : update.payload;
+                value =
+                  typeof update.payload === 'function'
+                    ? update.payload(value)
+                    : update.payload;
               }
               update = update.next;
             } while (update !== pending.next);
@@ -124,7 +132,7 @@ export const getCurrentState = (fiber: Fiber | null) => {
       return state;
     }
   } catch {
-  // Silently fail
+    // Silently fail
   }
   return {};
 };
@@ -156,9 +164,10 @@ export const getChangedState = (fiber: Fiber): Set<string> => {
             let update = pending.next;
             do {
               if (update?.payload) {
-                value = typeof update.payload === 'function'
-                  ? update.payload(value)
-                  : update.payload;
+                value =
+                  typeof update.payload === 'function'
+                    ? update.payload(value)
+                    : update.payload;
               }
               update = update.next;
             } while (update !== pending.next);
@@ -205,13 +214,16 @@ export const getPropsOrder = (fiber: Fiber): Array<string> => {
 };
 
 export const getCurrentProps = (fiber: Fiber): Record<string, unknown> => {
-  const currentIsNewer = fiber && fiber.alternate
-    ? (fiber.actualStartTime ?? 0) > (fiber.alternate?.actualStartTime ?? 0)
-    : true;
+  const currentIsNewer =
+    fiber && fiber.alternate
+      ? (fiber.actualStartTime ?? 0) > (fiber.alternate?.actualStartTime ?? 0)
+      : true;
 
   const baseProps = currentIsNewer
     ? fiber.memoizedProps || fiber.pendingProps
-    : fiber.alternate?.memoizedProps || fiber.alternate?.pendingProps || fiber.memoizedProps;
+    : fiber.alternate?.memoizedProps ||
+      fiber.alternate?.pendingProps ||
+      fiber.memoizedProps;
 
   return { ...baseProps };
 };
@@ -257,11 +269,15 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
 };
 
 // Contexts
-export const getAllFiberContexts = (fiber: Fiber): Map<string, ContextValue> => {
+export const getAllFiberContexts = (
+  fiber: Fiber,
+): Map<string, ContextValue> => {
   const contexts = new Map<string, ContextValue>();
   if (!fiber) return contexts;
 
-  const findProviderValue = (contextType: ReactContext): { value: ContextValue; displayName: string } | null => {
+  const findProviderValue = (
+    contextType: ReactContext,
+  ): { value: ContextValue; displayName: string } | null => {
     let searchFiber: Fiber | null = fiber;
     while (searchFiber) {
       if (searchFiber.type?.Provider) {
@@ -278,28 +294,32 @@ export const getAllFiberContexts = (fiber: Fiber): Map<string, ContextValue> => 
             value: {
               displayValue: ensureRecord(currentValue),
               isUserContext: false,
-              rawValue: currentValue
+              rawValue: currentValue,
             },
-            displayName: contextType.displayName
+            displayName: contextType.displayName,
           };
         }
 
         // For user-defined contexts
-        const providerName = searchFiber.type.name?.replace('Provider', '') ??
+        const providerName =
+          searchFiber.type.name?.replace('Provider', '') ??
           searchFiber._debugOwner?.type?.name ??
           'Unnamed';
 
-        const valueToUse = pendingValue !== undefined ? pendingValue :
-          providerValue !== undefined ? providerValue :
-            currentValue;
+        const valueToUse =
+          pendingValue !== undefined
+            ? pendingValue
+            : providerValue !== undefined
+              ? providerValue
+              : currentValue;
 
         return {
           value: {
             displayValue: ensureRecord(valueToUse),
             isUserContext: true,
-            rawValue: valueToUse
+            rawValue: valueToUse,
           },
-          displayName: providerName
+          displayName: providerName,
         };
       }
       searchFiber = searchFiber.return;
@@ -310,7 +330,8 @@ export const getAllFiberContexts = (fiber: Fiber): Map<string, ContextValue> => 
   let currentFiber: Fiber | null = fiber;
   while (currentFiber) {
     if (currentFiber.dependencies?.firstContext) {
-      let contextItem = currentFiber.dependencies.firstContext as ContextDependency | null;
+      let contextItem = currentFiber.dependencies
+        .firstContext as ContextDependency | null;
       while (contextItem !== null) {
         const context = contextItem.context;
         if (context && '_currentValue' in context) {
@@ -330,11 +351,12 @@ export const getAllFiberContexts = (fiber: Fiber): Map<string, ContextValue> => 
 
 export const getCurrentContext = (fiber: Fiber) => {
   const contexts = getAllFiberContexts(fiber);
+  // TODO(Alexis): megamorphic code
   const contextObj: Record<string, unknown> = {};
 
-  contexts.forEach((value, contextName) => {
+  for (const [contextName, value] of contexts) {
     contextObj[contextName] = value.displayValue;
-  });
+  }
 
   return contextObj;
 };
@@ -344,11 +366,13 @@ const getContextDisplayName = (contextType: unknown): string => {
     return String(contextType);
   }
 
-  return (contextType as any)?.displayName ??
+  return (
+    (contextType as any)?.displayName ??
     (contextType as any)?.Provider?.displayName ??
     (contextType as any)?.Consumer?.displayName ??
     (contextType as any)?.type?.name?.replace('Provider', '') ??
-    'Unnamed';
+    'Unnamed'
+  );
 };
 
 export const getChangedContext = (fiber: Fiber): Set<string> => {
@@ -357,7 +381,7 @@ export const getChangedContext = (fiber: Fiber): Set<string> => {
 
   const currentContexts = getAllFiberContexts(fiber);
 
-  currentContexts.forEach((_currentValue, contextType) => {
+  for (const [contextType] of currentContexts) {
     const contextName = getContextDisplayName(contextType);
 
     let searchFiber: Fiber | null = fiber;
@@ -377,10 +401,13 @@ export const getChangedContext = (fiber: Fiber): Set<string> => {
 
       if (!isEqual(currentProviderValue, alternateValue)) {
         changes.add(contextName);
-        contextChangeCounts.set(contextName, (contextChangeCounts.get(contextName) ?? 0) + 1);
+        contextChangeCounts.set(
+          contextName,
+          (contextChangeCounts.get(contextName) ?? 0) + 1,
+        );
       }
     }
-  });
+  }
 
   return changes;
 };

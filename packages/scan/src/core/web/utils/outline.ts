@@ -213,9 +213,9 @@ export const fadeOutOutline = () => {
     const shouldSkip = shouldSkipInterpolation(target);
     if (shouldSkip) {
       invariantActiveOutline.current = target;
-      invariantActiveOutline.groupedAggregatedRender.forEach((v) => {
+      for (const [, v] of invariantActiveOutline.groupedAggregatedRender) {
         v.computedCurrent = target;
-      });
+      }
     } else {
       if (!invariantActiveOutline.current) {
         invariantActiveOutline.current = new DOMRect(
@@ -242,9 +242,9 @@ export const fadeOutOutline = () => {
 
       invariantActiveOutline.current = computedCurrent;
 
-      invariantActiveOutline.groupedAggregatedRender.forEach((v) => {
+      for (const [, v] of invariantActiveOutline.groupedAggregatedRender) {
         v.computedCurrent = computedCurrent;
-      });
+      }
     }
 
     drawingQueue.push({
@@ -494,8 +494,11 @@ const activateOutlines = async () => {
       // handles canceling the animation of the associated render that was painted at a different location
       if (prevAggregatedRender?.computedKey) {
         const groupOnKey = activeOutlines.get(prevAggregatedRender.computedKey);
-        groupOnKey?.groupedAggregatedRender?.forEach(
-          (value, prevStoredFiber) => {
+        if (groupOnKey?.groupedAggregatedRender) {
+          for (const [
+            prevStoredFiber,
+            value,
+          ] of groupOnKey.groupedAggregatedRender) {
             if (areFibersEqual(prevStoredFiber, fiber)) {
               value.frame = 45; // todo: make this max frame, not hardcoded
 
@@ -504,8 +507,8 @@ const activateOutlines = async () => {
                 existingOutline.current = value.computedCurrent!;
               }
             }
-          },
-        );
+          }
+        }
       }
       activeOutlines.set(key, existingOutline);
     } else if (!prevAggregatedRender) {
