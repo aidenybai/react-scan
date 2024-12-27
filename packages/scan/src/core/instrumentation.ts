@@ -1,5 +1,6 @@
 import { signal, type Signal } from '@preact/signals';
 import { getChangedPropsDetailed } from '@web-inspect-element/utils';
+import { RENDER_PHASE_STRING_TO_ENUM, RenderPhase } from '@web-utils/outline';
 import {
   createFiberVisitor,
   didFiberCommit,
@@ -99,7 +100,7 @@ export interface AggregatedChange {
 }
 
 export interface Render {
-  phase: 'mount' | 'update' | 'unmount';
+  phase: RenderPhase;
   componentName: string | null;
   time: number | null;
   count: number;
@@ -400,7 +401,7 @@ export const createInstrumentation = (
         const fps = getFPS();
 
         const render: Render = {
-          phase,
+          phase: RENDER_PHASE_STRING_TO_ENUM[phase],
           componentName: getDisplayName(type),
           count: 1,
           changes,

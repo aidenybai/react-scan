@@ -4,15 +4,6 @@ import { type Fiber } from 'react-reconciler';
 import { ReactScanInternals } from '..';
 import type { AggregatedChange, Render, RenderChange } from './instrumentation';
 
-// Helper function for Set union
-const unionSets = <T>(setA: Set<T>, setB: Set<T>): Set<T> => {
-  const union = new Set(setA);
-  for (const elem of setB) {
-    union.add(elem);
-  }
-  return union;
-};
-
 export const aggregateChanges = (
   changes: Array<RenderChange>,
   prevAggregatedChange?: AggregatedChange,
@@ -42,7 +33,7 @@ export const joinAggregations = ({
   to.didCommit = to.didCommit || from.didCommit;
   to.forget = to.forget || from.forget;
   to.fps = to.fps + from.fps;
-  to.phase = unionSets(to.phase, from.phase);
+  to.phase |= from.phase;
   to.time = (to.time ?? 0) + (from.time ?? 0);
 
   to.unnecessary = to.unnecessary || from.unnecessary;
@@ -60,7 +51,7 @@ export const aggregateRender = (
   prevAggregated.didCommit = prevAggregated.didCommit || newRender.didCommit;
   prevAggregated.forget = prevAggregated.forget || newRender.forget;
   prevAggregated.fps = prevAggregated.fps + newRender.fps;
-  prevAggregated.phase.add(newRender.phase);
+  prevAggregated.phase |= newRender.phase;
   prevAggregated.time = (prevAggregated.time ?? 0) + (newRender.time ?? 0);
 
   prevAggregated.unnecessary =

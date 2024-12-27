@@ -1,4 +1,13 @@
 import { signal, type Signal } from '@preact/signals';
+import { ICONS } from '@web-assets/svgs/svgs';
+import {
+  createInspectElementStateMachine,
+  type States,
+} from '@web-inspect-element/inspect-state-machine';
+import { playGeigerClickSound } from '@web-utils/geiger';
+import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
+import { log, logIntro } from '@web-utils/log';
+import { flushOutlines, type Outline } from '@web-utils/outline';
 import {
   detectReactBuildType,
   getDisplayName,
@@ -12,15 +21,6 @@ import {
 } from 'bippy';
 import type * as React from 'react';
 import type { Fiber } from 'react-reconciler';
-import { ICONS } from '@web-assets/svgs/svgs';
-import {
-  createInspectElementStateMachine,
-  type States,
-} from '@web-inspect-element/inspect-state-machine';
-import { playGeigerClickSound } from '@web-utils/geiger';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { log, logIntro } from '@web-utils/log';
-import { flushOutlines, type Outline } from '@web-utils/outline';
 import {
   aggregateChanges,
   aggregateRender,
@@ -381,12 +381,14 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
 
   // Get data from both current and alternate fibers
   const currentData = Store.reportData.get(reportFiber);
-  const alternateData = fiber.alternate ? Store.reportData.get(fiber.alternate) : null;
+  const alternateData = fiber.alternate
+    ? Store.reportData.get(fiber.alternate)
+    : null;
 
   // More efficient null checks and Math.max
   const existingCount = Math.max(
     (currentData && currentData.count) || 0,
-    (alternateData && alternateData.count) || 0
+    (alternateData && alternateData.count) || 0,
   );
 
   // Create single shared object for both fibers
@@ -395,7 +397,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
     time: selfTime || 0,
     renders,
     displayName,
-    type: getType(fiber.type) || null
+    type: getType(fiber.type) || null,
   };
 
   // Store in both fibers
@@ -461,7 +463,12 @@ const updateScheduledOutlines = (fiber: Fiber, renders: Array<Render>) => {
   for (let i = 0, len = renders.length; i < len; i++) {
     const render = renders[i];
     const domFiber = getNearestHostFiber(fiber);
-    if (!domFiber || !domFiber.stateNode || !(domFiber.stateNode instanceof Element)) continue;
+    if (
+      !domFiber ||
+      !domFiber.stateNode ||
+      !(domFiber.stateNode instanceof Element)
+    )
+      continue;
 
     if (ReactScanInternals.scheduledOutlines.has(fiber)) {
       const existingOutline = ReactScanInternals.scheduledOutlines.get(fiber)!;
@@ -479,7 +486,7 @@ const updateScheduledOutlines = (fiber: Fiber, renders: Array<Render>) => {
           didCommit: render.didCommit,
           forget: render.forget,
           fps: render.fps,
-          phase: new Set([render.phase]),
+          phase: render.phase,
           time: render.time,
           unnecessary: render.unnecessary,
           frame: 0,
@@ -556,7 +563,9 @@ export const start = () => {
         void audioContext.resume();
       };
 
-      window.addEventListener('pointerdown', createAudioContextOnInteraction, { once: true });
+      window.addEventListener('pointerdown', createAudioContextOnInteraction, {
+        once: true,
+      });
 
       const container = document.createElement('div');
       container.id = 'react-scan-root';

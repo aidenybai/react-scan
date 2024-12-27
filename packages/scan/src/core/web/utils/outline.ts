@@ -1,7 +1,7 @@
-import { type Fiber } from 'react-reconciler';
 import { throttle } from '@web-utils/helpers';
 import { LRUMap } from '@web-utils/lru';
 import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
+import { type Fiber } from 'react-reconciler';
 import { type AggregatedChange } from 'src/core/instrumentation';
 import { ReactScanInternals, type OutlineKey } from '../../index';
 import { getLabelText, joinAggregations } from '../../utils';
@@ -337,10 +337,22 @@ export interface Outline {
   estimatedTextWidth: number | null; // todo: estimated is stupid just make it the actual
 }
 
+export const enum RenderPhase {
+  Mount = 0b001,
+  Update = 0b010,
+  Unmount = 0b100,
+}
+
+export const RENDER_PHASE_STRING_TO_ENUM = {
+  mount: RenderPhase.Mount,
+  update: RenderPhase.Update,
+  unmount: RenderPhase.Unmount,
+} as const;
+
 export interface AggregatedRender {
   name: ComponentName;
   frame: number | null;
-  phase: Set<'mount' | 'update' | 'unmount'>;
+  phase: number; // union of RenderPhase
   time: number | null;
   aggregatedCount: number;
   forget: boolean;

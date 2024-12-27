@@ -1,10 +1,10 @@
-import type { Render } from '../../instrumentation';
+import { ChangeReason, type Render } from '../../instrumentation';
 import { getLabelText } from '../../utils';
 
 export const log = (renders: Array<Render>) => {
   const logMap = new Map<
     string,
-    Array<{ prev: unknown; next: unknown; type: string; unstable: boolean }>
+    Array<{ prev: unknown; next: unknown; type: string; unstable?: boolean }>
   >();
   for (let i = 0, len = renders.length; i < len; i++) {
     const render = renders[i];
@@ -22,10 +22,11 @@ export const log = (renders: Array<Render>) => {
         frame: null,
         ...render,
         changes: {
-          type: new Set(render.changes.map((change) => change.type)),
+          // TODO(Alexis): use a faster reduction method
+          type: render.changes.reduce((set, change) => set | change.type, 0),
           unstable: render.changes.some((change) => change.unstable),
         },
-        phase: new Set([render.phase]),
+        phase: render.phase,
         computedCurrent: null,
       },
     ]);
@@ -38,7 +39,7 @@ export const log = (renders: Array<Render>) => {
       for (let i = 0, len = render.changes.length; i < len; i++) {
         const { name, prevValue, nextValue, unstable, type } =
           render.changes[i];
-        if (type === 'props') {
+        if (type === ChangeReason.Props) {
           prevChangedProps ??= {};
           nextChangedProps ??= {};
           prevChangedProps[`${unstable ? '⚠️' : ''}${name} (prev)`] = prevValue;
@@ -47,7 +48,7 @@ export const log = (renders: Array<Render>) => {
           changeLog.push({
             prev: prevValue,
             next: nextValue,
-            type,
+            type: type === ChangeReason.Context ? 'context' : 'state',
             unstable,
           });
         }
