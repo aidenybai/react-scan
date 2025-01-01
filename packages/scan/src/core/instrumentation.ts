@@ -210,49 +210,72 @@ export const getPropsChanges = (fiber: Fiber) => {
   return changes;
 };
 
+interface StateFiber {
+  memoizedState: unknown;
+}
+
+function getStateChangesTraversal(
+  this: Array<RenderChange>,
+  prevState: StateFiber,
+  nextState: StateFiber,
+): void {
+  if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
+  const change: RenderChange = {
+    type: ChangeReason.State,
+    name: '', // bad interface should make this a discriminated union
+    value: nextState.memoizedState,
+    unstable: false,
+  };
+  this.push(change);
+}
+
 export const getStateChanges = (fiber: Fiber) => {
   const changes: Array<RenderChange> = [];
 
-  traverseState(fiber, (prevState, nextState) => {
-    if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
-    const change: RenderChange = {
-      type: ChangeReason.State,
-      name: '', // bad interface should make this a discriminated union
-      value: nextState.memoizedState,
-      unstable: false,
-    };
-    changes.push(change);
-  });
+  traverseState(fiber, getStateChangesTraversal.bind(changes));
 
   return changes;
 };
 
+interface ContextFiber {
+  context: unknown; // refers to Context<T>;
+  memoizedValue: unknown;
+}
+
+function getContextChangesTraversal(
+  this: Array<RenderChange>,
+  prevContext: ContextFiber,
+  nextContext: ContextFiber,
+): void {
+  const prevValue = prevContext.memoizedValue;
+  const nextValue = nextContext.memoizedValue;
+
+  const change: RenderChange = {
+    type: ChangeReason.Context,
+    name: '',
+    value: nextValue,
+    unstable: false,
+  };
+  this.push(change);
+
+  const prevValueString = fastSerialize(prevValue);
+  const nextValueString = fastSerialize(nextValue);
+
+  if (
+    unstableTypes.includes(typeof prevValue) &&
+    unstableTypes.includes(typeof nextValue) &&
+    prevValueString === nextValueString
+  ) {
+    change.unstable = true;
+  }
+}
+
 export const getContextChanges = (fiber: Fiber) => {
   const changes: Array<RenderChange> = [];
 
-  traverseContexts(fiber, (prevContext, nextContext) => {
-    const prevValue = prevContext.memoizedValue;
-    const nextValue = nextContext.memoizedValue;
-
-    const change: RenderChange = {
-      type: ChangeReason.Context,
-      name: '',
-      value: nextValue,
-      unstable: false,
-    };
-    changes.push(change);
-
-    const prevValueString = fastSerialize(prevValue);
-    const nextValueString = fastSerialize(nextValue);
-
-    if (
-      unstableTypes.includes(typeof prevValue) &&
-      unstableTypes.includes(typeof nextValue) &&
-      prevValueString === nextValueString
-    ) {
-      change.unstable = true;
-    }
-  });
+  // Alexis: we use bind functions so that the compiler doesn't produce
+  // any closures
+  traverseContexts(fiber, getContextChangesTraversal.bind(changes));
 
   return changes;
 };
@@ -293,22 +316,35 @@ let inited = false;
 
 const getAllInstances = () => Array.from(instrumentationInstances.values());
 
+interface IsRenderUnnecessaryState {
+  isRequiredChange: boolean;
+}
+
+function isRenderUnnecessaryTraversal(
+  this: IsRenderUnnecessaryState,
+  _propsName: string,
+  prevValue: unknown,
+  nextValue: unknown,
+): void {
+  if (
+    !isEqual(prevValue, nextValue) &&
+    !isValueUnstable(prevValue, nextValue)
+  ) {
+    this.isRequiredChange = true;
+  }
+}
+
 // FIXME: calculation is slow
 export const isRenderUnnecessary = (fiber: Fiber) => {
   if (!didFiberCommit(fiber)) return true;
 
   const mutatedHostFibers = getMutatedHostFibers(fiber);
   for (const mutatedHostFiber of mutatedHostFibers) {
-    let isRequiredChange = false;
-    traverseProps(mutatedHostFiber, (prevValue, nextValue) => {
-      if (
-        !isEqual(prevValue, nextValue) &&
-        !isValueUnstable(prevValue, nextValue)
-      ) {
-        isRequiredChange = true;
-      }
-    });
-    if (isRequiredChange) return false;
+    const state: IsRenderUnnecessaryState = {
+      isRequiredChange: false,
+    };
+    traverseProps(mutatedHostFiber, isRenderUnnecessaryTraversal.bind(state));
+    if (state.isRequiredChange) return false;
   }
   return true;
 };
