@@ -170,12 +170,11 @@ const isPromise = (value: any): value is Promise<unknown> => {
 const isEditableValue = (value: unknown): boolean => {
   if (value === null || value === undefined) return true;
 
-  switch (true) {
-    case value?.constructor === Date:
-    case value?.constructor === RegExp:
-    case value?.constructor === Error:
+  switch (value.constructor) {
+    case Date:
+    case RegExp:
+    case Error:
       return true;
-
     default:
       switch (typeof value) {
         case 'string':
