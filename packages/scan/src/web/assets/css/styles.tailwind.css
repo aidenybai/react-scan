@@ -371,7 +371,7 @@ button {
 
 .react-scan-preview-line {
   @apply relative;
-  @apply flex items-center min-h-6;
+  @apply flex items-center min-h-6 gap-x-2;
 }
 
 .react-scan-flash-overlay {
