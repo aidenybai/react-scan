@@ -183,7 +183,15 @@ const formatValue = (value: unknown): string => {
     case value instanceof Set:
       return `Set(${value.size})`;
     case value instanceof Date:
-      return 'Date';
+      return value.toLocaleString(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).replace(/[/,-]/g, '.');
     case value instanceof RegExp:
       return 'RegExp';
     case value instanceof Error:
