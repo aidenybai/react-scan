@@ -1,5 +1,5 @@
-import type { Render } from '../../instrumentation';
-import { getLabelText } from '../../utils';
+import { type Render } from "~core/instrumentation";
+import { getLabelText } from "~core/utils";
 
 export const log = (renders: Array<Render>) => {
   const logMap = new Map<
@@ -48,7 +48,7 @@ export const log = (renders: Array<Render>) => {
             prev: prevValue,
             next: nextValue,
             type,
-            unstable,
+            unstable: unstable ?? false,
           });
         }
       }

@@ -1,19 +1,19 @@
 import { useRef, useEffect } from 'preact/hooks';
 import { getDisplayName } from 'bippy';
-import { Store } from '../../../..';
+import { Store } from '~core/index';
+import { replayComponent } from '~web/components/inspector';
 import {
   getCompositeComponentFromElement,
   getOverrideMethods,
-} from '../../inspect-element/utils';
-import { replayComponent } from '../../inspect-element/view-state';
+} from '../inspector/utils';
 import { Icon } from '../icon';
 
 const REPLAY_DELAY_MS = 300;
 
 export const BtnReplay = () => {
+  const refTimeout = useRef<TTimer>();
   const replayState = useRef({
     isReplaying: false,
-    timeoutId: undefined as TTimer,
     toggleDisabled: (disabled: boolean, button: HTMLElement) => {
       button.classList[disabled ? 'add' : 'remove']('disabled');
     },
@@ -41,15 +41,12 @@ export const BtnReplay = () => {
     void replayComponent(parentCompositeFiber)
       .catch(() => void 0)
       .finally(() => {
-        if (state.timeoutId) {
-          clearTimeout(state.timeoutId);
-          state.timeoutId = undefined;
-        }
+        clearTimeout(refTimeout.current);
         if (document.hidden) {
           state.isReplaying = false;
           state.toggleDisabled(false, button);
         } else {
-          state.timeoutId = setTimeout(() => {
+          refTimeout.current = setTimeout(() => {
             state.isReplaying = false;
             state.toggleDisabled(false, button);
           }, REPLAY_DELAY_MS);
@@ -120,15 +117,11 @@ export const Header = () => {
   });
 
   const handleClose = () => {
-    if (Store.inspectState.value.propContainer) {
-      Store.inspectState.value = {
-        kind: 'inspect-off',
-        propContainer: Store.inspectState.value.propContainer,
-      };
-    }
+    Store.inspectState.value = {
+      kind: 'inspect-off',
+    };
   };
 
-  // fixme: replace inline styles with direct tailwind usage
   return (
     <div className="react-scan-header">
       <span ref={refComponentName} className="with-data-text" />

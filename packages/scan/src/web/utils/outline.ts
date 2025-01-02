@@ -1,10 +1,10 @@
-import { throttle } from '@web-utils/helpers';
-import { LRUMap } from '@web-utils/lru';
-import { outlineWorker, type DrawingQueue } from '@web-utils/outline-worker';
 import { type Fiber } from 'react-reconciler';
-import { type AggregatedChange } from 'src/core/instrumentation';
-import { ReactScanInternals, type OutlineKey } from '../../index';
-import { getLabelText, joinAggregations } from '../../utils';
+import { throttle } from './helpers';
+import { LRUMap } from './lru';
+import { type DrawingQueue, outlineWorker } from './outline-worker';
+import { ReactScanInternals, type OutlineKey } from '~core/index';
+import { type AggregatedChange } from '~core/instrumentation';
+import { getLabelText, joinAggregations } from '~core/utils';
 
 const enum Reason {
   Commit = 0b001,
@@ -70,7 +70,7 @@ export const batchGetBoundingRects = (
     const results = new Map<Element, DOMRect>();
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        const element = entry.target as Element;
+        const element = entry.target;
         const bounds = entry.boundingClientRect;
         results.set(element, bounds);
       }
@@ -162,7 +162,7 @@ export const fadeOutOutline = () => {
     const averageScore = Math.max(
       (THRESHOLD_FPS - Math.min(avgFps, THRESHOLD_FPS)) / THRESHOLD_FPS,
       invariantActiveOutline.aggregatedRender.time ??
-        0 / invariantActiveOutline.aggregatedRender.aggregatedCount / 16,
+      0 / invariantActiveOutline.aggregatedRender.aggregatedCount / 16,
     );
 
     const t = Math.min(averageScore, 1);

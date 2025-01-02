@@ -1,13 +1,9 @@
 import { type JSX } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
-import { getCompositeComponentFromElement } from '@web-inspect-element/utils';
-import {
-  cn,
-  debounce,
-  saveLocalStorage,
-  toggleMultipleClasses,
-} from '@web-utils/helpers';
-import { Store } from 'src/core';
+import { saveLocalStorage, toggleMultipleClasses, debounce, cn } from '~web/utils/helpers';
+import { ScanOverlay } from '~web/components/inspector/overlay';
+import { Store } from '~core/index';
+import { Inspector } from '../inspector';
 import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../../constants';
 import {
   defaultWidgetConfig,
@@ -29,7 +25,6 @@ export const Widget = () => {
 
   const refContainer = useRef<HTMLDivElement | null>(null);
   const refContent = useRef<HTMLDivElement>(null);
-  const refPropContainer = useRef<HTMLDivElement>(null);
   const refFooter = useRef<HTMLDivElement>(null);
 
   const refInitialMinimizedWidth = useRef<number>(0);
@@ -286,24 +281,11 @@ export const Widget = () => {
 
     const unsubscribeStoreInspectState = Store.inspectState.subscribe(
       (state) => {
-        if (!refContent.current || !refPropContainer.current) return;
+        if (!refContent.current) return;
 
         refShouldExpand.current = state.kind === 'focused';
 
-        if (state.kind === 'focused') {
-          const { parentCompositeFiber } = getCompositeComponentFromElement(
-            state.focusedDomElement,
-          );
-          if (!parentCompositeFiber) {
-            setTimeout(() => {
-              Store.inspectState.value = {
-                kind: 'inspect-off',
-                propContainer: refPropContainer.current!,
-              };
-            }, 16);
-            return;
-          }
-        } else {
+        if (state.kind === 'inspecting') {
           toggleMultipleClasses(refContent.current, [
             'opacity-0',
             'duration-0',
@@ -334,81 +316,85 @@ export const Widget = () => {
   }, []);
 
   return (
-    <div
-      id="react-scan-toolbar"
-      ref={refContainer}
-      onMouseDown={handleDrag}
-      className={cn(
-        'fixed inset-0 rounded-lg shadow-lg',
-        'flex flex-col',
-        'font-mono text-[13px]',
-        'user-select-none',
-        'opacity-0',
-        'cursor-move',
-        'z-[124124124124]',
-        'animate-fade-in animation-duration-300 animation-delay-300',
-        'will-change-transform',
-      )}
-    >
-      <ResizeHandle position="top" />
-      <ResizeHandle position="bottom" />
-      <ResizeHandle position="left" />
-      <ResizeHandle position="right" />
-
+    <>
+      <ScanOverlay />
       <div
+        id="react-scan-toolbar"
+        ref={refContainer}
+        onMouseDown={handleDrag}
         className={cn(
-          'flex flex-1 flex-col',
-          'overflow-hidden z-10',
-          'rounded-lg',
-          'bg-black',
-          'opacity-100',
-          'transition-[border-radius] duration-150',
-          'peer-hover/left:rounded-l-none',
-          'peer-hover/right:rounded-r-none',
-          'peer-hover/top:rounded-t-none',
-          'peer-hover/bottom:rounded-b-none',
+          'fixed inset-0 rounded-lg shadow-lg',
+          'flex flex-col',
+          'font-mono text-[13px]',
+          'user-select-none',
+          'opacity-0',
+          'cursor-move',
+          'z-[124124124124]',
+          'animate-fade-in animation-duration-300 animation-delay-300',
+          'will-change-transform',
         )}
       >
-        <div
-          ref={refContent}
-          className={cn(
-            'relative',
-            'flex-1',
-            'flex flex-col',
-            'rounded-t-lg',
-            'overflow-hidden',
-            'opacity-100',
-            'transition-[opacity] duration-150',
-          )}
-        >
-          <Header />
-          <div
-            ref={refPropContainer}
-            className={cn(
-              'react-scan-prop',
-              'flex-1',
-              'text-white',
-              'transition-opacity duration-150 delay-150',
-              'overflow-y-auto overflow-x-hidden',
-            )}
-          />
-        </div>
+        <ResizeHandle position="top" />
+        <ResizeHandle position="bottom" />
+        <ResizeHandle position="left" />
+        <ResizeHandle position="right" />
 
         <div
-          ref={refFooter}
           className={cn(
-            'relative',
-            'h-9',
-            'flex items-center justify-between',
-            'transition-colors duration-200',
-            'overflow-hidden',
+            'flex flex-1 flex-col',
+            'overflow-hidden z-10',
             'rounded-lg',
-            'z-10'
+            'bg-black',
+            'opacity-100',
+            'transition-[border-radius] duration-150',
+            'peer-hover/left:rounded-l-none',
+            'peer-hover/right:rounded-r-none',
+            'peer-hover/top:rounded-t-none',
+            'peer-hover/bottom:rounded-b-none',
           )}
         >
-          <Toolbar refPropContainer={refPropContainer} />
+          <div
+            ref={refContent}
+            className={cn(
+              'relative',
+              'flex-1',
+              'flex flex-col',
+              'rounded-t-lg',
+              'overflow-hidden',
+              'opacity-100',
+              'transition-[opacity] duration-150',
+            )}
+          >
+            <Header />
+            <div
+              className={cn(
+                'react-scan-prop',
+                'flex-1',
+                'text-white',
+                'transition-opacity duration-150 delay-150',
+                'overflow-y-auto overflow-x-hidden',
+              )}
+            >
+              <Inspector />
+            </div>
+          </div>
+
+          <div
+            ref={refFooter}
+            className={cn(
+              'relative',
+              'h-9',
+              'flex items-center justify-between',
+              'transition-colors duration-200',
+              'overflow-hidden',
+              'rounded-lg',
+              'z-10'
+            )}
+          >
+            <Toolbar />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

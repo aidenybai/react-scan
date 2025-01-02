@@ -1,11 +1,5 @@
 import { type JSX } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
-import {
-  cn,
-  saveLocalStorage,
-} from '@web-utils/helpers';
-import { Store } from 'src/core';
-import { Icon } from '@web-components/icon';
 import { LOCALSTORAGE_KEY, MIN_SIZE } from '../../constants';
 import { signalRefContainer, signalWidget } from '../../state';
 import {
@@ -17,6 +11,9 @@ import {
   getWindowDimensions,
 } from './helpers';
 import { type Corner, type ResizeHandleProps } from './types';
+import { saveLocalStorage, cn } from '~web/utils/helpers';
+import { Icon } from '~web/components/icon';
+import { Store } from '~core/index';
 
 export const ResizeHandle = ({ position }: ResizeHandleProps) => {
   const refContainer = useRef<HTMLDivElement>(null);

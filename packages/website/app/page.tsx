@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Companies from '@/components/companies';
 import CLI from '@/components/cli';
 import TodoDemo from '@/components/todo-demo';
+// import { TestDataTypes } from '@/components/test-data-types';
 
 export default function Home() {
   const [showDemo, setShowDemo] = useState(false);
@@ -50,6 +51,11 @@ export default function Home() {
         </div>
 
         <CLI command="npx react-scan@latest <URL>" />
+
+        {/*
+          for testing purposes only
+          <TestDataTypes />
+        */}
 
         <div className="!mb-8 mt-4 flex gap-2">
           <Link

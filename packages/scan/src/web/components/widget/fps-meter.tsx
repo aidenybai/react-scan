@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
-import { cn } from '@web-utils/helpers';
-import { getFPS } from '../../../instrumentation';
+import { getFPS } from '~core/instrumentation';
+import { cn } from '~web/utils/helpers';
 
 export const FpsMeter = () => {
   const [fps, setFps] = useState<number | null>(null);
@@ -10,7 +10,7 @@ export const FpsMeter = () => {
       setFps(getFPS());
     }, 100);
 
-  return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId);
   }, []);
 
   return (

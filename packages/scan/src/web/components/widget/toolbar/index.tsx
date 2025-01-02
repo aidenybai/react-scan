@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useMemo } from 'preact/hooks';
-import { cn } from '@web-utils/helpers';
-import { ReactScanInternals, Store, setOptions } from '../../../..';
-import { getNearestFiberFromElement } from '../../inspect-element/utils';
-import { Icon } from '../icon';
-import { FpsMeter } from './fps-meter';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
+import { Store, ReactScanInternals, setOptions } from '~core/index';
+import { Icon } from '~web/components/icon';
+import { getInspectableElements } from '~web/components/inspector/utils';
+import FpsMeter from '~web/components/widget/fps-meter';
+import { Search } from '~web/components/widget/toolbar/search';
+import { cn } from '~web/utils/helpers';
 
-interface ToolbarProps {
-  refPropContainer: preact.RefObject<HTMLDivElement>;
-}
-
-export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
+export const Toolbar = () => {
   const inspectState = Store.inspectState;
 
   const isInspectFocused = inspectState.value.kind === 'focused';
@@ -40,20 +37,17 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
       case 'inspecting':
         Store.inspectState.value = {
           kind: 'inspect-off',
-          propContainer: currentState.propContainer,
         };
         break;
       case 'focused':
         Store.inspectState.value = {
           kind: 'inspect-off',
-          propContainer: currentState.propContainer,
         };
         break;
       case 'inspect-off':
         Store.inspectState.value = {
           kind: 'inspecting',
           hoveredDomElement: null,
-          propContainer: refPropContainer.current!,
         };
         break;
       case 'uninitialized':
@@ -63,26 +57,15 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
 
   const findNextElement = useCallback(
     (currentElement: HTMLElement, direction: 'next' | 'previous') => {
-      const allElements = Array.from(document.querySelectorAll('*')).filter(
-        (el): el is HTMLElement => el instanceof HTMLElement,
-      );
-      const currentIndex = allElements.indexOf(currentElement);
+      const allElements = getInspectableElements();
+      const currentIndex = allElements.findIndex(item => item.element === currentElement);
+
       if (currentIndex === -1) return null;
 
-      const currentFiber = getNearestFiberFromElement(currentElement);
-      const increment = direction === 'next' ? 1 : -1;
-      let index = currentIndex + increment;
-
-      while (index >= 0 && index < allElements.length) {
-        const fiber = getNearestFiberFromElement(allElements[index]);
-        if (fiber && fiber !== currentFiber) {
-          return allElements[index];
-        }
-        index += increment;
-      }
-      return null;
+      const nextIndex = currentIndex + (direction === 'next' ? 1 : -1);
+      return allElements[nextIndex]?.element || null;
     },
-    [],
+    []
   );
 
   const onPreviousFocus = useCallback(() => {
@@ -98,7 +81,6 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
       Store.inspectState.value = {
         kind: 'focused',
         focusedDomElement: prevElement,
-        propContainer: currentState.propContainer,
       };
     }
   }, [findNextElement]);
@@ -112,8 +94,7 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
     if (nextElement) {
       Store.inspectState.value = {
         kind: 'focused',
-        focusedDomElement: nextElement,
-        propContainer: currentState.propContainer,
+        focusedDomElement: nextElement
       };
     }
   }, [findNextElement]);
@@ -136,10 +117,30 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
     if (currentState.kind === 'uninitialized') {
       Store.inspectState.value = {
         kind: 'inspect-off',
-        propContainer: refPropContainer.current!,
       };
     }
   }, []);
+
+  // Add these states to track if prev/next are available
+  const [hasPrevious, setHasPrevious] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
+
+  // Add this effect to update the button states whenever focused element changes
+  useEffect(() => {
+    const currentState = Store.inspectState.value;
+    if (currentState.kind !== 'focused' || !currentState.focusedDomElement) {
+      setHasPrevious(false);
+      setHasNext(false);
+      return;
+    }
+
+    // Check if prev/next elements exist
+    const prevElement = findNextElement(currentState.focusedDomElement, 'previous');
+    const nextElement = findNextElement(currentState.focusedDomElement, 'next');
+
+    setHasPrevious(!!prevElement);
+    setHasNext(!!nextElement);
+  }, [findNextElement, Store.inspectState.value]);
 
   return (
     <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
@@ -151,6 +152,7 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
       >
         {inspectIcon}
       </button>
+
       <button
         id="react-scan-power"
         title={
@@ -195,15 +197,24 @@ export const Toolbar = ({ refPropContainer }: ToolbarProps) => {
             id="react-scan-previous-focus"
             title="Previous element"
             onClick={onPreviousFocus}
-            className="flex items-center justify-center px-3"
+            disabled={!hasPrevious}
+            className={cn(
+              "flex items-center justify-center px-3",
+              !hasPrevious && "opacity-50 cursor-not-allowed"
+            )}
           >
             <Icon name="icon-previous" />
           </button>
+          <Search />
           <button
             id="react-scan-next-focus"
             title="Next element"
             onClick={onNextFocus}
-            className="flex items-center justify-center px-3"
+            disabled={!hasNext}
+            className={cn(
+              "flex items-center justify-center px-3",
+              !hasNext && "opacity-50 cursor-not-allowed"
+            )}
           >
             <Icon name="icon-next" />
           </button>

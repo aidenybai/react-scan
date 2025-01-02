@@ -1,11 +1,28 @@
 import {
+  getDisplayName,
   isCompositeFiber,
   isHostFiber,
   traverseFiber,
 } from 'bippy';
 import { type Fiber } from 'react-reconciler';
-import { ReactScanInternals } from '../../index';
-import { isEqual } from '../../utils';
+import { ReactScanInternals } from '~core/index';
+import { isEqual } from '~core/utils';
+
+export type States =
+  | {
+    kind: 'inspecting';
+    hoveredDomElement: HTMLElement | null;
+  }
+  | {
+    kind: 'inspect-off';
+  }
+  | {
+    kind: 'focused';
+    focusedDomElement: HTMLElement;
+  }
+  | {
+    kind: 'uninitialized';
+  };
 
 interface ReactRootContainer {
   _reactRootContainer?: {
@@ -21,13 +38,26 @@ interface ReactInternalProps {
   [key: string]: Fiber;
 }
 
+interface ReactRenderer {
+  findFiberByHostInstance: (instance: Element) => Fiber | null;
+  version: string;
+  bundleType: number;
+  rendererPackageName: string;
+  overrideHookState?: (fiber: Fiber, id: string, path: Array<any>, value: any) => void;
+  overrideProps?: (fiber: Fiber, path: Array<string>, value: any) => void;
+  scheduleUpdate?: (fiber: Fiber) => void;
+}
+
+interface DevToolsHook {
+  renderers: Map<number, ReactRenderer>;
+}
+
 export const getFiberFromElement = (element: Element): Fiber | null => {
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
-    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__ as DevToolsHook;
     if (!renderers) return null;
     for (const [, renderer] of Array.from(renderers)) {
       try {
-        // @ts-expect-error - renderer.findFiberByHostInstance is not typed
         const fiber = renderer.findFiberByHostInstance(element);
         if (fiber) return fiber;
       } catch (e) {
@@ -202,18 +232,46 @@ interface OverrideMethods {
 export const getOverrideMethods = (): OverrideMethods => {
   let overrideProps = null;
   let overrideHookState = null;
+
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
-    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__ as DevToolsHook;
     if (renderers) {
       for (const [_, renderer] of Array.from(renderers)) {
         try {
-          // @ts-expect-error - renderer methods are not typed
-          if (renderer.overrideProps && renderer.overrideHookState) {
-            // @ts-expect-error - renderer methods are not typed
-            overrideProps = renderer.overrideProps.bind(renderer);
-            // @ts-expect-error - renderer methods are not typed
+          if (overrideHookState) {
+            const prevOverrideHookState = overrideHookState;
+            overrideHookState = (fiber: Fiber, id: string, path: Array<any>, value: any) => {
+              // Find the hook
+              let current = fiber.memoizedState;
+              for (let i = 0; i < parseInt(id); i++) {
+                current = current.next;
+              }
+
+              if (current && current.queue) {
+                // Update through React's queue mechanism
+                const dispatch = current.queue.dispatch;
+                if (dispatch) {
+                  dispatch(value);
+                  return;
+                }
+              }
+
+              // Fallback to direct override if queue dispatch isn't available
+              prevOverrideHookState(fiber, id, path, value);
+              renderer.overrideHookState?.(fiber, id, path, value);
+            };
+          } else if (renderer.overrideHookState) {
             overrideHookState = renderer.overrideHookState.bind(renderer);
-            break;
+          }
+
+          if (overrideProps) {
+            const prevOverrideProps = overrideProps;
+            overrideProps = (fiber: Fiber, path: Array<string>, value: any) => {
+              prevOverrideProps(fiber, path, value);
+              renderer.overrideProps?.(fiber, path, value);
+            };
+          } else if (renderer.overrideProps) {
+            overrideProps = renderer.overrideProps.bind(renderer);
           }
         } catch (e) {
           /**/
@@ -223,4 +281,87 @@ export const getOverrideMethods = (): OverrideMethods => {
   }
 
   return { overrideProps, overrideHookState };
+};
+
+
+export const nonVisualTags = [
+  'html',
+  'meta',
+  'script',
+  'link',
+  'style',
+  'head',
+  'title',
+  'noscript',
+  'base',
+  'template',
+  'iframe',
+  'embed',
+  'object',
+  'param',
+  'source',
+  'track',
+  'area',
+  'portal',
+  'slot',
+  'xml',
+  'doctype',
+  'comment'
+];
+export const findComponentDOMNode = (fiber: Fiber, excludeNonVisualTags = true): HTMLElement | null => {
+  if (fiber.stateNode && 'nodeType' in fiber.stateNode) {
+    const element = fiber.stateNode as HTMLElement;
+    if (excludeNonVisualTags && nonVisualTags.includes(element.tagName.toLowerCase())) {
+      return null;
+    }
+    return element;
+  }
+
+  let child = fiber.child;
+  while (child) {
+    const result = findComponentDOMNode(child, excludeNonVisualTags);
+    if (result) return result;
+    child = child.sibling;
+  }
+
+  return null;
+};
+
+interface InspectableElement {
+  element: HTMLElement;
+  depth: number;
+  name: string;
+}
+
+export const getInspectableElements = (root: HTMLElement = document.body): Array<InspectableElement> => {
+  const result: Array<InspectableElement> = [];
+
+  const findInspectableFiber = (element: HTMLElement | null): HTMLElement | null => {
+    if (!element) return null;
+    const { parentCompositeFiber } = getCompositeComponentFromElement(element);
+    if (!parentCompositeFiber) return null;
+
+    const componentRoot = findComponentDOMNode(parentCompositeFiber);
+    return componentRoot === element ? element : null;
+  };
+
+  const traverse = (element: HTMLElement, depth = 0) => {
+    const inspectable = findInspectableFiber(element);
+    if (inspectable) {
+      const { parentCompositeFiber } = getCompositeComponentFromElement(inspectable);
+      result.push({
+        element: inspectable,
+        depth,
+        name: getDisplayName(parentCompositeFiber!.type) ?? 'Unknown'
+      });
+    }
+
+    // Traverse children first (depth-first)
+    Array.from(element.children).forEach(child => {
+      traverse(child as HTMLElement, inspectable ? depth + 1 : depth);
+    });
+  };
+
+  traverse(root);
+  return result;
 };

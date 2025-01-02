@@ -1,5 +1,5 @@
-import { recalcOutlines } from '@web-utils/outline';
-import { outlineWorker } from '@web-utils/outline-worker';
+import { recalcOutlines } from './utils/outline';
+import { outlineWorker } from './utils/outline-worker';
 
 export const initReactScanOverlay = () => {
   const container = document.getElementById('react-scan-root');
@@ -80,6 +80,7 @@ export const initReactScanOverlay = () => {
         transfer: [offscreen],
       },
     )
+    // eslint-disable-next-line no-console
     .catch(console.error);
 
   updateCanvasSize();

@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { type WidgetConfig, type WidgetSettings, type Corner } from './components/widget/types';
-import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from './constants';
+import { readLocalStorage, saveLocalStorage } from './utils/helpers';
+import { MIN_SIZE, SAFE_AREA, LOCALSTORAGE_KEY } from './constants';
+import { type Corner, type WidgetConfig, type WidgetSettings } from './components/widget/types';
 
 export const signalRefContainer = signal<HTMLDivElement | null>(null);
 

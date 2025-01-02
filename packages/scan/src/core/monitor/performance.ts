@@ -1,7 +1,7 @@
 import { getDisplayName } from 'bippy';
 import { type Fiber } from 'react-reconciler';
+import { getCompositeComponentFromElement } from '~web/components/inspector/utils';
 import { Store } from '../..';
-import { getCompositeComponentFromElement } from '../web/inspect-element/utils';
 import type {
   PerformanceInteraction,
   PerformanceInteractionEntry,

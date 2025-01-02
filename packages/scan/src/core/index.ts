@@ -12,27 +12,19 @@ import {
 } from 'bippy';
 import type * as React from 'react';
 import type { Fiber } from 'react-reconciler';
-import { ICONS } from '@web-assets/svgs/svgs';
-import {
-  createInspectElementStateMachine,
-  type States,
-} from '@web-inspect-element/inspect-state-machine';
-import { playGeigerClickSound } from '@web-utils/geiger';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { log, logIntro } from '@web-utils/log';
-import { flushOutlines, type Outline } from '@web-utils/outline';
-import {
-  aggregateChanges,
-  aggregateRender,
-  updateFiberRenderData,
-  type RenderData,
-} from 'src/core/utils';
-import { createInstrumentation, type Render } from './instrumentation';
-import type { InternalInteraction } from './monitor/types';
+import styles from '~web/assets/css/styles.css';
+import { log, logIntro } from '~web/utils/log';
+import { ICONS } from '~web/assets/svgs/svgs';
+import { type States } from '~web/components/inspector/utils';
+import { initReactScanOverlay } from '~web/overlay';
+import { createToolbar } from '~web/toolbar';
+import { playGeigerClickSound } from '~web/utils/geiger';
+import { saveLocalStorage, readLocalStorage } from '~web/utils/helpers';
+import { type Outline, flushOutlines } from '~web/utils/outline';
+import { type RenderData, aggregateRender, aggregateChanges, updateFiberRenderData } from '~core/utils';
 import { type getSession } from './monitor/utils';
-import styles from './web/assets/css/styles.css';
-import { initReactScanOverlay } from './web/overlay';
-import { createToolbar } from './web/toolbar';
+import type { InternalInteraction } from './monitor/types';
+import { createInstrumentation, type Render } from './instrumentation';
 
 let toolbarContainer: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -589,8 +581,6 @@ export const start = () => {
       if (!ctx) return;
       startFlushOutlineInterval();
 
-      createInspectElementStateMachine(shadowRoot);
-
       globalThis.__REACT_SCAN__ = {
         ReactScanInternals,
       };
@@ -598,10 +588,6 @@ export const start = () => {
       if (ReactScanInternals.options.value.showToolbar) {
         toolbarContainer = createToolbar(shadowRoot);
       }
-
-      const overlayElement = document.createElement('react-scan-overlay');
-
-      document.documentElement.appendChild(overlayElement);
 
       logIntro();
     },

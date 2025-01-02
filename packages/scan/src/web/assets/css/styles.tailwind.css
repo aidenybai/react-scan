@@ -341,7 +341,7 @@ button {
   }
 }
 
-.react-scan-expanded > .react-scan-arrow:before {
+.react-scan-expanded .react-scan-arrow:before {
   transform: rotate(90deg);
 }
 
@@ -376,20 +376,29 @@ button {
 
 .react-scan-flash-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(142, 97, 227, 1);
-  pointer-events: none;
+  inset: 0;
   opacity: 0;
   z-index: 999999;
   mix-blend-mode: multiply;
+  background: rgba(142, 97, 227, 0.9);
   transition: opacity 150ms ease-in;
-  border-radius: 4px;
+  pointer-events: none;
 }
 
 .react-scan-flash-active {
   opacity: 0.4;
   transition: opacity 300ms ease-in-out;
+}
+
+.react-scan-inspector-overlay {
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+
+  &.fade-out {
+    opacity: 0;
+  }
+
+  &.fade-in {
+    opacity: 1;
+  }
 }
