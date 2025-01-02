@@ -77,7 +77,7 @@ export const isDirectComponent = (fiber: Fiber): boolean => {
   const isFunctionalComponent = typeof fiber.type === 'function';
   const isClassComponent = fiber.type.prototype && fiber.type.prototype.isReactComponent;
 
-  if (!isFunctionalComponent && !isClassComponent) return false;
+  if (!(isFunctionalComponent || isClassComponent)) return false;
 
   // For class components, check if they have state
   if (isClassComponent) {

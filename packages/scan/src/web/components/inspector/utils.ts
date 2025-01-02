@@ -284,7 +284,7 @@ export const getOverrideMethods = (): OverrideMethods => {
 };
 
 
-export const nonVisualTags = [
+const nonVisualTags = new Set([
   'html',
   'meta',
   'script',
@@ -307,11 +307,11 @@ export const nonVisualTags = [
   'xml',
   'doctype',
   'comment'
-];
+]);
 export const findComponentDOMNode = (fiber: Fiber, excludeNonVisualTags = true): HTMLElement | null => {
   if (fiber.stateNode && 'nodeType' in fiber.stateNode) {
     const element = fiber.stateNode as HTMLElement;
-    if (excludeNonVisualTags && nonVisualTags.includes(element.tagName.toLowerCase())) {
+    if (excludeNonVisualTags && nonVisualTags.has(element.tagName.toLowerCase())) {
       return null;
     }
     return element;

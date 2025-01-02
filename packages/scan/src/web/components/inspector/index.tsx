@@ -69,7 +69,26 @@ type TypedArray =
   | BigInt64Array
   | BigUint64Array;
 
-const isExpandable = (value: unknown): value is Record<string, unknown> | Array<unknown> | ArrayBuffer | DataView | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array => {
+type InspectableValue =
+  | Record<string, unknown>
+  | Array<unknown>
+  | Map<unknown, unknown>
+  | Set<unknown>
+  | ArrayBuffer
+  | DataView
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array;
+
+const isExpandable = (value: unknown): value is InspectableValue => {
   if (value === null || typeof value !== 'object' || value instanceof Promise) {
     return false;
   }
@@ -87,12 +106,8 @@ const isExpandable = (value: unknown): value is Record<string, unknown> | Array<
     return true;  // Always expandable to show elements
   }
 
-  // Handle collections
-  if (value instanceof Map) {
-    return value.size > 0;
-  }
-
-  if (value instanceof Set) {
+  // Handle collections with size property
+  if (value instanceof Map || value instanceof Set) {
     return value.size > 0;
   }
 
@@ -108,21 +123,25 @@ const isPromise = (value: any): value is Promise<unknown> => {
 };
 
 const isEditableValue = (value: unknown): boolean => {
-  // Basic types are always editable
-  if (typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    typeof value === 'bigint') return true;
-
   if (value === null || value === undefined) return true;
 
-  // Special objects
-  if (value instanceof Date ||
-    value instanceof RegExp ||
-    value instanceof Error) return true;
+  switch (true) {
+    case value?.constructor === Date:
+    case value?.constructor === RegExp:
+    case value?.constructor === Error:
+      return true;
 
-  // Everything else is not directly editable
-  return false;
+    default:
+      switch (typeof value) {
+        case 'string':
+        case 'number':
+        case 'boolean':
+        case 'bigint':
+          return true;
+        default:
+          return false;
+      }
+  }
 };
 
 const getPath = (
@@ -158,50 +177,43 @@ const formatValue = (value: unknown): string => {
   if (value === undefined) return 'undefined';
   if (value instanceof Promise) return 'Promise';
 
-  if (value instanceof Map) {
-    return `Map(${value.size})`;
-  }
-
-  if (value instanceof Set) {
-    return `Set(${value.size})`;
-  }
-
-  if (value instanceof Date) return 'Date';
-  if (value instanceof RegExp) return 'RegExp';
-  if (value instanceof Error) return 'Error';
-
-  if (value instanceof ArrayBuffer) {
-    return `ArrayBuffer(${value.byteLength})`;
-  }
-
-  if (value instanceof DataView) {
-    return `DataView(${value.byteLength})`;
-  }
-
-  if (ArrayBuffer.isView(value)) {
-    return `${value.constructor.name}(${getArrayLength(value)})`;
-  }
-
-  if (Array.isArray(value)) {
-    return `Array(${value.length})`;
-  }
-
-  switch (typeof value) {
-    case 'string':
-      return `"${value}"`;
-    case 'number':
-    case 'boolean':
-    case 'bigint':
-      return String(value);
-    case 'symbol':
-      return value.toString();
-    case 'object': {
-      const keys = Object.keys(value);
-      if (keys.length <= 5) return `{${keys.join(', ')}}`;
-      return `{${keys.slice(0, 5).join(', ')}, ...${keys.length - 5}}`;
-    }
+  switch (true) {
+    case value instanceof Map:
+      return `Map(${value.size})`;
+    case value instanceof Set:
+      return `Set(${value.size})`;
+    case value instanceof Date:
+      return 'Date';
+    case value instanceof RegExp:
+      return 'RegExp';
+    case value instanceof Error:
+      return 'Error';
+    case value instanceof ArrayBuffer:
+      return `ArrayBuffer(${value.byteLength})`;
+    case value instanceof DataView:
+      return `DataView(${value.byteLength})`;
+    case ArrayBuffer.isView(value):
+      return `${value.constructor.name}(${getArrayLength(value)})`;
+    case Array.isArray(value):
+      return `Array(${value.length})`;
     default:
-      return typeof value;
+      switch (typeof value) {
+        case 'string':
+          return `"${value}"`;
+        case 'number':
+        case 'boolean':
+        case 'bigint':
+          return String(value);
+        case 'symbol':
+          return value.toString();
+        case 'object': {
+          const keys = Object.keys(value);
+          if (keys.length <= 5) return `{${keys.join(', ')}}`;
+          return `{${keys.slice(0, 5).join(', ')}, ...${keys.length - 5}}`;
+        }
+        default:
+          return typeof value;
+      }
   }
 };
 
@@ -703,7 +715,7 @@ const PropertyElement = ({
   const prevValue = lastRendered.get(currentPath);
   const isChanged = prevValue !== undefined && !isEqual(prevValue, value);
 
-  const renderNestedProperties = useCallback((obj: Record<string, unknown> | Array<unknown> | Map<unknown, unknown> | Set<unknown> | ArrayBuffer | DataView | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array) => {
+  const renderNestedProperties = useCallback((obj: InspectableValue) => {
     let entries: Array<IterableEntry>;
 
     if (obj instanceof ArrayBuffer) {
@@ -823,13 +835,7 @@ const PropertyElement = ({
             return true;
           }
         }
-      } else if (obj instanceof Set) {
-        for (const value of obj) {
-          if (hasCircular(value)) {
-            return true;
-          }
-        }
-      } else if (Array.isArray(obj)) {
+      } else if (obj instanceof Set || Array.isArray(obj)) {
         for (const value of obj) {
           if (hasCircular(value)) {
             return true;
