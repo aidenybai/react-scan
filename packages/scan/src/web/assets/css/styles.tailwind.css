@@ -340,6 +340,7 @@ svg {
   @apply transition-all duration-150;
 
   &.react-scan-expanded {
+    @apply pt-2;
     @apply grid-rows-[1fr];
   }
 }

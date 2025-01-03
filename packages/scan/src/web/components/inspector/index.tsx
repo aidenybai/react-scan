@@ -942,25 +942,25 @@ const WhatChanged = memo(() => {
   return (
     <div
       onClick={handleToggle}
-      className={cn(
-        "bg-yellow-600 p-2 text-white",
-      )}
+      className="bg-yellow-600 px-1 py-2 text-white"
     >
-      <p className="flex items-center gap-2">
-        <Icon
-          name="icon-chevron-right"
-          size={12}
-          className={cn(
-            {
-              'rotate-90': isExpanded,
-            }
-          )}
-        />
+      <div className="flex items-center">
+        <span className="flex w-8 items-center justify-center">
+          <Icon
+            name="icon-chevron-right"
+            size={12}
+            className={cn(
+              {
+                'rotate-90': isExpanded,
+              }
+            )}
+          />
+        </span>
         What changed?
-      </p>
+      </div>
       <div
         className={cn(
-          "react-scan-expandable",
+          "react-scan-expandable pl-8",
           {
             'react-scan-expanded': isExpanded,
           }
