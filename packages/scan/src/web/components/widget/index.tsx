@@ -372,7 +372,7 @@ export const Widget = () => {
                 'flex-1',
                 'text-white',
                 'transition-opacity duration-150 delay-150',
-                'overflow-y-auto overflow-x-hidden',
+                'overflow-y-scroll overflow-x-hidden',
               )}
             >
               <Inspector />

@@ -95,6 +95,7 @@ export const Search = () => {
         break;
       case 'Escape':
         e.preventDefault();
+        e.stopPropagation();
         handleClose();
         break;
     }

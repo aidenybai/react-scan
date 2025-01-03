@@ -498,10 +498,10 @@ export const ScanOverlay = () => {
         drawHoverOverlay(state.focusedDomElement, canvas, ctx, 'locked');
 
         unsubReport = Store.lastReportTime.subscribe(() => {
-          if (!refRafId.current && refCurrentRect.current) {
+          if (refRafId.current && refCurrentRect.current) {
             const { parentCompositeFiber } = getCompositeComponentFromElement(state.focusedDomElement);
             if (parentCompositeFiber) {
-              drawRect(canvas, ctx, 'locked', parentCompositeFiber);
+              drawHoverOverlay(state.focusedDomElement, canvas, ctx, 'locked');
             }
           }
         });
@@ -555,7 +555,7 @@ export const ScanOverlay = () => {
     window.addEventListener('resize', handleResizeOrScroll, { passive: true });
     document.addEventListener('mousemove', handleMouseMove, { passive: true, capture: true });
     document.addEventListener('click', handleClick, { capture: true });
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       unsubscribeAll();
@@ -564,7 +564,7 @@ export const ScanOverlay = () => {
       window.removeEventListener('resize', handleResizeOrScroll);
       document.removeEventListener('mousemove', handleMouseMove, { capture: true });
       document.removeEventListener('click', handleClick, { capture: true });
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+      window.removeEventListener('keydown', handleKeyDown);
 
       if (refRafId.current) {
         cancelAnimationFrame(refRafId.current);

@@ -47,6 +47,11 @@ button {
   @apply cursor-pointer;
 }
 
+svg {
+  @apply w-auto h-auto;
+  @apply pointer-events-none;
+}
+
 /*
   Using CSS content with data attributes is more performant than:
   1. React re-renders with JSX text content
@@ -271,25 +276,24 @@ button {
   @apply bg-black text-[#888];
   @apply before:content-[attr(data-section)] before:text-gray-500;
 
-  > div {
-    @apply min-h-6 ml-2;
+  > .react-scan-property {
+    @apply -ml-3.5;
   }
 }
 
 .react-scan-property {
   @apply relative;
   @apply flex flex-col;
-  @apply pt-1 pl-6;
+  @apply pl-8;
   @apply border-l-1 border-transparent;
   @apply overflow-hidden;
 }
 
-.react-scan-key {
-  color: #fff;
-}
-
-.react-scan-warning {
-  padding-right: 4px;
+.react-scan-property-content {
+  @apply flex-1 flex flex-col;
+  @apply py-1 min-h-6;
+  @apply max-w-full;
+  @apply overflow-hidden;
 }
 
 .react-scan-string {
@@ -304,52 +308,53 @@ button {
   color: #56b6c2;
 }
 
+.react-scan-key {
+  @apply min-w-8 max-w-60 truncate text-white;
+}
+
 .react-scan-input {
-  background: #000;
-  border: none;
-  color: #fff;
+  @apply text-white;
+  @apply bg-black;
 }
 
-.react-scan-object-key {
-  color: #fff;
-}
-
-.react-scan-array {
-  color: #fff;
-}
-
-.react-scan-expandable {
-  display: flex;
-  align-items: flex-start;
+@keyframes blink {
+	from { opacity: 1; }
+	to { opacity: 0; }
 }
 
 .react-scan-arrow {
-  @apply absolute top-2 left-6;
+  @apply absolute top-1 left-7;
+  @apply flex items-center justify-center;
   @apply cursor-pointer;
   @apply w-6 h-6;
   @apply -translate-x-full;
   @apply z-10;
 
-  &:before {
-    content: '▶';
-    @apply absolute inset-0;
-    @apply flex items-center justify-center;
-    @apply text-[#888];
-    @apply text-[8px];
-    @apply origin-center;
+  > svg {
     @apply transition-transform duration-150;
   }
 }
 
-.react-scan-expanded .react-scan-arrow:before {
-  transform: rotate(90deg);
+.react-scan-expandable {
+  @apply grid grid-rows-[0fr];
+  @apply transition-all duration-150;
+
+  &.react-scan-expanded {
+    @apply grid-rows-[1fr];
+  }
 }
 
-.react-scan-property-content {
-  @apply flex-1 flex flex-col;
-  @apply pt-1;
-  @apply max-w-full;
+.react-scan-nested {
+  @apply relative;
+  /* @apply border-l-1 border-gray-500/30; */
   @apply overflow-hidden;
+
+  &:before {
+    content: '';
+    @apply absolute top-0 left-0;
+    @apply w-[1px] h-full;
+    @apply bg-gray-500/30;
+  }
 }
 
 .react-scan-hidden {
@@ -362,11 +367,6 @@ button {
   margin-top: 8px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   padding-left: 8px;
-}
-
-.react-scan-nested-object {
-  /* @apply ml-5; */
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .react-scan-preview-line {

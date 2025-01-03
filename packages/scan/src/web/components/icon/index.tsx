@@ -43,6 +43,12 @@ export const Icon = forwardRef((props: SVGIconProps, ref: ForwardedRef<SVGSVGEle
     <svg
       ref={ref}
       {...attributes}
+      style={{
+        minWidth: `${width}px`,
+        maxWidth: `${width}px`,
+        minHeight: `${height}px`,
+        maxHeight: `${height}px`,
+      }}
     >
       <use href={path} />
     </svg>

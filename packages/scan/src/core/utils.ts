@@ -1,10 +1,9 @@
 import { getType } from 'bippy';
 import { type Fiber } from 'react-reconciler';
-import type { AggregatedChange, Render, RenderChange } from './instrumentation';
 import { ReactScanInternals } from '~core/index';
 import { type AggregatedRender } from '~web/utils/outline';
+import type { AggregatedChange, Render, RenderChange } from './instrumentation';
 
-// Helper function for Set union
 const unionSets = <T>(setA: Set<T>, setB: Set<T>): Set<T> => {
   const union = new Set(setA);
   for (const elem of setB) {

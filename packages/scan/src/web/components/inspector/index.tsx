@@ -8,6 +8,7 @@ import { Store } from '~core/index';
 import { isEqual } from '~core/utils';
 import { cn, tryOrElse } from '~web/utils/helpers';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
+import { Icon } from '~web/components/icon';
 import { getCompositeComponentFromElement, getOverrideMethods } from './utils';
 import {
   getChangedProps,
@@ -80,7 +81,7 @@ interface PropertyElementProps {
   parentPath?: string;
   objectPathMap?: WeakMap<object, Set<string>>;
   changedKeys?: Set<string>;
-  hasCumulativeChanges?: boolean;
+  allowEditing?: boolean;
 }
 
 interface PropertySectionProps {
@@ -167,8 +168,20 @@ const isPromise = (value: any): value is Promise<unknown> => {
   return value && (value instanceof Promise || (typeof value === 'object' && 'then' in value));
 };
 
-const isEditableValue = (value: unknown): boolean => {
+const isEditableValue = (value: unknown, parentPath?: string): boolean => {
   if (value === null || value === undefined) return true;
+
+  if (parentPath) {
+    const parts = parentPath.split('.');
+    let currentPath = '';
+    for (const part of parts) {
+      currentPath = currentPath ? `${currentPath}.${part}` : part;
+      const obj = lastRendered.get(currentPath);
+      if (obj instanceof DataView || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj)) {
+        return false;
+      }
+    }
+  }
 
   switch (value.constructor) {
     case Date:
@@ -383,78 +396,14 @@ const parseArrayValue = (value: string): Array<unknown> => {
   return result;
 };
 
-const parseValue = (value: string, currentType: unknown, propertyName?: string): unknown => {
+const parseValue = (value: string, currentType: unknown): unknown => {
   try {
-    if (typeof currentType === 'number') {
-      const numValue = Number(value);
-      if (isNaN(numValue)) return currentType;
-      return numValue & 0xFF;
-    }
+    if (typeof currentType === 'number') return Number(value);
     if (typeof currentType === 'string') return value;
     if (typeof currentType === 'boolean') return value === 'true';
     if (typeof currentType === 'bigint') return BigInt(value);
     if (currentType === null) return null;
     if (currentType === undefined) return undefined;
-
-    if (currentType instanceof ArrayBuffer) {
-      const numValue = Number(value);
-      if (isNaN(numValue)) return currentType;
-
-      const oldView = new Uint8Array(currentType);
-      const newBuffer = new ArrayBuffer(oldView.length);
-      const newView = new Uint8Array(newBuffer);
-
-      newView.set(oldView);
-
-      if (propertyName) {
-        const index = parseInt(propertyName, 10);
-        if (index >= 0 && index < newView.length) {
-          newView[index] = numValue & 0xFF;
-        }
-      }
-
-      return newBuffer;
-    }
-
-    if (ArrayBuffer.isView(currentType)) {
-      if (currentType instanceof BigInt64Array || currentType instanceof BigUint64Array) {
-        try {
-          const bigIntValue = BigInt(value);
-          const Constructor = Object.getPrototypeOf(currentType).constructor;
-          const typedArray = currentType;
-          const newArray = new Constructor(typedArray.length);
-          for (let i = 0; i < typedArray.length; i++) {
-            newArray[i] = typedArray[i];
-          }
-          if (propertyName) {
-            const index = parseInt(propertyName, 10);
-            if (index >= 0 && index < newArray.length) {
-              newArray[index] = bigIntValue;
-            }
-          }
-          return newArray;
-        } catch {
-          return currentType;
-        }
-      }
-
-      const numValue = Number(value);
-      if (isNaN(numValue)) return currentType;
-
-      const Constructor = Object.getPrototypeOf(currentType).constructor;
-      const typedArray = currentType as TypedArray;
-      const newArray = new Constructor(typedArray.length);
-      for (let i = 0; i < typedArray.length; i++) {
-        newArray[i] = typedArray[i];
-      }
-      if (propertyName) {
-        const index = parseInt(propertyName, 10);
-        if (index >= 0 && index < newArray.length) {
-          newArray[index] = numValue;
-        }
-      }
-      return newArray;
-    }
 
     if (currentType instanceof RegExp) {
       try {
@@ -508,7 +457,36 @@ const parseValue = (value: string, currentType: unknown, propertyName?: string):
   }
 };
 
-const EditableValue = ({ value, onSave, onCancel, name }: EditableValueProps & { name: string }) => {
+const detectValueType = (value: string): {
+  type: 'string' | 'number' | 'undefined' | 'null' | 'boolean';
+  value: unknown;
+} => {
+  const trimmed = value.trim();
+
+  if (/^".*"$/.test(trimmed)) {
+    return { type: 'string', value: trimmed.slice(1, -1) };
+  }
+
+  if (trimmed === 'undefined') return { type: 'undefined', value: undefined };
+  if (trimmed === 'null') return { type: 'null', value: null };
+  if (trimmed === 'true') return { type: 'boolean', value: true };
+  if (trimmed === 'false') return { type: 'boolean', value: false };
+
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+    return { type: 'number', value: Number(trimmed) };
+  }
+
+  return { type: 'string', value: `"${trimmed}"` };
+};
+
+const formatInitialValue = (value: unknown): string => {
+  if (value === undefined) return 'undefined';
+  if (value === null) return 'null';
+  if (typeof value === 'string') return `"${value}"`;
+  return String(value);
+};
+
+const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [editValue, setEditValue] = useState(() => {
     let initialValue = '';
@@ -520,7 +498,7 @@ const EditableValue = ({ value, onSave, onCancel, name }: EditableValueProps & {
         (typeof value === 'object' && value !== null)) {
         initialValue = formatValue(value);
       } else {
-        initialValue = String(value);
+        initialValue = formatInitialValue(value);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -532,15 +510,20 @@ const EditableValue = ({ value, onSave, onCancel, name }: EditableValueProps & {
 
   useEffect(() => {
     inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
 
-  const handleChange = (e: Event) => {
+    if (typeof value === 'string') {
+      inputRef.current?.setSelectionRange(1, inputRef.current.value.length - 1);
+    } else {
+      inputRef.current?.select();
+    }
+  }, [value]);
+
+  const handleChange = useCallback((e: Event) => {
     const target = e.target as HTMLInputElement;
     if (target) {
       setEditValue(target.value);
     }
-  };
+  }, []);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -554,13 +537,16 @@ const EditableValue = ({ value, onSave, onCancel, name }: EditableValueProps & {
           }
           newValue = date;
         } else {
-          newValue = parseValue(editValue, value, name);
+          const detected = detectValueType(editValue);
+          newValue = detected.value;
         }
         onSave(newValue);
       } catch (error) {
         onCancel();
       }
     } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
       onCancel();
     }
   };
@@ -569,12 +555,12 @@ const EditableValue = ({ value, onSave, onCancel, name }: EditableValueProps & {
     <input
       ref={inputRef}
       type={value instanceof Date ? 'datetime-local' : 'text'}
-      className="react-scan-input"
+      className="react-scan-input flex-1"
       value={editValue}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onBlur={onCancel}
-      step={value instanceof Date ? "1" : undefined}
+      step={value instanceof Date ? 1 : undefined}
     />
   );
 };
@@ -588,9 +574,9 @@ const PropertyElement = ({
   parentPath,
   objectPathMap = new WeakMap(),
   changedKeys = new Set(),
-  hasCumulativeChanges = false
+  allowEditing = true,
 }: PropertyElementProps) => {
-  const elementRef = useRef<HTMLDivElement>(null);
+  const refElement = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(() => {
     const currentPath = getPath(
       getDisplayName(fiber.type) ?? 'Unknown',
@@ -636,6 +622,8 @@ const PropertyElement = ({
       entries = Object.entries(obj);
     }
 
+    const canEditChildren = !(obj instanceof DataView || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj));
+
     const elements = entries.map(([key, value]) => (
       <PropertyElement
         key={String(key)}
@@ -647,123 +635,31 @@ const PropertyElement = ({
         parentPath={currentPath}
         objectPathMap={objectPathMap}
         changedKeys={changedKeys}
-        hasCumulativeChanges={hasCumulativeChanges || isChanged}
+        allowEditing={canEditChildren}
       />
     ));
 
     return elements;
-  }, [fiber, section, level, currentPath, objectPathMap, changedKeys, hasCumulativeChanges, isChanged]);
+  }, [fiber, section, level, currentPath, objectPathMap, changedKeys]);
 
   const valuePreview = useMemo(() => formatValue(value), [value]);
 
   const { overrideProps, overrideHookState } = getOverrideMethods();
-  const canEdit = section === 'props'
-    ? !!overrideProps
-    : section === 'state'
-      ? !!overrideHookState
-      : false;
-
-  const MAX_OBJECT_DEPTH = 100;
-  const MAX_COLLECTION_SIZE = 10000;
-
-  const validateObjectUpdate = (
-    value: unknown,
-    path: Array<string>,
-    depth = 0
-  ): { isValid: boolean; error?: string } => {
-    if (depth > MAX_OBJECT_DEPTH) {
-      return { isValid: false, error: 'Maximum object depth exceeded' };
-    }
-
-    if (value instanceof Map || value instanceof Set) {
-      if (value.size > MAX_COLLECTION_SIZE) {
-        return { isValid: false, error: 'Collection size exceeds maximum limit' };
-      }
-    }
-
-    if (Array.isArray(value)) {
-      if (value.length > MAX_COLLECTION_SIZE) {
-        return { isValid: false, error: 'Array size exceeds maximum limit' };
-      }
-    }
-
-    if (value instanceof ArrayBuffer || value instanceof DataView || ArrayBuffer.isView(value)) {
-      if (value.byteLength > MAX_COLLECTION_SIZE) {
-        return { isValid: false, error: 'Buffer size exceeds maximum limit' };
-      }
-    }
-
-    const seen = new Set<unknown>();
-    const hasCircular = (obj: unknown): boolean => {
-      if (obj === null || typeof obj !== 'object') {
-        return false;
-      }
-
-      if (seen.has(obj)) {
-        return true;
-      }
-
-      seen.add(obj);
-
-      if (obj instanceof Map) {
-        for (const [key, value] of obj.entries()) {
-          if (hasCircular(key) || hasCircular(value)) {
-            return true;
-          }
-        }
-      } else if (obj instanceof Set || Array.isArray(obj)) {
-        for (const value of obj) {
-          if (hasCircular(value)) {
-            return true;
-          }
-        }
-      } else {
-        for (const value of Object.values(obj)) {
-          if (hasCircular(value)) {
-            return true;
-          }
-        }
-      }
-
-      seen.delete(obj);
-      return false;
-    };
-
-    if (hasCircular(value)) {
-      return { isValid: false, error: 'Circular reference detected' };
-    }
-
-    return { isValid: true };
-  };
+  const canEdit = useMemo(() => {
+    return allowEditing && (
+      section === 'props'
+        ? !!overrideProps
+        : section === 'state'
+          ? !!overrideHookState
+          : false
+    );
+  }, [section, overrideProps, overrideHookState, allowEditing]);
 
   const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
-    const validation = validateObjectUpdate(value, path);
-    if (!validation.isValid) {
-      return obj;
-    }
-
-    if (path.length === 0) return value;
-
-    const [key, ...rest] = path;
-
     try {
-      if (obj instanceof DataView && rest.length === 0) {
-        const index = parseInt(key, 10);
-        const newBuffer = new ArrayBuffer(obj.byteLength);
-        const newView = new DataView(newBuffer);
-        const uint8Array = new Uint8Array(obj.buffer);
+      if (path.length === 0) return value;
 
-        uint8Array.forEach((byte, i) => {
-          newView.setUint8(i, byte);
-        });
-
-        if (typeof value === 'bigint') {
-          newView.setBigInt64(index, value);
-        } else {
-          newView.setUint8(index, value as number);
-        }
-        return newView;
-      }
+      const [key, ...rest] = path;
 
       if (obj instanceof Map) {
         const newMap = new Map(obj);
@@ -815,21 +711,9 @@ const PropertyElement = ({
           const parts = parentPath.split('.');
           const path = parts.filter(part => part !== 'props' && part !== getDisplayName(fiber.type));
           path.push(name);
-          const validation = validateObjectUpdate(newValue, path);
-          if (validation.isValid) {
-            overrideProps(fiber, path, newValue);
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn(sanitizeErrorMessage(validation.error ?? 'Invalid props update'));
-          }
+          overrideProps(fiber, path, newValue);
         } else {
-          const validation = validateObjectUpdate(newValue, [name]);
-          if (validation.isValid) {
-            overrideProps(fiber, [name], newValue);
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn(sanitizeErrorMessage(validation.error ?? 'Invalid props update'));
-          }
+          overrideProps(fiber, [name], newValue);
         }
       }, null);
     }
@@ -840,13 +724,7 @@ const PropertyElement = ({
           const stateNames = getStateNames(fiber);
           const namedStateIndex = stateNames.indexOf(name);
           const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
-          const validation = validateObjectUpdate(newValue, [name]);
-          if (validation.isValid) {
-            overrideHookState(fiber, hookId, [], newValue);
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn(sanitizeErrorMessage(validation.error ?? 'Invalid state update'));
-          }
+          overrideHookState(fiber, hookId, [], newValue);
         } else {
           const fullPathParts = parentPath.split('.');
           const stateIndex = fullPathParts.indexOf('state');
@@ -865,51 +743,8 @@ const PropertyElement = ({
             return;
           }
 
-          const currentValue = currentState[baseStateKey];
-
-          if (currentValue instanceof ArrayBuffer && (/^\d+$/.exec(name))) {
-            const oldView = new Uint8Array(currentValue);
-            const newBuffer = new ArrayBuffer(oldView.length);
-            const newView = new Uint8Array(newBuffer);
-            newView.set(oldView);
-            const byteIndex = parseInt(name, 10);
-            if (byteIndex >= 0 && byteIndex < newView.length) {
-              newView[byteIndex] = Number(newValue) & 0xFF;
-            }
-            overrideHookState(fiber, hookId, [], newBuffer);
-            return;
-          }
-
-          if (ArrayBuffer.isView(currentValue) && (/^\d+$/.exec(name))) {
-            const typedArray = currentValue as TypedArray;
-            const Constructor = Object.getPrototypeOf(typedArray).constructor;
-            const newArray = new Constructor(typedArray.length);
-
-            for (let i = 0; i < typedArray.length; i++) {
-              newArray[i] = typedArray[i];
-            }
-
-            const index = parseInt(name, 10);
-            if (index >= 0 && index < newArray.length) {
-              if (typedArray instanceof BigInt64Array || typedArray instanceof BigUint64Array) {
-                newArray[index] = BigInt(newValue as any);
-              } else {
-                newArray[index] = Number(newValue);
-              }
-            }
-
-            overrideHookState(fiber, hookId, [], newArray);
-            return;
-          }
-
-          const validation = validateObjectUpdate(newValue, statePath.slice(1).concat(name));
-          if (validation.isValid) {
-            const updatedState = updateNestedValue(currentState[baseStateKey], statePath.slice(1).concat(name), newValue);
-            overrideHookState(fiber, hookId, [], updatedState);
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn(sanitizeErrorMessage(validation.error ?? 'Invalid state update'));
-          }
+          const updatedState = updateNestedValue(currentState[baseStateKey], statePath.slice(1).concat(name), newValue);
+          overrideHookState(fiber, hookId, [], updatedState);
         }
       }, null);
     }
@@ -920,13 +755,13 @@ const PropertyElement = ({
   useEffect(() => {
     lastRendered.set(currentPath, value);
 
-    if (isChanged && elementRef.current) {
-      flashManager.create(elementRef.current);
+    if (isChanged && refElement.current) {
+      flashManager.create(refElement.current);
     }
 
     return () => {
-      if (elementRef.current) {
-        flashManager.cleanup(elementRef.current);
+      if (refElement.current) {
+        flashManager.cleanup(refElement.current);
       }
     };
   }, [value, isChanged, currentPath]);
@@ -945,32 +780,42 @@ const PropertyElement = ({
 
   const clipboardText = useMemo(() => formatForClipboard(value), [value]);
 
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((state) => {
+      const newIsExpanded = !state;
+      if (newIsExpanded) {
+        EXPANDED_PATHS.add(currentPath);
+      } else {
+        EXPANDED_PATHS.delete(currentPath);
+      }
+      return newIsExpanded;
+    });
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    if (canEdit) {
+      setIsEditing(true);
+    }
+  }, []);
+
   return (
-    <div
-      ref={elementRef}
-      className={cn(
-        'react-scan-property',
-        {
-          'react-scan-expandable': isExpandable(value),
-          'react-scan-expanded': isExpanded,
-        }
-      )}
-    >
+    <div ref={refElement} className="react-scan-property">
       <div className="react-scan-property-content">
-        {isExpandable(value) && (
-          <span
-            className="react-scan-arrow"
-            onClick={() => {
-              const newIsExpanded = !isExpanded;
-              setIsExpanded(newIsExpanded);
-              if (newIsExpanded) {
-                EXPANDED_PATHS.add(currentPath);
-              } else {
-                EXPANDED_PATHS.delete(currentPath);
-              }
-            }}
-          />
-        )}
+        {
+          isExpandable(value) && (
+            <span onClick={handleToggleExpand} className="react-scan-arrow">
+              <Icon
+                name="icon-chevron-right"
+                size={12}
+                className={cn(
+                  {
+                    'rotate-90': isExpanded,
+                  }
+                )}
+              />
+            </span>
+          )
+        }
         <div
           className={cn(
             'group',
@@ -982,34 +827,21 @@ const PropertyElement = ({
         >
           {
             shouldShowWarning && (
-              <span
-                className="react-scan-warning"
-                title="This value might cause performance issues"
-              >⚠️</span>
+              <Icon name="icon-alert" className="text-yellow-500" size={12} />
             )
           }
-          <span className="react-scan-key">
-            {name}:
-          </span>
+          <div className="react-scan-key">{name}:</div>
           {
-            isEditing && isEditableValue(value)
+            isEditing && isEditableValue(value, parentPath)
               ? (
                 <EditableValue
                   value={value}
                   onSave={handleSave}
                   onCancel={() => setIsEditing(false)}
-                  name={name}
                 />
               )
               : (
-                <span
-                  className="truncate"
-                  onClick={() => {
-                    if (canEdit && isEditableValue(value)) {
-                      setIsEditing(true);
-                    }
-                  }}
-                >
+                <span className="truncate" onClick={handleEdit}>
                   {valuePreview}
                 </span>
               )
@@ -1022,9 +854,18 @@ const PropertyElement = ({
           </CopyToClipboard>
         </div>
         {
-          (isExpanded && isExpandable(value)) && (
-            <div className="react-scan-nested-object">
-              {renderNestedProperties(value)}
+          isExpandable(value) && (
+            <div
+              className={cn(
+                "react-scan-expandable",
+                {
+                  'react-scan-expanded': isExpanded,
+                }
+              )}
+            >
+              <div className="react-scan-nested">
+                {renderNestedProperties(value)}
+              </div>
             </div>
           )
         }
@@ -1075,7 +916,6 @@ const PropertySection = ({ title, data, fiber, section }: PropertySectionProps) 
             level={0}
             objectPathMap={pathMap}
             changedKeys={changedKeys}
-            hasCumulativeChanges={false}
           />
         ))
       }
@@ -1084,7 +924,7 @@ const PropertySection = ({ title, data, fiber, section }: PropertySectionProps) 
 };
 
 const WhatChanged = memo(() => {
-  const [isOpen, setIsOpen] = useState(Store.wasDetailsOpen.value);
+  const [isExpanded, setIsExpanded] = useState(Store.wasDetailsOpen.value);
   const { changes } = inspectorState.value;
 
   const hasChanges = changes.state.size > 0 || changes.props.size > 0 || changes.context.size > 0;
@@ -1092,66 +932,92 @@ const WhatChanged = memo(() => {
     return null
   };
 
+  const handleToggle = useCallback(() => {
+    setIsExpanded((state) => {
+      Store.wasDetailsOpen.value = !state;
+      return !state;
+    });
+  }, []);
+
   return (
-    <details
-      open={isOpen}
-      style="background-color:#b8860b;color:#ffff00;padding:5px"
-      onToggle={(e) => {
-        const isOpen = (e.target as HTMLDetailsElement).open;
-        setIsOpen(isOpen);
-        Store.wasDetailsOpen.value = isOpen;
-      }}
+    <div
+      onClick={handleToggle}
+      className={cn(
+        "bg-yellow-600 p-2 text-white",
+      )}
     >
-      <summary>What changed?</summary>
-      {
-        changes.state.size > 0 && (
-          <>
-            <div>State:</div>
-            <ul style="list-style-type:disc;padding-left:20px">
-              {Array.from(changes.state).map(key => {
-                const count = getStateChangeCount(key);
-                if (count > 0) {
-                  return <li key={key}>{key} ×{count}</li>;
-                }
-                return null;
-              }).filter(Boolean)}
-            </ul>
-          </>
-        )
-      }
-      {
-        changes.props.size > 0 && (
-          <>
-            <div>Props:</div>
-            <ul style="list-style-type:disc;padding-left:20px">
-              {Array.from(changes.props).map(key => {
-                const count = getPropsChangeCount(key);
-                if (count > 0) {
-                  return <li key={key}>{key} ×{count}</li>;
-                }
-                return null;
-              }).filter(Boolean)}
-            </ul>
-          </>
-        )
-      }
-      {
-        changes.context.size > 0 && (
-          <>
-            <div>Context:</div>
-            <ul style="list-style-type:disc;padding-left:20px">
-              {Array.from(changes.context).map(key => {
-                const count = getContextChangeCount(key);
-                if (count > 0) {
-                  return <li key={key}>{key.replace(/^context\./, '')} ×{count}</li>;
-                }
-                return null;
-              }).filter(Boolean)}
-            </ul>
-          </>
-        )
-      }
-    </details>
+      <p className="flex items-center gap-2">
+        <Icon
+          name="icon-chevron-right"
+          size={12}
+          className={cn(
+            {
+              'rotate-90': isExpanded,
+            }
+          )}
+        />
+        What changed?
+      </p>
+      <div
+        className={cn(
+          "react-scan-expandable",
+          {
+            'react-scan-expanded': isExpanded,
+          }
+        )}
+      >
+        <div className="overflow-hidden">
+          {
+            changes.state.size > 0 && (
+              <>
+                <div>State:</div>
+                <ul style="list-style-type:disc;padding-left:20px">
+                  {Array.from(changes.state).map(key => {
+                    const count = getStateChangeCount(key);
+                    if (count > 0) {
+                      return <li key={key}>{key} ×{count}</li>;
+                    }
+                    return null;
+                  }).filter(Boolean)}
+                </ul>
+              </>
+            )
+          }
+          {
+            changes.props.size > 0 && (
+              <>
+                <div>Props:</div>
+                <ul style="list-style-type:disc;padding-left:20px">
+                  {Array.from(changes.props).map(key => {
+                    const count = getPropsChangeCount(key);
+                    if (count > 0) {
+                      return <li key={key}>{key} ×{count}</li>;
+                    }
+                    return null;
+                  }).filter(Boolean)}
+                </ul>
+              </>
+            )
+          }
+          {
+            changes.context.size > 0 && (
+              <>
+                <div>Context:</div>
+                <ul style="list-style-type:disc;padding-left:20px">
+                  {Array.from(changes.context).map(key => {
+                    const count = getContextChangeCount(key);
+                    if (count > 0) {
+                      return <li key={key}>{key.replace(/^context\./, '')} ×{count}</li>;
+                    }
+                    return null;
+                  }).filter(Boolean)}
+                </ul>
+              </>
+            )
+          }
+        </div>
+      </div>
+    </div>
   );
 });
 
