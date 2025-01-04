@@ -24,7 +24,7 @@ declare global {
   }
 
   var __REACT_DEVTOOLS_GLOBAL_HOOK__: Window['__REACT_DEVTOOLS_GLOBAL_HOOK__'];
-  type TTimer = ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null;
+  type TTimer = NodeJS.Timeout;
 
   var _reactScan: typeof reactScan;
 }

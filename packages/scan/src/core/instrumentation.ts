@@ -14,9 +14,9 @@ import {
   instrument,
 } from 'bippy';
 import { isValidElement } from 'preact';
-import { isEqual } from 'src/core/utils';
-import { getChangedPropsDetailed } from '@web-inspect-element/utils';
 import { ReactScanInternals, Store, getIsProduction } from './index';
+import { getChangedPropsDetailed } from '~web/components/inspector/utils';
+import { isEqual } from '~core/utils';
 
 let fps = 0;
 let lastTime = performance.now();

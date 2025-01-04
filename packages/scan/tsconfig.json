@@ -8,17 +8,17 @@
       "node"
     ],
     "paths": {
-      "@web-utils/*": [
-        "src/core/web/utils/*"
+      "~web/*": [
+        "src/web/*"
       ],
-      "@web-assets/*": [
-        "src/core/web/assets/*"
+      "~core/*": [
+        "src/core/*"
       ],
-      "@web-components/*": [
-        "src/core/web/components/*"
+      "~monitor/*": [
+        "src/monitor/*"
       ],
-      "@web-inspect-element/*": [
-        "src/core/web/inspect-element/*"
+      "~instrumentation/*": [
+        "src/instrumentation/*"
       ]
     }
   },

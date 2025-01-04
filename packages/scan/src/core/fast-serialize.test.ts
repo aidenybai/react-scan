@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fastSerialize } from 'src/core/instrumentation';
+import { fastSerialize } from '~core/instrumentation';
 
 describe('fastSerialize', () => {
   it('serializes null', () => {
@@ -27,8 +27,8 @@ describe('fastSerialize', () => {
   });
 
   it('serializes functions', () => {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    const testFunc = (x:2) => 3
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const testFunc = (x: 2) => 3
     expect(fastSerialize(testFunc)).toBe('(x) => 3');
   });
 

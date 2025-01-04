@@ -1,0 +1,405 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  outline: none !important;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+
+  /* WebKit (Chrome, Safari, Edge) specific scrollbar styles */
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    border-radius: 10px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, .4);
+  }
+}
+
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+    scrollbar-width: 6px;
+  }
+}
+
+
+button {
+  @apply hover:bg-none;
+  @apply outline-none;
+  @apply border-none;
+  @apply transition-colors duration-150 ease-linear;
+  @apply cursor-pointer;
+}
+
+svg {
+  @apply w-auto h-auto;
+  @apply pointer-events-none;
+}
+
+/*
+  Using CSS content with data attributes is more performant than:
+  1. React re-renders with JSX text content
+  2. Direct DOM manipulation methods:
+     - element.textContent (creates/updates text nodes, triggers repaint)
+     - element.innerText (triggers reflow by computing styles & layout)
+     - element.innerHTML (heavy parsing, triggers reflow, security risks)
+  3. Multiple data attributes with complex CSS concatenation
+
+  This approach:
+  - Avoids React reconciliation
+  - Uses browser's native CSS engine (optimized content updates)
+  - Minimizes main thread work
+  - Reduces DOM operations
+  - Avoids forced reflows (layout recalculation)
+  - Only triggers necessary repaints
+  - Keeps pseudo-element updates in render layer
+*/
+.with-data-text {
+  overflow: hidden;
+  &::before {
+    content: attr(data-text);
+    @apply block;
+    @apply truncate;
+  }
+}
+
+#react-scan-toolbar {
+  @apply fixed left-0 top-0;
+  @apply flex flex-col;
+  @apply rounded-lg shadow-lg;
+  @apply font-mono text-[13px] text-white;
+  @apply bg-black;
+  @apply select-none;
+  @apply cursor-move;
+  @apply opacity-0;
+  @apply z-[2147483678];
+  @apply animate-fade-in animation-duration-300 animation-delay-300;
+  @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
+
+  button {
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+.resize-line-wrapper {
+  @apply absolute;
+  @apply overflow-hidden;
+}
+
+.resize-line {
+  @apply absolute inset-0;
+  @apply overflow-hidden;
+  @apply bg-black/90;
+  @apply transition-all duration-150;
+
+  svg {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
+  }
+}
+
+.resize-right,
+.resize-left {
+  @apply inset-y-0;
+  @apply w-6;
+  @apply cursor-ew-resize;
+
+  .resize-line-wrapper {
+    @apply inset-y-0;
+    @apply w-1/2;
+  }
+
+  &:hover {
+    .resize-line {
+      @apply translate-x-0;
+    }
+  }
+}
+.resize-right {
+  @apply right-0;
+  @apply translate-x-1/2;
+
+  .resize-line-wrapper {
+    @apply right-0;
+  }
+  .resize-line {
+    @apply rounded-r-lg;
+    @apply -translate-x-full;
+  }
+}
+
+.resize-left {
+  @apply left-0;
+  @apply -translate-x-1/2;
+
+  .resize-line-wrapper {
+    @apply left-0;
+  }
+  .resize-line {
+    @apply rounded-l-lg;
+    @apply translate-x-full;
+  }
+}
+
+.resize-top,
+.resize-bottom {
+  @apply inset-x-0;
+  @apply h-6;
+  @apply cursor-ns-resize;
+
+  .resize-line-wrapper {
+    @apply inset-x-0;
+    @apply h-1/2;
+  }
+
+  &:hover {
+    .resize-line {
+      @apply translate-y-0;
+    }
+  }
+}
+.resize-top {
+  @apply top-0;
+  @apply -translate-y-1/2;
+
+  .resize-line-wrapper {
+    @apply top-0;
+  }
+  .resize-line {
+    @apply rounded-t-lg;
+    @apply translate-y-full;
+  }
+}
+
+.resize-bottom {
+  @apply bottom-0;
+  @apply translate-y-1/2;
+
+  .resize-line-wrapper {
+    @apply bottom-0;
+  }
+  .resize-line {
+    @apply rounded-b-lg;
+    @apply -translate-y-full;
+  }
+}
+
+/* HEADER */
+.react-scan-header {
+  @apply flex items-center gap-x-2;
+  @apply pl-3 pr-2;
+  @apply min-h-9;
+  @apply border-b-1 border-white/10;
+  @apply whitespace-nowrap overflow-hidden;
+}
+
+.react-scan-replay-button,
+.react-scan-close-button {
+  @apply flex items-center;
+  @apply p-1;
+  @apply min-w-fit;
+  @apply rounded;
+  @apply transition-colors duration-150;
+}
+
+.react-scan-replay-button {
+  @apply relative;
+  @apply overflow-hidden;
+  @apply !bg-purple-500/50;
+
+  &:hover {
+    @apply bg-purple-500/25;
+  }
+
+  &.disabled {
+    @apply opacity-50;
+    @apply pointer-events-none;
+  }
+
+  &:before {
+    content: '';
+    @apply absolute;
+    @apply inset-0;
+    @apply -translate-x-full;
+    animation: shimmer 2s infinite;
+    background: linear-gradient(to right,
+      transparent,
+      rgba(142, 97, 227, 0.3),
+      transparent);
+  }
+}
+
+.react-scan-close-button {
+  @apply bg-white/10;
+
+  &:hover {
+    @apply bg-white/15;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.react-scan-inspector {
+  font-size: 13px;
+  color: #fff;
+  width: 100%;
+}
+
+.react-scan-section {
+  @apply flex flex-col py-1;
+  @apply py-2 px-4;
+  @apply bg-black text-[#888];
+  @apply before:content-[attr(data-section)] before:text-gray-500;
+
+  > .react-scan-property {
+    @apply -ml-3.5;
+  }
+}
+
+.react-scan-property {
+  @apply relative;
+  @apply flex flex-col;
+  @apply pl-8;
+  @apply border-l-1 border-transparent;
+  @apply overflow-hidden;
+}
+
+.react-scan-property-content {
+  @apply flex-1 flex flex-col;
+  @apply py-1 min-h-6;
+  @apply max-w-full;
+  @apply overflow-hidden;
+}
+
+.react-scan-string {
+  color: #9ecbff;
+}
+
+.react-scan-number {
+  color: #79c7ff;
+}
+
+.react-scan-boolean {
+  color: #56b6c2;
+}
+
+.react-scan-key {
+  @apply min-w-8 max-w-60 truncate text-white;
+}
+
+.react-scan-input {
+  @apply text-white;
+  @apply bg-black;
+}
+
+@keyframes blink {
+	from { opacity: 1; }
+	to { opacity: 0; }
+}
+
+.react-scan-arrow {
+  @apply absolute top-1 left-7;
+  @apply flex items-center justify-center;
+  @apply cursor-pointer;
+  @apply w-6 h-6;
+  @apply -translate-x-full;
+  @apply z-10;
+
+  > svg {
+    @apply transition-transform duration-150;
+  }
+}
+
+.react-scan-expandable {
+  @apply grid grid-rows-[0fr];
+  @apply transition-all duration-150;
+
+  &.react-scan-expanded {
+    @apply pt-2;
+    @apply grid-rows-[1fr];
+  }
+}
+
+.react-scan-nested {
+  @apply relative;
+  /* @apply border-l-1 border-gray-500/30; */
+  @apply overflow-hidden;
+
+  &:before {
+    content: '';
+    @apply absolute top-0 left-0;
+    @apply w-[1px] h-full;
+    @apply bg-gray-500/30;
+  }
+}
+
+.react-scan-hidden {
+  display: none;
+}
+
+.react-scan-array-container {
+  overflow-y: auto;
+  @apply ml-5;
+  margin-top: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 8px;
+}
+
+.react-scan-preview-line {
+  @apply relative;
+  @apply flex items-center min-h-6 gap-x-2;
+}
+
+.react-scan-flash-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  z-index: 999999;
+  mix-blend-mode: multiply;
+  background: rgba(142, 97, 227, 0.9);
+  transition: opacity 150ms ease-in;
+  pointer-events: none;
+}
+
+.react-scan-flash-active {
+  opacity: 0.4;
+  transition: opacity 300ms ease-in-out;
+}
+
+.react-scan-inspector-overlay {
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+
+  &.fade-out {
+    opacity: 0;
+  }
+
+  &.fade-in {
+    opacity: 1;
+  }
+}

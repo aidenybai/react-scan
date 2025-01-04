@@ -7,7 +7,7 @@
     "dev": "node scripts/workspace.mjs dev",
     "pack": "node scripts/workspace.mjs pack",
     "pack:bump": "pnpm --filter scan pack:bump",
-    "lint": "node scripts/workspace.mjs lint",
+    "lint": "pnpm --parallel lint",
     "eslint:fix": "eslint --fix packages/*"
   },
   "devDependencies": {
