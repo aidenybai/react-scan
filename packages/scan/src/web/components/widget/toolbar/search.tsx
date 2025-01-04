@@ -1,3 +1,4 @@
+// TODO: @pivanov - improve UI and finish the implementation
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Store } from "~core/index";
 import { getInspectableElements } from "~web/components/inspector/utils";

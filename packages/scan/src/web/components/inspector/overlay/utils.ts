@@ -3,7 +3,6 @@ import { type Fiber } from 'react-reconciler';
 import { type ComponentState } from 'react';
 import { isEqual } from '~core/utils';
 
-// Types
 interface ContextDependency<T = unknown> {
   context: ReactContext<T>;
   next: ContextDependency<T> | null;
@@ -27,23 +26,64 @@ interface ReactContext<T = unknown> {
   displayName?: string;
 }
 
-// Constants
 const stateChangeCounts = new Map<string, number>();
 const propsChangeCounts = new Map<string, number>();
 const contextChangeCounts = new Map<string, number>();
 let lastRenderedStates = new WeakMap<Fiber>();
 
-// Regex patterns
 const STATE_NAME_REGEX = /\[(?<name>\w+),\s*set\w+\]/g;
 const PROPS_ORDER_REGEX = /\(\s*{\s*(?<props>[^}]+)\s*}\s*\)/;
 
-const ensureRecord = (value: unknown): Record<string, unknown> => {
+const ensureRecord = (value: unknown, seen = new WeakSet()): Record<string, unknown> => {
   if (value === null || value === undefined) {
     return {};
   }
-  if (typeof value === 'object' && value !== null) {
-    return value as Record<string, unknown>;
+
+  if (value instanceof Element) {
+    return {
+      type: 'Element',
+      tagName: value.tagName.toLowerCase(),
+    };
   }
+
+  if (typeof value === 'function') {
+    return { type: 'function', name: value.name || 'anonymous' };
+  }
+
+  if (value && (value instanceof Promise || (typeof value === 'object' && 'then' in value))) {
+    return { type: 'promise' };
+  }
+
+  if (typeof value === 'object') {
+    if (seen.has(value)) {
+      return { type: 'circular' };
+    }
+
+    if (Array.isArray(value)) {
+      seen.add(value);
+      const safeArray = value.map(item => ensureRecord(item, seen));
+      return { type: 'array', length: value.length, items: safeArray };
+    }
+
+    seen.add(value);
+
+    const result: Record<string, unknown> = {};
+    try {
+      const keys = Object.keys(value);
+      for (const key of keys) {
+        try {
+          const val = (value as any)[key];
+          result[key] = ensureRecord(val, seen);
+        } catch {
+          result[key] = { type: 'error', message: 'Failed to access property' };
+        }
+      }
+      return result;
+    } catch {
+      return { type: 'object' };
+    }
+  }
+
   return { value };
 };
 
@@ -58,7 +98,6 @@ export const getStateChangeCount = (name: string): number => stateChangeCounts.g
 export const getPropsChangeCount = (name: string): number => propsChangeCounts.get(name) ?? 0;
 export const getContextChangeCount = (name: string): number => contextChangeCounts.get(name) ?? 0;
 
-// States
 export const getStateNames = (fiber: Fiber): Array<string> => {
   const componentSource = fiber.type?.toString?.() || '';
   // Return the matches if we found any, otherwise return empty array
@@ -69,26 +108,20 @@ export const getStateNames = (fiber: Fiber): Array<string> => {
   ) : [];
 };
 
-// Helper to check if a component is a direct component (not a wrapper/HOC)
 export const isDirectComponent = (fiber: Fiber): boolean => {
   if (!fiber || !fiber.type) return false;
 
-  // Check if it's a functional component or a class component
   const isFunctionalComponent = typeof fiber.type === 'function';
   const isClassComponent = fiber.type.prototype && fiber.type.prototype.isReactComponent;
 
   if (!(isFunctionalComponent || isClassComponent)) return false;
 
-  // For class components, check if they have state
   if (isClassComponent) {
-    return true; // Class components usually manage their own state
+    return true;
   }
 
-  // For functional components, check for stateful hooks
   let memoizedState = fiber.memoizedState;
   while (memoizedState) {
-    // Check for any state hook (useState/useReducer)
-    // Both have a queue property in their memoizedState
     if (memoizedState.queue) {
       return true;
     }
@@ -102,7 +135,6 @@ export const getCurrentState = (fiber: Fiber | null) => {
   if (!fiber) return {};
 
   try {
-    // Check if it's a direct function component
     if (fiber.tag === FunctionComponentTag && isDirectComponent(fiber)) {
       return getCurrentFiberState(fiber);
     }
@@ -121,24 +153,19 @@ export const getChangedState = (fiber: Fiber): Set<string> => {
   ) return changes;
 
   try {
-    // Get the current state
     const currentState = getCurrentFiberState(fiber);
     if (!currentState) return changes;
 
-    // Handle initial render - don't mark anything as changed
     if (!fiber.alternate) {
-      // Just store the initial state without marking changes
       lastRenderedStates.set(fiber, { ...currentState });
       return changes;
     }
 
-    // Compare with last state and track changes
     const lastState = lastRenderedStates.get(fiber);
     if (lastState) {
       for (const name of Object.keys(currentState)) {
         if (!isEqual(currentState[name], lastState[name])) {
           changes.add(name);
-          // Only increment change count if it's not the first render
           if (lastState[name] !== undefined) {
             const existingCount = stateChangeCounts.get(name) ?? 0;
             stateChangeCounts.set(name, existingCount + 1);
@@ -158,9 +185,7 @@ export const getChangedState = (fiber: Fiber): Set<string> => {
   return changes;
 };
 
-// Helper to get current fiber state
 const getCurrentFiberState = (fiber: Fiber): ComponentState | null => {
-  // First check if this is a function component
   if (fiber.tag !== FunctionComponentTag || !isDirectComponent(fiber)) {
     return null;
   }
@@ -173,7 +198,6 @@ const getCurrentFiberState = (fiber: Fiber): ComponentState | null => {
     ? fiber.memoizedState
     : fiber.alternate?.memoizedState ?? fiber.memoizedState;
 
-  // Early return if no memoizedState
   if (!memoizedState) return null;
 
   const currentState: ComponentState = {};
@@ -181,7 +205,6 @@ const getCurrentFiberState = (fiber: Fiber): ComponentState | null => {
   let index = 0;
 
   while (memoizedState) {
-    // Check if this is a hook state (has queue property)
     if (memoizedState.queue) {
       const name = stateNames[index] || `{${index}}`;
       try {
@@ -197,7 +220,6 @@ const getCurrentFiberState = (fiber: Fiber): ComponentState | null => {
   return currentState;
 };
 
-// Helper to get state value including pending updates
 const getStateValue = (memoizedState: any): any => {
   let value = memoizedState.memoizedState;
 
@@ -216,7 +238,7 @@ const getStateValue = (memoizedState: any): any => {
 
   return value;
 };
-// Props
+
 export const getPropsOrder = (fiber: Fiber): Array<string> => {
   const componentSource = fiber.type?.toString?.() || '';
   const match = componentSource.match(PROPS_ORDER_REGEX);
@@ -280,7 +302,6 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
   return changes;
 };
 
-// Contexts
 export const getAllFiberContexts = (fiber: Fiber): Map<string, ContextValue> => {
   const contexts = new Map<string, ContextValue>();
   if (!fiber) return contexts;
@@ -308,7 +329,6 @@ export const getAllFiberContexts = (fiber: Fiber): Map<string, ContextValue> => 
           };
         }
 
-        // For user-defined contexts
         const providerName = searchFiber.type.name?.replace('Provider', '') ??
           searchFiber._debugOwner?.type?.name ??
           'Unnamed';

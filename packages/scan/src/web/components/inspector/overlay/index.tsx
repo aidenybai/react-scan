@@ -540,6 +540,18 @@ export const ScanOverlay = () => {
     }
   };
 
+  const handlePointerDown = (e: PointerEvent) => {
+    const state = Store.inspectState.peek();
+    const canvas = refCanvas.current;
+    if (!canvas) return;
+
+    if (state.kind === 'inspecting' || isClickInLockIcon(e as unknown as MouseEvent, canvas)) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  };
+
   useEffect(() => {
     const canvas = refCanvas.current;
     const ctx = canvas?.getContext('2d');
@@ -554,6 +566,7 @@ export const ScanOverlay = () => {
     window.addEventListener('scroll', handleResizeOrScroll, { passive: true });
     window.addEventListener('resize', handleResizeOrScroll, { passive: true });
     document.addEventListener('mousemove', handleMouseMove, { passive: true, capture: true });
+    document.addEventListener('pointerdown', handlePointerDown, { capture: true });
     document.addEventListener('click', handleClick, { capture: true });
     window.addEventListener('keydown', handleKeyDown);
 
@@ -564,6 +577,7 @@ export const ScanOverlay = () => {
       window.removeEventListener('resize', handleResizeOrScroll);
       document.removeEventListener('mousemove', handleMouseMove, { capture: true });
       document.removeEventListener('click', handleClick, { capture: true });
+      document.removeEventListener('pointerdown', handlePointerDown, { capture: true });
       window.removeEventListener('keydown', handleKeyDown);
 
       if (refRafId.current) {

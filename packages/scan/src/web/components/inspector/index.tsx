@@ -21,7 +21,6 @@ import {
   getCurrentContext,
   resetStateTracking,
   getStateNames,
-  getAllFiberContexts,
   getChangedState
 } from './overlay/utils';
 import { flashManager } from './flash-overlay';
@@ -75,7 +74,6 @@ type InspectableValue =
 interface PropertyElementProps {
   name: string;
   value: unknown;
-  fiber: Fiber;
   section: string;
   level: number;
   parentPath?: string;
@@ -86,8 +84,6 @@ interface PropertyElementProps {
 
 interface PropertySectionProps {
   title: string;
-  data: Record<string, unknown>;
-  fiber: Fiber;
   section: 'props' | 'state' | 'context';
 }
 
@@ -137,7 +133,7 @@ class InspectorErrorBoundary extends Component {
 }
 
 const isExpandable = (value: unknown): value is InspectableValue => {
-  if (value === null || typeof value !== 'object' || value instanceof Promise) {
+  if (value === null || typeof value !== 'object' || isPromise(value)) {
     return false;
   }
 
@@ -170,6 +166,12 @@ const isPromise = (value: any): value is Promise<unknown> => {
 
 const isEditableValue = (value: unknown, parentPath?: string): boolean => {
   if (value === null || value === undefined) return true;
+
+  if (isPromise(value)) return false;
+
+  if (typeof value === 'function') {
+    return false;
+  }
 
   if (parentPath) {
     const parts = parentPath.split('.');
@@ -246,7 +248,7 @@ const sanitizeErrorMessage = (error: string): string => {
 const formatValue = (value: unknown): string => {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
-  if (value instanceof Promise) return 'Promise';
+  if (isPromise(value)) return 'Promise';
 
   switch (true) {
     case value instanceof Map:
@@ -300,7 +302,7 @@ const formatForClipboard = (value: unknown): string => {
   try {
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
-    if (value instanceof Promise) return 'Promise';
+    if (isPromise(value)) return 'Promise';
 
     switch (true) {
       case value instanceof Date:
@@ -568,7 +570,6 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
 const PropertyElement = ({
   name,
   value,
-  fiber,
   section,
   level,
   parentPath,
@@ -576,10 +577,11 @@ const PropertyElement = ({
   changedKeys = new Set(),
   allowEditing = true,
 }: PropertyElementProps) => {
+  const { fiber } = inspectorState.value;
   const refElement = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(() => {
     const currentPath = getPath(
-      getDisplayName(fiber.type) ?? 'Unknown',
+      getDisplayName(fiber?.type) ?? 'Unknown',
       section,
       parentPath ?? '',
       name
@@ -589,11 +591,12 @@ const PropertyElement = ({
   const [isEditing, setIsEditing] = useState(false);
 
   const currentPath = getPath(
-    getDisplayName(fiber.type) ?? 'Unknown',
+    getDisplayName(fiber?.type) ?? 'Unknown',
     section,
     parentPath ?? '',
     name
   );
+
   const prevValue = lastRendered.get(currentPath);
   const isChanged = prevValue !== undefined && !isEqual(prevValue, value);
 
@@ -624,12 +627,11 @@ const PropertyElement = ({
 
     const canEditChildren = !(obj instanceof DataView || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj));
 
-    const elements = entries.map(([key, value]) => (
+    return entries.map(([key, value]) => (
       <PropertyElement
         key={String(key)}
         name={String(key)}
         value={value}
-        fiber={fiber}
         section={section}
         level={level + 1}
         parentPath={currentPath}
@@ -638,8 +640,6 @@ const PropertyElement = ({
         allowEditing={canEditChildren}
       />
     ));
-
-    return elements;
   }, [fiber, section, level, currentPath, objectPathMap, changedKeys]);
 
   const valuePreview = useMemo(() => formatValue(value), [value]);
@@ -648,12 +648,66 @@ const PropertyElement = ({
   const canEdit = useMemo(() => {
     return allowEditing && (
       section === 'props'
-        ? !!overrideProps
+        ? !!overrideProps && name !== 'children'
         : section === 'state'
           ? !!overrideHookState
           : false
     );
-  }, [section, overrideProps, overrideHookState, allowEditing]);
+  }, [section, overrideProps, overrideHookState, allowEditing, name]);
+
+  useEffect(() => {
+    lastRendered.set(currentPath, value);
+
+    const isSameComponentType = lastInspectedFiber?.type === fiber?.type;
+    const isFirstRender = !lastRendered.has(currentPath);
+    const shouldFlash = isChanged &&
+      refElement.current &&
+      prevValue !== undefined &&
+      !isSameComponentType &&
+      !isFirstRender;
+
+    if (shouldFlash && refElement.current) {
+      flashManager.create(refElement.current);
+    }
+
+    return () => {
+      if (refElement.current) {
+        flashManager.cleanup(refElement.current);
+      }
+    };
+  }, [value, isChanged, currentPath, prevValue, fiber?.type]);
+
+  const shouldShowWarning = useMemo(() => {
+    const shouldShowChange = !lastRendered.has(currentPath) || !isEqual(lastRendered.get(currentPath), value);
+
+    const isBadRender = level === 0 &&
+      shouldShowChange &&
+      typeof value === 'object' &&
+      value !== null &&
+      !isPromise(value);
+
+    return isBadRender;
+  }, [level, currentPath, value]);
+
+  const clipboardText = useMemo(() => formatForClipboard(value), [value]);
+
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((state) => {
+      const newIsExpanded = !state;
+      if (newIsExpanded) {
+        EXPANDED_PATHS.add(currentPath);
+      } else {
+        EXPANDED_PATHS.delete(currentPath);
+      }
+      return newIsExpanded;
+    });
+  }, [currentPath]);
+
+  const handleEdit = useCallback(() => {
+    if (canEdit) {
+      setIsEditing(true);
+    }
+  }, [canEdit]);
 
   const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
     try {
@@ -707,6 +761,8 @@ const PropertyElement = ({
 
     if (section === 'props' && overrideProps) {
       tryOrElse(() => {
+        if (!fiber) return;
+
         if (parentPath) {
           const parts = parentPath.split('.');
           const path = parts.filter(part => part !== 'props' && part !== getDisplayName(fiber.type));
@@ -720,6 +776,8 @@ const PropertyElement = ({
 
     if (section === 'state' && overrideHookState) {
       tryOrElse(() => {
+        if (!fiber) return;
+
         if (!parentPath) {
           const stateNames = getStateNames(fiber);
           const namedStateIndex = stateNames.indexOf(name);
@@ -752,51 +810,24 @@ const PropertyElement = ({
     setIsEditing(false);
   }, [value, section, overrideProps, overrideHookState, fiber, name, parentPath]);
 
-  useEffect(() => {
-    lastRendered.set(currentPath, value);
+  const checkCircularInValue = useMemo((): boolean => {
+    if (!value || typeof value !== 'object' || isPromise(value)) return false;
 
-    if (isChanged && refElement.current) {
-      flashManager.create(refElement.current);
-    }
-
-    return () => {
-      if (refElement.current) {
-        flashManager.cleanup(refElement.current);
-      }
-    };
-  }, [value, isChanged, currentPath]);
-
-  const shouldShowWarning = useMemo(() => {
-    const shouldShowChange = !lastRendered.has(currentPath) || !isEqual(lastRendered.get(currentPath), value);
-
-    const isBadRender = level === 0 &&
-      shouldShowChange &&
-      typeof value === 'object' &&
-      value !== null &&
-      !isPromise(value);
-
-    return isBadRender;
-  }, [level, currentPath, value]);
-
-  const clipboardText = useMemo(() => formatForClipboard(value), [value]);
-
-  const handleToggleExpand = useCallback(() => {
-    setIsExpanded((state) => {
-      const newIsExpanded = !state;
-      if (newIsExpanded) {
-        EXPANDED_PATHS.add(currentPath);
-      } else {
-        EXPANDED_PATHS.delete(currentPath);
-      }
-      return newIsExpanded;
-    });
+    return 'type' in value && value.type === 'circular';
   }, []);
 
-  const handleEdit = useCallback(() => {
-    if (canEdit) {
-      setIsEditing(true);
-    }
-  }, []);
+  if (checkCircularInValue) {
+    return (
+      <div className="react-scan-property">
+        <div className="react-scan-property-content">
+          <div className="react-scan-preview-line">
+            <div className="react-scan-key">{name}:</div>
+            <span className="text-yellow-500">[Circular Reference]</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={refElement} className="react-scan-property">
@@ -854,18 +885,9 @@ const PropertyElement = ({
           </CopyToClipboard>
         </div>
         {
-          isExpandable(value) && (
-            <div
-              className={cn(
-                "react-scan-expandable",
-                {
-                  'react-scan-expanded': isExpanded,
-                }
-              )}
-            >
-              <div className="react-scan-nested">
-                {renderNestedProperties(value)}
-              </div>
+          isExpandable(value) && isExpanded && (
+            <div className="react-scan-nested">
+              {renderNestedProperties(value)}
             </div>
           )
         }
@@ -874,44 +896,53 @@ const PropertyElement = ({
   );
 };
 
-const PropertySection = ({ title, data, fiber, section }: PropertySectionProps) => {
+const PropertySection = ({ title, section }: PropertySectionProps) => {
+  const { current, changes } = inspectorState.value;
+
   const pathMap = useMemo(() => new WeakMap<object, Set<string>>(), []);
   const changedKeys = useMemo(() => {
     switch (section) {
       case 'props':
-        return getChangedProps(fiber);
+        return changes.props;
       case 'state':
-        return getChangedState(fiber);
+        return changes.state;
       case 'context':
-        return getChangedContext(fiber);
+        return changes.context;
       default:
         return new Set<string>();
     }
-  }, [fiber, section]);
+  }, [section]);
 
   const currentData = useMemo(() => {
+    let result;
     switch (section) {
       case 'props':
-        return getCurrentProps(fiber);
+        result = current.props;
+        break;
       case 'state':
-        return getCurrentState(fiber) ?? {};
+        result = current.state;
+        break;
       case 'context':
-        return getCurrentContext(fiber);
-      default:
-        return data;
+        result = current.context;
+        break;
     }
-  }, [fiber, section, data]);
+
+    return result || {};
+  }, [section]);
+
+  if (!currentData || Object.keys(currentData).length === 0) {
+    return null;
+  }
 
   return (
     <div className="react-scan-section">
       <div>{title}</div>
       {
-        Object.entries(currentData ?? {}).map(([key, value]) => (
+        Object.entries(currentData).map(([key, value]) => (
           <PropertyElement
             key={key}
             name={key}
             value={value}
-            fiber={fiber}
             section={section}
             level={0}
             objectPathMap={pathMap}
@@ -929,8 +960,8 @@ const WhatChanged = memo(() => {
 
   const hasChanges = changes.state.size > 0 || changes.props.size > 0 || changes.context.size > 0;
   if (!hasChanges) {
-    return null
-  };
+    return null;
+  }
 
   const handleToggle = useCallback(() => {
     setIsExpanded((state) => {
@@ -1021,66 +1052,6 @@ const WhatChanged = memo(() => {
   );
 });
 
-const SectionProps = memo(() => {
-  const { fiber, current } = inspectorState.value;
-  if (!fiber) return null;
-
-  if (Object.keys(current.props).length === 0) return null;
-
-  return (
-    <PropertySection
-      title="Props"
-      data={current.props}
-      fiber={fiber}
-      section="props"
-    />
-  );
-});
-
-const SectionState = memo(() => {
-  const { fiber, current } = inspectorState.value;
-  if (!fiber) return null;
-
-  if (Object.keys(current.state).length === 0) return null;
-
-  return (
-    <PropertySection
-      title="State"
-      data={current.state}
-      fiber={fiber}
-      section="state"
-    />
-  );
-});
-
-const SectionContext = memo(() => {
-  const { fiber } = inspectorState.value;
-  if (!fiber) return null;
-
-  const currentContext = useMemo(() => {
-    const contexts = getAllFiberContexts(fiber);
-    const contextObj: Record<string, unknown> = {};
-
-    contexts.forEach((value, contextName) => {
-      const key = `context.${contextName}`;
-      contextObj[key] = value.displayValue;
-    });
-
-    return contextObj;
-  }, [fiber]);
-
-  if (Object.keys(currentContext).length === 0) return null;
-
-  return (
-    <PropertySection
-      title="Context"
-      data={currentContext}
-      fiber={fiber}
-      section="context"
-    />
-  );
-});
-
 export const Inspector = memo(() => {
   useEffect(() => {
     let rafId: ReturnType<typeof requestAnimationFrame>;
@@ -1103,7 +1074,7 @@ export const Inspector = memo(() => {
           context: getChangedContext(fiber)
         },
         current: {
-          state: getCurrentState(fiber) ?? {},
+          state: getCurrentState(fiber),
           props: getCurrentProps(fiber),
           context: getCurrentContext(fiber)
         }
@@ -1181,9 +1152,30 @@ export const Inspector = memo(() => {
     <InspectorErrorBoundary>
       <div className="react-scan-inspector">
         <WhatChanged />
-        <SectionProps />
-        <SectionState />
-        <SectionContext />
+        {
+          Object.keys(inspectorState.value.current.props).length > 0 && (
+            <PropertySection
+              title="Props"
+              section="props"
+            />
+          )
+        }
+        {
+          Object.keys(inspectorState.value.current.state).length > 0 && (
+            <PropertySection
+              title="State"
+              section="state"
+            />
+          )
+        }
+        {
+          Object.keys(inspectorState.value.current.context).length > 0 && (
+            <PropertySection
+              title="Context"
+              section="context"
+            />
+          )
+        }
       </div>
     </InspectorErrorBoundary>
   );

@@ -327,7 +327,7 @@ export const findComponentDOMNode = (fiber: Fiber, excludeNonVisualTags = true):
   return null;
 };
 
-interface InspectableElement {
+export interface InspectableElement {
   element: HTMLElement;
   depth: number;
   name: string;

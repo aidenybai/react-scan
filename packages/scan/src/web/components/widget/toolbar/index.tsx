@@ -1,34 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
+import { memo } from 'preact/compat';
+import { useCallback, useEffect } from 'preact/hooks';
 import { Store, ReactScanInternals, setOptions } from '~core/index';
 import { Icon } from '~web/components/icon';
-import { getInspectableElements } from '~web/components/inspector/utils';
 import FpsMeter from '~web/components/widget/fps-meter';
-import { Search } from '~web/components/widget/toolbar/search';
+import { Arrows } from '~web/components/widget/toolbar/arrows';
 import { cn } from '~web/utils/helpers';
 
-export const Toolbar = () => {
+export const Toolbar = memo(() => {
   const inspectState = Store.inspectState;
 
-  const isInspectFocused = inspectState.value.kind === 'focused';
   const isInspectActive = inspectState.value.kind === 'inspecting';
-
-  const { inspectIcon, inspectColor } = useMemo(() => {
-    let inspectIcon = null;
-    let inspectColor = '#999';
-
-    if (isInspectActive) {
-      inspectIcon = <Icon name="icon-inspect" />;
-      inspectColor = 'rgba(142, 97, 227, 1)';
-    } else if (isInspectFocused) {
-      inspectIcon = <Icon name="icon-focus" />;
-      inspectColor = 'rgba(142, 97, 227, 1)';
-    } else {
-      inspectIcon = <Icon name="icon-inspect" />;
-      inspectColor = '#999';
-    }
-
-    return { inspectIcon, inspectColor };
-  }, [isInspectActive, isInspectFocused]);
+  const isInspectFocused = inspectState.value.kind === 'focused';
 
   const onToggleInspect = useCallback(() => {
     const currentState = Store.inspectState.value;
@@ -53,58 +35,14 @@ export const Toolbar = () => {
       case 'uninitialized':
         break;
     }
-  }, [Store.inspectState.value]);
-
-  const findNextElement = useCallback(
-    (currentElement: HTMLElement, direction: 'next' | 'previous') => {
-      const allElements = getInspectableElements();
-      const currentIndex = allElements.findIndex(item => item.element === currentElement);
-
-      if (currentIndex === -1) return null;
-
-      const nextIndex = currentIndex + (direction === 'next' ? 1 : -1);
-      return allElements[nextIndex]?.element || null;
-    },
-    []
-  );
-
-  const onPreviousFocus = useCallback(() => {
-    const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement)
-      return;
-
-    const prevElement = findNextElement(
-      currentState.focusedDomElement,
-      'previous',
-    );
-    if (prevElement) {
-      Store.inspectState.value = {
-        kind: 'focused',
-        focusedDomElement: prevElement,
-      };
-    }
-  }, [findNextElement]);
-
-  const onNextFocus = useCallback(() => {
-    const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement)
-      return;
-
-    const nextElement = findNextElement(currentState.focusedDomElement, 'next');
-    if (nextElement) {
-      Store.inspectState.value = {
-        kind: 'focused',
-        focusedDomElement: nextElement
-      };
-    }
-  }, [findNextElement]);
+  }, []);
 
   const onToggleActive = useCallback(() => {
     if (ReactScanInternals.instrumentation) {
       ReactScanInternals.instrumentation.isPaused.value =
         !ReactScanInternals.instrumentation.isPaused.value;
     }
-  }, [ReactScanInternals.instrumentation]);
+  }, []);
 
   const onSoundToggle = useCallback(() => {
     const newSoundState = !ReactScanInternals.options.value.playSound;
@@ -112,35 +50,32 @@ export const Toolbar = () => {
   }, []);
 
   useEffect(() => {
-    const currentState = Store.inspectState.value;
+    const unsubscribe = Store.inspectState.subscribe(state => {
+      if (state.kind === 'uninitialized') {
+        Store.inspectState.value = {
+          kind: 'inspect-off',
+        };
+      }
+    });
 
-    if (currentState.kind === 'uninitialized') {
-      Store.inspectState.value = {
-        kind: 'inspect-off',
-      };
-    }
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
-  // Add these states to track if prev/next are available
-  const [hasPrevious, setHasPrevious] = useState(false);
-  const [hasNext, setHasNext] = useState(false);
+  let inspectIcon = null;
+  let inspectColor = '#999';
 
-  // Add this effect to update the button states whenever focused element changes
-  useEffect(() => {
-    const currentState = Store.inspectState.value;
-    if (currentState.kind !== 'focused' || !currentState.focusedDomElement) {
-      setHasPrevious(false);
-      setHasNext(false);
-      return;
-    }
-
-    // Check if prev/next elements exist
-    const prevElement = findNextElement(currentState.focusedDomElement, 'previous');
-    const nextElement = findNextElement(currentState.focusedDomElement, 'next');
-
-    setHasPrevious(!!prevElement);
-    setHasNext(!!nextElement);
-  }, [findNextElement, Store.inspectState.value]);
+  if (isInspectActive) {
+    inspectIcon = <Icon name="icon-inspect" />;
+    inspectColor = 'rgba(142, 97, 227, 1)';
+  } else if (isInspectFocused) {
+    inspectIcon = <Icon name="icon-focus" />;
+    inspectColor = 'rgba(142, 97, 227, 1)';
+  } else {
+    inspectIcon = <Icon name="icon-inspect" />;
+    inspectColor = '#999';
+  }
 
   return (
     <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
@@ -184,42 +119,7 @@ export const Toolbar = () => {
         />
       </button>
 
-      {isInspectFocused && (
-        <div
-          className={cn(
-            'flex items-stretch justify-between',
-            'ml-auto',
-            'border-l-1 border-white/10 text-[#999]',
-            'overflow-hidden',
-          )}
-        >
-          <button
-            id="react-scan-previous-focus"
-            title="Previous element"
-            onClick={onPreviousFocus}
-            disabled={!hasPrevious}
-            className={cn(
-              "flex items-center justify-center px-3",
-              !hasPrevious && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <Icon name="icon-previous" />
-          </button>
-          <Search />
-          <button
-            id="react-scan-next-focus"
-            title="Next element"
-            onClick={onNextFocus}
-            disabled={!hasNext}
-            className={cn(
-              "flex items-center justify-center px-3",
-              !hasNext && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <Icon name="icon-next" />
-          </button>
-        </div>
-      )}
+      <Arrows />
       <div
         className={cn(
           'flex items-center justify-center whitespace-nowrap py-1.5 px-2 text-sm text-white',
@@ -233,6 +133,6 @@ export const Toolbar = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Toolbar;
