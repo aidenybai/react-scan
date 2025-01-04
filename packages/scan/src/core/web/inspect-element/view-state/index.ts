@@ -1,22 +1,22 @@
-import type { Fiber } from 'react-reconciler';
-import { createHTMLTemplate } from '@web-utils/html-template';
-import { Store } from 'src/core';
 import { getOverrideMethods } from '@web-inspect-element/utils';
 import { tryOrElse } from '@web-utils/helpers';
+import { createHTMLTemplate } from '@web-utils/html-template';
+import type { Fiber } from 'react-reconciler';
+import { Store } from 'src/core';
 import { isEqual } from 'src/core/utils';
 import {
+  getChangedContext,
   getChangedProps,
   getChangedState,
-  getChangedContext,
-  getStateNames,
+  getContextChangeCount,
   getCurrentContext,
   getCurrentProps,
   getCurrentState,
-  resetStateTracking,
-  getStateChangeCount,
   getPropsChangeCount,
-  getContextChangeCount,
   getPropsOrder,
+  getStateChangeCount,
+  getStateNames,
+  resetStateTracking,
 } from './utils';
 
 interface PropertyElementOptions {
@@ -48,80 +48,75 @@ const templates = {
     `<details class="react-scan-what-changed" style="background-color:#b8860b;color:#ffff00;padding:5px">
       <summary class="font-bold">What changed?</summary>
     </details>`,
-    false
+    false,
   ),
 
   changeList: createHTMLTemplate<HTMLUListElement>(
     '<ul style="list-style-type:disc;padding-left:20px"></ul>',
-    false
+    false,
   ),
 
   propertyContainer: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-property">',
-    false
+    false,
   ),
 
   previewLine: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-preview-line">',
-    false
+    false,
   ),
 
   arrow: createHTMLTemplate<HTMLSpanElement>(
     '<span class="react-scan-arrow">',
-    false
+    false,
   ),
 
   propertyContent: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-property-content">',
-    false
+    false,
   ),
 
   nestedObject: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-nested-object">',
-    false
+    false,
   ),
 
   inspector: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-inspector">',
-    false
+    false,
   ),
 
   content: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-content">',
-    false
+    false,
   ),
 
-  header: createHTMLTemplate<HTMLDivElement>(
-    '<div>',
-    false
-  ),
+  header: createHTMLTemplate<HTMLDivElement>('<div>', false),
 
   flashOverlay: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-flash-overlay">',
-    false
+    false,
   ),
 
-  listItem: createHTMLTemplate<HTMLLIElement>(
-    '<li>',
-    false
-  ),
+  listItem: createHTMLTemplate<HTMLLIElement>('<li>', false),
 
   input: createHTMLTemplate<HTMLInputElement>(
     '<input type="text" class="react-scan-input">',
-    false
+    false,
   ),
 
   section: createHTMLTemplate<HTMLDivElement>(
     '<div class="react-scan-section">',
-    false
-  )
+    false,
+  ),
 };
 
 export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
   const propContainer = Store.inspectState.value.propContainer;
   if (!propContainer) return;
 
-  const componentName = fiber.type?.displayName || fiber.type?.name || 'Unknown';
+  const componentName =
+    fiber.type?.displayName || fiber.type?.name || 'Unknown';
 
   // Reset tracking only when switching to a different component type
   if (lastInspectedFiber?.type !== fiber.type) {
@@ -145,7 +140,7 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
   const stateList = templates.changeList();
   let hasStateChanges = false;
 
-  changedState.forEach(key => {
+  for (const key of changedState) {
     const count = getStateChangeCount(key);
     if (count > 0) {
       hasStateChanges = true;
@@ -154,7 +149,7 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
       li.textContent = `${key} ×${count}`;
       stateList.appendChild(li);
     }
-  });
+  }
 
   if (hasStateChanges) {
     whatChangedSection.appendChild(stateHeader);
@@ -170,17 +165,18 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
   const orderedProps = [...propsOrder, ...Array.from(changedProps)];
   const uniqueOrderedProps = [...new Set(orderedProps)];
 
-  uniqueOrderedProps.forEach(key => {
-    if (!changedProps.has(key)) return;
-    const count = getPropsChangeCount(key);
-    if (count > 0) {
-      hasPropsChanges = true;
-      hasAnyChanges = true;
-      const li = templates.listItem();
-      li.textContent = `${key} ×${count}`;
-      propsList.appendChild(li);
+  for (const key of uniqueOrderedProps) {
+    if (changedProps.has(key)) {
+      const count = getPropsChangeCount(key);
+      if (count > 0) {
+        hasPropsChanges = true;
+        hasAnyChanges = true;
+        const li = templates.listItem();
+        li.textContent = `${key} ×${count}`;
+        propsList.appendChild(li);
+      }
     }
-  });
+  }
 
   if (hasPropsChanges) {
     whatChangedSection.appendChild(propsHeader);
@@ -192,7 +188,7 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
   const contextList = templates.changeList();
   let hasContextChanges = false;
 
-  changedContext.forEach(key => {
+  for (const key of changedContext) {
     const count = getContextChangeCount(key);
     if (count > 0) {
       hasContextChanges = true;
@@ -201,7 +197,7 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
       li.textContent = `${key.replace('context.', '')} ×${count}`;
       contextList.appendChild(li);
     }
-  });
+  }
 
   if (hasContextChanges) {
     whatChangedSection.appendChild(contextHeader);
@@ -261,8 +257,11 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
     tryOrElse(() => {
       const stateObj: Record<string, unknown> = Array.isArray(currentState)
         ? Object.fromEntries(
-          (currentState as Array<unknown>).map((val, idx) => [idx.toString(), val])
-        )
+            (currentState as Array<unknown>).map((val, idx) => [
+              idx.toString(),
+              val,
+            ]),
+          )
         : currentState;
 
       sections.push({
@@ -280,7 +279,9 @@ export const renderPropsAndState = (didRender: boolean, fiber: Fiber) => {
     }, null);
   }
 
-  sections.forEach((section) => content.appendChild(section.element));
+  for (const section of sections) {
+    content.appendChild(section.element);
+  }
   inspector.appendChild(content);
   propContainer.appendChild(inspector);
 };
@@ -293,18 +294,18 @@ export const replayComponent = async (fiber: any) => {
     const currentProps = fiber.memoizedProps || {};
 
     try {
-      Object.keys(currentProps).forEach((key) => {
+      for (const key in currentProps) {
         overrideProps(fiber, [key], currentProps[key]);
-      });
+      }
     } catch (e) {
       /**/
     }
 
     try {
       const state = getCurrentState(fiber) || {};
-      Object.keys(state).forEach((key) => {
+      for (const key in state) {
         overrideHookState(fiber, key, [], state[key]);
-      });
+      }
     } catch (e) {
       /**/
     }
@@ -323,9 +324,11 @@ export const replayComponent = async (fiber: any) => {
   }
 };
 
-
 const isPromise = (value: any): value is Promise<unknown> => {
-  return value && (value instanceof Promise || (typeof value === 'object' && 'then' in value));
+  return (
+    value &&
+    (value instanceof Promise || (typeof value === 'object' && 'then' in value))
+  );
 };
 
 const getPath = (
@@ -340,20 +343,27 @@ const getPath = (
 };
 
 const isEditableValue = (value: unknown): boolean => {
-  return typeof value === 'string' ||
+  return (
+    typeof value === 'string' ||
     typeof value === 'number' ||
-    typeof value === 'boolean';
+    typeof value === 'boolean'
+  );
 };
 
 export const getValueClassName = (value: unknown): string => {
   if (Array.isArray(value)) return 'react-scan-array';
   if (value === null || value === undefined) return 'react-scan-null';
   switch (typeof value) {
-    case 'string': return 'react-scan-string';
-    case 'number': return 'react-scan-number';
-    case 'boolean': return 'react-scan-boolean';
-    case 'object': return 'react-scan-object-key';
-    default: return '';
+    case 'string':
+      return 'react-scan-string';
+    case 'number':
+      return 'react-scan-number';
+    case 'boolean':
+      return 'react-scan-boolean';
+    case 'object':
+      return 'react-scan-object-key';
+    default:
+      return '';
   }
 };
 
@@ -364,34 +374,51 @@ export const getValuePreview = (value: unknown): string => {
 
   switch (typeof value) {
     case 'string':
-      if (value.includes('&quot;') || value.includes('&#39;') ||
-        value.includes('&lt;') || value.includes('&gt;') ||
-        value.includes('&amp;')) {
+      if (
+        value.includes('&quot;') ||
+        value.includes('&#39;') ||
+        value.includes('&lt;') ||
+        value.includes('&gt;') ||
+        value.includes('&amp;')
+      ) {
         return `"${value}"`;
       }
       return `"${value.replace(/[<>&"'\\\n\r\t]/g, (char) => {
         switch (char) {
-          case '<': return '&lt;';
-          case '>': return '&gt;';
-          case '&': return '&amp;';
-          case '"': return '&quot;';
-          case "'": return '&#39;';
-          case '\\': return '\\\\';
-          case '\n': return '\\n';
-          case '\r': return '\\r';
-          case '\t': return '\\t';
-          default: return char;
+          case '<':
+            return '&lt;';
+          case '>':
+            return '&gt;';
+          case '&':
+            return '&amp;';
+          case '"':
+            return '&quot;';
+          case "'":
+            return '&#39;';
+          case '\\':
+            return '\\\\';
+          case '\n':
+            return '\\n';
+          case '\r':
+            return '\\r';
+          case '\t':
+            return '\\t';
+          default:
+            return char;
         }
       })}"`;
-    case 'number': return value.toString();
-    case 'boolean': return value.toString();
+    case 'number':
+      return value.toString();
+    case 'boolean':
+      return value.toString();
     case 'object': {
       if (value instanceof Promise) return 'Promise';
       const keys = Object.keys(value);
       if (keys.length <= 3) return `{${keys.join(', ')}}`;
       return `{${keys.slice(0, 8).join(', ')}, ...}`;
     }
-    default: return typeof value;
+    default:
+      return typeof value;
   }
 };
 
@@ -413,13 +440,14 @@ const renderSection = (
     const orderedProps = [...propsOrder, ...Object.keys(data)];
     const uniqueOrderedProps = [...new Set(orderedProps)];
     orderedEntries = uniqueOrderedProps
-      .filter(key => key in data)
-      .map(key => [key, data[key]]);
+      .filter((key) => key in data)
+      .map((key) => [key, data[key]]);
   } else {
     orderedEntries = Object.entries(data);
   }
 
-  orderedEntries.forEach(([key, value]) => {
+  // TODO classic for
+  for (const [key, value] of orderedEntries) {
     const el = createPropertyElement({
       componentName,
       didRender,
@@ -432,12 +460,13 @@ const renderSection = (
       changedKeys,
       parentPath: '',
       objectPathMap: new WeakMap(),
-      hasCumulativeChanges: true
+      hasCumulativeChanges: true,
     });
 
-    if (!el) return;
-    section.appendChild(el);
-  });
+    if (el) {
+      section.appendChild(el);
+    }
+  }
 
   return section;
 };
@@ -459,11 +488,12 @@ export const createPropertyElement = ({
   try {
     if (!changedAtInterval) {
       changedAtInterval = setInterval(() => {
-        changedAt.forEach((value, key) => {
+        for (const [key, value] of changedAt) {
+          // TODO(Alexis): what does "450" mean here
           if (Date.now() - value > 450) {
             changedAt.delete(key);
           }
-        });
+        }
       }, 200);
     }
 
@@ -483,7 +513,8 @@ export const createPropertyElement = ({
     const shouldShowChange =
       isChanged || changedKeys.has(key) || hasCumulativeChanges;
 
-    const isBadRender = level === 0 &&
+    const isBadRender =
+      level === 0 &&
       shouldShowChange &&
       typeof value === 'object' &&
       value !== null &&
@@ -496,7 +527,9 @@ export const createPropertyElement = ({
       createAndHandleFlashOverlay(container);
 
       if (level > 0 && container.parentElement) {
-        const parentContainer = container.closest('.react-scan-property')?.parentElement?.closest('.react-scan-property');
+        const parentContainer = container
+          .closest('.react-scan-property')
+          ?.parentElement?.closest('.react-scan-property');
         if (parentContainer instanceof HTMLElement) {
           createAndHandleFlashOverlay(parentContainer);
         }
@@ -535,8 +568,8 @@ export const createPropertyElement = ({
       preview.innerHTML = `
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
         <span class="react-scan-key">${key}:&nbsp;</span><span class="${getValueClassName(
-        value,
-      )} react-scan-value truncate">${getValuePreview(value)}</span>
+          value,
+        )} react-scan-value truncate">${getValuePreview(value)}</span>
       `;
 
       const content = templates.nestedObject();
@@ -550,50 +583,54 @@ export const createPropertyElement = ({
 
       if (isExpanded) {
         if (Array.isArray(value)) {
-          value.forEach((item, index) => {
+          for (let i = 0, len = value.length; i < len; i++) {
             const el = createPropertyElement({
               componentName,
               didRender,
               propContainer,
               fiber,
-              key: index.toString(),
-              value: item,
+              key: i.toString(),
+              value: value[i],
               section,
               level: level + 1,
               changedKeys: new Set(),
               parentPath: currentPath,
               objectPathMap: new WeakMap(),
-              hasCumulativeChanges: false
+              hasCumulativeChanges: false,
             });
-            if (!el) return;
-            content.appendChild(el);
-          });
+            if (el) {
+              content.appendChild(el);
+            }
+          }
         } else {
-          Object.entries(value).forEach(([k, v]) => {
+          for (const k in value) {
             const el = createPropertyElement({
               componentName,
               didRender,
               propContainer,
               fiber,
               key: k,
-              value: v,
+              value: value[k],
               section,
               level: level + 1,
               changedKeys: new Set(),
               parentPath: currentPath,
               objectPathMap: new WeakMap(),
-              hasCumulativeChanges: false
+              hasCumulativeChanges: false,
             });
-            if (!el) return;
-            content.appendChild(el);
-          });
+            if (el) {
+              content.appendChild(el);
+            }
+          }
         }
       }
 
       arrow.addEventListener('click', (e) => {
         e.stopPropagation();
 
-        const isExpanding = !container.classList.contains('react-scan-expanded');
+        const isExpanding = !container.classList.contains(
+          'react-scan-expanded',
+        );
 
         if (isExpanding) {
           EXPANDED_PATHS.add(currentPath);
@@ -602,43 +639,45 @@ export const createPropertyElement = ({
 
           if (!content.hasChildNodes()) {
             if (Array.isArray(value)) {
-              value.forEach((item, index) => {
+              for (let i = 0, len = value.length; i < len; i++) {
                 const el = createPropertyElement({
                   componentName,
                   didRender,
                   propContainer,
                   fiber,
-                  key: index.toString(),
-                  value: item,
+                  key: i.toString(),
+                  value: value[i],
                   section,
                   level: level + 1,
                   changedKeys: new Set(),
                   parentPath: currentPath,
                   objectPathMap: new WeakMap(),
-                  hasCumulativeChanges: false
+                  hasCumulativeChanges: false,
                 });
-                if (!el) return;
-                content.appendChild(el);
-              });
+                if (el) {
+                  content.appendChild(el);
+                }
+              }
             } else {
-              Object.entries(value).forEach(([k, v]) => {
+              for (const k in value) {
                 const el = createPropertyElement({
                   componentName,
                   didRender,
                   propContainer,
                   fiber,
                   key: k,
-                  value: v,
+                  value: value[k],
                   section,
                   level: level + 1,
                   changedKeys: new Set(),
                   parentPath: currentPath,
                   objectPathMap: new WeakMap(),
-                  hasCumulativeChanges: false
+                  hasCumulativeChanges: false,
                 });
-                if (!el) return;
-                content.appendChild(el);
-              });
+                if (el) {
+                  content.appendChild(el);
+                }
+              }
             }
           }
         } else {
@@ -654,30 +693,32 @@ export const createPropertyElement = ({
       preview.innerHTML = `
         ${isBadRender ? '<span class="react-scan-warning">⚠️</span>' : ''}
         <span class="react-scan-key">${key}:&nbsp;</span><span class="${getValueClassName(
-        value,
-      )} react-scan-value truncate">${getValuePreview(value)}</span>
+          value,
+        )} react-scan-value truncate">${getValuePreview(value)}</span>
       `;
       container.appendChild(preview);
 
       if (section === 'props' || section === 'state') {
         const valueElement = preview.querySelector('.react-scan-value');
         const { overrideProps, overrideHookState } = getOverrideMethods();
-        const canEdit = section === 'props' ? !!overrideProps : !!overrideHookState;
-
+        const canEdit =
+          section === 'props' ? !!overrideProps : !!overrideHookState;
 
         if (valueElement && canEdit && isEditableValue(value)) {
           valueElement.classList.add('react-scan-editable');
           valueElement.addEventListener('click', (e) => {
             e.stopPropagation();
             const input = templates.input();
-            input.value = typeof value === 'string' ?
-              value.replace(/^"(?:.*)"$/, '$1')
-                .replace(/&quot;/g, '"')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&amp;/g, '&')
-                .replace(/&#39;/g, "'")
-              : value.toString();
+            input.value =
+              typeof value === 'string'
+                ? value
+                    .replace(/^"(?:.*)"$/, '$1')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&#39;/g, "'")
+                : value.toString();
 
             const restoreOriginalElement = () => {
               tryOrElse(() => {
@@ -690,9 +731,11 @@ export const createPropertyElement = ({
             const updateValue = () => {
               const newValue = tryOrElse(() => {
                 const inputValue = input.value;
-                return typeof value === 'number' ? Number(inputValue) :
-                  typeof value === 'boolean' ? inputValue === 'true' :
-                    inputValue;
+                return typeof value === 'number'
+                  ? Number(inputValue)
+                  : typeof value === 'boolean'
+                    ? inputValue === 'true'
+                    : inputValue;
               }, value);
 
               if (isEqual(value, newValue)) {
@@ -704,7 +747,9 @@ export const createPropertyElement = ({
                 tryOrElse(() => {
                   if (parentPath) {
                     const parts = parentPath.split('.');
-                    const path = parts.filter(part => part !== 'props' && part !== componentName);
+                    const path = parts.filter(
+                      (part) => part !== 'props' && part !== componentName,
+                    );
                     path.push(key);
                     overrideProps(fiber, path, newValue);
                   } else {
@@ -718,7 +763,8 @@ export const createPropertyElement = ({
                   if (!parentPath) {
                     const stateNames = getStateNames(fiber);
                     const namedStateIndex = stateNames.indexOf(key);
-                    const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
+                    const hookId =
+                      namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
                     overrideHookState(fiber, hookId, [], newValue);
                   } else {
                     const fullPathParts = parentPath.split('.');
@@ -729,15 +775,19 @@ export const createPropertyElement = ({
                     const baseStateKey = statePath[0];
                     const stateNames = getStateNames(fiber);
                     const namedStateIndex = stateNames.indexOf(baseStateKey);
-                    const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
-                    const nestedPath = statePath.slice(1).map(part => /^\d+$/.test(part) ? parseInt(part, 10) : part);
+                    const hookId =
+                      namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
+                    const nestedPath = statePath
+                      .slice(1)
+                      .map((part) =>
+                        /^\d+$/.test(part) ? parseInt(part, 10) : part,
+                      );
                     nestedPath.push(key);
                     overrideHookState(fiber, hookId, nestedPath, newValue);
                   }
                 }, null);
               }
             };
-
 
             input.addEventListener('keydown', (e: KeyboardEvent) => {
               if (e.key === 'Enter') {
@@ -791,12 +841,15 @@ const cleanupFlashOverlay = (overlay: HTMLElement) => {
 const createAndHandleFlashOverlay = (container: HTMLElement) => {
   const existingOverlay = container.querySelector('.react-scan-flash-overlay');
 
-  const flashOverlay = existingOverlay instanceof HTMLElement ? existingOverlay : (() => {
-    const newOverlay = templates.flashOverlay();
-    container.appendChild(newOverlay);
-    activeOverlays.add(newOverlay);
-    return newOverlay;
-  })();
+  const flashOverlay =
+    existingOverlay instanceof HTMLElement
+      ? existingOverlay
+      : (() => {
+          const newOverlay = templates.flashOverlay();
+          container.appendChild(newOverlay);
+          activeOverlays.add(newOverlay);
+          return newOverlay;
+        })();
 
   requestAnimationFrame(() => {
     flashOverlay.style.cssText = `
@@ -829,21 +882,22 @@ const createAndHandleFlashOverlay = (container: HTMLElement) => {
 export const cleanup = () => {
   EXPANDED_PATHS.clear();
 
-  activeOverlays.forEach(cleanupFlashOverlay);
-  activeOverlays.clear();
+  for (const overlay of activeOverlays) {
+    cleanupFlashOverlay(overlay);
+  }
 
   if (changedAtInterval !== null) {
     clearInterval(changedAtInterval);
     changedAtInterval = null;
   }
 
-  activeOverlays.forEach((overlay) => {
+  for (const overlay of activeOverlays) {
     const timer = fadeOutTimers.get(overlay);
     if (timer) {
       clearTimeout(timer);
       fadeOutTimers.delete(overlay);
     }
-  });
+  }
 
   changedAt.clear();
   lastRendered.clear();
