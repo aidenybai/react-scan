@@ -1,7 +1,7 @@
-import type { AggregatedRender } from '@web-utils/outline';
 import { getType } from 'bippy';
 import { type Fiber } from 'react-reconciler';
-import { ReactScanInternals } from '..';
+import { ReactScanInternals } from '~core/index';
+import { type AggregatedRender } from '~web/utils/outline';
 import type { AggregatedChange, Render, RenderChange } from './instrumentation';
 
 export const aggregateChanges = (

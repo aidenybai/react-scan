@@ -9,16 +9,15 @@
   },
   "dependencies": {
     "@vercel/analytics": "^1.4.0",
-    "babel-plugin-react-compiler": "19.0.0-beta-a7bf2bd-20241110",
     "bippy": "^0.0.21",
-    "react": "19.0.0-rc.1",
-    "react-dom": "19.0.0-rc.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-scan": "^0.0.34",
-    "sugar-high": "^0.7.5",
-    "vite-plugin-inspect": "^0.8.7"
+    "sugar-high": "^0.7.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.3"
+    "vite": "^5.4.3",
+    "vite-plugin-inspect": "^0.8.7"
   }
 }

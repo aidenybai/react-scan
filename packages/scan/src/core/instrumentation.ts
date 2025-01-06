@@ -1,6 +1,4 @@
 import { signal, type Signal } from '@preact/signals';
-import { getChangedPropsDetailed } from '@web-inspect-element/utils';
-import { RENDER_PHASE_STRING_TO_ENUM, RenderPhase } from '@web-utils/outline';
 import {
   createFiberVisitor,
   didFiberCommit,
@@ -16,7 +14,12 @@ import {
 } from 'bippy';
 import { isValidElement } from 'preact';
 import type { Fiber, FiberRoot } from 'react-reconciler';
-import { isEqual } from 'src/core/utils';
+import { isEqual } from '~core/utils';
+import { getChangedPropsDetailed } from '~web/components/inspector/utils';
+import {
+  RENDER_PHASE_STRING_TO_ENUM,
+  type RenderPhase,
+} from '~web/utils/outline';
 import { ReactScanInternals, Store, getIsProduction } from './index';
 
 let fps = 0;

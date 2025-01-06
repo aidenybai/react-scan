@@ -1,13 +1,4 @@
 import { signal, type Signal } from '@preact/signals';
-import { ICONS } from '@web-assets/svgs/svgs';
-import {
-  createInspectElementStateMachine,
-  type States,
-} from '@web-inspect-element/inspect-state-machine';
-import { playGeigerClickSound } from '@web-utils/geiger';
-import { readLocalStorage, saveLocalStorage } from '@web-utils/helpers';
-import { log, logIntro } from '@web-utils/log';
-import { flushOutlines, type Outline } from '@web-utils/outline';
 import {
   detectReactBuildType,
   getDisplayName,
@@ -27,12 +18,18 @@ import {
   updateFiberRenderData,
   type RenderData,
 } from 'src/core/utils';
+import styles from '~web/assets/css/styles.css';
+import { ICONS } from '~web/assets/svgs/svgs';
+import { type States } from '~web/components/inspector/utils';
+import { initReactScanOverlay } from '~web/overlay';
+import { createToolbar } from '~web/toolbar';
+import { playGeigerClickSound } from '~web/utils/geiger';
+import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
+import { log, logIntro } from '~web/utils/log';
+import { flushOutlines, type Outline } from '~web/utils/outline';
 import { createInstrumentation, type Render } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
-import styles from './web/assets/css/styles.css';
-import { initReactScanOverlay } from './web/overlay';
-import { createToolbar } from './web/toolbar';
 
 let toolbarContainer: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -598,8 +595,6 @@ export const start = () => {
       if (!ctx) return;
       startFlushOutlineInterval();
 
-      createInspectElementStateMachine(shadowRoot);
-
       globalThis.__REACT_SCAN__ = {
         ReactScanInternals,
       };
@@ -607,10 +602,6 @@ export const start = () => {
       if (ReactScanInternals.options.value.showToolbar) {
         toolbarContainer = createToolbar(shadowRoot);
       }
-
-      const overlayElement = document.createElement('react-scan-overlay');
-
-      document.documentElement.appendChild(overlayElement);
 
       logIntro();
     },
