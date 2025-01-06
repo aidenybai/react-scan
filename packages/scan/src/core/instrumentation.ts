@@ -433,7 +433,9 @@ export const createInstrumentation = (
           unstable: false,
         }));
 
-        changes.push(...propsChanges, ...stateChanges, ...contextChanges);
+        changes.push.apply(changes, propsChanges);
+        changes.push.apply(changes, stateChanges);
+        changes.push.apply(changes, contextChanges);
 
         const { selfTime } = getTimings(fiber);
 
