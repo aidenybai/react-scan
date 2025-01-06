@@ -16,3 +16,4 @@ export function constant<P>(Component: FunctionComponent<P>) {
   Memoed._forwarded = true;
   return Memoed;
 }
+

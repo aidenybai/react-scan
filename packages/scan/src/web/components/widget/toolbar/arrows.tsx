@@ -6,7 +6,7 @@ import {
   type InspectableElement,
 } from '~web/components/inspector/utils';
 import { cn } from '~web/utils/helpers';
-import { constant } from '~web/utils/preact';
+import { constant } from '~web/utils/preact/constant';
 
 export const Arrows = constant(() => {
   const refButtonPrevious = useRef<HTMLButtonElement>(null);

@@ -4,7 +4,7 @@ import { Icon } from '~web/components/icon';
 import FpsMeter from '~web/components/widget/fps-meter';
 import { Arrows } from '~web/components/widget/toolbar/arrows';
 import { cn } from '~web/utils/helpers';
-import { constant } from '~web/utils/preact';
+import { constant } from '~web/utils/preact/constant';
 
 export const Toolbar = constant(() => {
   const inspectState = Store.inspectState;

@@ -14,7 +14,7 @@ import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
 import { cn, tryOrElse } from '~web/utils/helpers';
-import { constant } from '~web/utils/preact';
+import { constant } from '~web/utils/preact/constant';
 import { flashManager } from './flash-overlay';
 import {
   getChangedContext,
