@@ -1,10 +1,10 @@
 import { type Fiber } from 'react-reconciler';
-import { throttle } from './helpers';
-import { LRUMap } from './lru';
-import { type DrawingQueue, outlineWorker } from './outline-worker';
 import { ReactScanInternals, type OutlineKey } from '~core/index';
 import { type AggregatedChange } from '~core/instrumentation';
 import { getLabelText, joinAggregations } from '~core/utils';
+import { throttle } from './helpers';
+import { LRUMap } from './lru';
+import { outlineWorker, type DrawingQueue } from './outline-worker';
 
 const enum Reason {
   Commit = 0b001,
@@ -162,7 +162,7 @@ export const fadeOutOutline = () => {
     const averageScore = Math.max(
       (THRESHOLD_FPS - Math.min(avgFps, THRESHOLD_FPS)) / THRESHOLD_FPS,
       invariantActiveOutline.aggregatedRender.time ??
-      0 / invariantActiveOutline.aggregatedRender.aggregatedCount / 16,
+        0 / invariantActiveOutline.aggregatedRender.aggregatedCount / 16,
     );
 
     const t = Math.min(averageScore, 1);
@@ -641,7 +641,7 @@ function mergeTwoLabels(
   return {
     alpha: Math.max(a.alpha, b.alpha),
 
-    ...pickColorClosestToStartStage(a, b), // kinda wrong, should pick color in earliest stage
+    color: pickColorClosestToStartStage(a, b), // kinda wrong, should pick color in earliest stage
     reasons: mergedReasons,
     groupedAggregatedRender: mergedGrouped,
     rect: mergedRect,
@@ -656,19 +656,25 @@ function getBoundingRect(r1: DOMRect, r2: DOMRect): DOMRect {
   return new DOMRect(x1, y1, x2 - x1, y2 - y1);
 }
 
+interface Color {
+  r: number;
+  g: number;
+  b: number;
+}
+
 function pickColorClosestToStartStage(
   a: MergedOutlineLabel,
   b: MergedOutlineLabel,
-) {
+): Color {
   // stupid hack to always take the gray value when the render is unnecessary (we know the gray value has equal rgb)
   if (a.color.r === a.color.g && a.color.g === a.color.b) {
-    return { color: a.color };
+    return a.color;
   }
   if (b.color.r === b.color.g && b.color.g === b.color.b) {
-    return { color: b.color };
+    return b.color;
   }
 
-  return { color: a.color.r <= b.color.r ? a.color : b.color };
+  return a.color.r <= b.color.r ? a.color : b.color;
 }
 
 function getOverlapArea(rect1: DOMRect, rect2: DOMRect): number {
