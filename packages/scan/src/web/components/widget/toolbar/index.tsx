@@ -1,12 +1,12 @@
-import { memo } from 'preact/compat';
 import { useCallback, useEffect } from 'preact/hooks';
-import { Store, ReactScanInternals, setOptions } from '~core/index';
+import { ReactScanInternals, Store, setOptions } from '~core/index';
 import { Icon } from '~web/components/icon';
 import FpsMeter from '~web/components/widget/fps-meter';
 import { Arrows } from '~web/components/widget/toolbar/arrows';
 import { cn } from '~web/utils/helpers';
+import { constant } from '~web/utils/preact';
 
-export const Toolbar = memo(() => {
+export const Toolbar = constant(() => {
   const inspectState = Store.inspectState;
 
   const isInspectActive = inspectState.value.kind === 'inspecting';
@@ -50,7 +50,7 @@ export const Toolbar = memo(() => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = Store.inspectState.subscribe(state => {
+    const unsubscribe = Store.inspectState.subscribe((state) => {
       if (state.kind === 'uninitialized') {
         Store.inspectState.value = {
           kind: 'inspect-off',

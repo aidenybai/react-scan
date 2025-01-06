@@ -1,11 +1,14 @@
-import { memo } from "preact/compat";
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import { Store } from "~core/index";
-import { Icon } from "~web/components/icon";
-import { type InspectableElement, getInspectableElements } from "~web/components/inspector/utils";
-import { cn } from "~web/utils/helpers";
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { Store } from '~core/index';
+import { Icon } from '~web/components/icon';
+import {
+  getInspectableElements,
+  type InspectableElement,
+} from '~web/components/inspector/utils';
+import { cn } from '~web/utils/helpers';
+import { constant } from '~web/utils/preact';
 
-export const Arrows = memo(() => {
+export const Arrows = constant(() => {
   const refButtonPrevious = useRef<HTMLButtonElement>(null);
   const refButtonNext = useRef<HTMLButtonElement>(null);
   const refAllElements = useRef<Array<InspectableElement>>([]);
@@ -14,13 +17,15 @@ export const Arrows = memo(() => {
 
   const findNextElement = useCallback(
     (currentElement: HTMLElement, direction: 'next' | 'previous') => {
-      const currentIndex = refAllElements.current.findIndex(item => item.element === currentElement);
+      const currentIndex = refAllElements.current.findIndex(
+        (item) => item.element === currentElement,
+      );
       if (currentIndex === -1) return null;
 
       const nextIndex = currentIndex + (direction === 'next' ? 1 : -1);
       return refAllElements.current[nextIndex]?.element || null;
     },
-    []
+    [],
   );
 
   const onPreviousFocus = useCallback(() => {
@@ -49,25 +54,37 @@ export const Arrows = memo(() => {
     if (nextElement) {
       Store.inspectState.value = {
         kind: 'focused',
-        focusedDomElement: nextElement
+        focusedDomElement: nextElement,
       };
     }
   }, []);
 
   useEffect(() => {
-    const unsubscribe = Store.inspectState.subscribe(state => {
+    const unsubscribe = Store.inspectState.subscribe((state) => {
       if (state.kind === 'focused') {
         refAllElements.current = getInspectableElements();
         setShouldRender(true);
         if (refButtonPrevious.current) {
-          const hasPrevious = !!findNextElement(state.focusedDomElement, 'previous');
-          refButtonPrevious.current.classList.toggle('opacity-50', !hasPrevious);
-          refButtonPrevious.current.classList.toggle('cursor-not-allowed', !hasPrevious);
+          const hasPrevious = !!findNextElement(
+            state.focusedDomElement,
+            'previous',
+          );
+          refButtonPrevious.current.classList.toggle(
+            'opacity-50',
+            !hasPrevious,
+          );
+          refButtonPrevious.current.classList.toggle(
+            'cursor-not-allowed',
+            !hasPrevious,
+          );
         }
         if (refButtonNext.current) {
           const hasNext = !!findNextElement(state.focusedDomElement, 'next');
           refButtonNext.current.classList.toggle('opacity-50', !hasNext);
-          refButtonNext.current.classList.toggle('cursor-not-allowed', !hasNext);
+          refButtonNext.current.classList.toggle(
+            'cursor-not-allowed',
+            !hasNext,
+          );
         }
       }
 
@@ -118,6 +135,6 @@ export const Arrows = memo(() => {
       >
         <Icon name="icon-next" />
       </button>
-    </div >
+    </div>
   );
 });

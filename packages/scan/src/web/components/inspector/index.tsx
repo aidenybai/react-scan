@@ -1,29 +1,35 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'preact/hooks';
+import { signal } from '@preact/signals';
 import { getDisplayName } from 'bippy';
-import type { Fiber } from 'react-reconciler';
 import { Component } from 'preact';
-import { memo } from 'preact/compat';
-import { signal } from "@preact/signals";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
+import type { Fiber } from 'react-reconciler';
 import { Store } from '~core/index';
 import { isEqual } from '~core/utils';
-import { cn, tryOrElse } from '~web/utils/helpers';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
-import { getCompositeComponentFromElement, getOverrideMethods } from './utils';
-import {
-  getChangedProps,
-  getChangedContext,
-  getStateChangeCount,
-  getPropsChangeCount,
-  getContextChangeCount,
-  getCurrentState,
-  getCurrentProps,
-  getCurrentContext,
-  resetStateTracking,
-  getStateNames,
-  getChangedState
-} from './overlay/utils';
+import { cn, tryOrElse } from '~web/utils/helpers';
+import { constant } from '~web/utils/preact';
 import { flashManager } from './flash-overlay';
+import {
+  getChangedContext,
+  getChangedProps,
+  getChangedState,
+  getContextChangeCount,
+  getCurrentContext,
+  getCurrentProps,
+  getCurrentState,
+  getPropsChangeCount,
+  getStateChangeCount,
+  getStateNames,
+  resetStateTracking,
+} from './overlay/utils';
+import { getCompositeComponentFromElement, getOverrideMethods } from './utils';
 
 interface InspectorState {
   fiber: Fiber | null;
@@ -102,19 +108,18 @@ let lastInspectedFiber: Fiber | null = null;
 const THROTTLE_MS = 16;
 const DEBOUNCE_MS = 150;
 
-
 const inspectorState = signal<InspectorState>({
   fiber: null,
   changes: {
     state: new Set(),
     props: new Set(),
-    context: new Set()
+    context: new Set(),
   },
   current: {
     state: {},
     props: {},
-    context: {}
-  }
+    context: {},
+  },
 });
 
 class InspectorErrorBoundary extends Component {
@@ -161,7 +166,10 @@ const isExpandable = (value: unknown): value is InspectableValue => {
 };
 
 const isPromise = (value: any): value is Promise<unknown> => {
-  return value && (value instanceof Promise || (typeof value === 'object' && 'then' in value));
+  return (
+    value &&
+    (value instanceof Promise || (typeof value === 'object' && 'then' in value))
+  );
 };
 
 const isEditableValue = (value: unknown, parentPath?: string): boolean => {
@@ -179,7 +187,11 @@ const isEditableValue = (value: unknown, parentPath?: string): boolean => {
     for (const part of parts) {
       currentPath = currentPath ? `${currentPath}.${part}` : part;
       const obj = lastRendered.get(currentPath);
-      if (obj instanceof DataView || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj)) {
+      if (
+        obj instanceof DataView ||
+        obj instanceof ArrayBuffer ||
+        ArrayBuffer.isView(obj)
+      ) {
         return false;
       }
     }
@@ -256,15 +268,17 @@ const formatValue = (value: unknown): string => {
     case value instanceof Set:
       return `Set(${value.size})`;
     case value instanceof Date:
-      return value.toLocaleString(undefined, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).replace(/[/,-]/g, '.');
+      return value
+        .toLocaleString(undefined, {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        })
+        .replace(/[/,-]/g, '.');
     case value instanceof RegExp:
       return 'RegExp';
     case value instanceof Error:
@@ -316,11 +330,19 @@ const formatForClipboard = (value: unknown): string => {
       case value instanceof Set:
         return JSON.stringify(Array.from(value), null, 2);
       case value instanceof DataView:
-        return JSON.stringify(Array.from(new Uint8Array(value.buffer)), null, 2);
+        return JSON.stringify(
+          Array.from(new Uint8Array(value.buffer)),
+          null,
+          2,
+        );
       case value instanceof ArrayBuffer:
         return JSON.stringify(Array.from(new Uint8Array(value)), null, 2);
       case ArrayBuffer.isView(value) && 'length' in value:
-        return JSON.stringify(Array.from(value as unknown as ArrayLike<number>), null, 2);
+        return JSON.stringify(
+          Array.from(value as unknown as ArrayLike<number>),
+          null,
+          2,
+        );
       case Array.isArray(value):
         return JSON.stringify(value, null, 2);
       case typeof value === 'object':
@@ -423,9 +445,12 @@ const parseValue = (value: string, currentType: unknown): unknown => {
       const entries = value
         .slice(1, -1)
         .split(', ')
-        .map(entry => {
+        .map((entry) => {
           const [key, val] = entry.split(' => ');
-          return [parseValue(key, ''), parseValue(val, '')] as [unknown, unknown];
+          return [parseValue(key, ''), parseValue(val, '')] as [
+            unknown,
+            unknown,
+          ];
         });
       return new Map(entries);
     }
@@ -434,7 +459,7 @@ const parseValue = (value: string, currentType: unknown): unknown => {
       const values = value
         .slice(1, -1)
         .split(', ')
-        .map(v => parseValue(v, ''));
+        .map((v) => parseValue(v, ''));
       return new Set(values);
     }
 
@@ -446,7 +471,7 @@ const parseValue = (value: string, currentType: unknown): unknown => {
       const entries = value
         .slice(1, -1)
         .split(', ')
-        .map(entry => {
+        .map((entry) => {
           const [key, val] = entry.split(': ');
           return [key, parseValue(val, '')];
         });
@@ -459,7 +484,9 @@ const parseValue = (value: string, currentType: unknown): unknown => {
   }
 };
 
-const detectValueType = (value: string): {
+const detectValueType = (
+  value: string,
+): {
   type: 'string' | 'number' | 'undefined' | 'null' | 'boolean';
   value: unknown;
 } => {
@@ -495,9 +522,15 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
     try {
       if (value instanceof Date) {
         initialValue = value.toISOString().slice(0, 16);
-      } else if (value instanceof Map || value instanceof Set || value instanceof RegExp ||
-        value instanceof Error || value instanceof ArrayBuffer || ArrayBuffer.isView(value) ||
-        (typeof value === 'object' && value !== null)) {
+      } else if (
+        value instanceof Map ||
+        value instanceof Set ||
+        value instanceof RegExp ||
+        value instanceof Error ||
+        value instanceof ArrayBuffer ||
+        ArrayBuffer.isView(value) ||
+        (typeof value === 'object' && value !== null)
+      ) {
         initialValue = formatValue(value);
       } else {
         initialValue = formatInitialValue(value);
@@ -584,7 +617,7 @@ const PropertyElement = ({
       getDisplayName(fiber?.type) ?? 'Unknown',
       section,
       parentPath ?? '',
-      name
+      name,
     );
     return EXPANDED_PATHS.has(currentPath);
   });
@@ -594,64 +627,72 @@ const PropertyElement = ({
     getDisplayName(fiber?.type) ?? 'Unknown',
     section,
     parentPath ?? '',
-    name
+    name,
   );
 
   const prevValue = lastRendered.get(currentPath);
   const isChanged = prevValue !== undefined && !isEqual(prevValue, value);
 
-  const renderNestedProperties = useCallback((obj: InspectableValue) => {
-    let entries: Array<IterableEntry>;
+  const renderNestedProperties = useCallback(
+    (obj: InspectableValue) => {
+      let entries: Array<IterableEntry>;
 
-    if (obj instanceof ArrayBuffer) {
-      const view = new Uint8Array(obj);
-      entries = Array.from(view).map((v, i) => [i, v]);
-    } else if (obj instanceof DataView) {
-      const view = new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength);
-      entries = Array.from(view).map((v, i) => [i, v]);
-    } else if (ArrayBuffer.isView(obj)) {
-      if (obj instanceof BigInt64Array || obj instanceof BigUint64Array) {
-        entries = Array.from({ length: obj.length }, (_, i) => [i, obj[i]]);
+      if (obj instanceof ArrayBuffer) {
+        const view = new Uint8Array(obj);
+        entries = Array.from(view).map((v, i) => [i, v]);
+      } else if (obj instanceof DataView) {
+        const view = new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength);
+        entries = Array.from(view).map((v, i) => [i, v]);
+      } else if (ArrayBuffer.isView(obj)) {
+        if (obj instanceof BigInt64Array || obj instanceof BigUint64Array) {
+          entries = Array.from({ length: obj.length }, (_, i) => [i, obj[i]]);
+        } else {
+          entries = Array.from(obj as ArrayLike<number>).map((v, i) => [i, v]);
+        }
+      } else if (obj instanceof Map) {
+        entries = Array.from(obj.entries()).map(([k, v]) => [String(k), v]);
+      } else if (obj instanceof Set) {
+        entries = Array.from(obj).map((v, i) => [i, v]);
+      } else if (Array.isArray(obj)) {
+        entries = obj.map((value, index) => [index, value]);
       } else {
-        entries = Array.from(obj as ArrayLike<number>).map((v, i) => [i, v]);
+        entries = Object.entries(obj);
       }
-    } else if (obj instanceof Map) {
-      entries = Array.from(obj.entries()).map(([k, v]) => [String(k), v]);
-    } else if (obj instanceof Set) {
-      entries = Array.from(obj).map((v, i) => [i, v]);
-    } else if (Array.isArray(obj)) {
-      entries = obj.map((value, index) => [index, value]);
-    } else {
-      entries = Object.entries(obj);
-    }
 
-    const canEditChildren = !(obj instanceof DataView || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj));
+      const canEditChildren = !(
+        obj instanceof DataView ||
+        obj instanceof ArrayBuffer ||
+        ArrayBuffer.isView(obj)
+      );
 
-    return entries.map(([key, value]) => (
-      <PropertyElement
-        key={String(key)}
-        name={String(key)}
-        value={value}
-        section={section}
-        level={level + 1}
-        parentPath={currentPath}
-        objectPathMap={objectPathMap}
-        changedKeys={changedKeys}
-        allowEditing={canEditChildren}
-      />
-    ));
-  }, [fiber, section, level, currentPath, objectPathMap, changedKeys]);
+      return entries.map(([key, value]) => (
+        <PropertyElement
+          key={String(key)}
+          name={String(key)}
+          value={value}
+          section={section}
+          level={level + 1}
+          parentPath={currentPath}
+          objectPathMap={objectPathMap}
+          changedKeys={changedKeys}
+          allowEditing={canEditChildren}
+        />
+      ));
+    },
+    [fiber, section, level, currentPath, objectPathMap, changedKeys],
+  );
 
   const valuePreview = useMemo(() => formatValue(value), [value]);
 
   const { overrideProps, overrideHookState } = getOverrideMethods();
   const canEdit = useMemo(() => {
-    return allowEditing && (
-      section === 'props'
+    return (
+      allowEditing &&
+      (section === 'props'
         ? !!overrideProps && name !== 'children'
         : section === 'state'
           ? !!overrideHookState
-          : false
+          : false)
     );
   }, [section, overrideProps, overrideHookState, allowEditing, name]);
 
@@ -660,7 +701,8 @@ const PropertyElement = ({
 
     const isSameComponentType = lastInspectedFiber?.type === fiber?.type;
     const isFirstRender = !lastRendered.has(currentPath);
-    const shouldFlash = isChanged &&
+    const shouldFlash =
+      isChanged &&
       refElement.current &&
       prevValue !== undefined &&
       !isSameComponentType &&
@@ -678,9 +720,12 @@ const PropertyElement = ({
   }, [value, isChanged, currentPath, prevValue, fiber?.type]);
 
   const shouldShowWarning = useMemo(() => {
-    const shouldShowChange = !lastRendered.has(currentPath) || !isEqual(lastRendered.get(currentPath), value);
+    const shouldShowChange =
+      !lastRendered.has(currentPath) ||
+      !isEqual(lastRendered.get(currentPath), value);
 
-    const isBadRender = level === 0 &&
+    const isBadRender =
+      level === 0 &&
       shouldShowChange &&
       typeof value === 'object' &&
       value !== null &&
@@ -709,7 +754,11 @@ const PropertyElement = ({
     }
   }, [canEdit]);
 
-  const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
+  const updateNestedValue = (
+    obj: unknown,
+    path: Array<string>,
+    value: unknown,
+  ): unknown => {
     try {
       if (path.length === 0) return value;
 
@@ -743,7 +792,7 @@ const PropertyElement = ({
         }
         return {
           ...obj,
-          [key]: updateNestedValue((obj as any)[key], rest, value)
+          [key]: updateNestedValue((obj as any)[key], rest, value),
         };
       }
 
@@ -753,62 +802,73 @@ const PropertyElement = ({
     }
   };
 
-  const handleSave = useCallback((newValue: unknown) => {
-    if (isEqual(value, newValue)) {
-      setIsEditing(false);
-      return;
-    }
+  const handleSave = useCallback(
+    (newValue: unknown) => {
+      if (isEqual(value, newValue)) {
+        setIsEditing(false);
+        return;
+      }
 
-    if (section === 'props' && overrideProps) {
-      tryOrElse(() => {
-        if (!fiber) return;
+      if (section === 'props' && overrideProps) {
+        tryOrElse(() => {
+          if (!fiber) return;
 
-        if (parentPath) {
-          const parts = parentPath.split('.');
-          const path = parts.filter(part => part !== 'props' && part !== getDisplayName(fiber.type));
-          path.push(name);
-          overrideProps(fiber, path, newValue);
-        } else {
-          overrideProps(fiber, [name], newValue);
-        }
-      }, null);
-    }
-
-    if (section === 'state' && overrideHookState) {
-      tryOrElse(() => {
-        if (!fiber) return;
-
-        if (!parentPath) {
-          const stateNames = getStateNames(fiber);
-          const namedStateIndex = stateNames.indexOf(name);
-          const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
-          overrideHookState(fiber, hookId, [], newValue);
-        } else {
-          const fullPathParts = parentPath.split('.');
-          const stateIndex = fullPathParts.indexOf('state');
-          if (stateIndex === -1) return;
-
-          const statePath = fullPathParts.slice(stateIndex + 1);
-          const baseStateKey = statePath[0];
-          const stateNames = getStateNames(fiber);
-          const namedStateIndex = stateNames.indexOf(baseStateKey);
-          const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
-
-          const currentState = getCurrentState(fiber);
-          if (!currentState || !(baseStateKey in currentState)) {
-            // eslint-disable-next-line no-console
-            console.warn(sanitizeErrorMessage('Invalid state key'));
-            return;
+          if (parentPath) {
+            const parts = parentPath.split('.');
+            const path = parts.filter(
+              (part) => part !== 'props' && part !== getDisplayName(fiber.type),
+            );
+            path.push(name);
+            overrideProps(fiber, path, newValue);
+          } else {
+            overrideProps(fiber, [name], newValue);
           }
+        }, null);
+      }
 
-          const updatedState = updateNestedValue(currentState[baseStateKey], statePath.slice(1).concat(name), newValue);
-          overrideHookState(fiber, hookId, [], updatedState);
-        }
-      }, null);
-    }
+      if (section === 'state' && overrideHookState) {
+        tryOrElse(() => {
+          if (!fiber) return;
 
-    setIsEditing(false);
-  }, [value, section, overrideProps, overrideHookState, fiber, name, parentPath]);
+          if (!parentPath) {
+            const stateNames = getStateNames(fiber);
+            const namedStateIndex = stateNames.indexOf(name);
+            const hookId =
+              namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
+            overrideHookState(fiber, hookId, [], newValue);
+          } else {
+            const fullPathParts = parentPath.split('.');
+            const stateIndex = fullPathParts.indexOf('state');
+            if (stateIndex === -1) return;
+
+            const statePath = fullPathParts.slice(stateIndex + 1);
+            const baseStateKey = statePath[0];
+            const stateNames = getStateNames(fiber);
+            const namedStateIndex = stateNames.indexOf(baseStateKey);
+            const hookId =
+              namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
+
+            const currentState = getCurrentState(fiber);
+            if (!currentState || !(baseStateKey in currentState)) {
+              // eslint-disable-next-line no-console
+              console.warn(sanitizeErrorMessage('Invalid state key'));
+              return;
+            }
+
+            const updatedState = updateNestedValue(
+              currentState[baseStateKey],
+              statePath.slice(1).concat(name),
+              newValue,
+            );
+            overrideHookState(fiber, hookId, [], updatedState);
+          }
+        }, null);
+      }
+
+      setIsEditing(false);
+    },
+    [value, section, overrideProps, overrideHookState, fiber, name, parentPath],
+  );
 
   const checkCircularInValue = useMemo((): boolean => {
     if (!value || typeof value !== 'object' || isPromise(value)) return false;
@@ -832,65 +892,49 @@ const PropertyElement = ({
   return (
     <div ref={refElement} className="react-scan-property">
       <div className="react-scan-property-content">
-        {
-          isExpandable(value) && (
-            <span onClick={handleToggleExpand} className="react-scan-arrow">
-              <Icon
-                name="icon-chevron-right"
-                size={12}
-                className={cn(
-                  {
-                    'rotate-90': isExpanded,
-                  }
-                )}
-              />
-            </span>
-          )
-        }
+        {isExpandable(value) && (
+          <span onClick={handleToggleExpand} className="react-scan-arrow">
+            <Icon
+              name="icon-chevron-right"
+              size={12}
+              className={cn({
+                'rotate-90': isExpanded,
+              })}
+            />
+          </span>
+        )}
         <div
-          className={cn(
-            'group',
-            'react-scan-preview-line',
-            {
-              'react-scan-highlight': isChanged,
-            }
-          )}
+          className={cn('group', 'react-scan-preview-line', {
+            'react-scan-highlight': isChanged,
+          })}
         >
-          {
-            shouldShowWarning && (
-              <Icon name="icon-alert" className="text-yellow-500" size={12} />
-            )
-          }
+          {shouldShowWarning && (
+            <Icon name="icon-alert" className="text-yellow-500" size={12} />
+          )}
           <div className="react-scan-key">{name}:</div>
-          {
-            isEditing && isEditableValue(value, parentPath)
-              ? (
-                <EditableValue
-                  value={value}
-                  onSave={handleSave}
-                  onCancel={() => setIsEditing(false)}
-                />
-              )
-              : (
-                <span className="truncate" onClick={handleEdit}>
-                  {valuePreview}
-                </span>
-              )
-          }
+          {isEditing && isEditableValue(value, parentPath) ? (
+            <EditableValue
+              value={value}
+              onSave={handleSave}
+              onCancel={() => setIsEditing(false)}
+            />
+          ) : (
+            <span className="truncate" onClick={handleEdit}>
+              {valuePreview}
+            </span>
+          )}
           <CopyToClipboard
             text={clipboardText}
-            className='opacity-0 transition-opacity duration-150 group-hover:opacity-100'
+            className="opacity-0 transition-opacity duration-150 group-hover:opacity-100"
           >
             {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
           </CopyToClipboard>
         </div>
-        {
-          isExpandable(value) && isExpanded && (
-            <div className="react-scan-nested">
-              {renderNestedProperties(value)}
-            </div>
-          )
-        }
+        {isExpandable(value) && isExpanded && (
+          <div className="react-scan-nested">
+            {renderNestedProperties(value)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -937,28 +981,29 @@ const PropertySection = ({ title, section }: PropertySectionProps) => {
   return (
     <div className="react-scan-section">
       <div>{title}</div>
-      {
-        Object.entries(currentData).map(([key, value]) => (
-          <PropertyElement
-            key={key}
-            name={key}
-            value={value}
-            section={section}
-            level={0}
-            objectPathMap={pathMap}
-            changedKeys={changedKeys}
-          />
-        ))
-      }
+      {Object.entries(currentData).map(([key, value]) => (
+        <PropertyElement
+          key={key}
+          name={key}
+          value={value}
+          section={section}
+          level={0}
+          objectPathMap={pathMap}
+          changedKeys={changedKeys}
+        />
+      ))}
     </div>
   );
 };
 
-const WhatChanged = memo(() => {
+const WhatChanged = constant(() => {
   const [isExpanded, setIsExpanded] = useState(Store.wasDetailsOpen.value);
   const { changes } = inspectorState.value;
 
-  const hasChanges = changes.state.size > 0 || changes.props.size > 0 || changes.context.size > 0;
+  const hasChanges =
+    changes.state.size > 0 ||
+    changes.props.size > 0 ||
+    changes.context.size > 0;
   if (!hasChanges) {
     return null;
   }
@@ -971,88 +1016,92 @@ const WhatChanged = memo(() => {
   }, []);
 
   return (
-    <div
-      onClick={handleToggle}
-      className="bg-yellow-600 px-1 py-2 text-white"
-    >
+    <div onClick={handleToggle} className="bg-yellow-600 px-1 py-2 text-white">
       <div className="flex items-center">
         <span className="flex w-8 items-center justify-center">
           <Icon
             name="icon-chevron-right"
             size={12}
-            className={cn(
-              {
-                'rotate-90': isExpanded,
-              }
-            )}
+            className={cn({
+              'rotate-90': isExpanded,
+            })}
           />
         </span>
         What changed?
       </div>
       <div
-        className={cn(
-          "react-scan-expandable pl-8",
-          {
-            'react-scan-expanded': isExpanded,
-          }
-        )}
+        className={cn('react-scan-expandable pl-8', {
+          'react-scan-expanded': isExpanded,
+        })}
       >
         <div className="overflow-hidden">
-          {
-            changes.state.size > 0 && (
-              <>
-                <div>State:</div>
-                <ul style="list-style-type:disc;padding-left:20px">
-                  {Array.from(changes.state).map(key => {
+          {changes.state.size > 0 && (
+            <>
+              <div>State:</div>
+              <ul style="list-style-type:disc;padding-left:20px">
+                {Array.from(changes.state)
+                  .map((key) => {
                     const count = getStateChangeCount(key);
                     if (count > 0) {
-                      return <li key={key}>{key} ×{count}</li>;
+                      return (
+                        <li key={key}>
+                          {key} ×{count}
+                        </li>
+                      );
                     }
                     return null;
-                  }).filter(Boolean)}
-                </ul>
-              </>
-            )
-          }
-          {
-            changes.props.size > 0 && (
-              <>
-                <div>Props:</div>
-                <ul style="list-style-type:disc;padding-left:20px">
-                  {Array.from(changes.props).map(key => {
+                  })
+                  .filter(Boolean)}
+              </ul>
+            </>
+          )}
+          {changes.props.size > 0 && (
+            <>
+              <div>Props:</div>
+              <ul style="list-style-type:disc;padding-left:20px">
+                {Array.from(changes.props)
+                  .map((key) => {
                     const count = getPropsChangeCount(key);
                     if (count > 0) {
-                      return <li key={key}>{key} ×{count}</li>;
+                      return (
+                        <li key={key}>
+                          {key} ×{count}
+                        </li>
+                      );
                     }
                     return null;
-                  }).filter(Boolean)}
-                </ul>
-              </>
-            )
-          }
-          {
-            changes.context.size > 0 && (
-              <>
-                <div>Context:</div>
-                <ul style="list-style-type:disc;padding-left:20px">
-                  {Array.from(changes.context).map(key => {
+                  })
+                  .filter(Boolean)}
+              </ul>
+            </>
+          )}
+          {changes.context.size > 0 && (
+            <>
+              <div>Context:</div>
+              <ul style="list-style-type:disc;padding-left:20px">
+                {Array.from(changes.context)
+                  .map((key) => {
                     const count = getContextChangeCount(key);
                     if (count > 0) {
-                      return <li key={key}>{key.replace(/^context\./, '')} ×{count}</li>;
+                      return (
+                        <li key={key}>
+                          {key.replace(/^context\./, '')} ×{count}
+                        </li>
+                      );
                     }
                     return null;
-                  }).filter(Boolean)}
-                </ul>
-              </>
-            )
-          }
+                  })
+                  .filter(Boolean)}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 });
 
-export const Inspector = memo(() => {
+export const Inspector = constant(() => {
   useEffect(() => {
     let rafId: ReturnType<typeof requestAnimationFrame>;
     let debounceTimer: ReturnType<typeof setTimeout>;
@@ -1061,7 +1110,8 @@ export const Inspector = memo(() => {
     let pendingFiber: Fiber | null = null;
 
     const updateInspectorState = (fiber: Fiber) => {
-      const isNewComponent = !lastInspectedFiber || lastInspectedFiber.type !== fiber.type;
+      const isNewComponent =
+        !lastInspectedFiber || lastInspectedFiber.type !== fiber.type;
       if (isNewComponent) {
         resetStateTracking();
       }
@@ -1071,13 +1121,13 @@ export const Inspector = memo(() => {
         changes: {
           props: getChangedProps(fiber),
           state: getChangedState(fiber),
-          context: getChangedContext(fiber)
+          context: getChangedContext(fiber),
         },
         current: {
           state: getCurrentState(fiber),
           props: getCurrentProps(fiber),
-          context: getCurrentContext(fiber)
-        }
+          context: getCurrentContext(fiber),
+        },
       };
 
       lastInspectedFiber = fiber;
@@ -1117,7 +1167,9 @@ export const Inspector = memo(() => {
     const unSubState = Store.inspectState.subscribe((state) => {
       if (state.kind !== 'focused' || !state.focusedDomElement) return;
 
-      const { parentCompositeFiber } = getCompositeComponentFromElement(state.focusedDomElement);
+      const { parentCompositeFiber } = getCompositeComponentFromElement(
+        state.focusedDomElement,
+      );
       if (!parentCompositeFiber) return;
 
       processFiberUpdate(parentCompositeFiber);
@@ -1130,7 +1182,8 @@ export const Inspector = memo(() => {
       if (inspectState.kind !== 'focused') return;
 
       const element = inspectState.focusedDomElement;
-      const { parentCompositeFiber } = getCompositeComponentFromElement(element);
+      const { parentCompositeFiber } =
+        getCompositeComponentFromElement(element);
 
       if (parentCompositeFiber && lastInspectedFiber) {
         processFiberUpdate(parentCompositeFiber);
@@ -1152,30 +1205,15 @@ export const Inspector = memo(() => {
     <InspectorErrorBoundary>
       <div className="react-scan-inspector">
         <WhatChanged />
-        {
-          Object.keys(inspectorState.value.current.props).length > 0 && (
-            <PropertySection
-              title="Props"
-              section="props"
-            />
-          )
-        }
-        {
-          Object.keys(inspectorState.value.current.state).length > 0 && (
-            <PropertySection
-              title="State"
-              section="state"
-            />
-          )
-        }
-        {
-          Object.keys(inspectorState.value.current.context).length > 0 && (
-            <PropertySection
-              title="Context"
-              section="context"
-            />
-          )
-        }
+        {Object.keys(inspectorState.value.current.props).length > 0 && (
+          <PropertySection title="Props" section="props" />
+        )}
+        {Object.keys(inspectorState.value.current.state).length > 0 && (
+          <PropertySection title="State" section="state" />
+        )}
+        {Object.keys(inspectorState.value.current.context).length > 0 && (
+          <PropertySection title="Context" section="context" />
+        )}
       </div>
     </InspectorErrorBoundary>
   );
@@ -1200,7 +1238,8 @@ export const replayComponent = async (fiber: Fiber): Promise<void> => {
       try {
         const stateNames = getStateNames(fiber);
         const namedStateIndex = stateNames.indexOf(key);
-        const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
+        const hookId =
+          namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
         overrideHookState(fiber, hookId, [], state[key]);
       } catch (e) {
         // Silently ignore state override errors
@@ -1213,6 +1252,6 @@ export const replayComponent = async (fiber: Fiber): Promise<void> => {
       child = child.sibling;
     }
   } catch (e) {
-  // Silently ignore replay errors
+    // Silently ignore replay errors
   }
 };
