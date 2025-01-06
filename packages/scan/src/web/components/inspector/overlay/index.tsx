@@ -1,13 +1,14 @@
-import { useRef, useEffect } from 'preact/hooks';
 import { getDisplayName } from 'bippy';
+import { useEffect, useRef } from 'preact/hooks';
 import type { Fiber } from 'react-reconciler';
-import { cn, throttle } from '~web/utils/helpers';
-import { Store, ReactScanInternals } from '~core/index';
+import { ReactScanInternals, Store } from '~core/index';
 import {
-  getCompositeComponentFromElement,
   findComponentDOMNode,
+  getCompositeComponentFromElement,
   type States,
 } from '~web/components/inspector/utils';
+import { cn, throttle } from '~web/utils/helpers';
+import { lerp } from '~web/utils/lerp';
 
 type DrawKind = 'locked' | 'inspecting';
 
@@ -31,10 +32,11 @@ const ANIMATION_CONFIG = {
     fast: 0.51,
     slow: 0.1,
     off: 0,
-  }
+  },
 } as const;
 
-export const OVERLAY_DPR = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+export const OVERLAY_DPR =
+  typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
 
 export const currentLockIconRect: LockIconRect | null = null;
 
@@ -46,13 +48,11 @@ export const ScanOverlay = () => {
   const refLastHoveredElement = useRef<HTMLElement | null>(null);
   const refRafId = useRef<number>(0);
   const refTimeout = useRef<TTimer>();
-  const refCleanupMap = useRef(new Map<States['kind'] | 'fade-out', () => void>());
+  const refCleanupMap = useRef(
+    new Map<States['kind'] | 'fade-out', () => void>(),
+  );
   const refIsFadingOut = useRef(false);
   const refLastFrameTime = useRef<number>(0);
-
-  const linearInterpolation = (start: number, end: number, t: number) => {
-    return start * (1 - t) + end * t;
-  };
 
   const drawLockIcon = (
     ctx: CanvasRenderingContext2D,
@@ -98,7 +98,8 @@ export const ScanOverlay = () => {
   ) => {
     if (!fiber) return;
 
-    const reportDataFiber = Store.reportData.get(fiber) ??
+    const reportDataFiber =
+      Store.reportData.get(fiber) ??
       (fiber.alternate ? Store.reportData.get(fiber.alternate) : null);
 
     const stats = {
@@ -123,7 +124,8 @@ export const ScanOverlay = () => {
     const textWidth = textMetrics.width;
     const lockIconSize = kind === 'locked' ? 14 : 0;
     const lockIconPadding = kind === 'locked' ? 6 : 0;
-    const pillWidth = textWidth + pillPadding * 2 + lockIconSize + lockIconPadding;
+    const pillWidth =
+      textWidth + pillPadding * 2 + lockIconSize + lockIconPadding;
 
     const pillX = rect.left;
     const pillY = rect.top - pillHeight - 4;
@@ -149,7 +151,10 @@ export const ScanOverlay = () => {
 
     ctx.fillStyle = 'white';
     ctx.textBaseline = 'middle';
-    const textX = pillX + pillPadding + (kind === 'locked' ? lockIconSize + lockIconPadding : 0);
+    const textX =
+      pillX +
+      pillPadding +
+      (kind === 'locked' ? lockIconSize + lockIconPadding : 0);
     ctx.fillText(text, textX, pillY + pillHeight / 2);
     ctx.restore();
   };
@@ -188,11 +193,15 @@ export const ScanOverlay = () => {
     parentCompositeFiber: Fiber,
     onComplete?: () => void,
   ) => {
-    const speed = ReactScanInternals.options.value.animationSpeed as keyof typeof ANIMATION_CONFIG.speeds;
+    const speed = ReactScanInternals.options.value
+      .animationSpeed as keyof typeof ANIMATION_CONFIG.speeds;
     const t = ANIMATION_CONFIG.speeds[speed] ?? ANIMATION_CONFIG.speeds.off;
 
     const animationFrame = (timestamp: number) => {
-      if (timestamp - refLastFrameTime.current < ANIMATION_CONFIG.frameInterval) {
+      if (
+        timestamp - refLastFrameTime.current <
+        ANIMATION_CONFIG.frameInterval
+      ) {
         refRafId.current = requestAnimationFrame(animationFrame);
         return;
       }
@@ -204,10 +213,10 @@ export const ScanOverlay = () => {
       }
 
       refCurrentRect.current = {
-        left: linearInterpolation(refCurrentRect.current.left, targetRect.left, t),
-        top: linearInterpolation(refCurrentRect.current.top, targetRect.top, t),
-        width: linearInterpolation(refCurrentRect.current.width, targetRect.width, t),
-        height: linearInterpolation(refCurrentRect.current.height, targetRect.height, t),
+        left: lerp(refCurrentRect.current.left, targetRect.left, t),
+        top: lerp(refCurrentRect.current.top, targetRect.top, t),
+        width: lerp(refCurrentRect.current.width, targetRect.width, t),
+        height: lerp(refCurrentRect.current.height, targetRect.height, t),
       };
 
       drawRect(canvas, ctx, kind, parentCompositeFiber);
@@ -270,14 +279,15 @@ export const ScanOverlay = () => {
   ) => {
     if (!overlayElement || !canvas || !ctx) return;
 
-    const { parentCompositeFiber, targetRect } = getCompositeComponentFromElement(overlayElement);
+    const { parentCompositeFiber, targetRect } =
+      getCompositeComponentFromElement(overlayElement);
     if (!parentCompositeFiber || !targetRect) return;
 
     setupOverlayAnimation(canvas, ctx, targetRect, kind, parentCompositeFiber);
   };
 
   const unsubscribeAll = () => {
-    refCleanupMap.current.forEach(cleanup => cleanup?.());
+    refCleanupMap.current.forEach((cleanup) => cleanup?.());
   };
 
   const cleanupCanvas = (canvas: HTMLCanvasElement) => {
@@ -296,8 +306,16 @@ export const ScanOverlay = () => {
     if (!refCanvas.current || refIsFadingOut.current) return;
 
     const handleTransitionEnd = (e: TransitionEvent) => {
-      if (!refCanvas.current || e.propertyName !== 'opacity' || !refIsFadingOut.current) return;
-      refCanvas.current.removeEventListener('transitionend', handleTransitionEnd);
+      if (
+        !refCanvas.current ||
+        e.propertyName !== 'opacity' ||
+        !refIsFadingOut.current
+      )
+        return;
+      refCanvas.current.removeEventListener(
+        'transitionend',
+        handleTransitionEnd,
+      );
       cleanupCanvas(refCanvas.current);
       onComplete?.();
     };
@@ -310,7 +328,10 @@ export const ScanOverlay = () => {
 
     refCanvas.current.addEventListener('transitionend', handleTransitionEnd);
     refCleanupMap.current.set('fade-out', () => {
-      refCanvas.current?.removeEventListener('transitionend', handleTransitionEnd);
+      refCanvas.current?.removeEventListener(
+        'transitionend',
+        handleTransitionEnd,
+      );
     });
 
     refIsFadingOut.current = true;
@@ -337,7 +358,8 @@ export const ScanOverlay = () => {
   };
 
   const handleNonHoverableArea = () => {
-    if (!refCurrentRect.current || !refCanvas.current || refIsFadingOut.current) return;
+    if (!refCurrentRect.current || !refCanvas.current || refIsFadingOut.current)
+      return;
     startFadeOut();
   };
 
@@ -349,7 +371,9 @@ export const ScanOverlay = () => {
     clearTimeout(refTimeout.current);
 
     if (element && element !== refCanvas.current) {
-      const { parentCompositeFiber } = getCompositeComponentFromElement(element as HTMLElement);
+      const { parentCompositeFiber } = getCompositeComponentFromElement(
+        element as HTMLElement,
+      );
       if (parentCompositeFiber) {
         const componentElement = findComponentDOMNode(parentCompositeFiber);
         if (componentElement) {
@@ -392,10 +416,14 @@ export const ScanOverlay = () => {
   };
 
   const handleElementClick = (e: MouseEvent) => {
-    const element = refLastHoveredElement.current ?? document.elementFromPoint(e.clientX, e.clientY);
+    const element =
+      refLastHoveredElement.current ??
+      document.elementFromPoint(e.clientX, e.clientY);
     if (!element) return;
 
-    const { parentCompositeFiber } = getCompositeComponentFromElement(element as HTMLElement);
+    const { parentCompositeFiber } = getCompositeComponentFromElement(
+      element as HTMLElement,
+    );
     if (!parentCompositeFiber) return;
 
     const componentElement = findComponentDOMNode(parentCompositeFiber);
@@ -499,7 +527,9 @@ export const ScanOverlay = () => {
 
         unsubReport = Store.lastReportTime.subscribe(() => {
           if (refRafId.current && refCurrentRect.current) {
-            const { parentCompositeFiber } = getCompositeComponentFromElement(state.focusedDomElement);
+            const { parentCompositeFiber } = getCompositeComponentFromElement(
+              state.focusedDomElement,
+            );
             if (parentCompositeFiber) {
               drawHoverOverlay(state.focusedDomElement, canvas, ctx, 'locked');
             }
@@ -513,7 +543,10 @@ export const ScanOverlay = () => {
     }
   };
 
-  const updateCanvasSize = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+  const updateCanvasSize = (
+    canvas: HTMLCanvasElement,
+    ctx: CanvasRenderingContext2D,
+  ) => {
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * OVERLAY_DPR;
     canvas.height = rect.height * OVERLAY_DPR;
@@ -545,7 +578,10 @@ export const ScanOverlay = () => {
     const canvas = refCanvas.current;
     if (!canvas) return;
 
-    if (state.kind === 'inspecting' || isClickInLockIcon(e as unknown as MouseEvent, canvas)) {
+    if (
+      state.kind === 'inspecting' ||
+      isClickInLockIcon(e as unknown as MouseEvent, canvas)
+    ) {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -565,8 +601,13 @@ export const ScanOverlay = () => {
 
     window.addEventListener('scroll', handleResizeOrScroll, { passive: true });
     window.addEventListener('resize', handleResizeOrScroll, { passive: true });
-    document.addEventListener('mousemove', handleMouseMove, { passive: true, capture: true });
-    document.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    document.addEventListener('mousemove', handleMouseMove, {
+      passive: true,
+      capture: true,
+    });
+    document.addEventListener('pointerdown', handlePointerDown, {
+      capture: true,
+    });
     document.addEventListener('click', handleClick, { capture: true });
     window.addEventListener('keydown', handleKeyDown);
 
@@ -575,9 +616,13 @@ export const ScanOverlay = () => {
       unSubState();
       window.removeEventListener('scroll', handleResizeOrScroll);
       window.removeEventListener('resize', handleResizeOrScroll);
-      document.removeEventListener('mousemove', handleMouseMove, { capture: true });
+      document.removeEventListener('mousemove', handleMouseMove, {
+        capture: true,
+      });
       document.removeEventListener('click', handleClick, { capture: true });
-      document.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      document.removeEventListener('pointerdown', handlePointerDown, {
+        capture: true,
+      });
       window.removeEventListener('keydown', handleKeyDown);
 
       if (refRafId.current) {

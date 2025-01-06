@@ -2,6 +2,7 @@ import { type Fiber } from 'react-reconciler';
 import { ReactScanInternals, type OutlineKey } from '~core/index';
 import { type AggregatedChange } from '~core/instrumentation';
 import { getLabelText, joinAggregations } from '~core/utils';
+import { lerp } from '~web/utils/lerp';
 import { throttle } from './helpers';
 import { LRUMap } from './lru';
 import { outlineWorker, type DrawingQueue } from './outline-worker';
@@ -129,10 +130,6 @@ const shouldSkipInterpolation = (rect: DOMRect) => {
 
 const INTERPOLATION_SPEED = 0.2;
 
-const lerp = (start: number, end: number) => {
-  return start + (end - start) * INTERPOLATION_SPEED;
-};
-
 export const fadeOutOutline = () => {
   const drawingQueue: Array<DrawingQueue> = [];
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
@@ -230,10 +227,10 @@ export const fadeOutOutline = () => {
       const current = invariantActiveOutline.current;
 
       const computedCurrent = new DOMRect(
-        lerp(current.x, target.x),
-        lerp(current.y, target.y),
-        lerp(current.width, target.width),
-        lerp(current.height, target.height),
+        lerp(current.x, target.x, INTERPOLATION_SPEED),
+        lerp(current.y, target.y, INTERPOLATION_SPEED),
+        lerp(current.width, target.width, INTERPOLATION_SPEED),
+        lerp(current.height, target.height, INTERPOLATION_SPEED),
       );
 
       invariantActiveOutline.current = computedCurrent;
