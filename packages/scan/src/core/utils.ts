@@ -58,18 +58,58 @@ export const aggregateRender = (
     prevAggregated.unnecessary || newRender.unnecessary;
 };
 
+function descending(a: number, b: number): number {
+  return b - a;
+}
+
+interface ComponentData {
+  name: string;
+  forget: boolean;
+  time: number;
+}
+
+function getComponentGroupNames(group: ComponentData[]): string {
+  let result = group[0].name;
+
+  for (let i = 1; i < 4; i++) {
+    result += ', ' + group[i].name;
+  }
+
+  return result;
+}
+
+function getComponentGroupTotalTime(group: ComponentData[]): number {
+  let result = group[0].time;
+
+  for (let i = 1, len = group.length; i < len; i++) {
+    result += group[i].time;
+  }
+
+  return result;
+}
+
+function componentGroupHasForget(group: ComponentData[]): boolean {
+  for (let i = 0, len = group.length; i < len; i++) {
+    if (group[i].forget) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export const getLabelText = (
   groupedAggregatedRenders: Array<AggregatedRender>,
 ) => {
   let labelText = '';
 
-  const componentsByCount = new Map<
-    number,
-    Array<{ name: string; forget: boolean; time: number }>
-  >();
+  const componentsByCount = new Map<number, Array<ComponentData>>();
 
-  for (const aggregatedRender of groupedAggregatedRenders) {
-    const { forget, time, aggregatedCount, name } = aggregatedRender;
+  for (const {
+    forget,
+    time,
+    aggregatedCount,
+    name,
+  } of groupedAggregatedRenders) {
     if (!componentsByCount.has(aggregatedCount)) {
       componentsByCount.set(aggregatedCount, []);
     }
@@ -78,22 +118,17 @@ export const getLabelText = (
       .push({ name, forget, time: time ?? 0 });
   }
 
-  const sortedCounts = Array.from(componentsByCount.keys()).sort(
-    (a, b) => b - a,
-  );
+  const sortedCounts = Array.from(componentsByCount.keys()).sort(descending);
 
   const parts: Array<string> = [];
   let cumulativeTime = 0;
   for (const count of sortedCounts) {
     const componentGroup = componentsByCount.get(count)!;
-    const names = componentGroup
-      .slice(0, 4)
-      .map(({ name }) => name)
-      .join(', ');
+    const names = getComponentGroupNames(componentGroup);
     let text = names;
 
-    const totalTime = componentGroup.reduce((sum, { time }) => sum + time, 0);
-    const hasForget = componentGroup.some(({ forget }) => forget);
+    const totalTime = getComponentGroupTotalTime(componentGroup);
+    const hasForget = componentGroupHasForget(componentGroup);
 
     cumulativeTime += totalTime;
 
@@ -121,7 +156,7 @@ export const getLabelText = (
   }
 
   if (cumulativeTime >= 0.01) {
-    labelText += ` (${Number(cumulativeTime.toFixed(2))}ms)`;
+    labelText += ` (${cumulativeTime.toFixed(2)}ms)`;
   }
 
   return labelText;
