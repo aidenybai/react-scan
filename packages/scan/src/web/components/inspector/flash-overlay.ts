@@ -8,11 +8,9 @@ const fadeOutTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
 const trackElementPosition = (
   element: Element,
-  callback: (element: Element) => void
-): () => void => {
-  const handleScroll = () => {
-    callback(element);
-  };
+  callback: (element: Element) => void,
+): (() => void) => {
+  const handleScroll = callback.bind(null, element);
 
   document.addEventListener('scroll', handleScroll, {
     passive: true,
@@ -28,27 +26,32 @@ export const flashManager = {
   activeFlashes: new Map<HTMLElement, FlashEntry>(),
 
   create(container: HTMLElement) {
-    const existingOverlay = container.querySelector('.react-scan-flash-overlay');
+    const existingOverlay = container.querySelector(
+      '.react-scan-flash-overlay',
+    );
 
-    const overlay = existingOverlay instanceof HTMLElement ? existingOverlay : (() => {
-      const newOverlay = document.createElement('div');
-      newOverlay.className = 'react-scan-flash-overlay';
-      container.appendChild(newOverlay);
+    const overlay =
+      existingOverlay instanceof HTMLElement
+        ? existingOverlay
+        : (() => {
+            const newOverlay = document.createElement('div');
+            newOverlay.className = 'react-scan-flash-overlay';
+            container.appendChild(newOverlay);
 
-      const scrollCleanup = trackElementPosition(container, () => {
-        if (container.querySelector('.react-scan-flash-overlay')) {
-          this.create(container);
-        }
-      });
+            const scrollCleanup = trackElementPosition(container, () => {
+              if (container.querySelector('.react-scan-flash-overlay')) {
+                this.create(container);
+              }
+            });
 
-      this.activeFlashes.set(container, {
-        element: container,
-        overlay: newOverlay,
-        scrollCleanup
-      });
+            this.activeFlashes.set(container, {
+              element: container,
+              overlay: newOverlay,
+              scrollCleanup,
+            });
 
-      return newOverlay;
-    })();
+            return newOverlay;
+          })();
 
     const existingTimer = fadeOutTimers.get(overlay);
     if (existingTimer) {
@@ -102,8 +105,8 @@ export const flashManager = {
   },
 
   cleanupAll() {
-    this.activeFlashes.forEach((entry) => {
+    for (const [, entry] of this.activeFlashes) {
       this.cleanup(entry.element);
-    });
-  }
+    }
+  },
 };
