@@ -38,59 +38,55 @@ const ensureRecord = (
   value: unknown,
   seen = new WeakSet(),
 ): Record<string, unknown> => {
-  if (value === null || value === undefined) {
+  if (value == null) {
     return {};
   }
-
-  if (value instanceof Element) {
-    return {
-      type: 'Element',
-      tagName: value.tagName.toLowerCase(),
-    };
-  }
-
-  if (typeof value === 'function') {
-    return { type: 'function', name: value.name || 'anonymous' };
-  }
-
-  if (
-    value &&
-    (value instanceof Promise || (typeof value === 'object' && 'then' in value))
-  ) {
-    return { type: 'promise' };
-  }
-
-  if (typeof value === 'object') {
-    if (seen.has(value)) {
-      return { type: 'circular' };
-    }
-
-    if (Array.isArray(value)) {
-      seen.add(value);
-      const safeArray = value.map((item) => ensureRecord(item, seen));
-      return { type: 'array', length: value.length, items: safeArray };
-    }
-
-    seen.add(value);
-
-    const result: Record<string, unknown> = {};
-    try {
-      const keys = Object.keys(value);
-      for (const key of keys) {
-        try {
-          const val = (value as any)[key];
-          result[key] = ensureRecord(val, seen);
-        } catch {
-          result[key] = { type: 'error', message: 'Failed to access property' };
-        }
+  switch (typeof value) {
+    case 'object':
+      if (value instanceof Element) {
+        return {
+          type: 'Element',
+          tagName: value.tagName.toLowerCase(),
+        };
       }
-      return result;
-    } catch {
-      return { type: 'object' };
-    }
-  }
+      if (value instanceof Promise || 'then' in value) {
+        return { type: 'promise' };
+      }
+      if (seen.has(value)) {
+        return { type: 'circular' };
+      }
 
-  return { value };
+      if (Array.isArray(value)) {
+        seen.add(value);
+        const safeArray = value.map((item) => ensureRecord(item, seen));
+        return { type: 'array', length: value.length, items: safeArray };
+      }
+
+      seen.add(value);
+
+      const result: Record<string, unknown> = {};
+      try {
+        const keys = Object.keys(value);
+        for (const key of keys) {
+          try {
+            const val = (value as any)[key];
+            result[key] = ensureRecord(val, seen);
+          } catch {
+            result[key] = {
+              type: 'error',
+              message: 'Failed to access property',
+            };
+          }
+        }
+        return result;
+      } catch {
+        return { type: 'object' };
+      }
+    case 'function':
+      return { type: 'function', name: value.name || 'anonymous' };
+    default:
+      return { value };
+  }
 };
 
 export const resetStateTracking = () => {

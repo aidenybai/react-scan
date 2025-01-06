@@ -173,7 +173,7 @@ const isPromise = (value: any): value is Promise<unknown> => {
 };
 
 const isEditableValue = (value: unknown, parentPath?: string): boolean => {
-  if (value === null || value === undefined) return true;
+  if (value == null) return true;
 
   if (isPromise(value)) return false;
 
@@ -197,21 +197,22 @@ const isEditableValue = (value: unknown, parentPath?: string): boolean => {
     }
   }
 
-  switch (value.constructor) {
-    case Date:
-    case RegExp:
-    case Error:
+  switch (typeof value) {
+    case 'string':
+    case 'number':
+    case 'boolean':
+    case 'bigint':
       return true;
-    default:
-      switch (typeof value) {
-        case 'string':
-        case 'number':
-        case 'boolean':
-        case 'bigint':
-          return true;
-        default:
-          return false;
+    case 'object':
+      if (
+        value instanceof Date ||
+        value instanceof RegExp ||
+        value instanceof Error
+      ) {
+        return true;
       }
+    default:
+      return false;
   }
 };
 
@@ -258,57 +259,61 @@ const sanitizeErrorMessage = (error: string): string => {
 };
 
 const formatValue = (value: unknown): string => {
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (isPromise(value)) return 'Promise';
-
-  switch (true) {
-    case value instanceof Map:
-      return `Map(${value.size})`;
-    case value instanceof Set:
-      return `Set(${value.size})`;
-    case value instanceof Date:
-      return value
-        .toLocaleString(undefined, {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        })
-        .replace(/[/,-]/g, '.');
-    case value instanceof RegExp:
-      return 'RegExp';
-    case value instanceof Error:
-      return 'Error';
-    case value instanceof ArrayBuffer:
-      return `ArrayBuffer(${value.byteLength})`;
-    case value instanceof DataView:
-      return `DataView(${value.byteLength})`;
-    case ArrayBuffer.isView(value):
-      return `${value.constructor.name}(${getArrayLength(value)})`;
-    case Array.isArray(value):
-      return `Array(${value.length})`;
-    default:
-      switch (typeof value) {
-        case 'string':
-          return `"${value}"`;
-        case 'number':
-        case 'boolean':
-        case 'bigint':
-          return String(value);
-        case 'symbol':
-          return value.toString();
-        case 'object': {
+  switch (typeof value) {
+    case 'undefined':
+      return 'undefined';
+    case 'string':
+      return `"${value}"`;
+    case 'number':
+    case 'boolean':
+    case 'bigint':
+      return String(value);
+    case 'symbol':
+      return value.toString();
+    case 'object': {
+      if (!value) {
+        return 'null';
+      }
+      switch (true) {
+        case value instanceof Map:
+          return `Map(${value.size})`;
+        case value instanceof Set:
+          return `Set(${value.size})`;
+        case value instanceof Date:
+          return value
+            .toLocaleString(undefined, {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+            })
+            .replace(/[/,-]/g, '.');
+        case value instanceof RegExp:
+          return 'RegExp';
+        case value instanceof Error:
+          return 'Error';
+        case value instanceof ArrayBuffer:
+          return `ArrayBuffer(${value.byteLength})`;
+        case value instanceof DataView:
+          return `DataView(${value.byteLength})`;
+        case ArrayBuffer.isView(value):
+          return `${value.constructor.name}(${getArrayLength(value)})`;
+        case Array.isArray(value):
+          return `Array(${value.length})`;
+        case isPromise(value):
+          return 'Promise';
+        default: {
           const keys = Object.keys(value);
           if (keys.length <= 5) return `{${keys.join(', ')}}`;
           return `{${keys.slice(0, 5).join(', ')}, ...${keys.length - 5}}`;
         }
-        default:
-          return typeof value;
       }
+    }
+    default:
+      return typeof value;
   }
 };
 
@@ -422,60 +427,68 @@ const parseArrayValue = (value: string): Array<unknown> => {
 
 const parseValue = (value: string, currentType: unknown): unknown => {
   try {
-    if (typeof currentType === 'number') return Number(value);
-    if (typeof currentType === 'string') return value;
-    if (typeof currentType === 'boolean') return value === 'true';
-    if (typeof currentType === 'bigint') return BigInt(value);
-    if (currentType === null) return null;
-    if (currentType === undefined) return undefined;
-
-    if (currentType instanceof RegExp) {
-      try {
-        const match = /^\/(?<pattern>.*)\/(?<flags>[gimuy]*)$/.exec(value);
-        if (match?.groups) {
-          return new RegExp(match.groups.pattern, match.groups.flags);
+    switch (typeof currentType) {
+      case 'number':
+        return Number(value);
+      case 'string':
+        return value;
+      case 'boolean':
+        return value === 'true';
+      case 'bigint':
+        return BigInt(value);
+      case 'undefined':
+        return undefined;
+      case 'object': {
+        if (!currentType) {
+          return null;
         }
-        return new RegExp(value);
-      } catch {
-        return currentType;
+
+        if (Array.isArray(currentType)) {
+          return parseArrayValue(value.slice(1, -1));
+        }
+
+        if (currentType instanceof RegExp) {
+          try {
+            const match = /^\/(?<pattern>.*)\/(?<flags>[gimuy]*)$/.exec(value);
+            if (match?.groups) {
+              return new RegExp(match.groups.pattern, match.groups.flags);
+            }
+            return new RegExp(value);
+          } catch {
+            return currentType;
+          }
+        }
+
+        if (currentType instanceof Map) {
+          const entries = value
+            .slice(1, -1)
+            .split(', ')
+            .map((entry) => {
+              const [key, val] = entry.split(' => ');
+              return [parseValue(key, ''), parseValue(val, '')] as [
+                unknown,
+                unknown,
+              ];
+            });
+          return new Map(entries);
+        }
+
+        if (currentType instanceof Set) {
+          const values = value
+            .slice(1, -1)
+            .split(', ')
+            .map((v) => parseValue(v, ''));
+          return new Set(values);
+        }
+        const entries = value
+          .slice(1, -1)
+          .split(', ')
+          .map((entry) => {
+            const [key, val] = entry.split(': ');
+            return [key, parseValue(val, '')];
+          });
+        return Object.fromEntries(entries);
       }
-    }
-
-    if (currentType instanceof Map) {
-      const entries = value
-        .slice(1, -1)
-        .split(', ')
-        .map((entry) => {
-          const [key, val] = entry.split(' => ');
-          return [parseValue(key, ''), parseValue(val, '')] as [
-            unknown,
-            unknown,
-          ];
-        });
-      return new Map(entries);
-    }
-
-    if (currentType instanceof Set) {
-      const values = value
-        .slice(1, -1)
-        .split(', ')
-        .map((v) => parseValue(v, ''));
-      return new Set(values);
-    }
-
-    if (Array.isArray(currentType)) {
-      return parseArrayValue(value.slice(1, -1));
-    }
-
-    if (typeof currentType === 'object') {
-      const entries = value
-        .slice(1, -1)
-        .split(', ')
-        .map((entry) => {
-          const [key, val] = entry.split(': ');
-          return [key, parseValue(val, '')];
-        });
-      return Object.fromEntries(entries);
     }
 
     return value;
