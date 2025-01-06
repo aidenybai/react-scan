@@ -160,8 +160,8 @@ const isExpandable = (value: unknown): value is InspectableValue => {
   return Object.keys(value).length > 0;
 };
 
-const isPromise = (value: any): value is Promise<unknown> => {
-  return value && (value instanceof Promise || (typeof value === 'object' && 'then' in value));
+const isPromise = (value: unknown): value is Promise<unknown> => {
+  return !!value && (value instanceof Promise || (typeof value === 'object' && 'then' in value));
 };
 
 const isEditableValue = (value: unknown, parentPath?: string): boolean => {
@@ -328,7 +328,7 @@ const formatForClipboard = (value: unknown): string => {
       default:
         return String(value);
     }
-  } catch (err) {
+  } catch {
     return String(value);
   }
 };
@@ -454,7 +454,7 @@ const parseValue = (value: string, currentType: unknown): unknown => {
     }
 
     return value;
-  } catch (error) {
+  } catch {
     return currentType;
   }
 };
@@ -534,7 +534,7 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
         let newValue: unknown;
         if (value instanceof Date) {
           const date = new Date(editValue);
-          if (isNaN(date.getTime())) {
+          if (Number.isNaN(date.getTime())) {
             throw new Error('Invalid date');
           }
           newValue = date;
@@ -543,7 +543,7 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
           newValue = detected.value;
         }
         onSave(newValue);
-      } catch (error) {
+      } catch {
         onCancel();
       }
     } else if (e.key === 'Escape') {
@@ -567,6 +567,50 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
   );
 };
 
+const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
+  try {
+    if (path.length === 0) return value;
+
+    const [key, ...rest] = path;
+
+    if (obj instanceof Map) {
+      const newMap = new Map(obj);
+      if (rest.length === 0) {
+        newMap.set(key, value);
+      } else {
+        const currentValue = newMap.get(key);
+        newMap.set(key, updateNestedValue(currentValue, rest, value));
+      }
+      return newMap;
+    }
+
+    if (Array.isArray(obj)) {
+      const index = Number.parseInt(key, 10);
+      const newArray = [...obj];
+      if (rest.length === 0) {
+        newArray[index] = value;
+      } else {
+        newArray[index] = updateNestedValue(obj[index], rest, value);
+      }
+      return newArray;
+    }
+
+    if (obj && typeof obj === 'object') {
+      if (rest.length === 0) {
+        return { ...obj, [key]: value };
+      }
+      return {
+        ...obj,
+        [key]: updateNestedValue((obj as Record<string, unknown>)[key], rest, value)
+      };
+    }
+
+    return value;
+  } catch {
+    return obj;
+  }
+};
+
 const PropertyElement = ({
   name,
   value,
@@ -578,6 +622,7 @@ const PropertyElement = ({
   allowEditing = true,
 }: PropertyElementProps) => {
   const { fiber } = inspectorState.value;
+
   const refElement = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(() => {
     const currentPath = getPath(
@@ -640,7 +685,7 @@ const PropertyElement = ({
         allowEditing={canEditChildren}
       />
     ));
-  }, [fiber, section, level, currentPath, objectPathMap, changedKeys]);
+  }, [section, level, currentPath, objectPathMap, changedKeys]);
 
   const valuePreview = useMemo(() => formatValue(value), [value]);
 
@@ -709,50 +754,6 @@ const PropertyElement = ({
     }
   }, [canEdit]);
 
-  const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
-    try {
-      if (path.length === 0) return value;
-
-      const [key, ...rest] = path;
-
-      if (obj instanceof Map) {
-        const newMap = new Map(obj);
-        if (rest.length === 0) {
-          newMap.set(key, value);
-        } else {
-          const currentValue = newMap.get(key);
-          newMap.set(key, updateNestedValue(currentValue, rest, value));
-        }
-        return newMap;
-      }
-
-      if (Array.isArray(obj)) {
-        const index = parseInt(key, 10);
-        const newArray = [...obj];
-        if (rest.length === 0) {
-          newArray[index] = value;
-        } else {
-          newArray[index] = updateNestedValue(obj[index], rest, value);
-        }
-        return newArray;
-      }
-
-      if (obj && typeof obj === 'object') {
-        if (rest.length === 0) {
-          return { ...obj, [key]: value };
-        }
-        return {
-          ...obj,
-          [key]: updateNestedValue((obj as any)[key], rest, value)
-        };
-      }
-
-      return value;
-    } catch (error) {
-      return obj;
-    }
-  };
-
   const handleSave = useCallback((newValue: unknown) => {
     if (isEqual(value, newValue)) {
       setIsEditing(false);
@@ -814,7 +815,7 @@ const PropertyElement = ({
     if (!value || typeof value !== 'object' || isPromise(value)) return false;
 
     return 'type' in value && value.type === 'circular';
-  }, []);
+  }, [value]);
 
   if (checkCircularInValue) {
     return (
@@ -834,7 +835,12 @@ const PropertyElement = ({
       <div className="react-scan-property-content">
         {
           isExpandable(value) && (
-            <span onClick={handleToggleExpand} className="react-scan-arrow">
+            <button
+              type="button"
+              onClick={() => handleToggleExpand()}
+              onKeyDown={(e) => e.key === 'Enter' && handleToggleExpand()}
+              className="react-scan-arrow"
+            >
               <Icon
                 name="icon-chevron-right"
                 size={12}
@@ -844,7 +850,7 @@ const PropertyElement = ({
                   }
                 )}
               />
-            </span>
+            </button>
           )
         }
         <div
@@ -872,9 +878,13 @@ const PropertyElement = ({
                 />
               )
               : (
-                <span className="truncate" onClick={handleEdit}>
+                <button
+                  type="button"
+                  className="truncate"
+                  onClick={handleEdit}
+                >
                   {valuePreview}
-                </span>
+                </button>
               )
           }
           <CopyToClipboard
@@ -911,10 +921,10 @@ const PropertySection = ({ title, section }: PropertySectionProps) => {
       default:
         return new Set<string>();
     }
-  }, [section]);
+  }, [section, changes]);
 
   const currentData = useMemo(() => {
-    let result;
+    let result: Record<string, unknown> | undefined;
     switch (section) {
       case 'props':
         result = current.props;
@@ -926,9 +936,8 @@ const PropertySection = ({ title, section }: PropertySectionProps) => {
         result = current.context;
         break;
     }
-
     return result || {};
-  }, [section]);
+  }, [section, current.props, current.state, current.context]);
 
   if (!currentData || Object.keys(currentData).length === 0) {
     return null;
@@ -956,10 +965,28 @@ const PropertySection = ({ title, section }: PropertySectionProps) => {
 
 const WhatChanged = memo(() => {
   const [isExpanded, setIsExpanded] = useState(Store.wasDetailsOpen.value);
+  const [shouldShow, setShouldShow] = useState(false);
   const { changes } = inspectorState.value;
+  const timerRef = useRef<TTimer>();
 
   const hasChanges = changes.state.size > 0 || changes.props.size > 0 || changes.context.size > 0;
-  if (!hasChanges) {
+
+  useEffect(() => {
+    if (hasChanges) {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setShouldShow(true);
+      }, 32); // Two frames delay
+    } else {
+      setShouldShow(false);
+    }
+
+    return () => {
+      clearTimeout(timerRef.current);
+    };
+  }, [hasChanges]);
+
+  if (!hasChanges || !shouldShow) {
     return null;
   }
 
@@ -971,9 +998,11 @@ const WhatChanged = memo(() => {
   }, []);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={handleToggle}
-      className="bg-yellow-600 px-1 py-2 text-white"
+      onKeyDown={(e) => e.key === 'Enter' && handleToggle()}
+      className="flex w-full flex-col bg-yellow-600 px-1 py-2 text-left text-white"
     >
       <div className="flex items-center">
         <span className="flex w-8 items-center justify-center">
@@ -991,7 +1020,7 @@ const WhatChanged = memo(() => {
       </div>
       <div
         className={cn(
-          "react-scan-expandable pl-8",
+          "react-scan-expandable pl-8 flex-1",
           {
             'react-scan-expanded': isExpanded,
           }
@@ -1048,7 +1077,7 @@ const WhatChanged = memo(() => {
           }
         </div>
       </div>
-    </div>
+    </button>
   );
 });
 
@@ -1146,36 +1175,22 @@ export const Inspector = memo(() => {
     };
   }, []);
 
-  if (!inspectorState.value.fiber) return null;
-
   return (
     <InspectorErrorBoundary>
       <div className="react-scan-inspector">
         <WhatChanged />
-        {
-          Object.keys(inspectorState.value.current.props).length > 0 && (
-            <PropertySection
-              title="Props"
-              section="props"
-            />
-          )
-        }
-        {
-          Object.keys(inspectorState.value.current.state).length > 0 && (
-            <PropertySection
-              title="State"
-              section="state"
-            />
-          )
-        }
-        {
-          Object.keys(inspectorState.value.current.context).length > 0 && (
-            <PropertySection
-              title="Context"
-              section="context"
-            />
-          )
-        }
+        <PropertySection
+          title="Props"
+          section="props"
+        />
+        <PropertySection
+          title="State"
+          section="state"
+        />
+        <PropertySection
+          title="Context"
+          section="context"
+        />
       </div>
     </InspectorErrorBoundary>
   );
@@ -1187,32 +1202,32 @@ export const replayComponent = async (fiber: Fiber): Promise<void> => {
     if (!overrideProps || !overrideHookState || !fiber) return;
 
     const currentProps = fiber.memoizedProps || {};
-    Object.keys(currentProps).forEach((key) => {
+    for (const key of Object.keys(currentProps)) {
       try {
         overrideProps(fiber, [key], currentProps[key]);
-      } catch (e) {
+      } catch {
         // Silently ignore prop override errors
       }
-    });
+    }
 
     const state = getCurrentState(fiber) ?? {};
-    Object.keys(state).forEach((key) => {
+    for (const key of Object.keys(state)) {
       try {
         const stateNames = getStateNames(fiber);
         const namedStateIndex = stateNames.indexOf(key);
         const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
         overrideHookState(fiber, hookId, [], state[key]);
-      } catch (e) {
+      } catch {
         // Silently ignore state override errors
       }
-    });
+    }
 
     let child = fiber.child;
     while (child) {
       await replayComponent(child);
       child = child.sibling;
     }
-  } catch (e) {
-  // Silently ignore replay errors
+  } catch {
+    // Silently ignore replay errors
   }
 };
