@@ -36,15 +36,15 @@ export const CopyToClipboard = memo((props: CopyToClipboardProps): JSX.Element =
     e.preventDefault();
     e.stopPropagation();
 
-    void (async () => {
-      try {
-        await navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(text).then(
+      () => {
         setIsCopied(true);
         onCopy?.(true, text);
-      } catch (err) {
+      },
+      () => {
         onCopy?.(false, text);
-      }
-    })();
+      },
+    );
   }, [text, onCopy]);
 
   const ClipboardIcon = useMemo((): JSX.Element => (
