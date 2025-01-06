@@ -505,14 +505,20 @@ const detectValueType = (
 } => {
   const trimmed = value.trim();
 
+  switch (trimmed) {
+    case 'undefined':
+      return { type: 'undefined', value: undefined };
+    case 'null':
+      return { type: 'null', value: null };
+    case 'true':
+      return { type: 'boolean', value: true };
+    case 'false':
+      return { type: 'boolean', value: false };
+  }
+
   if (/^".*"$/.test(trimmed)) {
     return { type: 'string', value: trimmed.slice(1, -1) };
   }
-
-  if (trimmed === 'undefined') return { type: 'undefined', value: undefined };
-  if (trimmed === 'null') return { type: 'null', value: null };
-  if (trimmed === 'true') return { type: 'boolean', value: true };
-  if (trimmed === 'false') return { type: 'boolean', value: false };
 
   if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
     return { type: 'number', value: Number(trimmed) };
