@@ -555,26 +555,63 @@ export interface MergedOutlineLabel {
   rect: DOMRect;
 }
 
+interface TransformedOutlineLabel {
+  original: OutlineLabel;
+  rect: DOMRect;
+}
+
+function ascendingTransformedOutlineLabel(
+  a: TransformedOutlineLabel,
+  b: TransformedOutlineLabel,
+): number {
+  return a.rect.x - b.rect.x;
+}
+
+function getTransformedOutlineLabels(
+  labels: Array<OutlineLabel>,
+): Array<TransformedOutlineLabel> {
+  let array: Array<TransformedOutlineLabel> = [];
+
+  for (let i = 0, len = labels.length, label: OutlineLabel; i < len; i++) {
+    label = labels[i];
+    array.push({
+      original: label,
+      rect: applyLabelTransform(label.activeOutline.current!, label.textWidth),
+    });
+  }
+
+  array.sort(ascendingTransformedOutlineLabel);
+
+  return array;
+}
+
+function getMergedOutlineLabels(
+  labels: Array<OutlineLabel>,
+): Array<MergedOutlineLabel> {
+  let array: Array<MergedOutlineLabel> = [];
+
+  for (let i = 0, len = labels.length; i < len; i++) {
+    array.push(toMergedLabel(labels[i]));
+  }
+
+  return array;
+}
+
 // todo: optimize me so this can run always
 // note: this can be implemented in nlogn using https://en.wikipedia.org/wiki/Sweep_line_algorithm
 export const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
 ): Array<MergedOutlineLabel> => {
   if (labels.length > 1500) {
-    return labels.map((label) => toMergedLabel(label));
+    return getMergedOutlineLabels(labels);
   }
 
-  const transformed = labels.map((label) => ({
-    original: label,
-    rect: applyLabelTransform(label.activeOutline.current!, label.textWidth),
-  }));
-
-  transformed.sort((a, b) => a.rect.x - b.rect.x);
+  const transformed = getTransformedOutlineLabels(labels);
 
   const mergedLabels: Array<MergedOutlineLabel> = [];
   const mergedSet = new Set<number>();
 
-  for (let i = 0; i < transformed.length; i++) {
+  for (let i = 0, len = transformed.length; i < len; i++) {
     if (mergedSet.has(i)) continue;
 
     let currentMerged = toMergedLabel(
@@ -583,7 +620,7 @@ export const mergeOverlappingLabels = (
     );
     let currentRight = currentMerged.rect.x + currentMerged.rect.width;
 
-    for (let j = i + 1; j < transformed.length; j++) {
+    for (let j = i + 1; j < len; j++) {
       if (mergedSet.has(j)) continue;
 
       if (transformed[j].rect.x > currentRight) {
