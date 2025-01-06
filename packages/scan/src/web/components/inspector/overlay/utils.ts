@@ -1,5 +1,5 @@
 import { FunctionComponentTag } from 'bippy';
-import { type ComponentState } from 'react';
+import { Context, type ComponentState } from 'react';
 import { type Fiber } from 'react-reconciler';
 import { isEqual } from '~core/utils';
 
@@ -402,28 +402,13 @@ export const getCurrentContext = (fiber: Fiber) => {
   return contextObj;
 };
 
-const getContextDisplayName = (contextType: unknown): string => {
-  if (typeof contextType !== 'object' || contextType === null) {
-    return String(contextType);
-  }
-
-  return (
-    (contextType as any)?.displayName ??
-    (contextType as any)?.Provider?.displayName ??
-    (contextType as any)?.Consumer?.displayName ??
-    (contextType as any)?.type?.name?.replace('Provider', '') ??
-    'Unnamed'
-  );
-};
-
 export const getChangedContext = (fiber: Fiber): Set<string> => {
   const changes = new Set<string>();
   if (!fiber.alternate) return changes;
 
   const currentContexts = getAllFiberContexts(fiber);
 
-  for (const [contextType] of currentContexts) {
-    const contextName = getContextDisplayName(contextType);
+  for (const [contextName] of currentContexts) {
 
     let searchFiber: Fiber | null = fiber;
     let providerFiber: Fiber | null = null;
