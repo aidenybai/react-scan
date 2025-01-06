@@ -71,7 +71,10 @@ interface ComponentData {
 function getComponentGroupNames(group: ComponentData[]): string {
   let result = group[0].name;
 
-  for (let i = 1; i < 4; i++) {
+  const len = group.length;
+  const max = Math.min(4, len);
+
+  for (let i = 1; i < max; i++) {
     result += ', ' + group[i].name;
   }
 
@@ -102,6 +105,7 @@ export const getLabelText = (
 ) => {
   let labelText = '';
 
+  // TODO(Alexis): perhaps simplify this block up to the sorted line
   const componentsByCount = new Map<number, Array<ComponentData>>();
 
   for (const {
@@ -122,11 +126,10 @@ export const getLabelText = (
 
   const parts: Array<string> = [];
   let cumulativeTime = 0;
+
   for (const count of sortedCounts) {
     const componentGroup = componentsByCount.get(count)!;
-    const names = getComponentGroupNames(componentGroup);
-    let text = names;
-
+    let text = getComponentGroupNames(componentGroup);
     const totalTime = getComponentGroupTotalTime(componentGroup);
     const hasForget = componentGroupHasForget(componentGroup);
 
@@ -137,11 +140,11 @@ export const getLabelText = (
     }
 
     if (count > 1) {
-      text += ` ×${count}`;
+      text += ' ×' + count;
     }
 
     if (hasForget) {
-      text = `✨${text}`;
+      text = '✨' + text;
     }
 
     parts.push(text);
@@ -152,11 +155,11 @@ export const getLabelText = (
   if (!labelText.length) return null;
 
   if (labelText.length > 40) {
-    labelText = `${labelText.slice(0, 40)}…`;
+    labelText = labelText.slice(0, 40) + '…';
   }
 
   if (cumulativeTime >= 0.01) {
-    labelText += ` (${cumulativeTime.toFixed(2)}ms)`;
+    labelText += ' (' + cumulativeTime.toFixed(2) + 'ms)';
   }
 
   return labelText;
