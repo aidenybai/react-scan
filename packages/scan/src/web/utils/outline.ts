@@ -10,6 +10,7 @@ const enum Reason {
   Commit = 0b001,
   Unstable = 0b010,
   Unnecessary = 0b100,
+  All = 0b111,
 }
 
 export interface OutlineLabel {
@@ -86,8 +87,10 @@ export const batchGetBoundingRects = (
 
 export const flushOutlines = async () => {
   if (
-    !ReactScanInternals.scheduledOutlines.size &&
-    !ReactScanInternals.activeOutlines.size
+    !(
+      ReactScanInternals.scheduledOutlines.size ||
+      ReactScanInternals.activeOutlines.size
+    )
   ) {
     return;
   }
@@ -101,13 +104,10 @@ export const flushOutlines = async () => {
   recalcOutlines();
 
   ReactScanInternals.scheduledOutlines = new Map();
-
-  const { options } = ReactScanInternals;
-
-  options.value.onPaintStart?.(flattenedScheduledOutlines);
+  ReactScanInternals.options.value.onPaintStart?.(flattenedScheduledOutlines);
 
   if (!animationFrameId) {
-    animationFrameId = requestAnimationFrame(() => fadeOutOutline());
+    animationFrameId = requestAnimationFrame(fadeOutOutline);
   }
 };
 
@@ -125,6 +125,12 @@ const shouldSkipInterpolation = (rect: DOMRect) => {
   }
 
   return !ReactScanInternals.options.value.smoothlyAnimateOutlines;
+};
+
+const INTERPOLATION_SPEED = 0.2;
+
+const lerp = (start: number, end: number) => {
+  return start + (end - start) * INTERPOLATION_SPEED;
 };
 
 export const fadeOutOutline = () => {
@@ -176,30 +182,26 @@ export const fadeOutOutline = () => {
     // don't re-create to avoid gc time
     phases.clear();
 
-    let didCommit = false;
     let unstable = false;
     let isUnnecessary = false;
 
     for (const render of invariantActiveOutline.groupedAggregatedRender.values()) {
       if (render.unnecessary) {
-        isUnnecessary = true;
+        reasons |= Reason.Unnecessary;
+        color.r = 128;
+        color.g = 128;
+        color.b = 128;
       }
       if (render.changes.unstable) {
-        unstable = true;
+        reasons |= Reason.Unstable;
       }
       if (render.didCommit) {
-        didCommit = true;
+        reasons |= Reason.Commit;
       }
-    }
 
-    if (didCommit) reasons |= Reason.Commit;
-    if (unstable) reasons |= Reason.Unstable;
-
-    if (isUnnecessary) {
-      reasons |= Reason.Unnecessary;
-      color.r = 128;
-      color.g = 128;
-      color.b = 128;
+      if (reasons === Reason.All) {
+        break;
+      }
     }
 
     const alphaScalar = 0.8;
@@ -225,13 +227,7 @@ export const fadeOutOutline = () => {
           target.height,
         );
       }
-
-      const INTERPOLATION_SPEED = 0.2;
       const current = invariantActiveOutline.current;
-
-      const lerp = (start: number, end: number) => {
-        return start + (end - start) * INTERPOLATION_SPEED;
-      };
 
       const computedCurrent = new DOMRect(
         lerp(current.x, target.x),
