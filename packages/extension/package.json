@@ -31,7 +31,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "bestzip": "^2.2.1",
     "cross-env": "^7.0.3",
-    "vite": "^5.4.3",
+    "vite": "^6.0.7",
     "vite-plugin-web-extension": "^4.3.1",
     "webextension-polyfill": "^0.10.0"
   }
