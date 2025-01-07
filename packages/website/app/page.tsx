@@ -51,6 +51,11 @@ export default function Home() {
 
         <CLI command="npx react-scan@latest <URL>" />
 
+        {/*
+          for testing purposes only
+          <TestDataTypes />
+        */}
+
         <div className="!mb-8 mt-4 flex gap-2">
           <Link
             href="https://github.com/aidenybai/react-scan#install"

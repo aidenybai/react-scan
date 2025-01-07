@@ -8,15 +8,19 @@ import {
   getType,
   hasMemoCache,
   instrument,
-  isValidElement,
   traverseContexts,
   traverseProps,
   traverseState,
 } from 'bippy';
-import type * as React from 'react';
+import { isValidElement } from 'preact';
 import type { Fiber, FiberRoot } from 'react-reconciler';
-import { isEqual } from 'src/core/utils';
-import { getIsProduction, ReactScanInternals, Store } from './index';
+import { isEqual } from '~core/utils';
+import { getChangedPropsDetailed } from '~web/components/inspector/utils';
+import {
+  RENDER_PHASE_STRING_TO_ENUM,
+  type RenderPhase,
+} from '~web/utils/outline';
+import { ReactScanInternals, Store, getIsProduction } from './index';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -49,7 +53,7 @@ export const isElementVisible = (el: Element) => {
   return (
     style.display !== 'none' &&
     style.visibility !== 'hidden' &&
-    style.contentVisibility !== 'hidden' &&
+    (style as any).contentVisibility !== 'hidden' &&
     style.opacity !== '0'
   );
 };
@@ -77,27 +81,32 @@ export const isElementInViewport = (
   return isVisible && rect.width && rect.height;
 };
 
+export const enum ChangeReason {
+  Props = 0b001,
+  State = 0b010,
+  Context = 0b100,
+}
+
 export interface RenderChange {
-  type: 'props' | 'context' | 'state';
+  type: ChangeReason;
   name: string;
-  prevValue: unknown;
-  nextValue: unknown;
-  unstable: boolean;
+  value: any;
+  prevValue?: unknown;
+  nextValue?: unknown;
+  unstable?: boolean;
+  count?: number;
 }
 
-// this must grow O(1) w.r.t to renders
 export interface AggregatedChange {
-  type: Set<'props' | 'context' | 'state'>;
+  type: number; // union of AggregatedChangeReason
   unstable: boolean;
 }
-
-export type Category = 'commit' | 'unstable' | 'unnecessary';
 
 export interface Render {
-  phase: 'mount' | 'update' | 'unmount';
+  phase: RenderPhase;
   componentName: string | null;
   time: number | null;
-  count: number; // uh is this right?
+  count: number;
   forget: boolean;
   changes: Array<RenderChange>;
   unnecessary: boolean | null;
@@ -189,10 +198,9 @@ export const getPropsChanges = (fiber: Fiber) => {
       continue;
     }
     const change: RenderChange = {
-      type: 'props',
+      type: ChangeReason.Props,
       name: propName,
-      prevValue,
-      nextValue,
+      value: nextValue,
       unstable: false,
     };
     changes.push(change);
@@ -205,21 +213,20 @@ export const getPropsChanges = (fiber: Fiber) => {
   return changes;
 };
 
-interface FiberState {
+interface StateFiber {
   memoizedState: unknown;
 }
 
 function getStateChangesTraversal(
   this: Array<RenderChange>,
-  prevState: FiberState,
-  nextState: FiberState,
+  prevState: StateFiber,
+  nextState: StateFiber,
 ): void {
   if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
   const change: RenderChange = {
-    type: 'state',
+    type: ChangeReason.State,
     name: '', // bad interface should make this a discriminated union
-    prevValue: prevState.memoizedState,
-    nextValue: nextState.memoizedState,
+    value: nextState.memoizedState,
     unstable: false,
   };
   this.push(change);
@@ -233,24 +240,23 @@ export const getStateChanges = (fiber: Fiber) => {
   return changes;
 };
 
-interface FiberContext {
-  context: React.Context<unknown>;
+interface ContextFiber {
+  context: unknown; // refers to Context<T>;
   memoizedValue: unknown;
 }
 
 function getContextChangesTraversal(
   this: Array<RenderChange>,
-  prevContext: FiberContext,
-  nextContext: FiberContext,
+  prevContext: ContextFiber,
+  nextContext: ContextFiber,
 ): void {
   const prevValue = prevContext.memoizedValue;
   const nextValue = nextContext.memoizedValue;
 
   const change: RenderChange = {
-    type: 'context',
+    type: ChangeReason.Context,
     name: '',
-    prevValue,
-    nextValue,
+    value: nextValue,
     unstable: false,
   };
   this.push(change);
@@ -270,6 +276,8 @@ function getContextChangesTraversal(
 export const getContextChanges = (fiber: Fiber) => {
   const changes: Array<RenderChange> = [];
 
+  // Alexis: we use bind functions so that the compiler doesn't produce
+  // any closures
   traverseContexts(fiber, getContextChangesTraversal.bind(changes));
 
   return changes;
@@ -317,6 +325,7 @@ interface IsRenderUnnecessaryState {
 
 function isRenderUnnecessaryTraversal(
   this: IsRenderUnnecessaryState,
+  _propsName: string,
   prevValue: unknown,
   nextValue: unknown,
 ): void {
@@ -328,6 +337,7 @@ function isRenderUnnecessaryTraversal(
   }
 }
 
+// FIXME: calculation is slow
 export const isRenderUnnecessary = (fiber: Fiber) => {
   if (!didFiberCommit(fiber)) return true;
 
@@ -342,17 +352,15 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
   return true;
 };
 
-const shouldTrackUnnecessaryRenders = () => {
+const shouldRunUnnecessaryRenderCheck = () => {
   // yes, this can be condensed into one conditional, but ifs are easier to reason/build on than long boolean expressions
   if (!ReactScanInternals.options.value.trackUnnecessaryRenders) {
     return false;
   }
 
-  const isProd = getIsProduction();
-
-  // only run advanced render checks when monitoring is active in production if the user set dangerouslyForceRunInProduction
+  // only run unnecessaryRenderCheck when monitoring is active in production if the user set dangerouslyForceRunInProduction
   if (
-    isProd &&
+    getIsProduction() &&
     Store.monitor.value &&
     ReactScanInternals.options.value.dangerouslyForceRunInProduction &&
     ReactScanInternals.options.value.trackUnnecessaryRenders
@@ -360,7 +368,7 @@ const shouldTrackUnnecessaryRenders = () => {
     return true;
   }
 
-  if (isProd && Store.monitor.value) {
+  if (getIsProduction() && Store.monitor.value) {
     return false;
   }
 
@@ -399,31 +407,42 @@ export const createInstrumentation = (
 
         const changes: Array<RenderChange> = [];
 
-        if (config.trackChanges) {
-          const propsChanges = getPropsChanges(fiber);
-          const stateChanges = getStateChanges(fiber);
-          const contextChanges = getContextChanges(fiber);
+        const propsChanges = getChangedPropsDetailed(fiber).map((change) => ({
+          type: ChangeReason.Props,
+          name: change.name,
+          value: change.value,
+          prevValue: change.prevValue,
+          unstable: false,
+        }));
 
-          for (let i = 0, len = propsChanges.length; i < len; i++) {
-            const change = propsChanges[i];
-            changes.push(change);
-          }
-          for (let i = 0, len = stateChanges.length; i < len; i++) {
-            const change = stateChanges[i];
-            changes.push(change);
-          }
-          for (let i = 0, len = contextChanges.length; i < len; i++) {
-            const change = contextChanges[i];
-            changes.push(change);
-          }
-        }
+        const stateChanges = getStateChanges(fiber).map((change) => ({
+          type: ChangeReason.State,
+          name: change.name,
+          value: change.value,
+          prevValue: change.prevValue,
+          count: change.count,
+          unstable: false,
+        }));
+
+        const contextChanges = getContextChanges(fiber).map((change) => ({
+          type: ChangeReason.Context,
+          name: change.name,
+          value: change.value,
+          prevValue: change.prevValue,
+          count: change.count,
+          unstable: false,
+        }));
+
+        changes.push.apply(changes, propsChanges);
+        changes.push.apply(changes, stateChanges);
+        changes.push.apply(changes, contextChanges);
 
         const { selfTime } = getTimings(fiber);
 
         const fps = getFPS();
 
         const render: Render = {
-          phase,
+          phase: RENDER_PHASE_STRING_TO_ENUM[phase],
           componentName: getDisplayName(type),
           count: 1,
           changes,
@@ -431,7 +450,7 @@ export const createInstrumentation = (
           forget: hasMemoCache(fiber),
           // todo: allow this to be toggle-able through toolbar
           // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
-          unnecessary: shouldTrackUnnecessaryRenders()
+          unnecessary: shouldRunUnnecessaryRenderCheck()
             ? isRenderUnnecessary(fiber)
             : null,
 

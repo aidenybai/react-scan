@@ -39,16 +39,16 @@ export const App = () => {
 
           <div className="task-section">
             <AddTaskBar
-              onCreate={(value) => {
-                if (!value) return;
-                setTasks([...tasks, value]);
+              onCreate={(task) => {
+                if (!task) return;
+                setTasks([...tasks, task]);
               }}
             />
             <TaskList
               tasks={tasks}
-              onDelete={(value) =>
-                setTasks(tasks.filter((task) => task !== value))
-              }
+              onDelete={(task) => {
+                setTasks(tasks.filter((t) => t.id !== task.id));
+              }}
             />
           </div>
         </div>
@@ -61,7 +61,7 @@ export const TaskList = ({ tasks, onDelete }) => {
   return (
     <ul>
       {tasks.map((task) => (
-        <TaskItem key={task} task={task} onDelete={onDelete} />
+        <TaskItem key={task.id} task={task} onDelete={onDelete} />
       ))}
     </ul>
   );
@@ -71,7 +71,7 @@ export const TaskItem = ({ task, onDelete }) => {
   const { tooltip } = React.useContext(TooltipContext);
   return (
     <li className="task-item" tooltip={tooltip}>
-      {task}
+      {task.text}
       <Button onClick={() => onDelete(task)}>Delete</Button>
     </li>
   );
@@ -83,7 +83,7 @@ export const Text = ({ children }) => {
 
 export const Button = ({ onClick, children }) => {
   return (
-    <button onClick={onClick}>
+    <button type="button" onClick={onClick}>
       <Text>{children}</Text>
     </button>
   );
@@ -92,21 +92,26 @@ export const Button = ({ onClick, children }) => {
 export const AddTaskBar = ({ onCreate }) => {
   const [value, setValue] = useState('');
   const [id, setId] = useState(0);
+
+  const handleCreate = () => {
+    if (value.length === 0) return;
+    onCreate({ id, text: `${value} (${id})` });
+    setValue('');
+    setId(id + 1);
+  };
+
   return (
     <div className="add-task-container">
       <Input
         onChange={(value) => setValue(value)}
-        onEnter={(value) => {
-          onCreate(`${value} (${id})`);
-          setValue('');
-          setId(id + 1);
+        onEnter={() => {
+          handleCreate();
         }}
         value={value}
       />
       <Button
         onClick={() => {
-          onCreate(value);
-          setValue('');
+          handleCreate();
         }}
       >
         Add Task
@@ -124,7 +129,7 @@ export const Input = ({ onChange, onEnter, value }) => {
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
-          onEnter(e.target.value);
+          onEnter();
         }
       }}
       value={value}
