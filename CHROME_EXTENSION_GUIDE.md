@@ -5,7 +5,7 @@
 
 ## Chrome
 
-1. Download the [`chrome-react-scanner-extension-v1.0.0.zip`](https://github.com/aidenybai/react-scan/tree/main/packages/extension/build) file.
+1. Download the [`chrome-react-scanner-extension-v1.0.1.zip`](https://github.com/aidenybai/react-scan/tree/main/packages/extension/build) file.
 2. Unzip the file.
 3. Open Chrome and navigate to `chrome://extensions/`.
 4. Enable "Developer mode" if it is not already enabled.
@@ -13,7 +13,7 @@
 
 ## Firefox
 
-1. Download the [`firefox-react-scanner-extension-v1.0.0.zip`](https://github.com/aidenybai/react-scan/tree/main/packages/extension/build) file.
+1. Download the [`firefox-react-scanner-extension-v1.0.1.zip`](https://github.com/aidenybai/react-scan/tree/main/packages/extension/build) file.
 2. Unzip the file.
 3. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
 4. Click "Load Temporary Add-on..."
@@ -21,7 +21,7 @@
 
 ## Brave
 
-1. Download the [`brave-react-scanner-extension-v1.0.0.zip`](https://github.com/aidenybai/react-scan/tree/main/packages/extension/build) file.
+1. Download the [`brave-react-scanner-extension-v1.0.1.zip`](https://github.com/aidenybai/react-scan/tree/main/packages/extension/build) file.
 2. Unzip the file.
 3. Open Brave and navigate to `brave://extensions`.
 4. Click "Load unpacked" and select the unzipped folder (or drag the folder into the page).
