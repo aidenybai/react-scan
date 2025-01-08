@@ -557,8 +557,9 @@ export const ScanOverlay = () => {
   const handleResizeOrScroll = () => {
     const state = Store.inspectState.peek();
     const canvas = refCanvas.current;
+    if (!canvas) return;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    if (!ctx) return;
 
     cancelAnimationFrame(refRafId.current);
     clearTimeout(refTimeout.current);
@@ -590,8 +591,9 @@ export const ScanOverlay = () => {
 
   useEffect(() => {
     const canvas = refCanvas.current;
+    if (!canvas) return;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    if (!ctx) return;
 
     updateCanvasSize(canvas, ctx);
 
