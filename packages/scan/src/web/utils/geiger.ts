@@ -1,7 +1,7 @@
 // MIT License
 // Copyright (c) 2024 Kristian Dupont
 
-import { isFirefox, readLocalStorage } from "./helpers";
+import { isFirefox, readLocalStorage } from './helpers';
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,10 @@ const FREQ_MULTIPLIER = 200;
 const DEFAULT_VOLUME = 0.5;
 
 // Ensure volume is between 0 and 1
-const storedVolume = Math.max(0, Math.min(1, readLocalStorage<number>('react-scan-volume') ?? DEFAULT_VOLUME));
+const storedVolume = Math.max(
+  0,
+  Math.min(1, readLocalStorage<number>('react-scan-volume') ?? DEFAULT_VOLUME),
+);
 
 // Audio configurations for different browsers
 const config = {
@@ -52,7 +55,7 @@ const config = {
     endFreq: 220,
     attack: 0.0005,
     volumeMultiplier: storedVolume,
-  }
+  },
 } as const; // Make entire config readonly
 
 // Cache the selected config
@@ -66,7 +69,6 @@ export const playGeigerClickSound = (
   audioContext: AudioContext,
   amplitude: number,
 ) => {
-
   const now = performance.now();
   if (now - lastPlayTime < MIN_INTERVAL) {
     return;
@@ -78,26 +80,28 @@ export const playGeigerClickSound = (
   const { duration, oscillatorType, startFreq, endFreq, attack } = audioConfig;
 
   // Pre-calculate volume once
-  const volume = Math.max(BASE_VOLUME, amplitude) * audioConfig.volumeMultiplier;
+  const volume =
+    Math.max(BASE_VOLUME, amplitude) * audioConfig.volumeMultiplier;
 
   // Create and configure nodes in one go
   const oscillator = new OscillatorNode(audioContext, {
     type: oscillatorType,
-    frequency: startFreq + amplitude * FREQ_MULTIPLIER
+    frequency: startFreq + amplitude * FREQ_MULTIPLIER,
   });
 
   const gainNode = new GainNode(audioContext, {
-    gain: 0
+    gain: 0,
   });
 
   // Schedule all parameters
-  oscillator.frequency.exponentialRampToValueAtTime(endFreq, currentTime + duration);
+  oscillator.frequency.exponentialRampToValueAtTime(
+    endFreq,
+    currentTime + duration,
+  );
   gainNode.gain.linearRampToValueAtTime(volume, currentTime + attack);
 
   // Connect and schedule playback
-  oscillator
-    .connect(gainNode)
-    .connect(audioContext.destination);
+  oscillator.connect(gainNode).connect(audioContext.destination);
 
   oscillator.start(currentTime);
   oscillator.stop(currentTime + duration);

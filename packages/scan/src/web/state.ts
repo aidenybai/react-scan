@@ -1,7 +1,11 @@
 import { signal } from '@preact/signals';
+import {
+  type Corner,
+  type WidgetConfig,
+  type WidgetSettings,
+} from './components/widget/types';
+import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from './constants';
 import { readLocalStorage, saveLocalStorage } from './utils/helpers';
-import { MIN_SIZE, SAFE_AREA, LOCALSTORAGE_KEY } from './constants';
-import { type Corner, type WidgetConfig, type WidgetSettings } from './components/widget/types';
 
 export const signalRefContainer = signal<HTMLDivElement | null>(null);
 
@@ -12,15 +16,15 @@ export const defaultWidgetConfig = {
     isFullHeight: false,
     width: MIN_SIZE.width,
     height: MIN_SIZE.height,
-    position: { x: SAFE_AREA, y: SAFE_AREA }
+    position: { x: SAFE_AREA, y: SAFE_AREA },
   },
   lastDimensions: {
     isFullWidth: false,
     isFullHeight: false,
     width: MIN_SIZE.width,
     height: MIN_SIZE.height,
-    position: { x: SAFE_AREA, y: SAFE_AREA }
-  }
+    position: { x: SAFE_AREA, y: SAFE_AREA },
+  },
 } as WidgetConfig;
 
 export const getInitialWidgetConfig = (): WidgetConfig => {
@@ -29,7 +33,7 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
     saveLocalStorage(LOCALSTORAGE_KEY, {
       corner: defaultWidgetConfig.corner,
       dimensions: defaultWidgetConfig.dimensions,
-      lastDimensions: defaultWidgetConfig.lastDimensions
+      lastDimensions: defaultWidgetConfig.lastDimensions,
     });
 
     return defaultWidgetConfig;
@@ -42,9 +46,9 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
       isFullHeight: false,
       width: MIN_SIZE.width,
       height: MIN_SIZE.height,
-      position: stored.dimensions.position
+      position: stored.dimensions.position,
     },
-    lastDimensions: stored.dimensions
+    lastDimensions: stored.dimensions,
   };
 };
 
@@ -59,11 +63,11 @@ export const updateDimensions = (): void => {
   signalWidget.value = {
     ...signalWidget.value,
     dimensions: {
-      isFullWidth: width >= window.innerWidth - (SAFE_AREA * 2),
-      isFullHeight: height >= window.innerHeight - (SAFE_AREA * 2),
+      isFullWidth: width >= window.innerWidth - SAFE_AREA * 2,
+      isFullHeight: height >= window.innerHeight - SAFE_AREA * 2,
       width,
       height,
-      position
-    }
+      position,
+    },
   };
 };

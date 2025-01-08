@@ -166,7 +166,10 @@ const isExpandable = (value: unknown): value is InspectableValue => {
 };
 
 const isPromise = (value: unknown): value is Promise<unknown> => {
-  return !!value && (value instanceof Promise || (typeof value === 'object' && 'then' in value));
+  return (
+    !!value &&
+    (value instanceof Promise || (typeof value === 'object' && 'then' in value))
+  );
 };
 
 const isEditableValue = (value: unknown, parentPath?: string): boolean => {
@@ -616,7 +619,11 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
   );
 };
 
-const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
+const updateNestedValue = (
+  obj: unknown,
+  path: Array<string>,
+  value: unknown,
+): unknown => {
   try {
     if (path.length === 0) return value;
 
@@ -650,7 +657,11 @@ const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): u
       }
       return {
         ...obj,
-        [key]: updateNestedValue((obj as Record<string, unknown>)[key], rest, value)
+        [key]: updateNestedValue(
+          (obj as Record<string, unknown>)[key],
+          rest,
+          value,
+        ),
       };
     }
 
@@ -726,20 +737,22 @@ const PropertyElement = ({
         ArrayBuffer.isView(obj)
       );
 
-    return entries.map(([key, value]) => (
-      <PropertyElement
-        key={String(key)}
-        name={String(key)}
-        value={value}
-        section={section}
-        level={level + 1}
-        parentPath={currentPath}
-        objectPathMap={objectPathMap}
-        changedKeys={changedKeys}
-        allowEditing={canEditChildren}
-      />
-    ));
-  }, [section, level, currentPath, objectPathMap, changedKeys]);
+      return entries.map(([key, value]) => (
+        <PropertyElement
+          key={String(key)}
+          name={String(key)}
+          value={value}
+          section={section}
+          level={level + 1}
+          parentPath={currentPath}
+          objectPathMap={objectPathMap}
+          changedKeys={changedKeys}
+          allowEditing={canEditChildren}
+        />
+      ));
+    },
+    [section, level, currentPath, objectPathMap, changedKeys],
+  );
 
   const valuePreview = useMemo(() => formatValue(value), [value]);
 
@@ -813,11 +826,12 @@ const PropertyElement = ({
     }
   }, [canEdit]);
 
-  const handleSave = useCallback((newValue: unknown) => {
-    if (isEqual(value, newValue)) {
-      setIsEditing(false);
-      return;
-    }
+  const handleSave = useCallback(
+    (newValue: unknown) => {
+      if (isEqual(value, newValue)) {
+        setIsEditing(false);
+        return;
+      }
 
       if (section === 'props' && overrideProps) {
         tryOrElse(() => {
@@ -902,26 +916,22 @@ const PropertyElement = ({
   return (
     <div ref={refElement} className="react-scan-property">
       <div className="react-scan-property-content">
-        {
-          isExpandable(value) && (
-            <button
-              type="button"
-              onClick={() => handleToggleExpand()}
-              onKeyDown={(e) => e.key === 'Enter' && handleToggleExpand()}
-              className="react-scan-arrow"
-            >
-              <Icon
-                name="icon-chevron-right"
-                size={12}
-                className={cn(
-                  {
-                    'rotate-90': isExpanded,
-                  }
-                )}
-              />
-            </button>
-          )
-        }
+        {isExpandable(value) && (
+          <button
+            type="button"
+            onClick={() => handleToggleExpand()}
+            onKeyDown={(e) => e.key === 'Enter' && handleToggleExpand()}
+            className="react-scan-arrow"
+          >
+            <Icon
+              name="icon-chevron-right"
+              size={12}
+              className={cn({
+                'rotate-90': isExpanded,
+              })}
+            />
+          </button>
+        )}
         <div
           className={cn('group', 'react-scan-preview-line', {
             'react-scan-highlight': isChanged,
@@ -931,25 +941,17 @@ const PropertyElement = ({
             <Icon name="icon-alert" className="text-yellow-500" size={12} />
           )}
           <div className="react-scan-key">{name}:</div>
-          {
-            isEditing && isEditableValue(value, parentPath)
-              ? (
-                <EditableValue
-                  value={value}
-                  onSave={handleSave}
-                  onCancel={() => setIsEditing(false)}
-                />
-              )
-              : (
-                <button
-                  type="button"
-                  className="truncate"
-                  onClick={handleEdit}
-                >
-                  {valuePreview}
-                </button>
-              )
-          }
+          {isEditing && isEditableValue(value, parentPath) ? (
+            <EditableValue
+              value={value}
+              onSave={handleSave}
+              onCancel={() => setIsEditing(false)}
+            />
+          ) : (
+            <button type="button" className="truncate" onClick={handleEdit}>
+              {valuePreview}
+            </button>
+          )}
           <CopyToClipboard
             text={clipboardText}
             className="opacity-0 transition-opacity duration-150 group-hover:opacity-100"
@@ -1028,7 +1030,10 @@ const WhatChanged = constant(() => {
   const { changes } = inspectorState.value;
   const timerRef = useRef<TTimer>();
 
-  const hasChanges = changes.state.size > 0 || changes.props.size > 0 || changes.context.size > 0;
+  const hasChanges =
+    changes.state.size > 0 ||
+    changes.props.size > 0 ||
+    changes.context.size > 0;
 
   useEffect(() => {
     if (hasChanges) {
@@ -1076,12 +1081,9 @@ const WhatChanged = constant(() => {
         What changed?
       </div>
       <div
-        className={cn(
-          "react-scan-expandable pl-8 flex-1",
-          {
-            'react-scan-expanded': isExpanded,
-          }
-        )}
+        className={cn('react-scan-expandable pl-8 flex-1', {
+          'react-scan-expanded': isExpanded,
+        })}
       >
         <div className="overflow-hidden">
           {changes.state.size > 0 && (
@@ -1252,18 +1254,9 @@ export const Inspector = constant(() => {
     <InspectorErrorBoundary>
       <div className="react-scan-inspector">
         <WhatChanged />
-        <PropertySection
-          title="Props"
-          section="props"
-        />
-        <PropertySection
-          title="State"
-          section="state"
-        />
-        <PropertySection
-          title="Context"
-          section="context"
-        />
+        <PropertySection title="Props" section="props" />
+        <PropertySection title="State" section="state" />
+        <PropertySection title="Context" section="context" />
       </div>
     </InspectorErrorBoundary>
   );

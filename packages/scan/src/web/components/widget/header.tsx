@@ -1,12 +1,12 @@
-import { useRef, useEffect } from 'preact/hooks';
 import { getDisplayName } from 'bippy';
+import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { replayComponent } from '~web/components/inspector';
+import { Icon } from '../icon';
 import {
   getCompositeComponentFromElement,
   getOverrideMethods,
 } from '../inspector/utils';
-import { Icon } from '../icon';
 
 const REPLAY_DELAY_MS = 300;
 
@@ -90,12 +90,12 @@ export const Header = () => {
   const refMetrics = useRef<HTMLSpanElement>(null);
 
   useSubscribeFocusedFiber(() => {
-
     cancelAnimationFrame(refRaf.current ?? 0);
     refRaf.current = requestAnimationFrame(() => {
       if (Store.inspectState.value.kind !== 'focused') return;
       const focusedElement = Store.inspectState.value.focusedDomElement;
-      const { parentCompositeFiber } = getCompositeComponentFromElement(focusedElement);
+      const { parentCompositeFiber } =
+        getCompositeComponentFromElement(focusedElement);
       if (!parentCompositeFiber) return;
 
       const displayName = getDisplayName(parentCompositeFiber.type);
@@ -105,11 +105,12 @@ export const Header = () => {
 
       if (refComponentName.current && refMetrics.current) {
         refComponentName.current.dataset.text = displayName ?? 'Unknown';
-        const formattedTime = time > 0
-          ? time < 0.1 - Number.EPSILON
-            ? '< 0.1ms'
-            : `${Number(time.toFixed(1))}ms`
-          : '';
+        const formattedTime =
+          time > 0
+            ? time < 0.1 - Number.EPSILON
+              ? '< 0.1ms'
+              : `${Number(time.toFixed(1))}ms`
+            : '';
 
         refMetrics.current.dataset.text = `${count} re-renders${formattedTime ? ` • ${formattedTime}` : ''}`;
       }

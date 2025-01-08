@@ -1,9 +1,14 @@
 // TODO: @pivanov - improve UI and finish the implementation
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { Store } from "~core/index";
-import { getInspectableElements } from "~web/components/inspector/utils";
-import { cn } from "~web/utils/helpers";
-
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
+import { Store } from '~core/index';
+import { getInspectableElements } from '~web/components/inspector/utils';
+import { cn } from '~web/utils/helpers';
 
 export const Search = () => {
   const [search, setSearch] = useState('');
@@ -43,15 +48,16 @@ export const Search = () => {
   const elements = useMemo(() => getInspectableElements(), []);
 
   // Get current focused element
-  const currentElement = Store.inspectState.value.kind === 'focused'
-    ? Store.inspectState.value.focusedDomElement
-    : null;
+  const currentElement =
+    Store.inspectState.value.kind === 'focused'
+      ? Store.inspectState.value.focusedDomElement
+      : null;
 
   const filteredElements = useMemo(() => {
     if (!search) return elements;
     const searchLower = search.toLowerCase();
-    return elements.filter(item =>
-      item.name.toLowerCase().includes(searchLower)
+    return elements.filter((item) =>
+      item.name.toLowerCase().includes(searchLower),
     );
   }, [elements, search]);
 
@@ -61,7 +67,9 @@ export const Search = () => {
 
       // Find and select current element in the list
       if (currentElement) {
-        const index = filteredElements.findIndex(item => item.element === currentElement);
+        const index = filteredElements.findIndex(
+          (item) => item.element === currentElement,
+        );
         if (index !== -1) {
           setSelectedIndex(index);
           // Scroll the item into view
@@ -80,13 +88,11 @@ export const Search = () => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(i =>
-          i < filteredElements.length - 1 ? i + 1 : i
-        );
+        setSelectedIndex((i) => (i < filteredElements.length - 1 ? i + 1 : i));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(i => i > 0 ? i - 1 : i);
+        setSelectedIndex((i) => (i > 0 ? i - 1 : i));
         break;
       case 'Enter':
         e.preventDefault();
@@ -110,7 +116,7 @@ export const Search = () => {
         ref={inputRef}
         type="text"
         value={search}
-        onChange={e => {
+        onChange={(e) => {
           setSearch(e.currentTarget.value);
           setSelectedIndex(0);
         }}
@@ -130,10 +136,10 @@ export const Search = () => {
             }}
             className={cn(
               'flex items-center px-2 py-1 cursor-pointer hover:bg-white/5',
-              selectedIndex === index && 'bg-white/10'
+              selectedIndex === index && 'bg-white/10',
             )}
             style={{
-              paddingLeft: `${item.depth * 16 + 8}px`
+              paddingLeft: `${item.depth * 16 + 8}px`,
             }}
           >
             <span className="truncate">

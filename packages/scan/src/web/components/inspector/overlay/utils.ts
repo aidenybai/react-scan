@@ -1,5 +1,5 @@
 import { FunctionComponentTag } from 'bippy';
-import { Context, type ComponentState } from 'react';
+import { type ComponentState } from 'react';
 import { type Fiber } from 'react-reconciler';
 import { isEqual } from '~core/utils';
 
@@ -409,7 +409,6 @@ export const getChangedContext = (fiber: Fiber): Set<string> => {
   const currentContexts = getAllFiberContexts(fiber);
 
   for (const [contextName] of currentContexts) {
-
     let searchFiber: Fiber | null = fiber;
     let providerFiber: Fiber | null = null;
 

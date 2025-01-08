@@ -1,4 +1,4 @@
-import { SmolWorker } from "~core/worker/smol";
+import { SmolWorker } from '~core/worker/smol';
 
 export interface DrawingQueue {
   rect: DOMRect;
@@ -22,21 +22,21 @@ export interface SerializedOutlineLabel {
 export type OutlineWorkerAction =
   | { type: 'set-canvas'; payload: OffscreenCanvas }
   | {
-    type: 'fade-out-outline';
-    payload: {
-      dpi: number;
-      drawingQueue: Array<DrawingQueue>;
-      mergedLabels: Array<SerializedOutlineLabel>;
-    };
-  }
+      type: 'fade-out-outline';
+      payload: {
+        dpi: number;
+        drawingQueue: Array<DrawingQueue>;
+        mergedLabels: Array<SerializedOutlineLabel>;
+      };
+    }
   | {
-    type: 'resize';
-    payload: {
-      width: number;
-      height: number;
-      dpi: number;
+      type: 'resize';
+      payload: {
+        width: number;
+        height: number;
+        dpi: number;
+      };
     };
-  };
 
 function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
   const MONO_FONT =

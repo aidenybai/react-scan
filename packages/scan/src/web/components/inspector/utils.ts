@@ -10,19 +10,19 @@ import { isEqual } from '~core/utils';
 
 export type States =
   | {
-    kind: 'inspecting';
-    hoveredDomElement: HTMLElement | null;
-  }
+      kind: 'inspecting';
+      hoveredDomElement: HTMLElement | null;
+    }
   | {
-    kind: 'inspect-off';
-  }
+      kind: 'inspect-off';
+    }
   | {
-    kind: 'focused';
-    focusedDomElement: HTMLElement;
-  }
+      kind: 'focused';
+      focusedDomElement: HTMLElement;
+    }
   | {
-    kind: 'uninitialized';
-  };
+      kind: 'uninitialized';
+    };
 
 interface ReactRootContainer {
   _reactRootContainer?: {
@@ -43,7 +43,12 @@ interface ReactRenderer {
   version: string;
   bundleType: number;
   rendererPackageName: string;
-  overrideHookState?: (fiber: Fiber, id: string, path: Array<any>, value: any) => void;
+  overrideHookState?: (
+    fiber: Fiber,
+    id: string,
+    path: Array<any>,
+    value: any,
+  ) => void;
   overrideProps?: (fiber: Fiber, path: Array<string>, value: any) => void;
   scheduleUpdate?: (fiber: Fiber) => void;
 }
@@ -110,7 +115,9 @@ export const getFirstStateNode = (fiber: Fiber): Element | null => {
   return null;
 };
 
-export const getNearestFiberFromElement = (element: Element | null): Fiber | null => {
+export const getNearestFiberFromElement = (
+  element: Element | null,
+): Fiber | null => {
   if (!element) return null;
 
   try {
@@ -216,7 +223,7 @@ export const getChangedPropsDetailed = (fiber: Fiber): Array<PropChange> => {
       changes.push({
         name: key,
         value: currentValue,
-        prevValue
+        prevValue,
       });
     }
   }
@@ -225,8 +232,12 @@ export const getChangedPropsDetailed = (fiber: Fiber): Array<PropChange> => {
 };
 
 interface OverrideMethods {
-  overrideProps: ((fiber: Fiber, path: Array<string>, value: unknown) => void) | null;
-  overrideHookState: ((fiber: Fiber, id: string, path: Array<unknown>, value: unknown) => void) | null;
+  overrideProps:
+    | ((fiber: Fiber, path: Array<string>, value: unknown) => void)
+    | null;
+  overrideHookState:
+    | ((fiber: Fiber, id: string, path: Array<unknown>, value: unknown) => void)
+    | null;
 }
 
 export const getOverrideMethods = (): OverrideMethods => {
@@ -240,7 +251,12 @@ export const getOverrideMethods = (): OverrideMethods => {
         try {
           if (overrideHookState) {
             const prevOverrideHookState = overrideHookState;
-            overrideHookState = (fiber: Fiber, id: string, path: Array<any>, value: any) => {
+            overrideHookState = (
+              fiber: Fiber,
+              id: string,
+              path: Array<any>,
+              value: any,
+            ) => {
               // Find the hook
               let current = fiber.memoizedState;
               for (let i = 0; i < parseInt(id); i++) {
@@ -283,7 +299,6 @@ export const getOverrideMethods = (): OverrideMethods => {
   return { overrideProps, overrideHookState };
 };
 
-
 const nonVisualTags = new Set([
   'html',
   'meta',
@@ -306,12 +321,18 @@ const nonVisualTags = new Set([
   'slot',
   'xml',
   'doctype',
-  'comment'
+  'comment',
 ]);
-export const findComponentDOMNode = (fiber: Fiber, excludeNonVisualTags = true): HTMLElement | null => {
+export const findComponentDOMNode = (
+  fiber: Fiber,
+  excludeNonVisualTags = true,
+): HTMLElement | null => {
   if (fiber.stateNode && 'nodeType' in fiber.stateNode) {
     const element = fiber.stateNode as HTMLElement;
-    if (excludeNonVisualTags && nonVisualTags.has(element.tagName.toLowerCase())) {
+    if (
+      excludeNonVisualTags &&
+      nonVisualTags.has(element.tagName.toLowerCase())
+    ) {
       return null;
     }
     return element;
@@ -333,10 +354,14 @@ export interface InspectableElement {
   name: string;
 }
 
-export const getInspectableElements = (root: HTMLElement = document.body): Array<InspectableElement> => {
+export const getInspectableElements = (
+  root: HTMLElement = document.body,
+): Array<InspectableElement> => {
   const result: Array<InspectableElement> = [];
 
-  const findInspectableFiber = (element: HTMLElement | null): HTMLElement | null => {
+  const findInspectableFiber = (
+    element: HTMLElement | null,
+  ): HTMLElement | null => {
     if (!element) return null;
     const { parentCompositeFiber } = getCompositeComponentFromElement(element);
     if (!parentCompositeFiber) return null;
@@ -348,16 +373,17 @@ export const getInspectableElements = (root: HTMLElement = document.body): Array
   const traverse = (element: HTMLElement, depth = 0) => {
     const inspectable = findInspectableFiber(element);
     if (inspectable) {
-      const { parentCompositeFiber } = getCompositeComponentFromElement(inspectable);
+      const { parentCompositeFiber } =
+        getCompositeComponentFromElement(inspectable);
       result.push({
         element: inspectable,
         depth,
-        name: getDisplayName(parentCompositeFiber!.type) ?? 'Unknown'
+        name: getDisplayName(parentCompositeFiber!.type) ?? 'Unknown',
       });
     }
 
     // Traverse children first (depth-first)
-    Array.from(element.children).forEach(child => {
+    Array.from(element.children).forEach((child) => {
       traverse(child as HTMLElement, inspectable ? depth + 1 : depth);
     });
   };
