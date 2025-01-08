@@ -6,61 +6,53 @@ import {
   type Size,
 } from './types';
 
-export const getWindowDimensions = (() => {
-  let cache: {
-    width: number;
-    height: number;
-    maxWidth: number;
-    maxHeight: number;
-    rightEdge: (width: number) => number;
-    bottomEdge: (height: number) => number;
-    isFullWidth: (width: number) => boolean;
-    isFullHeight: (height: number) => boolean;
-  } | null = null;
+class WindowDimensions {
+  maxWidth: number;
+  maxHeight: number;
 
-  return () => {
-    const currentWidth = window.innerWidth;
-    const currentHeight = window.innerHeight;
+  constructor(
+    public width: number,
+    public height: number,
+  ) {
+    this.maxWidth = width - SAFE_AREA * 2;
+    this.maxHeight = height - SAFE_AREA * 2;
+  }
 
-    if (
-      cache &&
-      cache.width === currentWidth &&
-      cache.height === currentHeight
-    ) {
-      return {
-        maxWidth: cache.maxWidth,
-        maxHeight: cache.maxHeight,
-        rightEdge: cache.rightEdge,
-        bottomEdge: cache.bottomEdge,
-        isFullWidth: cache.isFullWidth,
-        isFullHeight: cache.isFullHeight,
-      };
-    }
+  rightEdge(width: number): number {
+    return this.width - width - SAFE_AREA;
+  }
 
-    const maxWidth = currentWidth - SAFE_AREA * 2;
-    const maxHeight = currentHeight - SAFE_AREA * 2;
+  bottomEdge(height: number): number {
+    return this.height - height - SAFE_AREA;
+  }
 
-    cache = {
-      width: currentWidth,
-      height: currentHeight,
-      maxWidth,
-      maxHeight,
-      rightEdge: (width: number) => currentWidth - width - SAFE_AREA,
-      bottomEdge: (height: number) => currentHeight - height - SAFE_AREA,
-      isFullWidth: (width: number) => width >= maxWidth,
-      isFullHeight: (height: number) => height >= maxHeight,
-    };
+  isFullWidth(width: number): boolean {
+    return width >= this.maxWidth;
+  }
 
-    return {
-      maxWidth: cache.maxWidth,
-      maxHeight: cache.maxHeight,
-      rightEdge: cache.rightEdge,
-      bottomEdge: cache.bottomEdge,
-      isFullWidth: cache.isFullWidth,
-      isFullHeight: cache.isFullHeight,
-    };
-  };
-})();
+  isFullHeight(height: number): boolean {
+    return height >= this.maxHeight;
+  }
+}
+
+let cachedWindowDimensions: WindowDimensions | undefined;
+
+export const getWindowDimensions = () => {
+  const currentWidth = window.innerWidth;
+  const currentHeight = window.innerHeight;
+
+  if (
+    cachedWindowDimensions &&
+    cachedWindowDimensions.width === currentWidth &&
+    cachedWindowDimensions.height === currentHeight
+  ) {
+    return cachedWindowDimensions;
+  }
+
+  cachedWindowDimensions = new WindowDimensions(currentWidth, currentHeight);
+
+  return cachedWindowDimensions;
+};
 
 export const getOppositeCorner = (
   position: ResizeHandleProps['position'],
@@ -284,21 +276,27 @@ export const calculateNewSizeAndPosition = (
 };
 
 export const getClosestCorner = (position: Position): Corner => {
-  const { maxWidth, maxHeight } = getWindowDimensions();
+  const windowDims = getWindowDimensions();
 
-  const distances = {
+  const distances: Record<Corner, number> = {
     'top-left': Math.hypot(position.x, position.y),
-    'top-right': Math.hypot(maxWidth - position.x, position.y),
-    'bottom-left': Math.hypot(position.x, maxHeight - position.y),
-    'bottom-right': Math.hypot(maxWidth - position.x, maxHeight - position.y),
+    'top-right': Math.hypot(windowDims.maxWidth - position.x, position.y),
+    'bottom-left': Math.hypot(position.x, windowDims.maxHeight - position.y),
+    'bottom-right': Math.hypot(
+      windowDims.maxWidth - position.x,
+      windowDims.maxHeight - position.y,
+    ),
   };
 
-  return Object.entries(distances).reduce<Corner>(
-    (closest, [corner, distance]) => {
-      return distance < distances[closest] ? (corner as Corner) : closest;
-    },
-    'top-left',
-  );
+  let closest: Corner = 'top-left';
+
+  for (const key in distances) {
+    if (distances[key as Corner] < distances[closest]) {
+      closest = key as Corner;
+    }
+  }
+
+  return closest;
 };
 
 // Helper to determine best corner based on cursor position, widget size, and movement
