@@ -292,10 +292,8 @@ export const getChangedProps = (fiber: Fiber): Set<string> => {
     if (!isEqual(currentValue, previousValue)) {
       changes.add(key);
 
-      if (typeof currentValue !== 'function') {
-        const count = (propsChangeCounts.get(key) ?? 0) + 1;
-        propsChangeCounts.set(key, count);
-      }
+      const count = (propsChangeCounts.get(key) ?? 0) + 1;
+      propsChangeCounts.set(key, count);
     }
   }
 
