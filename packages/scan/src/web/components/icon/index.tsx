@@ -12,8 +12,8 @@ export interface SVGIconProps {
 }
 
 export const Icon = forwardRef(
-  (props: SVGIconProps, ref: ForwardedRef<SVGSVGElement>) => {
-    const {
+  (
+    {
       size = 15,
       name,
       fill = 'currentColor',
@@ -21,27 +21,24 @@ export const Icon = forwardRef(
       className,
       externalURL = '',
       style,
-    } = props;
-
+    }: SVGIconProps,
+    ref: ForwardedRef<SVGSVGElement>,
+  ) => {
     const width = Array.isArray(size) ? size[0] : size;
     const height = Array.isArray(size) ? size[1] || size[0] : size;
-
-    const attributes = {
-      width: `${width}px`,
-      height: `${height}px`,
-      fill,
-      stroke,
-      className,
-      style,
-    };
 
     const path = `${externalURL}#${name}`;
 
     return (
       <svg
         ref={ref}
-        {...attributes}
+        width={`${width}px`}
+        height={`${height}px`}
+        fill={fill}
+        stroke={stroke}
+        className={className}
         style={{
+          ...style,
           minWidth: `${width}px`,
           maxWidth: `${width}px`,
           minHeight: `${height}px`,
