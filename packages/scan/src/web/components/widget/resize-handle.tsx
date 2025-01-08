@@ -23,10 +23,10 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
   const prevCorner = useRef<Corner | null>(null);
 
   useEffect(() => {
-    if (!refContainer.current) return;
+    const container = refContainer.current;
+    if (!container) return;
 
     const updateVisibility = (isFocused: boolean) => {
-      if (!refContainer.current) return;
       const isVisible =
         isFocused &&
         getHandleVisibility(
@@ -37,23 +37,17 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         );
 
       if (isVisible) {
-        refContainer.current.classList.remove(
+        container.classList.remove(
           'hidden',
           'pointer-events-none',
           'opacity-0',
         );
       } else {
-        refContainer.current.classList.add(
-          'hidden',
-          'pointer-events-none',
-          'opacity-0',
-        );
+        container.classList.add('hidden', 'pointer-events-none', 'opacity-0');
       }
     };
 
     const unsubscribeSignalWidget = signalWidget.subscribe((state) => {
-      if (!refContainer.current) return;
-
       if (
         prevWidth.current !== null &&
         prevHeight.current !== null &&
@@ -74,7 +68,6 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
 
     const unsubscribeStoreInspectState = Store.inspectState.subscribe(
       (state) => {
-        if (!refContainer.current) return;
         updateVisibility(state.kind === 'focused');
       },
     );
