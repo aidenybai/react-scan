@@ -1,11 +1,5 @@
 import { memo } from 'preact/compat';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 
@@ -21,9 +15,13 @@ interface CopyToClipboardProps {
 }
 
 export const CopyToClipboard = memo(
-  (props: CopyToClipboardProps): JSX.Element => {
-    const { text, children, onCopy, className, iconSize = 14 } = props;
-
+  ({
+    text,
+    children,
+    onCopy,
+    className,
+    iconSize = 14,
+  }: CopyToClipboardProps): JSX.Element => {
     const refTimeout = useRef<TTimer>();
     const [isCopied, setIsCopied] = useState(false);
 
@@ -31,7 +29,7 @@ export const CopyToClipboard = memo(
       if (isCopied) {
         refTimeout.current = setTimeout(() => setIsCopied(false), 600);
         return () => {
-          clearTimeout(refTimeout?.current);
+          clearTimeout(refTimeout.current);
         };
       }
     }, [isCopied]);
@@ -54,31 +52,28 @@ export const CopyToClipboard = memo(
       [text, onCopy],
     );
 
-    const ClipboardIcon = useMemo(
-      (): JSX.Element => (
-        <button
-          onClick={copyToClipboard}
-          type="button"
-          className={cn(
-            'z-10',
-            'flex items-center justify-center',
-            'hover:text-dev-pink-400',
-            'transition-colors duration-200 ease-in-out',
-            'cursor-pointer',
-            `size-[${iconSize}px]`,
-            className,
-          )}
-        >
-          <Icon
-            name={`icon-${isCopied ? 'check' : 'copy'}`}
-            size={[iconSize]}
-            className={cn({
-              'text-green-500': isCopied,
-            })}
-          />
-        </button>
-      ),
-      [className, copyToClipboard, iconSize, isCopied],
+    const ClipboardIcon = (
+      <button
+        onClick={copyToClipboard}
+        type="button"
+        className={cn(
+          'z-10',
+          'flex items-center justify-center',
+          'hover:text-dev-pink-400',
+          'transition-colors duration-200 ease-in-out',
+          'cursor-pointer',
+          `size-[${iconSize}px]`,
+          className,
+        )}
+      >
+        <Icon
+          name={`icon-${isCopied ? 'check' : 'copy'}`}
+          size={[iconSize]}
+          className={cn({
+            'text-green-500': isCopied,
+          })}
+        />
+      </button>
     );
 
     if (!children) {
