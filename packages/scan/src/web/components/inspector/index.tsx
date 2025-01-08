@@ -652,6 +652,7 @@ const updateNestedValue = (
     }
 
     if (obj && typeof obj === 'object') {
+      // TODO Megamorphic code
       if (rest.length === 0) {
         return { ...obj, [key]: value };
       }
