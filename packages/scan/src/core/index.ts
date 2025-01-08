@@ -31,9 +31,50 @@ import { createInstrumentation, type Render } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
 import { type getSession } from './monitor/utils';
 
-let toolbarContainer: HTMLElement | null = null;
+let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
+let toolbarContainer: HTMLElement | null = null;
 let audioContext: AudioContext | null = null;
+
+interface RootContainer {
+  rootContainer: HTMLDivElement;
+  shadowRoot: ShadowRoot;
+}
+
+const initRootContainer = (): RootContainer => {
+  if (rootContainer && shadowRoot) {
+    return { rootContainer, shadowRoot };
+  }
+
+  rootContainer = document.createElement('div');
+  rootContainer.id = 'react-scan-root';
+
+  shadowRoot = rootContainer.attachShadow({ mode: 'open' });
+
+  const fragment = document.createDocumentFragment();
+
+  const cssStyles = document.createElement('style');
+  cssStyles.textContent = styles;
+
+  const iconSprite = new DOMParser().parseFromString(
+    ICONS,
+    'image/svg+xml',
+  ).documentElement;
+  shadowRoot.appendChild(iconSprite);
+
+  const root = document.createElement('div');
+  root.id = 'react-scan-toolbar-root';
+  root.className = 'absolute z-2147483647';
+
+  fragment.appendChild(cssStyles);
+  fragment.appendChild(root);
+
+  shadowRoot.appendChild(fragment);
+
+  document.documentElement.appendChild(rootContainer);
+
+  return { rootContainer, shadowRoot };
+};
 
 export interface Options {
   /**
@@ -363,6 +404,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
       toolbarContainer.remove();
     }
 
+    const { shadowRoot } = initRootContainer();
     if (newOptions.showToolbar && shadowRoot) {
       toolbarContainer = createToolbar(shadowRoot);
     }
@@ -564,32 +606,7 @@ export const start = () => {
         once: true,
       });
 
-      const container = document.createElement('div');
-      container.id = 'react-scan-root';
-
-      shadowRoot = container.attachShadow({ mode: 'open' });
-
-      const fragment = document.createDocumentFragment();
-
-      const cssStyles = document.createElement('style');
-      cssStyles.textContent = styles;
-
-      const iconSprite = new DOMParser().parseFromString(
-        ICONS,
-        'image/svg+xml',
-      ).documentElement;
-      shadowRoot.appendChild(iconSprite);
-
-      const root = document.createElement('div');
-      root.id = 'react-scan-toolbar-root';
-      root.className = 'absolute z-2147483647';
-
-      fragment.appendChild(cssStyles);
-      fragment.appendChild(root);
-
-      shadowRoot.appendChild(fragment);
-
-      document.documentElement.appendChild(container);
+      const { shadowRoot } = initRootContainer();
 
       ctx = initReactScanOverlay();
       if (!ctx) return;

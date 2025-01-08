@@ -1,4 +1,5 @@
 import { broadcast, canLoadReactScan, getReactVersion } from '../utils/helpers';
+import { storageGetItem, storageSetItem } from '@pivanov/utils'
 import { createReactNotAvailableUI, toggleReactIsNotAvailable } from './react-is-not-available';
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -15,6 +16,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     createReactNotAvailableUI();
   }
 
+  const isDefaultEnabled = await storageGetItem<boolean>('react-scan', 'enabled');
+  _reactScan.setOptions({
+    enabled: !!isDefaultEnabled,
+    showToolbar: !!isDefaultEnabled
+  });
+
   broadcast.onmessage = async (type, data) => {
     if (type === 'react-scan:toggle-state') {
       broadcast.postMessage('react-scan:react-version', {
@@ -27,6 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           enabled: state,
           showToolbar: state
         });
+        void storageSetItem('react-scan', 'enabled', state);
       } else {
         toggleReactIsNotAvailable();
       }
