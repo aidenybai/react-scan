@@ -161,9 +161,9 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         document.removeEventListener('mouseup', handleMouseUp);
 
         const { dimensions, corner } = signalWidget.value;
-        const { isFullWidth, isFullHeight } = getWindowDimensions();
-        const isCurrentFullWidth = isFullWidth(dimensions.width);
-        const isCurrentFullHeight = isFullHeight(dimensions.height);
+        const windowDims = getWindowDimensions();
+        const isCurrentFullWidth = windowDims.isFullWidth(dimensions.width);
+        const isCurrentFullHeight = windowDims.isFullHeight(dimensions.height);
         const isFullScreen = isCurrentFullWidth && isCurrentFullHeight;
 
         let newCorner = corner;
@@ -227,11 +227,10 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
 
       const containerStyle = container.style;
       const { dimensions, corner } = signalWidget.value;
-      const { maxWidth, maxHeight, isFullWidth, isFullHeight } =
-        getWindowDimensions();
+      const windowDims = getWindowDimensions();
 
-      const isCurrentFullWidth = isFullWidth(dimensions.width);
-      const isCurrentFullHeight = isFullHeight(dimensions.height);
+      const isCurrentFullWidth = windowDims.isFullWidth(dimensions.width);
+      const isCurrentFullHeight = windowDims.isFullHeight(dimensions.height);
       const isFullScreen = isCurrentFullWidth && isCurrentFullHeight;
       const isPartiallyMaximized =
         (isCurrentFullWidth || isCurrentFullHeight) && !isFullScreen;
@@ -247,14 +246,18 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       );
 
       if (position === 'left' || position === 'right') {
-        newWidth = isCurrentFullWidth ? dimensions.width : maxWidth;
+        newWidth = isCurrentFullWidth ? dimensions.width : windowDims.maxWidth;
         if (isPartiallyMaximized) {
-          newWidth = isCurrentFullWidth ? MIN_SIZE.width : maxWidth;
+          newWidth = isCurrentFullWidth ? MIN_SIZE.width : windowDims.maxWidth;
         }
       } else {
-        newHeight = isCurrentFullHeight ? dimensions.height : maxHeight;
+        newHeight = isCurrentFullHeight
+          ? dimensions.height
+          : windowDims.maxHeight;
         if (isPartiallyMaximized) {
-          newHeight = isCurrentFullHeight ? MIN_SIZE.height * 5 : maxHeight;
+          newHeight = isCurrentFullHeight
+            ? MIN_SIZE.height * 5
+            : windowDims.maxHeight;
         }
       }
 
@@ -268,8 +271,8 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
 
       const newPosition = calculatePosition(newCorner, newWidth, newHeight);
       const newDimensions = {
-        isFullWidth: isFullWidth(newWidth),
-        isFullHeight: isFullHeight(newHeight),
+        isFullWidth: windowDims.isFullWidth(newWidth),
+        isFullHeight: windowDims.isFullHeight(newHeight),
         width: newWidth,
         height: newHeight,
         position: newPosition,
