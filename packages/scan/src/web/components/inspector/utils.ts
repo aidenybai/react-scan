@@ -378,7 +378,10 @@ export const getInspectableElements = (
       result.push({
         element: inspectable,
         depth,
-        name: getDisplayName(parentCompositeFiber!.type) ?? 'Unknown',
+        name:
+          (parentCompositeFiber!.type &&
+            getDisplayName(parentCompositeFiber!.type)) ??
+          'Unknown',
       });
     }
 

@@ -151,7 +151,7 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
     if (!fiber) {
       continue;
     }
-    if (getDisplayName(fiber?.type)) {
+    if (fiber.type && getDisplayName(fiber.type)) {
       parentCompositeFiber = fiber;
     }
   }

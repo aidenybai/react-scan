@@ -685,23 +685,15 @@ const PropertyElement = ({
   const { fiber } = inspectorState.value;
 
   const refElement = useRef<HTMLDivElement>(null);
-  const [isExpanded, setIsExpanded] = useState(() => {
-    const currentPath = getPath(
-      getDisplayName(fiber?.type) ?? 'Unknown',
-      section,
-      parentPath ?? '',
-      name,
-    );
-    return EXPANDED_PATHS.has(currentPath);
-  });
-  const [isEditing, setIsEditing] = useState(false);
 
   const currentPath = getPath(
-    getDisplayName(fiber?.type) ?? 'Unknown',
+    (fiber?.type && getDisplayName(fiber.type)) ?? 'Unknown',
     section,
     parentPath ?? '',
     name,
   );
+  const [isExpanded, setIsExpanded] = useState(EXPANDED_PATHS.has(currentPath));
+  const [isEditing, setIsEditing] = useState(false);
 
   const prevValue = lastRendered.get(currentPath);
   const isChanged = prevValue !== undefined && !isEqual(prevValue, value);
