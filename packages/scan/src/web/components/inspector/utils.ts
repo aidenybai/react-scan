@@ -300,28 +300,28 @@ export const getOverrideMethods = (): OverrideMethods => {
 };
 
 const nonVisualTags = new Set([
-  'html',
-  'meta',
-  'script',
-  'link',
-  'style',
-  'head',
-  'title',
-  'noscript',
-  'base',
-  'template',
-  'iframe',
-  'embed',
-  'object',
-  'param',
-  'source',
-  'track',
-  'area',
-  'portal',
-  'slot',
-  'xml',
-  'doctype',
-  'comment',
+  'HTML',
+  'META',
+  'SCRIPT',
+  'LINK',
+  'STYLE',
+  'HEAD',
+  'TITLE',
+  'NOSCRIPT',
+  'BASE',
+  'TEMPLATE',
+  'IFRAME',
+  'EMBED',
+  'OBJECT',
+  'PARAM',
+  'SOURCE',
+  'TRACK',
+  'AREA',
+  'PORTAL',
+  'SLOT',
+  'XML',
+  'DOCTYPE',
+  'COMMENT'
 ]);
 export const findComponentDOMNode = (
   fiber: Fiber,
@@ -331,7 +331,7 @@ export const findComponentDOMNode = (
     const element = fiber.stateNode as HTMLElement;
     if (
       excludeNonVisualTags &&
-      nonVisualTags.has(element.tagName.toLowerCase())
+      nonVisualTags.has(element.tagName)
     ) {
       return null;
     }

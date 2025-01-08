@@ -1,5 +1,4 @@
 import { defineConfig, UserConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
 import webExtension, { readJsonFile } from 'vite-plugin-web-extension';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
@@ -76,7 +75,6 @@ export default defineConfig(({ mode }): UserConfig => {
       minifyIdentifiers: false,
     },
     plugins: [
-      react(),
       tsconfigPaths(),
       webExtension({
         manifest: generateManifest,

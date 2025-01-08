@@ -31,7 +31,6 @@ declare global {
   type TTimer = NodeJS.Timeout;
 
   interface Window {
-    isReactScanExtension?: boolean;
     __REACT_DEVTOOLS_GLOBAL_HOOK__: DevToolsHook;
   }
 

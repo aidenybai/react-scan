@@ -1,13 +1,18 @@
-import { broadcast, canLoadReactScan, getReactVersion } from '../utils/helpers';
-import { storageGetItem, storageSetItem } from '@pivanov/utils'
+import { broadcast, canLoadReactScan, hasReactFiber } from '../utils/helpers';
+import { sleep, storageGetItem, storageSetItem } from '@pivanov/utils'
 import { createReactNotAvailableUI, toggleReactIsNotAvailable } from './react-is-not-available';
 
+
 window.addEventListener('DOMContentLoaded', async () => {
+
   if (!canLoadReactScan) {
     return;
   }
 
-  const isReactAvailable = await getReactVersion();
+  // Wait for React to load
+  await sleep(1000);
+  const isReactAvailable = hasReactFiber();
+
   if (!isReactAvailable) {
     _reactScan.setOptions({
       enabled: false,

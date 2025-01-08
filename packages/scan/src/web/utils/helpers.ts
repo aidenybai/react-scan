@@ -111,6 +111,15 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
     // Silently fail
   }
 };
+export const removeLocalStorage = (storageKey: string): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch {
+    // Silently fail
+  }
+};
 
 export const toggleMultipleClasses = (
   element: HTMLElement,

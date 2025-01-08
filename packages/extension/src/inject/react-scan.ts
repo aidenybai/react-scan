@@ -1,10 +1,13 @@
 import * as reactScan from 'react-scan';
-import { canLoadReactScan, readLocalStorage } from '../utils/helpers';
+import { canLoadReactScan, saveLocalStorage } from '../utils/helpers';
 
-window.isReactScanExtension = true;
+saveLocalStorage('useExtensionWorker', true);
 window.reactScan = reactScan.setOptions;
 globalThis._reactScan = reactScan;
 
 if (canLoadReactScan) {
-  reactScan.scan({ enabled: false, showToolbar: false });
+  reactScan.scan({
+    enabled: true,
+    showToolbar: false,
+  });
 }

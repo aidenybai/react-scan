@@ -1,4 +1,6 @@
 import { SmolWorker } from '~core/worker/smol';
+import { SmolWorkerExtension } from '~core/worker/smol-extension';
+import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
 
 export interface DrawingQueue {
   rect: DOMRect;
@@ -116,4 +118,14 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
   };
 }
 
-export const outlineWorker = new SmolWorker(setupOutlineWorker);
+const createWorker = () => {
+  const useExtensionWorker = readLocalStorage<boolean>('useExtensionWorker');
+  removeLocalStorage('useExtensionWorker');
+
+  if (useExtensionWorker) {
+    return new SmolWorkerExtension(setupOutlineWorker);
+  }
+  return new SmolWorker(setupOutlineWorker);
+};
+
+export const outlineWorker = createWorker();

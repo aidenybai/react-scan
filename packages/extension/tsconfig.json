@@ -22,9 +22,12 @@
       ]
     },
     "types": [
+      "node",
       "chrome"
-    ]
+    ],
   },
-  "include": ["src"],
+  "include": [
+    "src",
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

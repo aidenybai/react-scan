@@ -15,7 +15,6 @@ declare global {
     };
     wrappedJSObject?: any;
     reactScan: typeof reactScan.setOptions;
-    isReactScanExtension: boolean;
   }
 
   interface globalThis {
