@@ -117,7 +117,28 @@ Add the script tag to your `index.html`:
 
 If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
 
-## API Reference
+## CLI
+
+If you don't have a local version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+
+```bash
+npx react-scan@latest http://localhost:3000
+# you can technically scan ANY website on the web:
+# npx react-scan@latest https://react.dev
+```
+
+You can add it to your existing dev process as well. Here's an example for Next.js:
+
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "scan": "next dev & npx react-scan@latest localhost:3000"
+  }
+}
+```
+
+## Programmatic Usage
 
 If you need a programmatic API to debug further, install via NPM instead:
 
@@ -141,23 +162,19 @@ if (typeof window !== 'undefined') {
 
 > Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
 
-If you don't have a localv version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+While some compile-time processes will bring some implicit module imports and would be inserted even before your entry point. It may import `react` before your `react-scan` import statement. An approach to fix this is to import `react-scan` via `webpack.EntryPlugin` like this:
 
-```bash
-npx react-scan@latest http://localhost:3000
-# you can technically scan ANY website on the web:
-# npx react-scan@latest https://react.dev
-```
+**webpack.config.js**
 
-You can add it to your existing dev process as well. Here's an example for Next.js:
+```js
+const webpack = require('webpack');
 
-```json
-{
-  "scripts": {
-    "dev": "next dev",
-    "scan": "next dev & npx react-scan@latest localhost:3000"
-  }
-}
+/** @type {import('webpack').Configuration} */
+module.exports = {
+  plugins: [
+    new webpack.EntryPlugin(__dirname, 'react-scan', { name: undefined }),
+  ],
+};
 ```
 
 ## API Reference
