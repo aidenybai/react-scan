@@ -162,7 +162,7 @@ if (typeof window !== 'undefined') {
 
 > Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
 
-While some compile-time processes will bring some implicit module imports and would be inserted even before your entry point. It may import `react` before your `react-scan` import statement. An approach to fix this is to import `react-scan` via `webpack.EntryPlugin` like this:
+While some compile-time processes may introduce implicit module imports, these imports can occur even before your entry point. For example, react might be imported before your react-scan import statement. One approach to address this is to import react-scan using `webpack.EntryPlugin` like this:
 
 **webpack.config.js**
 
