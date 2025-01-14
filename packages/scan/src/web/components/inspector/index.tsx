@@ -1,5 +1,4 @@
-import { signal } from '@preact/signals';
-import { getDisplayName } from 'bippy';
+import { type Fiber, getDisplayName } from 'bippy';
 import { Component } from 'preact';
 import {
   useCallback,
@@ -8,55 +7,30 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
-import type { Fiber } from 'react-reconciler';
 import { Store } from '~core/index';
 import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
+import { signalIsSettingsOpen } from '~web/state';
 import { cn, tryOrElse } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { flashManager } from './flash-overlay';
 import {
-  getChangedContext,
-  getChangedProps,
-  getChangedState,
-  getContextChangeCount,
-  getCurrentContext,
-  getCurrentProps,
-  getCurrentState,
-  getPropsChangeCount,
-  getStateChangeCount,
+  type SectionData,
+  collectInspectorData,
+  ensureRecord,
+  getCurrentFiberState,
   getStateNames,
-  resetStateTracking,
+  isPromise,
 } from './overlay/utils';
-import { getCompositeComponentFromElement, getOverrideMethods } from './utils';
-
-interface InspectorState {
-  fiber: Fiber | null;
-  changes: {
-    state: Set<string>;
-    props: Set<string>;
-    context: Set<string>;
-  };
-  current: {
-    state: Record<string, unknown>;
-    props: Record<string, unknown>;
-    context: Record<string, unknown>;
-  };
-}
-
-type TypedArray =
-  | Int8Array
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Float32Array
-  | Float64Array
-  | BigInt64Array
-  | BigUint64Array;
+import {
+  TIMELINE_MAX_UPDATES,
+  type TimelineUpdate,
+  globalInspectorState,
+  inspectorState,
+  timelineState,
+} from './states';
+import { getCompositeFiberFromElement, getOverrideMethods } from './utils';
 
 type InspectableValue =
   | Record<string, unknown>
@@ -79,7 +53,7 @@ type InspectableValue =
 
 interface PropertyElementProps {
   name: string;
-  value: unknown;
+  value: unknown | ValueMetadata;
   section: string;
   level: number;
   parentPath?: string;
@@ -99,28 +73,16 @@ interface EditableValueProps {
   onCancel: () => void;
 }
 
-type IterableEntry = [key: string | number, value: unknown];
-
-const EXPANDED_PATHS = new Set<string>();
-const lastRendered = new Map<string, unknown>();
-let lastInspectedFiber: Fiber | null = null;
-
-const THROTTLE_MS = 16;
-const DEBOUNCE_MS = 150;
-
-const inspectorState = signal<InspectorState>({
-  fiber: null,
-  changes: {
-    state: new Set(),
-    props: new Set(),
-    context: new Set(),
-  },
-  current: {
-    state: {},
-    props: {},
-    context: {},
-  },
-});
+interface ValueMetadata {
+  type: string;
+  displayValue: string;
+  value?: unknown;
+  size?: number;
+  length?: number;
+  byteLength?: number;
+  entries?: Record<string, ValueMetadata>;
+  items?: Array<ValueMetadata>;
+}
 
 class InspectorErrorBoundary extends Component {
   state = { hasError: false };
@@ -165,13 +127,6 @@ const isExpandable = (value: unknown): value is InspectableValue => {
   return Object.keys(value).length > 0;
 };
 
-const isPromise = (value: unknown): value is Promise<unknown> => {
-  return (
-    !!value &&
-    (value instanceof Promise || (typeof value === 'object' && 'then' in value))
-  );
-};
-
 const isEditableValue = (value: unknown, parentPath?: string): boolean => {
   if (value == null) return true;
 
@@ -186,7 +141,7 @@ const isEditableValue = (value: unknown, parentPath?: string): boolean => {
     let currentPath = '';
     for (const part of parts) {
       currentPath = currentPath ? `${currentPath}.${part}` : part;
-      const obj = lastRendered.get(currentPath);
+      const obj = globalInspectorState.lastRendered.get(currentPath);
       if (
         obj instanceof DataView ||
         obj instanceof ArrayBuffer ||
@@ -197,22 +152,21 @@ const isEditableValue = (value: unknown, parentPath?: string): boolean => {
     }
   }
 
-  switch (typeof value) {
-    case 'string':
-    case 'number':
-    case 'boolean':
-    case 'bigint':
+  switch (value.constructor) {
+    case Date:
+    case RegExp:
+    case Error:
       return true;
-    case 'object':
-      if (
-        value instanceof Date ||
-        value instanceof RegExp ||
-        value instanceof Error
-      ) {
-        return true;
-      }
     default:
-      return false;
+      switch (typeof value) {
+        case 'string':
+        case 'number':
+        case 'boolean':
+        case 'bigint':
+          return true;
+        default:
+          return false;
+      }
   }
 };
 
@@ -231,13 +185,6 @@ const getPath = (
   }
 
   return `${componentName}.${section}.${key}`;
-};
-
-const getArrayLength = (obj: ArrayBufferView): number => {
-  if (obj instanceof DataView) {
-    return obj.byteLength;
-  }
-  return (obj as TypedArray).length;
 };
 
 const sanitizeString = (value: string): string => {
@@ -259,62 +206,8 @@ const sanitizeErrorMessage = (error: string): string => {
 };
 
 const formatValue = (value: unknown): string => {
-  switch (typeof value) {
-    case 'undefined':
-      return 'undefined';
-    case 'string':
-      return `"${value}"`;
-    case 'number':
-    case 'boolean':
-    case 'bigint':
-      return String(value);
-    case 'symbol':
-      return value.toString();
-    case 'object': {
-      if (!value) {
-        return 'null';
-      }
-      switch (true) {
-        case value instanceof Map:
-          return `Map(${value.size})`;
-        case value instanceof Set:
-          return `Set(${value.size})`;
-        case value instanceof Date:
-          return value
-            .toLocaleString(undefined, {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-              hour12: false,
-            })
-            .replace(/[/,-]/g, '.');
-        case value instanceof RegExp:
-          return 'RegExp';
-        case value instanceof Error:
-          return 'Error';
-        case value instanceof ArrayBuffer:
-          return `ArrayBuffer(${value.byteLength})`;
-        case value instanceof DataView:
-          return `DataView(${value.byteLength})`;
-        case ArrayBuffer.isView(value):
-          return `${value.constructor.name}(${getArrayLength(value)})`;
-        case Array.isArray(value):
-          return `Array(${value.length})`;
-        case isPromise(value):
-          return 'Promise';
-        default: {
-          const keys = Object.keys(value);
-          if (keys.length <= 5) return `{${keys.join(', ')}}`;
-          return `{${keys.slice(0, 5).join(', ')}, ...${keys.length - 5}}`;
-        }
-      }
-    }
-    default:
-      return typeof value;
-  }
+  const metadata = ensureRecord(value);
+  return metadata.displayValue as string;
 };
 
 const formatForClipboard = (value: unknown): string => {
@@ -322,6 +215,24 @@ const formatForClipboard = (value: unknown): string => {
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
     if (isPromise(value)) return 'Promise';
+
+    if (typeof value === 'function') {
+      const fnStr = value.toString();
+      try {
+        const formatted = fnStr
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .replace(/{\s+/g, '{\n  ') // Add newline after {
+          .replace(/;\s+/g, ';\n  ') // Add newline after ;
+          .replace(/}\s*$/g, '\n}') // Add newline before final }
+          .replace(/\(\s+/g, '(') // Remove space after (
+          .replace(/\s+\)/g, ')') // Remove space before )
+          .replace(/,\s+/g, ', '); // Normalize comma spacing
+
+        return formatted;
+      } catch {
+        return fnStr;
+      }
+    }
 
     switch (true) {
       case value instanceof Date:
@@ -380,8 +291,6 @@ const parseArrayValue = (value: string): Array<unknown> => {
 
     if (char === '\\') {
       escapeNext = true;
-      current += char;
-      continue;
     }
 
     if (char === '"') {
@@ -535,8 +444,10 @@ const formatInitialValue = (value: unknown): string => {
 };
 
 const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [editValue, setEditValue] = useState(() => {
+  const refInput = useRef<HTMLInputElement>(null);
+  const [editValue, setEditValue] = useState('');
+
+  useEffect(() => {
     let initialValue = '';
     try {
       if (value instanceof Date) {
@@ -554,22 +465,21 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
       } else {
         initialValue = formatInitialValue(value);
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn(sanitizeErrorMessage(String(error)));
+    } catch {
       initialValue = String(value);
     }
-    return sanitizeString(initialValue);
-  });
+    const sanitizedValue = sanitizeString(initialValue);
+    setEditValue(sanitizedValue);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-
-    if (typeof value === 'string') {
-      inputRef.current?.setSelectionRange(1, inputRef.current.value.length - 1);
-    } else {
-      inputRef.current?.select();
-    }
+    requestAnimationFrame(() => {
+      if (!refInput.current) return;
+      refInput.current.focus();
+      if (typeof value === 'string') {
+        refInput.current.setSelectionRange(1, sanitizedValue.length - 1);
+      } else {
+        refInput.current.select();
+      }
+    });
   }, [value]);
 
   const handleChange = useCallback((e: Event) => {
@@ -601,13 +511,14 @@ const EditableValue = ({ value, onSave, onCancel }: EditableValueProps) => {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       onCancel();
     }
   };
 
   return (
     <input
-      ref={inputRef}
+      ref={refInput}
       type={value instanceof Date ? 'datetime-local' : 'text'}
       className="react-scan-input flex-1"
       value={editValue}
@@ -683,7 +594,6 @@ const PropertyElement = ({
   allowEditing = true,
 }: PropertyElementProps) => {
   const { fiber } = inspectorState.value;
-
   const refElement = useRef<HTMLDivElement>(null);
 
   const currentPath = getPath(
@@ -692,62 +602,96 @@ const PropertyElement = ({
     parentPath ?? '',
     name,
   );
-  const [isExpanded, setIsExpanded] = useState(EXPANDED_PATHS.has(currentPath));
+  const [isExpanded, setIsExpanded] = useState(
+    globalInspectorState.expandedPaths.has(currentPath),
+  );
   const [isEditing, setIsEditing] = useState(false);
 
-  const prevValue = lastRendered.get(currentPath);
-  const isChanged = prevValue !== undefined && !isEqual(prevValue, value);
+  const prevValue = globalInspectorState.lastRendered.get(currentPath);
+  const isChanged = !isEqual(prevValue, value);
 
-  const renderNestedProperties = useCallback(
-    (obj: InspectableValue) => {
-      let entries: Array<IterableEntry>;
-
-      if (obj instanceof ArrayBuffer) {
-        const view = new Uint8Array(obj);
-        entries = Array.from(view).map((v, i) => [i, v]);
-      } else if (obj instanceof DataView) {
-        const view = new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength);
-        entries = Array.from(view).map((v, i) => [i, v]);
-      } else if (ArrayBuffer.isView(obj)) {
-        if (obj instanceof BigInt64Array || obj instanceof BigUint64Array) {
-          entries = Array.from({ length: obj.length }, (_, i) => [i, obj[i]]);
-        } else {
-          entries = Array.from(obj as ArrayLike<number>).map((v, i) => [i, v]);
-        }
-      } else if (obj instanceof Map) {
-        entries = Array.from(obj.entries()).map(([k, v]) => [String(k), v]);
-      } else if (obj instanceof Set) {
-        entries = Array.from(obj).map((v, i) => [i, v]);
-      } else if (Array.isArray(obj)) {
-        entries = obj.map((value, index) => [index, value]);
-      } else {
-        entries = Object.entries(obj);
+  useEffect(() => {
+    return () => {
+      if (refElement.current) {
+        flashManager.cleanup(refElement.current);
       }
+    };
+  }, []);
 
-      const canEditChildren = !(
-        obj instanceof DataView ||
-        obj instanceof ArrayBuffer ||
-        ArrayBuffer.isView(obj)
-      );
+  useEffect(() => {
+    globalInspectorState.lastRendered.set(currentPath, value);
 
-      return entries.map(([key, value]) => (
-        <PropertyElement
-          key={String(key)}
-          name={String(key)}
-          value={value}
-          section={section}
-          level={level + 1}
-          parentPath={currentPath}
-          objectPathMap={objectPathMap}
-          changedKeys={changedKeys}
-          allowEditing={canEditChildren}
-        />
-      ));
-    },
-    [section, level, currentPath, objectPathMap, changedKeys],
-  );
+    const isFirstRender = !globalInspectorState.lastRendered.has(currentPath);
+    const shouldFlash = isChanged && refElement.current && !isFirstRender;
 
-  const valuePreview = useMemo(() => formatValue(value), [value]);
+    if (shouldFlash && refElement.current && level === 0) {
+      flashManager.create(refElement.current);
+    }
+  }, [value, isChanged, currentPath, level]);
+
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prevState: boolean) => {
+      const newIsExpanded = !prevState;
+      if (newIsExpanded) {
+        globalInspectorState.expandedPaths.add(currentPath);
+      } else {
+        globalInspectorState.expandedPaths.delete(currentPath);
+      }
+      return newIsExpanded;
+    });
+  }, [currentPath]);
+
+  const valuePreview = useMemo(() => {
+    if (typeof value === 'object' && value !== null) {
+      if ('displayValue' in value) {
+        return String(value.displayValue);
+      }
+    }
+    return formatValue(value);
+  }, [value]);
+
+  const clipboardText = useMemo(() => {
+    if (typeof value === 'object' && value !== null) {
+      if ('value' in value) {
+        return String(formatForClipboard(value.value));
+      }
+      if ('displayValue' in value) {
+        return String(value.displayValue);
+      }
+    }
+    return String(formatForClipboard(value));
+  }, [value]);
+
+  const isExpandableValue = useMemo(() => {
+    if (!value || typeof value !== 'object') return false;
+
+    if ('type' in value) {
+      const metadata = value as ValueMetadata;
+      switch (metadata.type) {
+        case 'array':
+        case 'Map':
+        case 'Set':
+          return (metadata.size ?? metadata.length ?? 0) > 0;
+        case 'object':
+          return (metadata.size ?? 0) > 0;
+        case 'ArrayBuffer':
+        case 'DataView':
+          return (metadata.byteLength ?? 0) > 0;
+        case 'circular':
+        case 'promise':
+        case 'function':
+        case 'error':
+          return false;
+        default:
+          if ('entries' in metadata || 'items' in metadata) {
+            return true;
+          }
+          return false;
+      }
+    }
+
+    return isExpandable(value);
+  }, [value]);
 
   const { overrideProps, overrideHookState } = getOverrideMethods();
   const canEdit = useMemo(() => {
@@ -761,57 +705,27 @@ const PropertyElement = ({
     );
   }, [section, overrideProps, overrideHookState, allowEditing, name]);
 
-  useEffect(() => {
-    lastRendered.set(currentPath, value);
+  const isBadRender = useMemo(() => {
+    const isFirstRender = !globalInspectorState.lastRendered.has(currentPath);
 
-    const isSameComponentType = lastInspectedFiber?.type === fiber?.type;
-    const isFirstRender = !lastRendered.has(currentPath);
-    const shouldFlash =
-      isChanged &&
-      refElement.current &&
-      prevValue !== undefined &&
-      !isSameComponentType &&
-      !isFirstRender;
+    if (isFirstRender) {
+      if (typeof value === 'function') {
+        return true;
+      }
 
-    if (shouldFlash && refElement.current) {
-      flashManager.create(refElement.current);
+      if (typeof value !== 'object') {
+        return false;
+      }
     }
 
-    return () => {
-      if (refElement.current) {
-        flashManager.cleanup(refElement.current);
-      }
-    };
-  }, [value, isChanged, currentPath, prevValue, fiber?.type]);
-
-  const shouldShowWarning = useMemo(() => {
     const shouldShowChange =
-      !lastRendered.has(currentPath) ||
-      !isEqual(lastRendered.get(currentPath), value);
+      !isFirstRender ||
+      !isEqual(globalInspectorState.lastRendered.get(currentPath), value);
 
-    const isBadRender =
-      level === 0 &&
-      shouldShowChange &&
-      typeof value === 'object' &&
-      value !== null &&
-      !isPromise(value);
+    const isBadRender = level === 0 && shouldShowChange && !isPromise(value);
 
     return isBadRender;
-  }, [level, currentPath, value]);
-
-  const clipboardText = useMemo(() => formatForClipboard(value), [value]);
-
-  const handleToggleExpand = useCallback(() => {
-    setIsExpanded((state) => {
-      const newIsExpanded = !state;
-      if (newIsExpanded) {
-        EXPANDED_PATHS.add(currentPath);
-      } else {
-        EXPANDED_PATHS.delete(currentPath);
-      }
-      return newIsExpanded;
-    });
-  }, [currentPath]);
+  }, [currentPath, level, value]);
 
   const handleEdit = useCallback(() => {
     if (canEdit) {
@@ -865,9 +779,9 @@ const PropertyElement = ({
             const hookId =
               namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
 
-            const currentState = getCurrentState(fiber);
+            const currentState = inspectorState.value.fiberState.current;
             if (!currentState || !(baseStateKey in currentState)) {
-              // eslint-disable-next-line no-console
+              // biome-ignore lint/suspicious/noConsole: Intended debug output
               console.warn(sanitizeErrorMessage('Invalid state key'));
               return;
             }
@@ -893,6 +807,118 @@ const PropertyElement = ({
     return 'type' in value && value.type === 'circular';
   }, [value]);
 
+  const renderNestedProperties = useCallback(
+    (obj: unknown): preact.ComponentChildren => {
+      if (!obj || typeof obj !== 'object') return null;
+
+      if ('type' in obj) {
+        const metadata = obj as ValueMetadata;
+        if ('entries' in metadata && metadata.entries) {
+          const entries = Object.entries(metadata.entries);
+          if (entries.length === 0) return null;
+
+          return (
+            <div className="react-scan-nested">
+              {entries.map(([key, val]) => (
+                <PropertyElement
+                  key={`${currentPath}-entry-${key}`}
+                  name={key}
+                  value={val}
+                  section={section}
+                  level={level + 1}
+                  parentPath={currentPath}
+                  objectPathMap={objectPathMap}
+                  changedKeys={changedKeys}
+                  allowEditing={allowEditing}
+                />
+              ))}
+            </div>
+          );
+        }
+
+        if ('items' in metadata && Array.isArray(metadata.items)) {
+          if (metadata.items.length === 0) return null;
+          return (
+            <div className="react-scan-nested">
+              {metadata.items.map((item, i) => {
+                const itemKey = `${currentPath}-item-${item.type}-${i}`;
+                return (
+                  <PropertyElement
+                    key={itemKey}
+                    name={`${i}`}
+                    value={item}
+                    section={section}
+                    level={level + 1}
+                    parentPath={currentPath}
+                    objectPathMap={objectPathMap}
+                    changedKeys={changedKeys}
+                    allowEditing={allowEditing}
+                  />
+                );
+              })}
+            </div>
+          );
+        }
+        return null;
+      }
+
+      let entries: Array<[key: string | number, value: unknown]>;
+
+      if (obj instanceof ArrayBuffer) {
+        const view = new Uint8Array(obj);
+        entries = Array.from(view).map((v, i) => [i, v]);
+      } else if (obj instanceof DataView) {
+        const view = new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength);
+        entries = Array.from(view).map((v, i) => [i, v]);
+      } else if (ArrayBuffer.isView(obj)) {
+        if (obj instanceof BigInt64Array || obj instanceof BigUint64Array) {
+          entries = Array.from({ length: obj.length }, (_, i) => [i, obj[i]]);
+        } else {
+          const typedArray = obj as unknown as ArrayLike<number>;
+          entries = Array.from(typedArray).map((v, i) => [i, v]);
+        }
+      } else if (obj instanceof Map) {
+        entries = Array.from(obj.entries()).map(([k, v]) => [String(k), v]);
+      } else if (obj instanceof Set) {
+        entries = Array.from(obj).map((v, i) => [i, v]);
+      } else if (Array.isArray(obj)) {
+        entries = obj.map((value, index) => [`${index}`, value]);
+      } else {
+        entries = Object.entries(obj);
+      }
+
+      if (entries.length === 0) return null;
+
+      const canEditChildren = !(
+        obj instanceof DataView ||
+        obj instanceof ArrayBuffer ||
+        ArrayBuffer.isView(obj)
+      );
+
+      return (
+        <div className="react-scan-nested">
+          {entries.map(([key, val]) => {
+            const itemKey = `${currentPath}-${typeof key === 'number' ? `item-${key}` : key}`;
+            return (
+              <PropertyElement
+                key={itemKey}
+                name={String(key)}
+                value={val}
+                section={section}
+                level={level + 1}
+                parentPath={currentPath}
+                objectPathMap={objectPathMap}
+                changedKeys={changedKeys}
+                allowEditing={canEditChildren}
+              />
+            );
+          })}
+        </div>
+      );
+    },
+    [section, level, currentPath, objectPathMap, changedKeys, allowEditing],
+  );
+
   if (checkCircularInValue) {
     return (
       <div className="react-scan-property">
@@ -909,11 +935,10 @@ const PropertyElement = ({
   return (
     <div ref={refElement} className="react-scan-property">
       <div className="react-scan-property-content">
-        {isExpandable(value) && (
+        {isExpandableValue && (
           <button
             type="button"
-            onClick={() => handleToggleExpand()}
-            onKeyDown={(e) => e.key === 'Enter' && handleToggleExpand()}
+            onClick={handleToggleExpand}
             className="react-scan-arrow"
           >
             <Icon
@@ -925,26 +950,55 @@ const PropertyElement = ({
             />
           </button>
         )}
+
         <div
           className={cn('group', 'react-scan-preview-line', {
             'react-scan-highlight': isChanged,
           })}
         >
-          {shouldShowWarning && (
-            <Icon name="icon-alert" className="text-yellow-500" size={12} />
-          )}
+          {isBadRender &&
+            !changedKeys.has(`${name}:memoized`) &&
+            !changedKeys.has(`${name}:unmemoized`) && (
+              <Icon
+                name="icon-bell-ring"
+                className="text-yellow-500"
+                size={14}
+              />
+            )}
+          {
+            changedKeys.has(`${name}:unmemoized`) && (
+              <Icon
+                name="icon-flame"
+                className="text-red-500"
+                size={14}
+              />
+            )
+          }
+          {
+            changedKeys.has(`${name}:memoized`) && (
+              <Icon
+                name="icon-shield"
+                className="text-green-600"
+                size={14}
+              />
+            )
+          }
           <div className="react-scan-key">{name}:</div>
-          {isEditing && isEditableValue(value, parentPath) ? (
-            <EditableValue
-              value={value}
-              onSave={handleSave}
-              onCancel={() => setIsEditing(false)}
-            />
-          ) : (
-            <button type="button" className="truncate" onClick={handleEdit}>
-              {valuePreview}
-            </button>
-          )}
+          {
+            isEditing && isEditableValue(value, parentPath)
+              ? (
+                <EditableValue
+                  value={value}
+                  onSave={handleSave}
+                  onCancel={() => setIsEditing(false)}
+                />
+              )
+              : (
+                <button type="button" className="truncate" onClick={handleEdit}>
+                  {valuePreview}
+                </button>
+              )
+          }
           <CopyToClipboard
             text={clipboardText}
             className="opacity-0 transition-opacity duration-150 group-hover:opacity-100"
@@ -952,48 +1006,55 @@ const PropertyElement = ({
             {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
           </CopyToClipboard>
         </div>
-        {isExpandable(value) && isExpanded && (
-          <div className="react-scan-nested">
-            {renderNestedProperties(value)}
-          </div>
-        )}
+        <div
+          className={cn(
+            'react-scan-expandable',
+            {
+              'react-scan-expanded': isExpanded,
+            },
+          )}
+        >
+          {
+            isExpandableValue && (
+              <div className="react-scan-nested">
+                {renderNestedProperties(value)}
+              </div>
+            )
+          }
+        </div>
       </div>
     </div>
   );
 };
 
 const PropertySection = ({ title, section }: PropertySectionProps) => {
-  const { current, changes } = inspectorState.value;
+  const { fiberProps, fiberState, fiberContext } = inspectorState.value;
 
   const pathMap = useMemo(() => new WeakMap<object, Set<string>>(), []);
-  const changedKeys = useMemo(() => {
+  const { currentData, changedKeys } = useMemo(() => {
     switch (section) {
       case 'props':
-        return changes.props;
+        return {
+          currentData: fiberProps.current,
+          changedKeys: fiberProps.changes,
+        };
       case 'state':
-        return changes.state;
+        return {
+          currentData: fiberState.current,
+          changedKeys: fiberState.changes,
+        };
       case 'context':
-        return changes.context;
+        return {
+          currentData: fiberContext.current,
+          changedKeys: fiberContext.changes,
+        };
       default:
-        return new Set<string>();
+        return {
+          currentData: {},
+          changedKeys: new Set<string>(),
+        };
     }
-  }, [section, changes]);
-
-  const currentData = useMemo(() => {
-    let result: Record<string, unknown> | undefined;
-    switch (section) {
-      case 'props':
-        result = current.props;
-        break;
-      case 'state':
-        result = current.state;
-        break;
-      case 'context':
-        result = current.context;
-        break;
-    }
-    return result || {};
-  }, [section, current.props, current.state, current.context]);
+  }, [section, fiberState, fiberProps, fiberContext]);
 
   if (!currentData || Object.keys(currentData).length === 0) {
     return null;
@@ -1002,50 +1063,109 @@ const PropertySection = ({ title, section }: PropertySectionProps) => {
   return (
     <div className="react-scan-section">
       <div>{title}</div>
-      {Object.entries(currentData).map(([key, value]) => (
-        <PropertyElement
-          key={key}
-          name={key}
-          value={value}
-          section={section}
-          level={0}
-          objectPathMap={pathMap}
-          changedKeys={changedKeys}
-        />
-      ))}
+      {
+        Object.entries(currentData).map(([key, value]) => (
+          <PropertyElement
+            key={key}
+            name={key}
+            value={value}
+            section={section}
+            level={0}
+            objectPathMap={pathMap}
+            changedKeys={changedKeys}
+          />
+        ))
+      }
     </div>
   );
 };
 
 const WhatChanged = constant(() => {
+  const refPrevFiber = useRef<Fiber | null>(null);
   const [isExpanded, setIsExpanded] = useState(Store.wasDetailsOpen.value);
-  const [shouldShow, setShouldShow] = useState(false);
-  const { changes } = inspectorState.value;
-  const timerRef = useRef<TTimer>();
 
-  const hasChanges =
-    changes.state.size > 0 ||
-    changes.props.size > 0 ||
-    changes.context.size > 0;
+  const { fiber, fiberProps, fiberState, fiberContext } = inspectorState.value;
 
-  useEffect(() => {
-    if (hasChanges) {
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setShouldShow(true);
-      }, 32); // Two frames delay
-    } else {
-      setShouldShow(false);
+  const renderSection = useCallback((
+    sectionName: 'state' | 'props' | 'context',
+    items: SectionData,
+  ) => {
+    const elements = Array.from(items.changes)
+      .reduce<JSX.Element[]>((acc, key) => {
+        if (sectionName === 'props') {
+            const isUnmemoized = key.endsWith(':unmemoized');
+            if (isUnmemoized) {
+              acc.push(
+                <li key={key}>
+                  <div>
+                    {key.split(':')[0]}{' '}
+                    <Icon
+                      name="icon-flame"
+                      className="text-white shadow-sm mr-2"
+                      size={14}
+                    />
+                  </div>
+                </li>,
+              );
+              return acc;
+            }
+          }
+
+          const count = items.changesCounts.get(key) ?? 0;
+          if (count > 0) {
+            const displayKey =
+              sectionName === 'context' ? key.replace(/^context\./, '') : key;
+
+            acc.push(
+              <li key={key}>
+                {displayKey} ×{count}
+              </li>,
+            );
+          }
+
+        return acc;
+      }, []);
+
+      if (!elements.length) return null;
+
+      return (
+        <>
+          <div>
+            {sectionName.charAt(0).toUpperCase() + sectionName.slice(1)}:
+          </div>
+          <ul>{elements}</ul>
+        </>
+      );
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  const { hasChanges, sections } = useMemo(() => {
+    if (!refPrevFiber.current || refPrevFiber.current.type !== fiber?.type) {
+      refPrevFiber.current = fiber;
+      return {
+        hasChanges: false,
+        sections: [],
+      };
     }
 
-    return () => {
-      clearTimeout(timerRef.current);
-    };
-  }, [hasChanges]);
+    const hasChanges = !!(
+      fiberProps.changes.size > 0 ||
+      fiberState.changes.size > 0 ||
+      fiberContext.changes.size > 0
+    );
 
-  if (!hasChanges || !shouldShow) {
-    return null;
-  }
+    const sections = [
+      renderSection('props', fiberProps),
+      renderSection('state', fiberState),
+      renderSection('context', fiberContext),
+    ];
+
+
+    return {
+      hasChanges,
+      sections,
+    };
+  }, [fiberState, fiberProps, fiberContext]);
 
   const handleToggle = useCallback(() => {
     setIsExpanded((state) => {
@@ -1055,197 +1175,233 @@ const WhatChanged = constant(() => {
   }, []);
 
   return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      onKeyDown={(e) => e.key === 'Enter' && handleToggle()}
-      className="flex w-full flex-col bg-yellow-600 px-1 py-2 text-left text-white"
+    <div
+      className={cn('react-scan-expandable', {
+        'react-scan-expanded': hasChanges,
+      })}
     >
-      <div className="flex items-center">
-        <span className="flex w-8 items-center justify-center">
-          <Icon
-            name="icon-chevron-right"
-            size={12}
-            className={cn({
-              'rotate-90': isExpanded,
-            })}
-          />
-        </span>
-        What changed?
-      </div>
-      <div
-        className={cn('react-scan-expandable pl-8 flex-1', {
-          'react-scan-expanded': isExpanded,
-        })}
-      >
-        <div className="overflow-hidden">
-          {changes.state.size > 0 && (
-            <>
-              <div>State:</div>
-              <ul style="list-style-type:disc;padding-left:20px">
-                {Array.from(changes.state)
-                  .map((key) => {
-                    const count = getStateChangeCount(key);
-                    if (count > 0) {
-                      return (
-                        <li key={key}>
-                          {key} ×{count}
-                        </li>
-                      );
-                    }
-                    return null;
-                  })
-                  .filter(Boolean)}
-              </ul>
-            </>
+      {hasChanges && (
+        <div
+          onClick={handleToggle}
+          onKeyDown={(e) => e.key === 'Enter' && handleToggle()}
+          className={cn(
+            'flex flex-col',
+            'px-1 py-2',
+            'text-left text-white',
+            'bg-yellow-600',
+            'overflow-hidden',
+            'opacity-0',
+            'transition-all duration-300 delay-300',
+            {
+              'opacity-100 delay-0': hasChanges,
+            },
           )}
-          {changes.props.size > 0 && (
-            <>
-              <div>Props:</div>
-              <ul style="list-style-type:disc;padding-left:20px">
-                {Array.from(changes.props)
-                  .map((key) => {
-                    const count = getPropsChangeCount(key);
-                    if (count > 0) {
-                      return (
-                        <li key={key}>
-                          {key} ×{count}
-                        </li>
-                      );
-                    }
-                    return null;
-                  })
-                  .filter(Boolean)}
-              </ul>
-            </>
-          )}
-          {changes.context.size > 0 && (
-            <>
-              <div>Context:</div>
-              <ul style="list-style-type:disc;padding-left:20px">
-                {Array.from(changes.context)
-                  .map((key) => {
-                    const count = getContextChangeCount(key);
-                    if (count > 0) {
-                      return (
-                        <li key={key}>
-                          {key.replace(/^context\./, '')} ×{count}
-                        </li>
-                      );
-                    }
-                    return null;
-                  })
-                  .filter(Boolean)}
-              </ul>
-            </>
-          )}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="flex w-8 items-center justify-center">
+                <Icon
+                  name="icon-chevron-right"
+                  size={12}
+                  className={cn({
+                    'rotate-90': isExpanded,
+                  })}
+                />
+              </span>
+              What changed?
+            </div>
+          </div>
+          <div
+            className={cn(
+              'react-scan-what-changed',
+              'react-scan-expandable pl-8 flex-1',
+              {
+                'react-scan-expanded pt-2': isExpanded,
+              },
+            )}
+          >
+            <div className="overflow-hidden">{sections}</div>
+          </div>
         </div>
-      </div>
-    </button>
+      )}
+    </div>
   );
 });
 
 export const Inspector = constant(() => {
+  const refLastInspectedFiber = useRef<Fiber | null>(null);
+  const refPendingUpdates = useRef<Set<Fiber>>(new Set<Fiber>());
+
+  const isSettingsOpen = signalIsSettingsOpen.value;
+
   useEffect(() => {
-    let rafId: ReturnType<typeof requestAnimationFrame>;
-    let debounceTimer: ReturnType<typeof setTimeout>;
-    let lastUpdateTime = 0;
-    let isProcessing = false;
-    let pendingFiber: Fiber | null = null;
 
-    const updateInspectorState = (fiber: Fiber) => {
-      const isNewComponent =
-        !lastInspectedFiber || lastInspectedFiber.type !== fiber.type;
-      if (isNewComponent) {
-        resetStateTracking();
-      }
+    const processUpdate = () => {
+      if (refPendingUpdates.current.size === 0) return;
 
-      inspectorState.value = {
-        fiber,
-        changes: {
-          props: getChangedProps(fiber),
-          state: getChangedState(fiber),
-          context: getChangedContext(fiber),
-        },
-        current: {
-          state: getCurrentState(fiber),
-          props: getCurrentProps(fiber),
-          context: getCurrentContext(fiber),
-        },
-      };
+      const fiber = Array.from(refPendingUpdates.current)[0];
+      refPendingUpdates.current.clear();
 
-      lastInspectedFiber = fiber;
-    };
+      const timeline = timelineState.value;
+      if (timeline.isReplaying) {
+        const update = timeline.updates[timeline.currentIndex];
+        refLastInspectedFiber.current = update.fiber;
 
-    const processFiberUpdate = (fiber: Fiber) => {
-      const now = Date.now();
-      const timeSinceLastUpdate = now - lastUpdateTime;
-
-      clearTimeout(debounceTimer);
-      cancelAnimationFrame(rafId);
-
-      if (timeSinceLastUpdate < THROTTLE_MS) {
-        pendingFiber = fiber;
-        debounceTimer = setTimeout(() => {
-          rafId = requestAnimationFrame(() => {
-            if (pendingFiber) {
-              isProcessing = true;
-              updateInspectorState(pendingFiber);
-              isProcessing = false;
-              pendingFiber = null;
-              lastUpdateTime = Date.now();
-            }
-          });
-        }, DEBOUNCE_MS);
+        inspectorState.value = {
+          fiber: update.fiber,
+          fiberProps: update.props,
+          fiberState: update.state,
+          fiberContext: update.context,
+        };
+        timelineState.value.isReplaying = false;
         return;
       }
 
-      rafId = requestAnimationFrame(() => {
-        isProcessing = true;
-        updateInspectorState(fiber);
-        isProcessing = false;
-        lastUpdateTime = now;
-      });
+      refLastInspectedFiber.current = fiber;
+      inspectorState.value = {
+        fiber,
+        ...collectInspectorData(fiber),
+      };
+
+      if (refPendingUpdates.current.size > 0) {
+        queueMicrotask(processUpdate);
+      }
+    };
+
+    const scheduleUpdate = (fiber: Fiber) => {
+      refPendingUpdates.current.add(fiber);
+      queueMicrotask(processUpdate);
     };
 
     const unSubState = Store.inspectState.subscribe((state) => {
-      if (state.kind !== 'focused' || !state.focusedDomElement) return;
+      if (state.kind !== 'focused' || !state.focusedDomElement) {
+        refPendingUpdates.current.clear();
+        refLastInspectedFiber.current = null;
+        globalInspectorState.cleanup();
+        return;
+      }
 
-      const { parentCompositeFiber } = getCompositeComponentFromElement(
+
+      if (state.kind === 'focused') {
+        signalIsSettingsOpen.value = false;
+      }
+
+      const { parentCompositeFiber } = getCompositeFiberFromElement(
         state.focusedDomElement,
       );
       if (!parentCompositeFiber) return;
 
-      processFiberUpdate(parentCompositeFiber);
+      if (refLastInspectedFiber.current?.type !== parentCompositeFiber.type) {
+        refPendingUpdates.current.clear();
+        globalInspectorState.cleanup();
+        scheduleUpdate(parentCompositeFiber);
+      }
+
     });
 
-    const unSubReport = Store.lastReportTime.subscribe(() => {
-      if (isProcessing) return;
-
+    const unSubLastReportTime = Store.lastReportTime.subscribe(() => {
       const inspectState = Store.inspectState.value;
-      if (inspectState.kind !== 'focused') return;
+      if (inspectState.kind !== 'focused' || !inspectState.focusedDomElement) {
+        refPendingUpdates.current.clear();
+        refLastInspectedFiber.current = null;
+        return;
+      }
 
       const element = inspectState.focusedDomElement;
-      const { parentCompositeFiber } =
-        getCompositeComponentFromElement(element);
+      const { parentCompositeFiber } = getCompositeFiberFromElement(element);
 
-      if (parentCompositeFiber && lastInspectedFiber) {
-        processFiberUpdate(parentCompositeFiber);
+      if (!parentCompositeFiber) {
+        Store.inspectState.value = {
+          kind: 'inspect-off',
+        };
+        return;
       }
+
+      scheduleUpdate(parentCompositeFiber);
+
+      requestAnimationFrame(() => {
+        if (!element.isConnected) {
+          refPendingUpdates.current.clear();
+          refLastInspectedFiber.current = null;
+          globalInspectorState.cleanup();
+          Store.inspectState.value = {
+            kind: 'inspecting',
+            hoveredDomElement: null,
+          };
+        }
+      });
+    });
+
+    const unSubInspectorState = inspectorState.subscribe((state) => {
+      if (!state.fiber || !refLastInspectedFiber.current) return;
+      if (state.fiber.type !== refLastInspectedFiber.current.type) return;
+      if (timelineState.value.isReplaying) return;
+
+      const update: TimelineUpdate = {
+        fiber: state.fiber,
+        timestamp: Date.now(),
+        props: state.fiberProps,
+        state: state.fiberState,
+        context: state.fiberContext,
+        stateNames: getStateNames(state.fiber),
+      };
+
+      const { updates, currentIndex, totalUpdates } = timelineState.value;
+      let newUpdates: TimelineUpdate[];
+
+      if (updates.length >= TIMELINE_MAX_UPDATES) {
+        if (currentIndex < updates.length - 1) {
+          newUpdates = [...updates.slice(0, currentIndex + 1), update].slice(-TIMELINE_MAX_UPDATES);
+        } else {
+          newUpdates = [...updates.slice(1), update];
+        }
+      } else {
+        if (currentIndex < updates.length - 1) {
+          newUpdates = [...updates.slice(0, currentIndex + 1), update];
+        } else {
+          newUpdates = [...updates, update];
+        }
+      }
+
+      const newIndex = newUpdates.length - 1;
+      const newTotal = currentIndex < updates.length - 1
+        ? totalUpdates - (updates.length - currentIndex - 1) + 1
+        : totalUpdates + 1;
+
+      timelineState.value = {
+        ...timelineState.value,
+        updates: newUpdates,
+        currentIndex: newIndex,
+        totalUpdates: newTotal,
+      };
     });
 
     return () => {
       unSubState();
-      unSubReport();
-      clearTimeout(debounceTimer);
-      cancelAnimationFrame(rafId);
-      pendingFiber = null;
+      unSubLastReportTime();
+      unSubInspectorState();
+      refPendingUpdates.current.clear();
+      globalInspectorState.cleanup();
     };
   }, []);
 
   return (
     <InspectorErrorBoundary>
-      <div className="react-scan-inspector">
+      <div
+        className={cn(
+          'react-scan-inspector',
+          'opacity-0',
+          'max-h-0',
+          'overflow-hidden',
+          'transition-opacity duration-150 delay-0',
+          'pointer-events-none',
+          {
+            'opacity-100 delay-300 pointer-events-auto max-h-["auto"]':
+              !isSettingsOpen,
+          },
+        )}
+      >
+        {/* <Timeline /> */}
         <WhatChanged />
         <PropertySection title="Props" section="props" />
         <PropertySection title="State" section="state" />
@@ -1256,38 +1412,74 @@ export const Inspector = constant(() => {
 });
 
 export const replayComponent = async (fiber: Fiber): Promise<void> => {
-  try {
-    const { overrideProps, overrideHookState } = getOverrideMethods();
-    if (!overrideProps || !overrideHookState || !fiber) return;
+  const { overrideProps, overrideHookState } = getOverrideMethods();
+  if (!overrideProps || !overrideHookState || !fiber) return;
 
-    const currentProps = fiber.memoizedProps || {};
-    for (const key of Object.keys(currentProps)) {
-      try {
-        overrideProps(fiber, [key], currentProps[key]);
-      } catch {
-        // Silently ignore prop override errors
-      }
+  const currentProps = fiber.memoizedProps || {};
+  const propKeys = Object.keys(currentProps).filter((key) => {
+    const value = currentProps[key];
+    if (Array.isArray(value) || typeof value === 'string') {
+      return !Number.isInteger(Number(key)) && key !== 'length';
     }
+    return true;
+  });
 
-    const state = getCurrentState(fiber) ?? {};
-    for (const key of Object.keys(state)) {
+  for (const key of propKeys) {
+    try {
+      overrideProps(fiber, [key], currentProps[key]);
+    } catch {}
+  }
+
+  const currentState = getCurrentFiberState(fiber);
+  if (currentState) {
+    const stateNames = getStateNames(fiber);
+
+    // First, handle named state hooks
+    for (const [key, value] of Object.entries(currentState)) {
       try {
-        const stateNames = getStateNames(fiber);
         const namedStateIndex = stateNames.indexOf(key);
-        const hookId =
-          namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
-        overrideHookState(fiber, hookId, [], state[key]);
-      } catch {
-        // Silently ignore state override errors
-      }
+        if (namedStateIndex !== -1) {
+          const hookId = namedStateIndex.toString();
+          // For arrays and objects, we need to clone to trigger updates
+          const stateValue = Array.isArray(value)
+            ? [...value]
+            : typeof value === 'object' && value !== null
+              ? { ...value }
+              : value;
+          overrideHookState(fiber, hookId, [], stateValue);
+        }
+      } catch {}
     }
 
-    let child = fiber.child;
-    while (child) {
-      await replayComponent(child);
-      child = child.sibling;
+    // Then handle unnamed state hooks
+    let hookIndex = 0;
+    let currentHook = fiber.memoizedState;
+    while (currentHook !== null) {
+      try {
+        const hookId = hookIndex.toString();
+        const value = currentHook.memoizedState;
+
+        // Only update if this hook isn't already handled by named states
+        if (!stateNames.includes(hookId)) {
+          // For arrays and objects, we need to clone to trigger updates
+          const stateValue = Array.isArray(value)
+            ? [...value]
+            : typeof value === 'object' && value !== null
+              ? { ...value }
+              : value;
+          overrideHookState(fiber, hookId, [], stateValue);
+        }
+      } catch {}
+
+      currentHook = currentHook.next as typeof currentHook;
+      hookIndex++;
     }
-  } catch {
-    // Silently ignore replay errors
+  }
+
+  // Recursively handle children
+  let child = fiber.child;
+  while (child) {
+    await replayComponent(child);
+    child = child.sibling;
   }
 };

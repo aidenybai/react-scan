@@ -1,14 +1,16 @@
-import { useCallback, useEffect } from 'preact/hooks';
-import { ReactScanInternals, Store, setOptions } from '~core/index';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
+import { ReactScanInternals, Store } from '~core/index';
 import { Icon } from '~web/components/icon';
 import FpsMeter from '~web/components/widget/fps-meter';
 import { Arrows } from '~web/components/widget/toolbar/arrows';
+import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 
 export const Toolbar = constant(() => {
-  const inspectState = Store.inspectState;
+  const refSettingsButton = useRef<HTMLButtonElement>(null);
 
+  const inspectState = Store.inspectState;
   const isInspectActive = inspectState.value.kind === 'inspecting';
   const isInspectFocused = inspectState.value.kind === 'focused';
 
@@ -44,13 +46,12 @@ export const Toolbar = constant(() => {
     }
   }, []);
 
-  const onSoundToggle = useCallback(() => {
-    const newSoundState = !ReactScanInternals.options.value.playSound;
-    setOptions({ playSound: newSoundState });
+  const onToggleSettings = useCallback(() => {
+    signalIsSettingsOpen.value = !signalIsSettingsOpen.value;
   }, []);
 
   useEffect(() => {
-    const unsubscribe = Store.inspectState.subscribe((state) => {
+    const unSubState = Store.inspectState.subscribe((state) => {
       if (state.kind === 'uninitialized') {
         Store.inspectState.value = {
           kind: 'inspect-off',
@@ -58,8 +59,13 @@ export const Toolbar = constant(() => {
       }
     });
 
+    const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
+      refSettingsButton.current?.classList.toggle('text-inspect', state);
+    });
+
     return () => {
-      unsubscribe();
+      unSubState();
+      unSubSettings();
     };
   }, []);
 
@@ -68,21 +74,27 @@ export const Toolbar = constant(() => {
 
   if (isInspectActive) {
     inspectIcon = <Icon name="icon-inspect" />;
-    inspectColor = 'rgba(142, 97, 227, 1)';
+    inspectColor = '#8e61e3';
   } else if (isInspectFocused) {
     inspectIcon = <Icon name="icon-focus" />;
-    inspectColor = 'rgba(142, 97, 227, 1)';
+    inspectColor = '#8e61e3';
   } else {
     inspectIcon = <Icon name="icon-inspect" />;
     inspectColor = '#999';
   }
 
   return (
-    <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
+    <div
+      className={cn(
+        'flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden',
+        'border-t-1 border-white/10',
+      )}
+    >
       <button
+        type="button"
         title="Inspect element"
         onClick={onToggleInspect}
-        className="flex items-center justify-center px-3"
+        className="button flex items-center justify-center px-3"
         style={{ color: inspectColor }}
       >
         {inspectIcon}
@@ -90,42 +102,40 @@ export const Toolbar = constant(() => {
 
       <button
         id="react-scan-power"
+        type="button"
         title={
           ReactScanInternals.instrumentation?.isPaused.value ? 'Start' : 'Stop'
         }
         onClick={onToggleActive}
-        className={cn('flex items-center justify-center px-3', {
+        className={cn(
+          'button',
+          'flex items-center justify-center px-3',
+          {
           'text-white': !ReactScanInternals.instrumentation?.isPaused.value,
           'text-[#999]': ReactScanInternals.instrumentation?.isPaused.value,
-        })}
+          })
+        }
       >
         <Icon
           name={`icon-${ReactScanInternals.instrumentation?.isPaused.value ? 'eye-off' : 'eye'}`}
         />
       </button>
       <button
-        id="react-scan-sound-toggle"
-        onClick={onSoundToggle}
-        title={
-          ReactScanInternals.options.value.playSound ? 'Sound On' : 'Sound Off'
-        }
-        className={cn('flex items-center justify-center px-3', {
-          'text-white': ReactScanInternals.options.value.playSound,
-          'text-[#999]': !ReactScanInternals.options.value.playSound,
-        })}
+        ref={refSettingsButton}
+        type="button"
+        title="Settings"
+        onClick={onToggleSettings}
+        className="button flex items-center justify-center px-3"
       >
-        <Icon
-          name={`icon-${ReactScanInternals.options.value.playSound ? 'volume-on' : 'volume-off'}`}
-        />
+        <Icon name="icon-settings" />
       </button>
 
       <Arrows />
       <div
         className={cn(
-          'flex items-center justify-center whitespace-nowrap py-1.5 px-2 text-sm text-white',
-          {
-            'ml-auto': !isInspectFocused,
-          },
+          'flex items-center justify-center',
+          'py-1.5 px-2',
+          'whitespace-nowrap text-sm text-white',
         )}
       >
         react-scan
@@ -134,5 +144,3 @@ export const Toolbar = constant(() => {
     </div>
   );
 });
-
-export default Toolbar;

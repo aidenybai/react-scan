@@ -1,12 +1,13 @@
-import { getDisplayName } from 'bippy';
+import { type Fiber, getDisplayName } from 'bippy';
 import { useEffect, useRef } from 'preact/hooks';
-import type { Fiber } from 'react-reconciler';
 import { ReactScanInternals, Store } from '~core/index';
 import {
+  type States,
   findComponentDOMNode,
   getCompositeComponentFromElement,
-  type States,
+  nonVisualTags,
 } from '~web/components/inspector/utils';
+import { signalIsSettingsOpen } from '~web/state';
 import { cn, throttle } from '~web/utils/helpers';
 import { lerp } from '~web/utils/lerp';
 
@@ -284,11 +285,26 @@ export const ScanOverlay = () => {
       getCompositeComponentFromElement(overlayElement);
     if (!parentCompositeFiber || !targetRect) return;
 
+    if (
+      targetRect.width <= 0 ||
+      targetRect.height <= 0 ||
+      targetRect.left >= window.innerWidth ||
+      targetRect.top >= window.innerHeight ||
+      (targetRect.left + targetRect.width <= 0) ||
+      (targetRect.top + targetRect.height <= 0) ||
+      (targetRect.left === 0 && targetRect.top === 0)
+    ) {
+      handleNonHoverableArea();
+      return;
+    }
+
     setupOverlayAnimation(canvas, ctx, targetRect, kind, parentCompositeFiber);
   };
 
   const unsubscribeAll = () => {
-    refCleanupMap.current.forEach((cleanup) => cleanup?.());
+    for (const cleanup of refCleanupMap.current.values()) {
+      cleanup?.();
+    }
   };
 
   const cleanupCanvas = (canvas: HTMLCanvasElement) => {
@@ -311,8 +327,9 @@ export const ScanOverlay = () => {
         !refCanvas.current ||
         e.propertyName !== 'opacity' ||
         !refIsFadingOut.current
-      )
+      ) {
         return;
+      }
       refCanvas.current.removeEventListener(
         'transitionend',
         handleTransitionEnd,
@@ -320,7 +337,6 @@ export const ScanOverlay = () => {
       cleanupCanvas(refCanvas.current);
       onComplete?.();
     };
-
     const existingListener = refCleanupMap.current.get('fade-out');
     if (existingListener) {
       existingListener();
@@ -337,21 +353,31 @@ export const ScanOverlay = () => {
 
     refIsFadingOut.current = true;
     refCanvas.current.classList.remove('fade-in');
-    refCanvas.current.classList.add('fade-out');
+    requestAnimationFrame(() => {
+      refCanvas.current?.classList.add('fade-out');
+    });
   };
 
   const startFadeIn = () => {
     if (!refCanvas.current) return;
-    refCanvas.current.classList.remove('fade-out');
-    refCanvas.current.classList.add('fade-in');
     refIsFadingOut.current = false;
+    refCanvas.current.classList.remove('fade-out');
+    requestAnimationFrame(() => {
+      refCanvas.current?.classList.add('fade-in');
+    });
   };
 
   const handleHoverableElement = (componentElement: HTMLElement) => {
     if (componentElement === refLastHoveredElement.current) return;
 
-    startFadeIn();
     refLastHoveredElement.current = componentElement;
+
+    if (nonVisualTags.has(componentElement.tagName)) {
+      startFadeOut();
+    } else {
+      startFadeIn();
+    }
+
     Store.inspectState.value = {
       kind: 'inspecting',
       hoveredDomElement: componentElement,
@@ -359,16 +385,25 @@ export const ScanOverlay = () => {
   };
 
   const handleNonHoverableArea = () => {
-    if (!refCurrentRect.current || !refCanvas.current || refIsFadingOut.current)
+    if (
+      !refCurrentRect.current ||
+      !refCanvas.current ||
+      refIsFadingOut.current
+    ) {
       return;
+    }
+
     startFadeOut();
   };
 
-  const handleMouseMove = throttle((e: MouseEvent) => {
+  const handleMouseMove = throttle((e?: MouseEvent) => {
     const state = Store.inspectState.peek();
     if (state.kind !== 'inspecting' || !refEventCatcher.current) return;
 
-    const element = document.elementFromPoint(e.clientX, e.clientY);
+    refEventCatcher.current.style.pointerEvents = 'none';
+    const element = document.elementFromPoint(e?.clientX ?? 0, e?.clientY ?? 0);
+    refEventCatcher.current.style.removeProperty('pointer-events');
+
     clearTimeout(refTimeout.current);
 
     if (element && element !== refCanvas.current) {
@@ -417,6 +452,14 @@ export const ScanOverlay = () => {
   };
 
   const handleElementClick = (e: MouseEvent) => {
+    const tagName = refLastHoveredElement.current?.tagName;
+    if (tagName && nonVisualTags.has(tagName)) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
     const element =
       refLastHoveredElement.current ??
       document.elementFromPoint(e.clientX, e.clientY);
@@ -455,35 +498,45 @@ export const ScanOverlay = () => {
     }
 
     if (state.kind === 'inspecting') {
-      e.preventDefault();
-      e.stopPropagation();
       handleElementClick(e);
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return;
+
     const state = Store.inspectState.peek();
     const canvas = refCanvas.current;
-    if (!canvas || e.key !== 'Escape') return;
+    if (!canvas) return;
 
-    switch (state.kind) {
-      case 'focused': {
-        startFadeIn();
-        refCurrentRect.current = null;
-        refLastHoveredElement.current = state.focusedDomElement;
-        Store.inspectState.value = {
-          kind: 'inspecting',
-          hoveredDomElement: state.focusedDomElement,
-        };
-        break;
-      }
-      case 'inspecting': {
-        startFadeOut(() => {
+    if (document.activeElement?.id === 'react-scan-root') {
+      return;
+    }
+
+    if (state.kind === 'focused' || state.kind === 'inspecting') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      switch (state.kind) {
+        case 'focused': {
+          startFadeIn();
+          refCurrentRect.current = null;
+          refLastHoveredElement.current = state.focusedDomElement;
           Store.inspectState.value = {
-            kind: 'inspect-off',
+            kind: 'inspecting',
+            hoveredDomElement: state.focusedDomElement,
           };
-        });
-        break;
+          break;
+        }
+        case 'inspecting': {
+          startFadeOut(() => {
+            signalIsSettingsOpen.value = false;
+            Store.inspectState.value = {
+              kind: 'inspect-off',
+            };
+          });
+          break;
+        }
       }
     }
   };
@@ -496,10 +549,8 @@ export const ScanOverlay = () => {
     refCleanupMap.current.get(state.kind)?.();
 
     if (refEventCatcher.current) {
-      if (state.kind === 'inspecting') {
+      if (state.kind !== 'inspecting') {
         refEventCatcher.current.style.pointerEvents = 'none';
-      } else {
-        refEventCatcher.current.style.removeProperty('pointer-events');
       }
     }
 
@@ -511,6 +562,7 @@ export const ScanOverlay = () => {
 
     switch (state.kind) {
       case 'inspect-off':
+        startFadeOut();
         return;
 
       case 'inspecting':
@@ -590,6 +642,7 @@ export const ScanOverlay = () => {
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     const canvas = refCanvas.current;
     if (!canvas) return;
@@ -612,7 +665,7 @@ export const ScanOverlay = () => {
       capture: true,
     });
     document.addEventListener('click', handleClick, { capture: true });
-    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
 
     return () => {
       unsubscribeAll();
@@ -626,7 +679,7 @@ export const ScanOverlay = () => {
       document.removeEventListener('pointerdown', handlePointerDown, {
         capture: true,
       });
-      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, { capture: true });
 
       if (refRafId.current) {
         cancelAnimationFrame(refRafId.current);
@@ -642,8 +695,10 @@ export const ScanOverlay = () => {
         className={cn(
           'fixed inset-0 w-screen h-screen',
           'z-[214748366]',
-          'pointer-events-none',
         )}
+        style={{
+          pointerEvents: 'none',
+        }}
       />
       <canvas
         ref={refCanvas}

@@ -1,5 +1,6 @@
-import { signal, type Signal } from '@preact/signals';
+import { type Signal, signal } from '@preact/signals';
 import {
+  type Fiber,
   detectReactBuildType,
   getDisplayName,
   getNearestHostFiber,
@@ -10,26 +11,26 @@ import {
   isInstrumentationActive,
   traverseFiber,
 } from 'bippy';
-import type * as React from 'react';
-import type { Fiber } from 'react-reconciler';
+import type { ComponentType } from 'preact';
+import type { ReactNode } from 'preact/compat';
 import {
+  type RenderData,
   aggregateChanges,
   aggregateRender,
   updateFiberRenderData,
-  type RenderData,
 } from 'src/core/utils';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
-import { type States } from '~web/components/inspector/utils';
+import type { States } from '~web/components/inspector/utils';
 import { initReactScanOverlay } from '~web/overlay';
 import { createToolbar } from '~web/toolbar';
 import { playGeigerClickSound } from '~web/utils/geiger';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { log, logIntro } from '~web/utils/log';
-import { flushOutlines, type Outline } from '~web/utils/outline';
-import { createInstrumentation, type Render } from './instrumentation';
+import { type Outline, flushOutlines } from '~web/utils/outline';
+import { type Render, createInstrumentation } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
-import { type getSession } from './monitor/utils';
+import type { getSession } from './monitor/utils';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -233,7 +234,7 @@ export type OutlineKey = `${string}-${string}`;
 
 export interface Internals {
   instrumentation: ReturnType<typeof createInstrumentation> | null;
-  componentAllowList: WeakMap<React.ComponentType<any>, Options> | null;
+  componentAllowList: WeakMap<ComponentType<unknown>, Options> | null;
   options: Signal<Options>;
   scheduledOutlines: Map<Fiber, Outline>; // we clear t,his nearly immediately, so no concern of mem leak on the fiber
   // outlines at the same coordinates always get merged together, so we pre-compute the merge ahead of time when aggregating in activeOutlines
@@ -289,12 +290,18 @@ type LocalStorageOptions = Omit<
   | 'onPaintFinish'
 >;
 
+function isOptionKey(key: string): key is keyof Options {
+  return key in ReactScanInternals.options.value;
+}
+
 const validateOptions = (options: Partial<Options>): Partial<Options> => {
   const errors: Array<string> = [];
   const validOptions: Partial<Options> = {};
 
   for (const key in options) {
-    const value = options[key as keyof Options];
+    if (!isOptionKey(key)) continue;
+
+    const value = options[key];
     switch (key) {
       case 'enabled':
       case 'includeChildren':
@@ -307,7 +314,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
         if (typeof value !== 'boolean') {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
-          (validOptions as any)[key] = value;
+          validOptions[key] = value;
         }
         break;
       case 'renderCountThreshold':
@@ -315,7 +322,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
         if (typeof value !== 'number' || value < 0) {
           errors.push(`- ${key} must be a non-negative number. Got "${value}"`);
         } else {
-          (validOptions as any)[key] = value;
+          validOptions[key] = value as number;
         }
         break;
       case 'animationSpeed':
@@ -324,18 +331,39 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
             `- Invalid animation speed "${value}". Using default "fast"`,
           );
         } else {
-          (validOptions as any)[key] = value;
+          validOptions[key] = value as 'slow' | 'fast' | 'off';
         }
         break;
       case 'onCommitStart':
+        if (typeof value !== 'function') {
+          errors.push(`- ${key} must be a function. Got "${value}"`);
+        } else {
+          validOptions.onCommitStart = value as () => void;
+        }
+        break;
       case 'onCommitFinish':
+        if (typeof value !== 'function') {
+          errors.push(`- ${key} must be a function. Got "${value}"`);
+        } else {
+          validOptions.onCommitFinish = value as () => void;
+        }
+        break;
       case 'onRender':
+        if (typeof value !== 'function') {
+          errors.push(`- ${key} must be a function. Got "${value}"`);
+        } else {
+          validOptions.onRender = value as (
+            fiber: Fiber,
+            renders: Array<Render>,
+          ) => void;
+        }
+        break;
       case 'onPaintStart':
       case 'onPaintFinish':
         if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
-          (validOptions as any)[key] = value;
+          validOptions[key] = value as (outlines: Array<Outline>) => void;
         }
         break;
       case 'trackUnnecessaryRenders': {
@@ -343,7 +371,6 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
           typeof value === 'boolean' ? value : false;
         break;
       }
-
       case 'smoothlyAnimateOutlines': {
         validOptions.smoothlyAnimateOutlines =
           typeof value === 'boolean' ? value : false;
@@ -355,14 +382,14 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
   }
 
   if (errors.length > 0) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
   }
 
   return validOptions;
 };
 
-export const getReport = (type?: React.ComponentType<any>) => {
+export const getReport = (type?: ComponentType<unknown>) => {
   if (type) {
     for (const reportData of Array.from(Store.legacyReportData.values())) {
       if (reportData.type === type) {
@@ -426,8 +453,8 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
 
   // More efficient null checks and Math.max
   const existingCount = Math.max(
-    (currentData && currentData.count) || 0,
-    (alternateData && alternateData.count) || 0,
+    currentData?.count ?? 0,
+    alternateData?.count ?? 0,
   );
 
   // Create single shared object for both fibers
@@ -436,7 +463,7 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
     time: selfTime || 0,
     renders,
     displayName,
-    type: getType(fiber.type) || null,
+    type: (getType(fiber.type) as ComponentType<unknown> | null) || null,
   };
 
   // Store in both fibers
@@ -465,7 +492,8 @@ export const reportRender = (fiber: Fiber, renders: Array<Render>) => {
 };
 
 export const isValidFiber = (fiber: Fiber) => {
-  if (ignoredProps.has(fiber.memoizedProps)) {
+  const props = fiber.memoizedProps;
+  if (typeof props === 'object' && props !== null && ignoredProps.has(props)) {
     return false;
   }
 
@@ -488,10 +516,12 @@ export const isValidFiber = (fiber: Fiber) => {
   return true;
 };
 
-let flushInterval: ReturnType<typeof setInterval>;
+let flushInterval: ReturnType<typeof setInterval> | null = null;
 const startFlushOutlineInterval = () => {
-  clearInterval(flushInterval);
-  setInterval(() => {
+  if (flushInterval) {
+    clearInterval(flushInterval);
+  }
+  flushInterval = setInterval(() => {
     requestAnimationFrame(() => {
       flushOutlines();
     });
@@ -510,8 +540,10 @@ const updateScheduledOutlines = (fiber: Fiber, renders: Array<Render>) => {
       continue;
 
     if (ReactScanInternals.scheduledOutlines.has(fiber)) {
-      const existingOutline = ReactScanInternals.scheduledOutlines.get(fiber)!;
-      aggregateRender(render, existingOutline.aggregatedRender);
+      const existingOutline = ReactScanInternals.scheduledOutlines.get(fiber);
+      if (existingOutline) {
+        aggregateRender(render, existingOutline.aggregatedRender);
+      }
     } else {
       ReactScanInternals.scheduledOutlines.set(fiber, {
         domNode: domFiber.stateNode,
@@ -626,7 +658,7 @@ export const start = () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
     onError(error) {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.error('[React Scan] Error instrumenting:', error);
     },
     isValidFiber,
@@ -693,7 +725,7 @@ export const start = () => {
   if (!Store.monitor.value && !isUsedInBrowserExtension) {
     setTimeout(() => {
       if (isInstrumentationActive()) return;
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.error(
         '[React Scan] Failed to load. Must import React Scan before React runs.',
       );
@@ -701,8 +733,8 @@ export const start = () => {
   }
 };
 
-export const withScan = <T>(
-  component: React.ComponentType<T>,
+export const withScan = <T extends object>(
+  component: ComponentType<T>,
   options: Options = {},
 ) => {
   setOptions(options);
@@ -712,12 +744,12 @@ export const withScan = <T>(
     return component;
   if (!componentAllowList) {
     ReactScanInternals.componentAllowList = new WeakMap<
-      React.ComponentType<any>,
+      ComponentType<unknown>,
       Options
     >();
   }
   if (componentAllowList) {
-    componentAllowList.set(component, { ...options });
+    componentAllowList.set(component as ComponentType<unknown>, { ...options });
   }
 
   start();
@@ -752,15 +784,13 @@ export const onRender = (
   };
 };
 
+
 export const ignoredProps = new WeakSet<
-  Exclude<
-    React.ReactNode,
-    undefined | null | string | number | boolean | bigint
-  >
+  Exclude<ReactNode, undefined | null | string | number | boolean | bigint>
 >();
 
-export const ignoreScan = (node: React.ReactNode) => {
-  if (typeof node === 'object' && node) {
+export const ignoreScan = (node: ReactNode) => {
+  if (node && typeof node === 'object') {
     ignoredProps.add(node);
   }
 };

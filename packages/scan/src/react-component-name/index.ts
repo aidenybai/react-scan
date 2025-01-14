@@ -1,9 +1,8 @@
- 
+import { transformAsync } from '@babel/core';
+import type { NodePath, PluginObj } from '@babel/core';
+import * as t from '@babel/types';
 import { createFilter } from '@rollup/pluginutils';
 import { createUnplugin } from 'unplugin';
-import { transformAsync } from '@babel/core';
-import type { PluginObj } from '@babel/core';
-import * as t from '@babel/types';
 
 export interface Options {
   include?: Array<string | RegExp>;
@@ -20,7 +19,7 @@ const createBabelPlugin = (): PluginObj => {
     );
   }
 
-  function isReactComponent(path: any): boolean {
+  function isReactComponent(path: NodePath<t.Node> | { node: t.Node }): boolean {
     if (!path?.node) return false;
 
     // Arrow functions and function declarations
@@ -84,7 +83,7 @@ const createBabelPlugin = (): PluginObj => {
       if (t.isCallExpression(callee)) {
         return path.node.arguments.some(
           (arg: t.Node) =>
-            (t.isIdentifier(arg) && (/^[A-Z]/.exec(arg.name))) ??
+            (t.isIdentifier(arg) && /^[A-Z]/.exec(arg.name)) ??
             isReactComponent({ node: arg }),
         );
       }
@@ -129,7 +128,7 @@ const createBabelPlugin = (): PluginObj => {
           path.traverse({
             'ClassDeclaration|FunctionDeclaration|VariableDeclarator'(path) {
               let componentName: string | undefined;
-              let componentPath: any;
+              let componentPath: NodePath<t.Node> | { node: t.Node } | null = null;
 
               if (t.isClassDeclaration(path.node) && path.node.id?.name) {
                 componentName = path.node.id.name;
@@ -145,13 +144,15 @@ const createBabelPlugin = (): PluginObj => {
                 t.isIdentifier(path.node.id)
               ) {
                 componentName = path.node.id.name;
-                componentPath = path.get('init');
+                const init = path.get('init');
+                componentPath = Array.isArray(init) ? init[0] : init;
               }
 
               if (
                 componentName &&
                 isComponentName(componentName) &&
                 !hasDisplayNameAssignment.has(componentName) &&
+                componentPath &&
                 isReactComponent(componentPath)
               ) {
                 const displayNameAssignment = t.tryStatement(
@@ -223,7 +224,7 @@ export const reactComponentNamePlugin = createUnplugin<Options>(
 
           return result ? { code: result.code ?? '', map: result.map } : null;
         } catch (error) {
-          // eslint-disable-next-line no-console
+          // biome-ignore lint/suspicious/noConsole: Intended debug output
           console.error('Error processing file:', id, error);
           return null;
         }

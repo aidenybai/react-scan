@@ -1,10 +1,5 @@
 import { MIN_SIZE, SAFE_AREA } from '../../constants';
-import {
-  type Corner,
-  type Position,
-  type ResizeHandleProps,
-  type Size,
-} from './types';
+import type { Corner, Position, ResizeHandleProps, Size } from './types';
 
 class WindowDimensions {
   maxWidth: number;
@@ -131,6 +126,9 @@ export const calculatePosition = (
       y = windowHeight - effectiveHeight - SAFE_AREA;
       break;
     case 'top-left':
+      x = SAFE_AREA;
+      y = SAFE_AREA;
+      break;
     default:
       x = SAFE_AREA;
       y = SAFE_AREA;

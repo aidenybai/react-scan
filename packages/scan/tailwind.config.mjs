@@ -7,17 +7,27 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        mono: ['Menlo', 'Consolas', 'Monaco', 'Liberation Mono', 'Lucida Console', 'monospace'],
+        mono: [
+          'Menlo',
+          'Consolas',
+          'Monaco',
+          'Liberation Mono',
+          'Lucida Console',
+          'monospace',
+        ],
+      },
+      colors: {
+        inspect: '#8e61e3',
       },
       fontSize: {
-        'xxs': '0.5rem',
+        xxs: '0.5rem',
       },
       cursor: {
         'nwse-resize': 'nwse-resize',
         'nesw-resize': 'nesw-resize',
         'ns-resize': 'ns-resize',
         'ew-resize': 'ew-resize',
-        'move': 'move',
+        move: 'move',
       },
       keyframes: {
         fadeIn: {
@@ -43,8 +53,8 @@ export default {
       animation: {
         'fade-in': 'fadeIn ease-in forwards',
         'fade-out': 'fadeOut ease-out forwards',
-        'rotate': 'rotate linear infinite',
-        'shake': 'shake 0.4s ease-in-out forwards',
+        rotate: 'rotate linear infinite',
+        shake: 'shake 0.4s ease-in-out forwards',
       },
       zIndex: {
         100: 100,
@@ -59,7 +69,7 @@ export default {
     'cursor-nesw-resize',
     'cursor-ns-resize',
     'cursor-ew-resize',
-    'cursor-move'
+    'cursor-move',
   ],
   plugins: [
     ({ addUtilities }) => {

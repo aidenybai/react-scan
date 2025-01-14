@@ -1,3 +1,10 @@
-import 'bippy';
+import { installRDTHook } from 'bippy';
 
-export {};
+// Initialize React DevTools hook
+const init = () => {
+  installRDTHook();
+};
+
+init();
+
+export { init };

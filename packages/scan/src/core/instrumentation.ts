@@ -1,5 +1,7 @@
-import { signal, type Signal } from '@preact/signals';
+import { type Signal, signal } from '@preact/signals';
 import {
+  type Fiber,
+  type FiberRoot,
   createFiberVisitor,
   didFiberCommit,
   getDisplayName,
@@ -13,7 +15,6 @@ import {
   traverseState,
 } from 'bippy';
 import { isValidElement } from 'preact';
-import type { Fiber, FiberRoot } from 'react-reconciler';
 import { isEqual } from '~core/utils';
 import { getChangedPropsDetailed } from '~web/components/inspector/utils';
 import {
@@ -53,7 +54,7 @@ export const isElementVisible = (el: Element) => {
   return (
     style.display !== 'none' &&
     style.visibility !== 'hidden' &&
-    (style as any).contentVisibility !== 'hidden' &&
+    style.contentVisibility !== 'hidden' &&
     style.opacity !== '0'
   );
 };
@@ -81,6 +82,7 @@ export const isElementInViewport = (
   return isVisible && rect.width && rect.height;
 };
 
+// biome-ignore lint/suspicious/noConstEnum: Using const enum for better performance since it's inlined at compile time and removed from the JS output
 export const enum ChangeReason {
   Props = 0b001,
   State = 0b010,
@@ -90,7 +92,7 @@ export const enum ChangeReason {
 export interface RenderChange {
   type: ChangeReason;
   name: string;
-  value: any;
+  value: unknown;
   prevValue?: unknown;
   nextValue?: unknown;
   unstable?: boolean;
@@ -139,7 +141,10 @@ export function fastSerialize(value: unknown, depth = 0): string {
   if (value === null) return 'null';
 
   if (cache.has(value)) {
-    return cache.get(value)!;
+    const cached = cache.get(value);
+    if (cached !== undefined) {
+      return cached;
+    }
   }
 
   if (Array.isArray(value)) {
@@ -163,7 +168,7 @@ export function fastSerialize(value: unknown, depth = 0): string {
     return str;
   }
 
-  const ctor = (value as any).constructor;
+  const ctor = value && typeof value === 'object' ? value.constructor : undefined;
   if (ctor && typeof ctor === 'function' && ctor.name) {
     const str = `${ctor.name}{…}`;
     cache.set(value, str);
@@ -219,9 +224,10 @@ interface StateFiber {
 
 function getStateChangesTraversal(
   this: Array<RenderChange>,
-  prevState: StateFiber,
-  nextState: StateFiber,
+  prevState: StateFiber | null | undefined,
+  nextState: StateFiber | null | undefined,
 ): void {
+  if (!prevState || !nextState) return;
   if (isEqual(prevState.memoizedState, nextState.memoizedState)) return;
   const change: RenderChange = {
     type: ChangeReason.State,
@@ -247,26 +253,27 @@ interface ContextFiber {
 
 function getContextChangesTraversal(
   this: Array<RenderChange>,
-  prevContext: ContextFiber,
-  nextContext: ContextFiber,
+  nextValue: ContextFiber | null | undefined,
+  prevValue: ContextFiber | null | undefined,
 ): void {
-  const prevValue = prevContext.memoizedValue;
-  const nextValue = nextContext.memoizedValue;
+  if (!nextValue || !prevValue) return;
+  const prevMemoizedValue = prevValue.memoizedValue;
+  const nextMemoizedValue = nextValue.memoizedValue;
 
   const change: RenderChange = {
     type: ChangeReason.Context,
     name: '',
-    value: nextValue,
+    value: nextMemoizedValue,
     unstable: false,
   };
   this.push(change);
 
-  const prevValueString = fastSerialize(prevValue);
-  const nextValueString = fastSerialize(nextValue);
+  const prevValueString = fastSerialize(prevMemoizedValue);
+  const nextValueString = fastSerialize(nextMemoizedValue);
 
   if (
-    unstableTypes.includes(typeof prevValue) &&
-    unstableTypes.includes(typeof nextValue) &&
+    unstableTypes.includes(typeof prevMemoizedValue) &&
+    unstableTypes.includes(typeof nextMemoizedValue) &&
     prevValueString === nextValueString
   ) {
     change.unstable = true;

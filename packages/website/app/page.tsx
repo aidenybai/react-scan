@@ -54,6 +54,10 @@ export default function Home() {
         {/*
           for testing purposes only
           <TestDataTypes />
+          */}
+        {/*
+          for testing purposes only
+          <CounterExample />
         */}
 
         <div className="!mb-8 mt-4 flex gap-2">

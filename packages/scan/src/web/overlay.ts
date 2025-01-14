@@ -80,7 +80,6 @@ export const initReactScanOverlay = () => {
         transfer: [offscreen],
       },
     )
-    // eslint-disable-next-line no-console
     .catch(console.error);
 
   updateCanvasSize();

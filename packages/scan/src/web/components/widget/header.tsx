@@ -1,7 +1,9 @@
 import { getDisplayName } from 'bippy';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { replayComponent } from '~web/components/inspector';
+import { signalIsSettingsOpen } from '~web/state';
+import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 import {
   getCompositeComponentFromElement,
@@ -19,11 +21,22 @@ export const BtnReplay = () => {
     },
   });
 
-  const { overrideProps, overrideHookState } = getOverrideMethods();
-  const canEdit = !!overrideProps;
+  const [canEdit, setCanEdit] = useState(false);
+  const isSettingsOpen = signalIsSettingsOpen.value;
+
+  useEffect(() => {
+    const { overrideProps } = getOverrideMethods();
+    const canEdit = !!overrideProps;
+
+    requestAnimationFrame(() => {
+      setCanEdit(canEdit);
+    });
+  }, []);
+
 
   const handleReplay = (e: MouseEvent) => {
     e.stopPropagation();
+    const { overrideProps, overrideHookState } = getOverrideMethods();
     const state = replayState.current;
     const button = e.currentTarget as HTMLElement;
 
@@ -58,15 +71,22 @@ export const BtnReplay = () => {
 
   return (
     <button
+      type="button"
       title="Replay component"
-      className="react-scan-replay-button"
       onClick={handleReplay}
+      className={cn(
+        'react-scan-replay-button',
+        {
+          'opacity-0 pointer-events-none': isSettingsOpen,
+        }
+      )}
     >
       <Icon name="icon-replay" />
     </button>
   );
 };
 const useSubscribeFocusedFiber = (onUpdate: () => void) => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     const subscribe = () => {
       if (Store.inspectState.value.kind !== 'focused') {
@@ -84,10 +104,12 @@ const useSubscribeFocusedFiber = (onUpdate: () => void) => {
   }, []);
 };
 
-export const Header = () => {
+const HeaderInspect = () => {
   const refRaf = useRef<number | null>(null);
   const refComponentName = useRef<HTMLSpanElement>(null);
   const refMetrics = useRef<HTMLSpanElement>(null);
+
+  const isSettingsOpen = signalIsSettingsOpen.value;
 
   useSubscribeFocusedFiber(() => {
     cancelAnimationFrame(refRaf.current ?? 0);
@@ -117,7 +139,52 @@ export const Header = () => {
     });
   });
 
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 flex items-center gap-x-2',
+        'translate-y-0',
+        'transition-transform duration-300',
+        {
+          '-translate-y-[200%]': isSettingsOpen,
+        },
+      )}
+    >
+      <span ref={refComponentName} className="with-data-text" />
+      <span
+        ref={refMetrics}
+        className="with-data-text mr-auto cursor-pointer !overflow-visible text-xs text-[#888]"
+        title="Click to toggle between rerenders and total renders"
+      />
+    </div>
+  );
+};
+
+const HeaderSettings = () => {
+  const isSettingsOpen = signalIsSettingsOpen.value;
+  return (
+    <span
+      data-text="Settings"
+      className={cn(
+        'absolute inset-0 flex items-center',
+        'with-data-text',
+        '-translate-y-[200%]',
+        'transition-transform duration-300',
+        {
+          'translate-y-0': isSettingsOpen,
+        },
+      )}
+    />
+  );
+};
+
+export const Header = () => {
   const handleClose = () => {
+    if (signalIsSettingsOpen.value) {
+      signalIsSettingsOpen.value = false;
+      return;
+    }
+
     Store.inspectState.value = {
       kind: 'inspect-off',
     };
@@ -125,14 +192,13 @@ export const Header = () => {
 
   return (
     <div className="react-scan-header">
-      <span ref={refComponentName} className="with-data-text" />
-      <span
-        ref={refMetrics}
-        className="with-data-text mr-auto cursor-pointer !overflow-visible text-xs text-[#888]"
-        title="Click to toggle between rerenders and total renders"
-      />
-      <BtnReplay />
+      <div className="relative flex-1 h-full">
+        <HeaderSettings />
+        <HeaderInspect />
+      </div>
+      {Store.inspectState.value.kind !== 'inspect-off' && <BtnReplay />}
       <button
+        type="button"
         title="Close"
         className="react-scan-close-button"
         onClick={handleClose}

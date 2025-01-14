@@ -143,7 +143,7 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
   }
 };
 
-export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
+export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
   if (typeof window === 'undefined') return;
 
   try {
@@ -151,19 +151,47 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): | void => {
   } catch {}
 };
 
-export const debounce = <T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: number | null = null;
+export const debounce = <T extends (enabled: boolean | null) => Promise<void>>(
+  fn: T,
+  wait: number,
+  options: { leading?: boolean; trailing?: boolean } = {},
+) => {
+  let timeoutId: number | undefined;
+  let lastArg: boolean | null | undefined;
+  let isLeadingInvoked = false;
 
-  return (...args: Parameters<T>): void => {
-    if (timeout !== null) {
-      clearTimeout(timeout);
+  const debounced = (enabled: boolean | null) => {
+    lastArg = enabled;
+
+    if (options.leading && !isLeadingInvoked) {
+      isLeadingInvoked = true;
+      fn(enabled);
+      return;
     }
-    timeout = setTimeout(() => {
-      func(...args);
-      timeout = null;
-    }, wait) as unknown as number;
+
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+
+    if (options.trailing !== false) {
+      timeoutId = setTimeout(() => {
+        isLeadingInvoked = false;
+        timeoutId = undefined;
+        if (lastArg !== undefined) {
+          fn(lastArg);
+        }
+      }, wait);
+    }
   };
+
+  debounced.cancel = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+      isLeadingInvoked = false;
+      lastArg = undefined;
+    }
+  };
+
+  return debounced;
 };

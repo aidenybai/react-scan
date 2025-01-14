@@ -44,14 +44,14 @@ chrome.runtime.onMessage.addListener(async (message: unknown, _sender, sendRespo
   return false;
 });
 
-window.addEventListener('DOMContentLoaded', (event) => {
+window.addEventListener('DOMContentLoaded', () => {
   broadcast.onmessage = (type, data) => {
     if (type === 'react-scan:is-focused') {
       browser.runtime.sendMessage({
         type: 'react-scan:is-focused',
         data: {
-          state: data.state
-        }
+          state: data.state,
+        },
       });
     }
   };

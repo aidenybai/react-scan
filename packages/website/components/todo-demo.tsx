@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Todo {
   id: number;
@@ -11,7 +11,7 @@ interface Todo {
 function TodoInput({
   value: input,
   onChange: setInput,
-  onAdd: addTodo
+  onAdd: addTodo,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -94,7 +94,7 @@ export default function TodoDemo({ closeAction }: { closeAction: () => void }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const addTodo = () => {
+  const addTodo = useCallback(() => {
     if (!input.trim()) return;
     setTodos([...todos, {
       id: Date.now(),
@@ -102,7 +102,7 @@ export default function TodoDemo({ closeAction }: { closeAction: () => void }) {
       timestamp: new Date()
     }]);
     setInput('');
-  };
+  }, [input, todos]);
 
   const deleteTodo = (id: number) => {
     setTodos(todos.filter(todo => todo.id !== id));

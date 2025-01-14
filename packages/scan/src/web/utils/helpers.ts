@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export const cn = (...inputs: Array<ClassValue>): string => {
@@ -20,35 +20,35 @@ export const onIdle = (callback: () => void) => {
   return setTimeout(callback, 0);
 };
 
-export const throttle = <T extends (...args: Array<any>) => any>(
-  callback: T,
+export const throttle = <E>(
+  callback: (e?: E) => void,
   delay: number,
-) => {
+): ((e?: E) => void) => {
   let lastCall = 0;
-  return (...args: Parameters<T>) => {
+  return (e?: E) => {
     const now = Date.now();
     if (now - lastCall >= delay) {
       lastCall = now;
-      return callback(...args);
+      return callback(e);
     }
+    return undefined;
   };
 };
-
-export const debounce = <T extends (...args: Array<any>) => any>(
+export const debounce = <T extends (enabled: boolean | null) => Promise<void>>(
   fn: T,
   wait: number,
   options: { leading?: boolean; trailing?: boolean } = {},
 ) => {
   let timeoutId: number | undefined;
-  let lastArgs: Parameters<T> | undefined;
+  let lastArg: boolean | null | undefined;
   let isLeadingInvoked = false;
 
-  const debounced = (...args: Parameters<T>) => {
-    lastArgs = args;
+  const debounced = (enabled: boolean | null) => {
+    lastArg = enabled;
 
     if (options.leading && !isLeadingInvoked) {
       isLeadingInvoked = true;
-      fn(...args);
+      fn(enabled);
       return;
     }
 
@@ -60,7 +60,9 @@ export const debounce = <T extends (...args: Array<any>) => any>(
       timeoutId = window.setTimeout(() => {
         isLeadingInvoked = false;
         timeoutId = undefined;
-        fn(...lastArgs!);
+        if (lastArg !== undefined) {
+          fn(lastArg);
+        }
       }, wait);
     }
   };
@@ -70,7 +72,7 @@ export const debounce = <T extends (...args: Array<any>) => any>(
       clearTimeout(timeoutId);
       timeoutId = undefined;
       isLeadingInvoked = false;
-      lastArgs = undefined;
+      lastArg = undefined;
     }
   };
 

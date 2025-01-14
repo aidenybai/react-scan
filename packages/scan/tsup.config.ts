@@ -1,15 +1,11 @@
-import fsPromise from 'node:fs/promises';
 import * as fs from 'node:fs';
+import fsPromise from 'node:fs/promises';
 import path from 'node:path';
-import { defineConfig } from 'tsup';
 import { TsconfigPathsPlugin } from '@esbuild-plugins/tsconfig-paths';
 import { init, parse } from 'es-module-lexer';
+import { defineConfig } from 'tsup';
 
 const DIST_PATH = './dist';
-
-if (!fs.existsSync(DIST_PATH)) {
-  fs.mkdirSync(DIST_PATH, { recursive: true });
-}
 
 const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
   try {
@@ -17,16 +13,13 @@ const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
     for (const file of files) {
       if (file.endsWith('.mjs') || file.endsWith('.js')) {
         const filePath = path.join(readPath, file);
-
         const data = await fsPromise.readFile(filePath, 'utf8');
-
         const updatedContent = `'use client';\n${data}`;
-
         await fsPromise.writeFile(filePath, updatedContent, 'utf8');
       }
     }
   } catch (err) {
-    // eslint-disable-next-line no-console -- We need to log the error
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.error('Error:', err);
   }
 };
@@ -53,6 +46,11 @@ const banner = `/**
 void (async () => {
   await init;
 
+  if (fs.existsSync(DIST_PATH)) {
+    fs.rmSync(DIST_PATH, { recursive: true });
+  }
+  fs.mkdirSync(DIST_PATH, { recursive: true });
+
   const code = fs.readFileSync('./src/core/index.ts', 'utf8');
   const [_, allExports] = parse(code);
   const names: Array<string> = [];
@@ -77,10 +75,7 @@ void (async () => {
     for (const ext of ['js', 'mjs', 'global.js']) {
       fs.writeFileSync(`./dist/rsc-shim.${ext}`, script);
     }
-    for (const ext of ['d.mts', 'd.ts']) {
-      fs.writeFileSync(`./dist/rsc-shim.${ext}`, `export {}`);
-    }
-  }, 500); // for some reason it clears the file if we don't wait
+  }, 500);
 })();
 
 export default defineConfig([
@@ -106,7 +101,6 @@ export default defineConfig([
     external: [
       'react',
       'react-dom',
-      'react-reconciler',
       'next',
       'next/navigation',
       'react-router',
@@ -133,7 +127,7 @@ export default defineConfig([
     },
     outDir: DIST_PATH,
     splitting: false,
-    clean: true,
+    clean: false,
     sourcemap: false,
     format: ['cjs', 'esm'],
     target: 'esnext',
@@ -163,7 +157,6 @@ export default defineConfig([
     external: [
       'react',
       'react-dom',
-      'react-reconciler',
       'next',
       'next/navigation',
       'react-router',
@@ -188,7 +181,7 @@ export default defineConfig([
       js: banner,
     },
     splitting: false,
-    clean: true,
+    clean: false,
     sourcemap: false,
     format: ['cjs'],
     target: 'esnext',
@@ -213,7 +206,7 @@ export default defineConfig([
     outDir: `${DIST_PATH}/react-component-name`,
     splitting: false,
     sourcemap: false,
-    clean: true,
+    clean: false,
     format: ['cjs', 'esm'],
     target: 'esnext',
     external: [

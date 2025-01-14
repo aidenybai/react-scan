@@ -1,20 +1,28 @@
 {
-  "editor.formatOnSave": true,
   "editor.defaultFormatter": "biomejs.biome",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.biome": "always",
+    "quickfix.biome": "always"
+  },
+  "css.lint.unknownAtRules": "ignore",
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-  "typescript.preferences.importModuleSpecifier": "non-relative",
-  "typescript.preferences.includePackageJsonAutoImports": "on",
-  "files.associations": {
-    "*.css": "css"
-  },
-  "editor.quickSuggestions": {
-    "strings": true
-  },
-  "css.validate": false,
-  "tailwindCSS.validate": true,
-  "editor.colorDecorators": true,
   "[css]": {
-    "editor.formatOnSave": false
+    "editor.defaultFormatter": "biomejs.biome"
   }
 }

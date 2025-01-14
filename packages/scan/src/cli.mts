@@ -1,30 +1,35 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import mri from 'mri';
-import { intro, confirm, isCancel, cancel, spinner } from '@clack/prompts';
+import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
 import { bgMagenta, dim, red } from 'kleur';
+import mri from 'mri';
 import {
-  chromium,
-  firefox,
-  webkit,
-  devices,
   type Browser,
   type BrowserContext,
+  chromium,
+  devices,
+  firefox,
+  webkit,
 } from 'playwright';
 
 const truncateString = (str: string, maxLength: number) => {
-  str = str.replace('http://', '').replace('https://', '').replace('www.', '');
-  if (str.endsWith('/')) {
-    str = str.slice(0, -1);
+  let result = str
+    .replace('http://', '')
+    .replace('https://', '')
+    .replace('www.', '');
+
+  if (result.endsWith('/')) {
+    result = result.slice(0, -1);
   }
-  if (str.length > maxLength) {
+
+  if (result.length > maxLength) {
     const half = Math.floor(maxLength / 2);
-    const start = str.slice(0, half);
-    const end = str.slice(str.length - (maxLength - half));
+    const start = result.slice(0, half);
+    const end = result.slice(result.length - (maxLength - half));
     return `${start}…${end}`;
   }
-  return str;
+  return result;
 };
 
 const inferValidURL = (maybeURL: string) => {
@@ -74,9 +79,16 @@ const applyStealthScripts = async (context: BrowserContext) => {
     });
 
     // Remove Playwright-specific properties
-    delete (window as any).__playwright;
-    delete (window as any).__pw_manual;
-    delete (window as any).__PW_inspect;
+    interface PlaywrightWindow extends Window {
+      __playwright?: unknown;
+      __pw_manual?: unknown;
+      __PW_inspect?: unknown;
+    }
+
+    const win = window as PlaywrightWindow;
+    win.__playwright = undefined;
+    win.__pw_manual = undefined;
+    win.__PW_inspect = undefined;
 
     // Redefine the headless property
     Object.defineProperty(navigator, 'headless', {
@@ -85,7 +97,7 @@ const applyStealthScripts = async (context: BrowserContext) => {
 
     // Override the permissions API
     const originalQuery = window.navigator.permissions.query;
-    window.navigator.permissions.query = (parameters: any) =>
+    window.navigator.permissions.query = (parameters) =>
       parameters.name === 'notifications'
         ? Promise.resolve({
             state: Notification.permission,
@@ -238,7 +250,7 @@ const init = async () => {
       const globalHook = globalThis.__REACT_SCAN__;
       if (!globalHook) return;
       let count = 0;
-      globalHook.ReactScanInternals.onRender = (fiber, renders) => {
+      globalHook.ReactScanInternals.onRender = (_fiber, renders) => {
         let localCount = 0;
         for (const render of renders) {
           localCount += render.count;
@@ -248,7 +260,7 @@ const init = async () => {
       const reportData = globalHook.ReactScanInternals.Store.reportData;
       if (!Object.keys(reportData).length) return;
 
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.log('REACT_SCAN_REPORT', count);
     });
   };
@@ -292,7 +304,7 @@ const init = async () => {
       interval = setInterval(() => {
         pollReport().catch(() => {});
       }, 1000);
-    } catch (e) {
+    } catch {
       currentSpinner?.stop(red(`Error: ${truncatedURL}`));
     }
   };
@@ -312,7 +324,7 @@ const init = async () => {
     }
     const reportDataString = text.replace('REACT_SCAN_REPORT', '').trim();
     try {
-      count = parseInt(reportDataString, 10);
+      count = Number.parseInt(reportDataString, 10);
     } catch {
       return;
     }

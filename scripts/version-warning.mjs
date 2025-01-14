@@ -1,8 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import chalk from 'chalk';
 import boxen from 'boxen';
+import chalk from 'chalk';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -14,17 +14,17 @@ const styles = {
   arrow: chalk.hex('#C4B5FD'),
   version: chalk.hex('#C4B5FD'),
   border: '#503C9B',
-  dim: chalk.hex('#A1A1AA')
+  dim: chalk.hex('#A1A1AA'),
 };
 
 const MESSAGES = {
   workspace: {
     header: '📦 Workspace Packages',
-    text: 'Make sure to bump versions if publishing'
+    text: 'Make sure to bump versions if publishing',
   },
   package: {
-    text: 'Make sure to bump version if publishing'
-  }
+    text: 'Make sure to bump version if publishing',
+  },
 };
 
 function getWorkspacePackages() {
@@ -32,8 +32,9 @@ function getWorkspacePackages() {
   const packages = {};
 
   try {
-    const dirs = readdirSync(packagesDir, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory());
+    const dirs = readdirSync(packagesDir, { withFileTypes: true }).filter(
+      (dirent) => dirent.isDirectory(),
+    );
 
     for (const dir of dirs) {
       const pkgPath = resolve(packagesDir, dir.name, 'package.json');
@@ -43,14 +44,14 @@ function getWorkspacePackages() {
           packages[pkg.name] = pkg.version;
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
+        // biome-ignore lint/suspicious/noConsole: Intended debug output
         console.error(`Error reading ${dir.name}/package.json:`, err);
       }
     }
 
     return packages;
   } catch (err) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.error('Error reading packages directory:', err);
     process.exit(1);
   }
@@ -60,7 +61,8 @@ function getPackageInfo() {
   const cwd = process.cwd();
   const isWorkspacePackage = cwd.includes('packages/');
   const isRootDir = cwd === resolve(__dirname, '..');
-  const isDirectPackageBuild = isWorkspacePackage && !process.env.WORKSPACE_BUILD;
+  const isDirectPackageBuild =
+    isWorkspacePackage && !process.env.WORKSPACE_BUILD;
 
   if (isDirectPackageBuild) {
     const pkgPath = resolve(cwd, 'package.json');
@@ -71,7 +73,7 @@ function getPackageInfo() {
   if (isRootDir) {
     return {
       name: 'Workspace Packages',
-      versions: getWorkspacePackages()
+      versions: getWorkspacePackages(),
     };
   }
 
@@ -81,23 +83,27 @@ function getPackageInfo() {
 const pkgInfo = getPackageInfo();
 
 const message = pkgInfo.versions
-  ? `${styles.text(MESSAGES.workspace.text)}\n\n${styles.header(MESSAGES.workspace.header)}\n${Object.entries(pkgInfo.versions).sort(([a], [b]) => a.localeCompare(b))
-    .map(([pkg, version], index, array) => {
-      const prevPkg = index > 0 ? array[index - 1][0] : '';
-      const needsSpace = prevPkg.startsWith('@') && pkg === 'react-scan';
-      return `${needsSpace ? '\n' : ''}${styles.dim(pkg.padEnd(32))}${styles.version(`v${version}`)}`;
-    })
-    .join('\n')
-  }`
+  ? `${styles.text(MESSAGES.workspace.text)}\n\n${styles.header(MESSAGES.workspace.header)}\n${Object.entries(
+      pkgInfo.versions,
+    )
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([pkg, version], index, array) => {
+        const prevPkg = index > 0 ? array[index - 1][0] : '';
+        const needsSpace = prevPkg.startsWith('@') && pkg === 'react-scan';
+        return `${needsSpace ? '\n' : ''}${styles.dim(pkg.padEnd(32))}${styles.version(`v${version}`)}`;
+      })
+      .join('\n')}`
   : `${styles.text(MESSAGES.package.text)}\n\n${styles.dim(pkgInfo.name.padEnd(32))}${styles.version(`v${pkgInfo.version}`)}`;
 
-// eslint-disable-next-line no-console
-console.log(boxen(message, {
-  padding: 1,
-  margin: 1,
-  borderStyle: 'round',
-  borderColor: styles.border,
-  title: chalk.hex(styles.title)(`⚡ Version Check`),
-  titleAlignment: 'left',
-  float: 'left'
-}));
+// biome-ignore lint/suspicious/noConsole: Intended debug output
+console.log(
+  boxen(message, {
+    padding: 1,
+    margin: 1,
+    borderStyle: 'round',
+    borderColor: styles.border,
+    title: chalk.hex(styles.title)('⚡ Version Check'),
+    titleAlignment: 'left',
+    float: 'left',
+  }),
+);

@@ -1,12 +1,13 @@
 import {
+  type Fiber,
   getDisplayName,
   isCompositeFiber,
   isHostFiber,
   traverseFiber,
 } from 'bippy';
-import { type Fiber } from 'react-reconciler';
 import { ReactScanInternals } from '~core/index';
 import { isEqual } from '~core/utils';
+import type { ExtendedReactRenderer } from '../../../types';
 
 export type States =
   | {
@@ -38,34 +39,15 @@ interface ReactInternalProps {
   [key: string]: Fiber;
 }
 
-interface ReactRenderer {
-  findFiberByHostInstance: (instance: Element) => Fiber | null;
-  version: string;
-  bundleType: number;
-  rendererPackageName: string;
-  overrideHookState?: (
-    fiber: Fiber,
-    id: string,
-    path: Array<any>,
-    value: any,
-  ) => void;
-  overrideProps?: (fiber: Fiber, path: Array<string>, value: any) => void;
-  scheduleUpdate?: (fiber: Fiber) => void;
-}
-
-interface DevToolsHook {
-  renderers: Map<number, ReactRenderer>;
-}
-
 export const getFiberFromElement = (element: Element): Fiber | null => {
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
-    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__ as DevToolsHook;
-    if (!renderers) return null;
-    for (const [, renderer] of Array.from(renderers)) {
+    const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    if (!hook.renderers) return null;
+    for (const [, renderer] of Array.from(hook.renderers)) {
       try {
-        const fiber = renderer.findFiberByHostInstance(element);
+        const fiber = renderer.findFiberByHostInstance?.(element);
         if (fiber) return fiber;
-      } catch (e) {
+      } catch {
         // If React is mid-render, references to previous nodes may disappear
       }
     }
@@ -126,7 +108,7 @@ export const getNearestFiberFromElement = (
 
     const res = getParentCompositeFiber(fiber);
     return res ? res[0] : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -202,6 +184,31 @@ export const getCompositeComponentFromElement = (element: Element) => {
   };
 };
 
+export const getCompositeFiberFromElement = (element: Element) => {
+  const associatedFiber = getNearestFiberFromElement(element);
+
+  if (!associatedFiber) return {};
+  const currentAssociatedFiber = isCurrentTree(associatedFiber)
+    ? associatedFiber
+    : (associatedFiber.alternate ?? associatedFiber);
+  const stateNode = getFirstStateNode(currentAssociatedFiber);
+  if (!stateNode) return {};
+
+  const anotherRes = getParentCompositeFiber(currentAssociatedFiber);
+  if (!anotherRes) {
+    return {};
+  }
+  let [parentCompositeFiber] = anotherRes;
+  parentCompositeFiber =
+    (isCurrentTree(parentCompositeFiber)
+      ? parentCompositeFiber
+      : parentCompositeFiber.alternate) ?? parentCompositeFiber;
+
+  return {
+    parentCompositeFiber,
+  };
+};
+
 interface PropChange {
   name: string;
   value: unknown;
@@ -231,65 +238,85 @@ export const getChangedPropsDetailed = (fiber: Fiber): Array<PropChange> => {
   return changes;
 };
 
+type OverrideHookState = (
+  fiber: Fiber,
+  id: string,
+  path: Array<unknown>,
+  value: unknown,
+) => void;
+
+type OverrideProps = (
+  fiber: Fiber,
+  path: Array<string>,
+  value: unknown,
+) => void;
+
 interface OverrideMethods {
-  overrideProps:
-    | ((fiber: Fiber, path: Array<string>, value: unknown) => void)
-    | null;
-  overrideHookState:
-    | ((fiber: Fiber, id: string, path: Array<unknown>, value: unknown) => void)
-    | null;
+  overrideProps: OverrideProps | null;
+  overrideHookState: OverrideHookState | null;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return value !== null && typeof value === 'object';
+};
 
 export const getOverrideMethods = (): OverrideMethods => {
   let overrideProps = null;
   let overrideHookState = null;
 
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
-    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__ as DevToolsHook;
+    const { renderers } = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (renderers) {
       for (const [_, renderer] of Array.from(renderers)) {
         try {
+          const devToolsRenderer = renderer as ExtendedReactRenderer;
+
           if (overrideHookState) {
             const prevOverrideHookState = overrideHookState;
             overrideHookState = (
               fiber: Fiber,
               id: string,
-              path: Array<any>,
-              value: any,
+              path: Array<unknown>,
+              value: unknown,
             ) => {
               // Find the hook
               let current = fiber.memoizedState;
-              for (let i = 0; i < parseInt(id); i++) {
+              for (let i = 0; i < Number(id); i++) {
+                if (!current?.next) break;
                 current = current.next;
               }
 
-              if (current && current.queue) {
+              if (current?.queue) {
                 // Update through React's queue mechanism
-                const dispatch = current.queue.dispatch;
-                if (dispatch) {
+                const queue = current.queue;
+                if (isRecord(queue) && 'dispatch' in queue) {
+                  const dispatch = queue.dispatch as (value: unknown) => void;
                   dispatch(value);
                   return;
                 }
               }
 
-              // Fallback to direct override if queue dispatch isn't available
               prevOverrideHookState(fiber, id, path, value);
-              renderer.overrideHookState?.(fiber, id, path, value);
+              devToolsRenderer.overrideHookState?.(fiber, id, path, value);
             };
-          } else if (renderer.overrideHookState) {
-            overrideHookState = renderer.overrideHookState.bind(renderer);
+          } else if (devToolsRenderer.overrideHookState) {
+            overrideHookState = devToolsRenderer.overrideHookState;
           }
 
           if (overrideProps) {
             const prevOverrideProps = overrideProps;
-            overrideProps = (fiber: Fiber, path: Array<string>, value: any) => {
+            overrideProps = (
+              fiber: Fiber,
+              path: Array<string>,
+              value: unknown,
+            ) => {
               prevOverrideProps(fiber, path, value);
-              renderer.overrideProps?.(fiber, path, value);
+              devToolsRenderer.overrideProps?.(fiber, path, value);
             };
-          } else if (renderer.overrideProps) {
-            overrideProps = renderer.overrideProps.bind(renderer);
+          } else if (devToolsRenderer.overrideProps) {
+            overrideProps = devToolsRenderer.overrideProps;
           }
-        } catch (e) {
+        } catch {
           /**/
         }
       }
@@ -299,40 +326,38 @@ export const getOverrideMethods = (): OverrideMethods => {
   return { overrideProps, overrideHookState };
 };
 
-const nonVisualTags = new Set([
+export const nonVisualTags = new Set([
   'HTML',
-  'META',
-  'SCRIPT',
-  'LINK',
-  'STYLE',
   'HEAD',
+  'META',
   'TITLE',
-  'NOSCRIPT',
   'BASE',
-  'TEMPLATE',
-  'IFRAME',
+  'SCRIPT',
+  'SCRIPT',
+  'STYLE',
+  'LINK',
+  'NOSCRIPT',
+  'SOURCE',
+  'TRACK',
   'EMBED',
   'OBJECT',
   'PARAM',
-  'SOURCE',
-  'TRACK',
-  'AREA',
+  'TEMPLATE',
   'PORTAL',
   'SLOT',
+  'AREA',
   'XML',
   'DOCTYPE',
-  'COMMENT'
+  'COMMENT',
 ]);
+
 export const findComponentDOMNode = (
   fiber: Fiber,
   excludeNonVisualTags = true,
 ): HTMLElement | null => {
   if (fiber.stateNode && 'nodeType' in fiber.stateNode) {
     const element = fiber.stateNode as HTMLElement;
-    if (
-      excludeNonVisualTags &&
-      nonVisualTags.has(element.tagName)
-    ) {
+    if (excludeNonVisualTags && nonVisualTags.has(element.tagName.toLowerCase())) {
       return null;
     }
     return element;
@@ -375,20 +400,20 @@ export const getInspectableElements = (
     if (inspectable) {
       const { parentCompositeFiber } =
         getCompositeComponentFromElement(inspectable);
+
+      if (!parentCompositeFiber) return;
+
       result.push({
         element: inspectable,
         depth,
-        name:
-          (parentCompositeFiber!.type &&
-            getDisplayName(parentCompositeFiber!.type)) ??
-          'Unknown',
+        name: getDisplayName(parentCompositeFiber.type) ?? 'Unknown',
       });
     }
 
     // Traverse children first (depth-first)
-    Array.from(element.children).forEach((child) => {
+    for (const child of Array.from(element.children)) {
       traverse(child as HTMLElement, inspectable ? depth + 1 : depth);
-    });
+    }
   };
 
   traverse(root);

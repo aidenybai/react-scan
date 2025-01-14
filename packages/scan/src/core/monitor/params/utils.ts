@@ -35,7 +35,7 @@ function computeRouteWithFormatter(
       }
     }
     return result;
-  } catch (e) {
+  } catch {
     return pathname;
   }
 }

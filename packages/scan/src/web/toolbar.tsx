@@ -9,7 +9,7 @@ export const createToolbar = (root: ShadowRoot): HTMLElement => {
 
   const originalRemove = container.remove.bind(container);
 
-  container.remove = function () {
+  container.remove = () => {
     if (container.hasChildNodes()) {
       // Double render(null) is needed to fully unmount Preact components.
       // The first call initiates unmounting, while the second ensures
