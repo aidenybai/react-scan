@@ -25,7 +25,7 @@ export default async function ReactComponentNameLoader(
         '**/.million/**/*',
       ],
     );
-    if (!filter(id)) return callback(null, code);
+    if (!filter(id)) return callback(null, code, map);
 
     const result = await transform(code, id, filter);
 
