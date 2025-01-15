@@ -153,6 +153,11 @@
       "types": "./dist/react-component-name/astro.d.ts",
       "import": "./dist/react-component-name/astro.mjs",
       "require": "./dist/react-component-name/astro.js"
+    },
+    "./react-component-name/loader": {
+      "types": "./dist/react-component-name/loader.d.ts",
+      "import": "./dist/react-component-name/loader.mjs",
+      "require": "./dist/react-component-name/loader.js"
     }
   },
   "main": "dist/index.js",
