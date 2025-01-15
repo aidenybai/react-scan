@@ -192,7 +192,8 @@
       "react-component-name/rollup": [
         "./dist/react-component-name/rollup.d.ts"
       ],
-      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"]
+      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"],
+      "react-component-name/loader": ["./dist/react-component-name/loader.d.ts"]
     }
   },
   "bin": "bin/cli.js",
