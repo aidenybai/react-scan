@@ -42,7 +42,7 @@ describe('complex component patterns', () => {
         useEffect(() => {
           fetch(url).then(setData)
         }, [url])
-        return children(data)
+        return <>{children(data)}</>
       }
     `;
     const result = await transform(input);
