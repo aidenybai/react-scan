@@ -1,7 +1,6 @@
 import { NodePath, PluginObj } from '@babel/core';
 import * as t from '@babel/types';
 import { isComponentishName } from './is-componentish-name';
-import { isReactClassComponent } from './is-react-class-component';
 import { isStatementTopLevel } from './is-statement-top-level';
 import { pathReferencesImport } from './path-references-import';
 import { unwrapNode, unwrapPath } from './unwrap';
@@ -52,6 +51,27 @@ function assignDisplayName(
   ]);
 }
 
+function isReactClassComponent(path: NodePath<t.Class>): boolean {
+  const superClass = path.get('superClass');
+
+  if (!superClass.isExpression()) {
+    return false;
+  }
+  // The usual
+  if (
+    pathReferencesImport(
+      superClass,
+      'react',
+      ['Component', 'PureComponent'],
+      false,
+      true,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function isReactComponent(expr: NodePath<t.Expression>): boolean {
   // Check for class components
   const classExpr = unwrapPath(expr, t.isClassExpression);
@@ -67,16 +87,16 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
   const callExpr = unwrapPath(expr, t.isCallExpression);
   if (callExpr) {
     const callee = callExpr.get('callee');
-    // forwardRef
-    if (pathReferencesImport(callee, 'react', 'forwardRef', false, true)) {
-      return true;
-    }
-    // memo
-    if (pathReferencesImport(callee, 'react', 'memo', false, true)) {
-      return true;
-    }
-    // memo
-    if (pathReferencesImport(callee, 'react', 'createContext', false, true)) {
+    // React
+    if (
+      pathReferencesImport(
+        callee,
+        'react',
+        ['forwardRef', 'memo', 'createContext'],
+        false,
+        true,
+      )
+    ) {
       return true;
     }
   }

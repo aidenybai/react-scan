@@ -6,7 +6,7 @@ import { unwrapPath } from './unwrap';
 export const pathReferencesImport = (
   path: NodePath,
   moduleSource: string,
-  importName: string,
+  importName: string[],
   asType: boolean,
   defaultNamespace = false,
 ): boolean => {
@@ -24,13 +24,13 @@ export const pathReferencesImport = (
           const key = t.isIdentifier(importPath.node.imported)
             ? importPath.node.imported.name
             : importPath.node.imported.value;
-          return key === importName;
+          return importName.includes(key);
         }
         if (isPathValid(importPath, t.isImportDefaultSpecifier)) {
-          return importName === 'default';
+          return importName.includes('default');
         }
         if (isPathValid(importPath, t.isImportNamespaceSpecifier)) {
-          return importName === '*';
+          return importName.includes('*');
         }
       }
     }
@@ -47,18 +47,18 @@ export const pathReferencesImport = (
     const property = memberExpr.get('property');
     if (isPathValid(property, t.isIdentifier)) {
       return (
-        property.node.name === importName &&
-        (pathReferencesImport(object, moduleSource, '*', asType) ||
+        importName.includes(property.node.name) &&
+        (pathReferencesImport(object, moduleSource, ['*'], asType) ||
           (defaultNamespace &&
-            pathReferencesImport(object, moduleSource, 'default', asType)))
+            pathReferencesImport(object, moduleSource, ['default'], asType)))
       );
     }
     if (isPathValid(property, t.isStringLiteral)) {
       return (
-        property.node.value === importName &&
-        (pathReferencesImport(object, moduleSource, '*', asType) ||
+        importName.includes(property.node.value) &&
+        (pathReferencesImport(object, moduleSource, ['*'], asType) ||
           (defaultNamespace &&
-            pathReferencesImport(object, moduleSource, 'default', asType)))
+            pathReferencesImport(object, moduleSource, ['default'], asType)))
       );
     }
   }
