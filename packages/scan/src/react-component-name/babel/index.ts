@@ -76,14 +76,60 @@ function isReactClassComponent(path: NodePath<t.Class>): boolean {
   return false;
 }
 
-function isEmotionStyled(path: NodePath<t.Node>): boolean {
-  return pathReferencesImport(
-    path,
-    '@emotion/styled',
-    ['default'],
-    false,
-    false,
-  );
+function isStyledComponent(
+  moduleName: string,
+  importName: string[],
+  path: NodePath<t.Expression>,
+): boolean {
+  function isStyledImport(path: NodePath<t.Node>): boolean {
+    return pathReferencesImport(path, moduleName, importName, false, false);
+  }
+  const callExpr = unwrapPath(path, t.isCallExpression);
+  if (callExpr) {
+    const callee = callExpr.get('callee');
+    // styled('h1', () => {...});
+    if (isStyledImport(callee)) {
+      return true;
+    }
+    // styled.h1(() => {...})
+    const memberExpr = unwrapPath(callee, t.isMemberExpression);
+    if (memberExpr) {
+      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+      if (object && isStyledImport(object)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  const taggedExpr = unwrapPath(path, t.isTaggedTemplateExpression);
+  if (taggedExpr) {
+    const tag = taggedExpr.get('tag');
+
+    const memberExpr = unwrapPath(tag, t.isMemberExpression);
+    if (memberExpr) {
+      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+      // styled.h1`...`;
+      if (object && isStyledImport(object)) {
+        return true;
+      }
+
+      return false;
+    }
+
+    // styled(Link)`...`
+    const callExpr = unwrapPath(tag, t.isCallExpression);
+    if (callExpr) {
+      const callee = callExpr.get('callee');
+      if (isStyledImport(callee)) {
+        return true;
+      }
+
+      return false;
+    }
+  }
+  return false;
 }
 
 function isReactComponent(expr: NodePath<t.Expression>): boolean {
@@ -113,10 +159,6 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
     ) {
       return true;
     }
-    // @emotion/styled
-    if (isEmotionStyled(callee)) {
-      return true;
-    }
     const identifier = unwrapPath(callee, t.isIdentifier);
     if (identifier) {
       // Assume HOCs
@@ -124,47 +166,14 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
         return true;
       }
     }
-    const memberExpr = unwrapPath(callee, t.isMemberExpression);
-    // @emotion/styled
-    if (memberExpr) {
-      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
-      if (object && isEmotionStyled(object)) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
-  const taggedExpr = unwrapPath(expr, t.isTaggedTemplateExpression);
-  if (taggedExpr) {
-    const tag = taggedExpr.get('tag');
-
-    // @emotion/styled
-    const memberExpr = unwrapPath(tag, t.isMemberExpression);
-    if (memberExpr) {
-      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
-      if (object && isEmotionStyled(object)) {
-        return true;
-      }
-
-      return false;
-    }
-
-    // @emotion/styled
-    const callExpr = unwrapPath(tag, t.isCallExpression);
-    if (callExpr) {
-      const callee = callExpr.get('callee');
-      if (isEmotionStyled(callee)) {
-        return true;
-      }
-
-      return false;
-    }
-
-    return false;
+  if (isStyledComponent('@emotion/styled', ['default'], expr)) {
+    return true;
   }
-
+  if (isStyledComponent('styled-components', ['default'], expr)) {
+    return true;
+  }
   return false;
 }
 
