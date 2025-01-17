@@ -53,7 +53,7 @@ const banner = `/**
 void (async () => {
   await init;
 
-  const code = fs.readFileSync('./src/core/index.ts', 'utf8');
+  const code = fs.readFileSync(path.join(__dirname, './src/core/index.ts'), 'utf8');
   const [_, allExports] = parse(code);
   const names: Array<string> = [];
   for (const exportItem of allExports) {
@@ -75,10 +75,10 @@ void (async () => {
 
   setTimeout(() => {
     for (const ext of ['js', 'mjs', 'global.js']) {
-      fs.writeFileSync(`./dist/rsc-shim.${ext}`, script);
+      fs.writeFileSync(path.join(__dirname, `./dist/rsc-shim.${ext}`), script);
     }
     for (const ext of ['d.mts', 'd.ts']) {
-      fs.writeFileSync(`./dist/rsc-shim.${ext}`, `export {}`);
+      fs.writeFileSync(path.join(__dirname, `./dist/rsc-shim.${ext}`), `export {}`);
     }
   }, 500); // for some reason it clears the file if we don't wait
 })();
@@ -110,7 +110,6 @@ export default defineConfig([
       'next',
       'next/navigation',
       'react-router',
-      'react-router-dom',
       '@remix-run/react',
     ],
     loader: {
@@ -167,7 +166,6 @@ export default defineConfig([
       'next',
       'next/navigation',
       'react-router',
-      'react-router-dom',
       '@remix-run/react',
       'preact',
       '@preact/signals',
@@ -218,12 +216,10 @@ export default defineConfig([
     target: 'esnext',
     external: [
       'unplugin',
-      'estree-walker',
       '@rollup/pluginutils',
       '@babel/types',
       '@babel/parser',
       '@babel/traverse',
-      '@babel/generator',
       '@babel/core',
       'rollup',
       'webpack',
