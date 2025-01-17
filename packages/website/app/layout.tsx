@@ -69,9 +69,13 @@ export default function RootLayout({
         <meta name="author" content="Aiden Bai" />
         <meta name="theme-color" content="#8b5cf6" />
         <link rel="canonical" href="https://react-scan.million.dev" />
-        <Script
+        {/* <Script
           strategy="beforeInteractive"
           src="https://unpkg.com/react-scan/dist/auto.global.js"
+        /> */}
+        <Script
+          strategy="beforeInteractive"
+          src="https://127.0.0.1:4000/auto.global.js"
         />
       </head>
       <body

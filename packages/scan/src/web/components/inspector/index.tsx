@@ -47,10 +47,10 @@ export const inspectorState = signal<InspectorState>({
 
 // todo: add reset button and error message
 class InspectorErrorBoundary extends Component {
-  state: { error: any; hasError: boolean } = { hasError: false, error: null };
+  state: { error: Error | null; hasError: boolean } = { hasError: false, error: null };
 
-  static getDerivedStateFromError(e: any) {
-    return { hasError: true, error: e };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   handleReset = () => {
@@ -69,6 +69,7 @@ class InspectorErrorBoundary extends Component {
             {this.state.error?.message || JSON.stringify(this.state.error)}
           </div>
           <button
+            type="button"
             onClick={this.handleReset}
             className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
           >

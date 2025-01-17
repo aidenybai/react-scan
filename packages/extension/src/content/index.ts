@@ -2,6 +2,8 @@ import browser from 'webextension-polyfill';
 import { BroadcastSchema } from '../types/messages';
 import { broadcast, readLocalStorage } from '../utils/helpers';
 
+console.log('@@@ 3');
+
 chrome.runtime.onMessage.addListener(async (message: unknown, _sender, sendResponse) => {
   const result = BroadcastSchema.safeParse(message);
   if (!result.success) {

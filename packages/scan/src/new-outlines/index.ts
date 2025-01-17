@@ -1,26 +1,20 @@
-import { Signal, signal } from '@preact/signals';
 import {
   type Fiber,
-  FiberRoot,
-  createFiberVisitor,
   didFiberCommit,
   getDisplayName,
   getFiberId,
   getNearestHostFibers,
   getTimings,
   getType,
-  instrument,
   isCompositeFiber,
-  secure,
-  traverseFiber,
 } from 'bippy';
 import {
-  Change,
-  ContextChange,
-  ignoredProps,
-  PropsChange,
+  type Change,
+  type ContextChange,
+  type PropsChange,
   ReactScanInternals,
   Store,
+  ignoredProps,
 } from '~core/index';
 import {
   ChangeReason,
@@ -28,9 +22,10 @@ import {
   getContextChanges,
   getStateChanges,
 } from '~core/instrumentation';
-import { RenderData } from '~core/utils';
+import type { RenderData } from '~core/utils';
 import { getChangedPropsDetailed } from '~web/components/inspector/utils';
-import { log, logIntro } from '~web/utils/log';
+import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
+import { log } from '~web/utils/log';
 import {
   OUTLINE_ARRAY_SIZE,
   drawCanvas,
@@ -39,7 +34,6 @@ import {
   updateScroll,
 } from './canvas';
 import type { ActiveOutline, BlueprintOutline, OutlineData } from './types';
-import { Instrumentation } from 'next/dist/build/swc/types';
 
 // The worker code will be replaced at build time
 const workerCode = '__WORKER_CODE__';
@@ -310,23 +304,28 @@ export const getCanvasEl = () => {
 
   if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED) {
     try {
-      worker = new Worker(
-        URL.createObjectURL(
-          new Blob([workerCode], { type: 'application/javascript' }),
-        ),
-      );
-      const offscreenCanvas = canvasEl.transferControlToOffscreen();
+      const useExtensionWorker = readLocalStorage<boolean>('useExtensionWorker');
+      removeLocalStorage('useExtensionWorker');
 
-      worker?.postMessage(
-        {
-          type: 'init',
-          canvas: offscreenCanvas,
-          width: canvasEl.width,
-          height: canvasEl.height,
-          dpr,
-        },
-        [offscreenCanvas],
-      );
+      if (useExtensionWorker) {
+        worker = new Worker(
+          URL.createObjectURL(
+            new Blob([workerCode], { type: 'application/javascript' }),
+          ),
+        );
+
+        const offscreenCanvas = canvasEl.transferControlToOffscreen();
+        worker?.postMessage(
+          {
+            type: 'init',
+            canvas: offscreenCanvas,
+            width: canvasEl.width,
+            height: canvasEl.height,
+            dpr,
+          },
+          [offscreenCanvas],
+        );
+      }
     } catch (e) {
       // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.warn('Failed to initialize OffscreenCanvas worker:', e);
@@ -459,15 +458,15 @@ const reportRenderToListeners = (fiber: Fiber) => {
       const listeners = Store.changesListeners.get(getFiberId(fiber));
 
       if (listeners?.length) {
-        const propsChanges: Array<PropsChange> = getChangedPropsDetailed(
-          fiber,
-        ).map((change) => ({
-          type: ChangeReason.Props,
-          name: change.name,
-          value: change.value,
-          prevValue: change.prevValue,
-          unstable: false,
-        }));
+        const propsChanges: Array<PropsChange> = getChangedPropsDetailed(fiber).map(
+          (change) => ({
+            type: ChangeReason.Props,
+            name: change.name,
+            value: change.value,
+            prevValue: change.prevValue,
+            unstable: false,
+          }),
+        );
 
         const stateChanges = getStateChanges(fiber);
 
@@ -484,20 +483,20 @@ const reportRenderToListeners = (fiber: Fiber) => {
           }),
         );
 
-        listeners.forEach((listener) => {
+        for (const listener of listeners) {
           listener({
             propsChanges,
             stateChanges,
             contextChanges,
           });
-        });
+        }
       }
       const fiberData: RenderData = {
         count: existingCount + 1,
         time: existingTime + selfTime || 0,
         renders: [],
         displayName,
-        type: (getType(fiber.type) as any) || null,
+        type: getType(fiber.type) || null,
         changes,
       };
 
@@ -516,8 +515,8 @@ export const isValidFiber = (fiber: Fiber) => {
 export const initReactScanInstrumentation = ({onActive}:{onActive?:() => void}) => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
-  const instrumentation = createInstrumentation(`react-scan-devtools-0.1.0`, {
-    onCommitStart() {
+  const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
+    onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
     onActive,
@@ -525,7 +524,7 @@ export const initReactScanInstrumentation = ({onActive}:{onActive?:() => void}) 
       // todo: ingest errors without accidentally collecting data about user
     },
     isValidFiber,
-    onRender(fiber, renders) {
+    onRender: (fiber, renders) => {
       const isOverlayPaused =
         ReactScanInternals.instrumentation?.isPaused.value;
       const isInspectorInactive =
@@ -539,7 +538,7 @@ export const initReactScanInstrumentation = ({onActive}:{onActive?:() => void}) 
       if (!isOverlayPaused) {
         outlineFiber(fiber);
       }
-      
+
       if (ReactScanInternals.options.value.log) {
         // this can be expensive given enough re-renders
         log(renders);
@@ -550,7 +549,7 @@ export const initReactScanInstrumentation = ({onActive}:{onActive?:() => void}) 
       }
       ReactScanInternals.options.value.onRender?.(fiber, renders);
     },
-    onCommitFinish() {
+    onCommitFinish: () => {
       ReactScanInternals.options.value.onCommitFinish?.();
     },
     trackChanges: false,

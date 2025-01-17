@@ -1,6 +1,15 @@
 import { sleep, storageGetItem, storageSetItem } from '@pivanov/utils';
+import * as reactScan from 'react-scan';
 import { broadcast, canLoadReactScan, hasReactFiber } from '../utils/helpers';
 import { createReactNotAvailableUI, toggleReactIsNotAvailable } from './react-is-not-available';
+
+console.log('@@@ 2');
+window.reactScan = reactScan.setOptions;
+
+reactScan.scan({
+  enabled: false,
+  showToolbar: true,
+});
 
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -13,7 +22,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const isReactAvailable = hasReactFiber();
 
   if (!isReactAvailable) {
-    _reactScan.setOptions({
+    reactScan.setOptions({
       enabled: false,
       showToolbar: false,
     });
@@ -24,7 +33,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     'react-scan',
     'enabled',
   );
-  _reactScan.setOptions({
+  reactScan.setOptions({
     enabled: !!isDefaultEnabled,
     showToolbar: !!isDefaultEnabled,
   });
@@ -37,7 +46,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       if (isReactAvailable) {
         const state = data?.state;
-        _reactScan.setOptions({
+        reactScan.setOptions({
           enabled: state,
           showToolbar: state,
         });
@@ -48,7 +57,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  _reactScan.ReactScanInternals.Store.inspectState.subscribe((state) => {
+  reactScan.ReactScanInternals.Store.inspectState.subscribe((state) => {
     broadcast.postMessage('react-scan:is-focused', {
       state: state.kind === 'focused',
     });
