@@ -3,27 +3,71 @@ import type { ReactNode } from 'preact/compat';
 import {
   type Dispatch,
   type StateUpdater,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'preact/hooks';
+import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
-import { inspectorState } from '.';
 import { DiffValueView } from './diff-value';
 import { isPromise } from './overlay/utils';
+import { inspectorState, timelineState } from './states';
 import {
-  calculateTotalChanges,
-  useInspectedFiberChangeStore,
-} from './use-change-store';
-import {
-  type AggregatedChanges,
   formatFunctionPreview,
   formatPath,
   getObjectDiff,
 } from './utils';
+
+export type Setter<T> = Dispatch<StateUpdater<T>>;
+
+type AggregatedChanges = {
+  count: number;
+  currentValue: unknown;
+  previousValue: unknown;
+  name: string;
+  id: string;
+  lastUpdated: number;
+};
+
+type AllAggregatedChanges = {
+  propsChanges: Map<string, AggregatedChanges>;
+  stateChanges: Map<string, AggregatedChanges>;
+  contextChanges: Map<
+    number,
+    | { changes: AggregatedChanges; kind: 'initialized' }
+    | {
+      kind: 'partially-initialized';
+      value: unknown;
+      name: string;
+      lastUpdated: number;
+      id: string;
+    }
+  >;
+};
+
+const calculateTotalChanges = (changes: AllAggregatedChanges): number => {
+  return (
+    Array.from(changes.propsChanges.values()).reduce(
+      (acc, change) => acc + change.count,
+      0,
+    ) +
+    Array.from(changes.stateChanges.values()).reduce(
+      (acc, change) => acc + change.count,
+      0,
+    ) +
+    Array.from(changes.contextChanges.values())
+      .filter(
+        (change): change is Extract<typeof change, { kind: 'initialized' }> =>
+          change.kind === 'initialized',
+      )
+      .reduce((acc, change) => acc + change.changes.count, 0)
+  );
+};
 
 const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
   if (value === null || value === undefined) return { value };
@@ -69,21 +113,181 @@ const DeferredRender = ({
   return <div className="flex flex-col gap-2">{children}</div>;
 };
 
-export type Setter<T> = Dispatch<StateUpdater<T>>;
 export const WhatChanged = constant(() => {
-  // if you are using the fiber for referential equality, use the fiberId
   const fiber = inspectorState.value.fiber;
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [unViewedChanges, setUnViewedChanges] = useState(0);
 
-  const aggregatedChanges = useInspectedFiberChangeStore({
-    onChangeUpdate: (count) => {
-      setUnViewedChanges((prev) => prev + count);
-    },
-  });
+  const { currentIndex, updates } = timelineState.value;
+  const currentUpdate = updates[currentIndex];
+  const prevUpdate = currentIndex > 0 ? updates[currentIndex - 1] : null;
+
+  const aggregatedChanges = useMemo<AllAggregatedChanges>(() => {
+    const changes: AllAggregatedChanges = {
+      propsChanges: new Map<string, AggregatedChanges>(),
+      stateChanges: new Map<string, AggregatedChanges>(),
+      contextChanges: new Map(),
+    };
+
+    if (!currentUpdate || !prevUpdate) return changes;
+
+    // Helper to get value consistently
+    const getCurrentValue = (update: typeof currentUpdate, name: string, type: 'props' | 'state' | 'context') => {
+      switch (type) {
+        case 'props':
+          return update.props.current.find(p => p.name === name)?.value;
+        case 'state':
+          return update.state.current.find(s => s.name === name)?.value;
+        case 'context':
+          return update.context.current.find(c => c.name === name)?.value;
+      }
+    };
+
+    // Track current changes (for diff display)
+    const trackChange = (
+      map: Map<string, AggregatedChanges>,
+      name: string,
+      currentValue: unknown,
+      previousValue: unknown,
+      count: number
+    ) => {
+      map.set(name, {
+        count,
+        currentValue,
+        previousValue,
+        name,
+        id: name,
+        lastUpdated: currentUpdate.timestamp,
+      });
+    };
+
+    // Count historical changes helper
+    const countHistoricalChanges = (name: string, type: 'props' | 'state' | 'context') => {
+      let count = 0;
+      for (let i = 1; i <= currentIndex; i++) {
+        const current = updates[i];
+        const prev = updates[i - 1];
+        if (!current || !prev) continue;
+
+        const currentValue = getCurrentValue(current, name, type);
+        const prevValue = getCurrentValue(prev, name, type);
+
+        if (!isEqual(currentValue, prevValue)) {
+          count++;
+        }
+      }
+      return count;
+    };
+
+    // Compare props
+    for (const { name, value } of currentUpdate.props.current) {
+      const prevValue = getCurrentValue(prevUpdate, name, 'props');
+      if (!isEqual(value, prevValue)) {
+        const count = countHistoricalChanges(name, 'props');
+        trackChange(changes.propsChanges, name, value, prevValue, count);
+      }
+    }
+
+    // Compare state
+    for (const { name, value } of currentUpdate.state.current) {
+      const prevValue = getCurrentValue(prevUpdate, name, 'state');
+      if (!isEqual(value, prevValue)) {
+        const count = countHistoricalChanges(name, 'state');
+        trackChange(changes.stateChanges, name, value, prevValue, count);
+      }
+    }
+
+    // Compare context
+    for (const { name, value } of currentUpdate.context.current) {
+      const prevValue = getCurrentValue(prevUpdate, name, 'context');
+      if (!isEqual(value, prevValue)) {
+        const isNewlyInitialized = !prevValue && value !== undefined;
+
+        if (isNewlyInitialized) {
+          changes.contextChanges.set(Number(name), {
+            kind: 'partially-initialized',
+            value,
+            name,
+            lastUpdated: currentUpdate.timestamp,
+            id: name,
+          });
+        } else {
+          const count = countHistoricalChanges(name, 'context');
+          changes.contextChanges.set(Number(name), {
+            kind: 'initialized',
+            changes: {
+              count,
+              currentValue: value,
+              previousValue: prevValue,
+              name,
+              id: name,
+              lastUpdated: currentUpdate.timestamp,
+            },
+          });
+        }
+      }
+    }
+
+    // Check for removed items
+    const checkRemoved = (
+      current: { name: string }[],
+      prev: { name: string; value: unknown }[],
+      map: Map<string, AggregatedChanges>,
+      type: 'props' | 'state' | 'context'
+    ) => {
+      for (const { name, value } of prev) {
+        if (!current.find(item => item.name === name)) {
+          const count = countHistoricalChanges(name, type);
+          trackChange(map, name, undefined, value, count);
+        }
+      }
+    };
+
+    checkRemoved(
+      currentUpdate.props.current,
+      prevUpdate.props.current,
+      changes.propsChanges,
+      'props'
+    );
+
+    checkRemoved(
+      currentUpdate.state.current,
+      prevUpdate.state.current,
+      changes.stateChanges,
+      'state'
+    );
+
+    // Check removed context items
+    const contextMap = new Map<string, AggregatedChanges>();
+    checkRemoved(
+      currentUpdate.context.current,
+      prevUpdate.context.current,
+      contextMap,
+      'context'
+    );
+
+    // Convert to initialized context changes
+    for (const [key, change] of contextMap) {
+      changes.contextChanges.set(Number(key), {
+        kind: 'initialized',
+        changes: change
+      });
+    }
+
+    return changes;
+  }, [currentUpdate, prevUpdate, currentIndex, updates]);
 
   const shouldShowChanges = calculateTotalChanges(aggregatedChanges) > 0;
+
+  // Combined effect for handling unViewedChanges
+  useEffect(() => {
+    if (isExpanded) {
+      setUnViewedChanges(0);
+    } else if (shouldShowChanges && hasInitialized) {
+      setUnViewedChanges(prev => prev + 1);
+    }
+  }, [shouldShowChanges, isExpanded, hasInitialized]);
 
   // this prevents the notifications to show after we completed logic to auto open
   // the accordion (we explicitly want the accordion animation when first changes appear)
@@ -137,7 +341,10 @@ export const WhatChanged = constant(() => {
         >
           <div className={cn(['px-4 ', isExpanded && 'py-2'])}>
             <DeferredRender isExpanded={isExpanded}>
-              <Section title="Props" changes={aggregatedChanges.propsChanges} />
+              <Section
+                title="Props"
+                changes={aggregatedChanges.propsChanges}
+              />
               <Section
                 title="State"
                 changes={aggregatedChanges.stateChanges}
@@ -148,7 +355,10 @@ export const WhatChanged = constant(() => {
                   )
                 }
               />
-              <Section title="Context" changes={initializedContextChanges} />
+              <Section
+                title="Context"
+                changes={initializedContextChanges}
+              />
             </DeferredRender>
           </div>
         </div>
@@ -217,7 +427,6 @@ const WhatsChangedHeader = ({
       onClick={() => {
         setIsExpanded((state) => {
           setUnViewedChanges(0);
-
           return !state;
         });
       }}
@@ -246,6 +455,25 @@ const WhatsChangedHeader = ({
 
 const identity = <T,>(x: T) => x;
 
+type SectionType = 'props' | 'state' | 'context';
+
+const useChangeValues = (change: AggregatedChanges) => {
+  return useMemo(() => {
+    const { value: prevValue, error: prevError } = safeGetValue(change.previousValue);
+    const { value: currValue, error: currError } = safeGetValue(change.currentValue);
+    const diff = getObjectDiff(prevValue, currValue);
+
+    return {
+      prevValue,
+      currValue,
+      prevError,
+      currError,
+      diff,
+      isFunction: typeof change.currentValue === 'function'
+    };
+  }, [change.previousValue, change.currentValue]);
+};
+
 const Section = ({
   changes,
   renderName = identity,
@@ -257,43 +485,39 @@ const Section = ({
 }) => {
   const [expandedFns, setExpandedFns] = useState(new Set<string>());
   const [expandedEntries, setExpandedEntries] = useState(new Set<string>());
+
+  const entries = useMemo(() => Array.from(changes.entries()), [changes]);
+  const sectionType = useMemo(() => title.toLowerCase() as SectionType, [title]);
+
+  const handleExpandEntry = useCallback((entryKey: string) => {
+    setExpandedEntries(prev => {
+      const next = new Set(prev);
+      if (next.has(String(entryKey))) {
+        next.delete(String(entryKey));
+      } else {
+        next.add(String(entryKey));
+      }
+      return next;
+    });
+  }, []);
+
   if (changes.size === 0) {
     return null;
   }
 
-  const entries = Array.from(changes.entries());
-
-  // the level of component abstraction can be written better
   return (
     <div>
       <div className="text-xs text-[#888] mb-1.5">{title}</div>
       <div className="flex flex-col gap-2">
         {entries.map(([entryKey, change]) => {
           const isEntryExpanded = expandedEntries.has(String(entryKey));
-          const { value: prevValue, error: prevError } = safeGetValue(
-            change.previousValue,
-          );
-          const { value: currValue, error: currError } = safeGetValue(
-            change.currentValue,
-          );
-
-          const diff = getObjectDiff(prevValue, currValue);
+          const values = useChangeValues(change);
 
           return (
             <div key={entryKey}>
               <button
                 type="button"
-                onClick={() => {
-                  setExpandedEntries((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(String(entryKey))) {
-                      next.delete(String(entryKey));
-                    } else {
-                      next.add(String(entryKey));
-                    }
-                    return next;
-                  });
-                }}
+                onClick={() => handleExpandEntry(entryKey)}
                 className="flex items-center gap-2 w-full bg-transparent border-none p-0 cursor-pointer text-white text-xs"
               >
                 <div className="flex items-center gap-1.5 flex-1">
@@ -309,11 +533,10 @@ const Section = ({
                   />
                   <div className="whitespace-pre-wrap break-words text-left font-medium flex items-center gap-x-1.5">
                     {renderName(change.name)}
-
                     <CountBadge
-                      count={change.count}
-                      showFlame={diff.changes.length === 0}
-                      showFn={typeof change.currentValue === 'function'}
+                      entryKey={entryKey}
+                      sectionType={sectionType}
+                      change={change}
                     />
                   </div>
                 </div>
@@ -325,15 +548,15 @@ const Section = ({
               >
                 <div className="pl-3 text-xs font-mono border-l-1 border-[#333]">
                   <div className="flex flex-col gap-0.5">
-                    {prevError || currError ? (
+                    {values.prevError || values.currError ? (
                       <AccessError
-                        currError={currError}
-                        prevError={prevError}
+                        currError={values.currError}
+                        prevError={values.prevError}
                       />
-                    ) : diff.changes.length > 0 ? (
+                    ) : values.diff.changes.length > 0 ? (
                       <DiffChange
                         change={change}
-                        diff={diff}
+                          diff={values.diff}
                         expandedFns={expandedFns}
                         renderName={renderName}
                         setExpandedFns={setExpandedFns}
@@ -341,10 +564,10 @@ const Section = ({
                       />
                     ) : (
                       <ReferenceOnlyChange
-                        currValue={currValue}
+                            currValue={values.currValue}
                         entryKey={entryKey}
                         expandedFns={expandedFns}
-                        prevValue={prevValue}
+                            prevValue={values.prevValue}
                         setExpandedFns={setExpandedFns}
                       />
                     )}
@@ -659,20 +882,52 @@ const ReferenceOnlyChange = ({
 };
 
 const CountBadge = ({
-  count,
-  showFlame,
-  showFn,
-}: { count: number; showFlame: boolean; showFn: boolean }) => {
-  const badgeRef = useRef<HTMLDivElement>(null);
+  entryKey,
+  sectionType,
+  change,
+}: {
+  entryKey: string;
+  sectionType: SectionType;
+  change: AggregatedChanges;
+}) => {
+  const refBadge = useRef<HTMLDivElement>(null);
+  const values = useChangeValues(change);
+  const { currentIndex, updates } = timelineState.value;
+
+  // Count how many times this entry has changed in the timeline
+  const count = useMemo(() => {
+    let changeCount = 0;
+    for (let i = 1; i <= currentIndex; i++) {
+      const current = updates[i];
+      const prev = updates[i - 1];
+      if (!current || !prev) continue;
+
+      const getCurrentValue = (update: typeof current) => {
+        switch (sectionType) {
+          case 'props':
+            return update.props.current.find(p => p.name === entryKey)?.value;
+          case 'state':
+            return update.state.current.find(s => s.name === entryKey)?.value;
+          case 'context':
+            return update.context.current.find(c => c.name === entryKey)?.value;
+        }
+      };
+
+      const currentValue = getCurrentValue(current);
+      const prevValue = getCurrentValue(prev);
+
+      if (!isEqual(currentValue, prevValue)) {
+        changeCount++;
+      }
+    }
+    return changeCount;
+  }, [currentIndex, updates, sectionType, entryKey]);
+
   const prevCount = useRef(count);
 
   useEffect(() => {
-    const element = badgeRef.current;
-    if (!element) {
-      return;
-    }
-
-    if (prevCount.current === count) {
+    const element = refBadge.current;
+    if (!element || prevCount.current === count) {
       return;
     }
 
@@ -685,20 +940,20 @@ const CountBadge = ({
 
   return (
     <div
-      ref={badgeRef}
+      ref={refBadge}
       className={cn(
         'count-badge',
         'text-[#a855f7] text-xs font-medium tabular-nums px-1.5 py-0.5 rounded-[4px] origin-center flex gap-x-2 items-center',
       )}
     >
-      {showFlame && (
+      {values.diff.changes.length === 0 && (
         <Icon
           name="icon-triangle-alert"
           className="text-yellow-500 mb-px"
           size={14}
         />
       )}
-      {showFn && (
+      {values.isFunction && (
         <Icon name="icon-function" className="text-[#A855F7] mb-px" size={14} />
       )}
       x{count}

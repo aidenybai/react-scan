@@ -2,12 +2,10 @@ import {
   ClassComponentTag,
   type ContextDependency,
   type Fiber,
-  // type Fiber,
   ForwardRefTag,
   FunctionComponentTag,
   MemoComponentTag,
   type MemoizedState,
-  // type MemoizedState,
   SimpleMemoComponentTag,
 } from 'bippy';
 import { isEqual } from '~core/utils';
@@ -223,13 +221,6 @@ export const resetStateTracking = () => {
   contextChangeCounts.clear();
 };
 
-export const getStateChangeCount = (name: string): number =>
-  stateChangeCounts.get(name) ?? 0;
-export const getPropsChangeCount = (name: string): number =>
-  propsChangeCounts.get(name) ?? 0;
-export const getContextChangeCount = (name: string): number =>
-  contextChangeCounts.get(name) ?? 0;
-
 export const getStateNames = (fiber: Fiber): Array<string> => {
   const componentSource = fiber.type?.toString?.() || '';
   return componentSource
@@ -281,6 +272,7 @@ interface ExtendedMemoizedState extends MemoizedState {
 
 export const getStateFromFiber = (fiber: Fiber) => {
   if (!fiber) return {};
+
   // only funtional components have memo tags,
   if (
     fiber.tag === FunctionComponentTag ||
@@ -343,9 +335,10 @@ const getPropsOrder = (fiber: Fiber): Array<string> => {
     .filter(Boolean);
 };
 
-interface SectionData {
+export interface SectionData {
   current: Array<{ name: string; value: unknown }>;
   changes: Set<string>;
+  changesCounts?: Map<string, number>;
 }
 
 export interface InspectorData {
@@ -371,7 +364,6 @@ export const collectInspectorData = (recvFiber: Fiber): InspectorData => {
 
   if (fiber.memoizedProps) {
     const baseProps = fiber.memoizedProps;
-
     const orderedProps = getPropsOrder(fiber);
     const remainingProps = new Set(Object.keys(baseProps));
 
@@ -446,6 +438,7 @@ export const collectInspectorData = (recvFiber: Fiber): InspectorData => {
       }),
     ),
     changes: new Set<string>(),
+    changesCounts: new Map(),
   };
 
   const contexts = getAllFiberContexts(fiber);
@@ -456,6 +449,7 @@ export const collectInspectorData = (recvFiber: Fiber): InspectorData => {
       value: ctx.value,
     })),
     changes: collectedChanges,
+    changesCounts: new Map(),
   };
 
   return {
@@ -465,6 +459,7 @@ export const collectInspectorData = (recvFiber: Fiber): InspectorData => {
         name,
         value,
       })),
+      changesCounts: propsChangeCounts,
     },
     fiberState,
     // todo: show the whole chain to reliably know context values
@@ -479,6 +474,7 @@ interface ContextInfo {
   displayName: string;
   contextType: unknown;
 }
+
 export const getAllFiberContexts = (
   fiber: Fiber,
 ): Map<unknown, ContextInfo> => {

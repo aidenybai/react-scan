@@ -7,8 +7,8 @@ import {
   Store,
 } from '~core/index';
 import { isEqual } from '~core/utils';
+import { inspectorState } from './states';
 // import { AllAggregatedChanges } from './utils';
-import { inspectorState } from '.';
 
 const CHANGES_QUEUE_INTERVAL = 50;
 

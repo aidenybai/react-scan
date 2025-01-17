@@ -12,7 +12,12 @@ import { isEqual } from '~core/utils';
 import { batchGetBoundingRects } from '~web/utils/outline';
 import { globalInspectorState } from '.';
 import type { ExtendedReactRenderer } from '../../../types';
-import { ensureRecord, isPromise } from './overlay/utils';
+import {
+  ensureRecord,
+  getCurrentFiberState,
+  getStateNames,
+  isPromise,
+} from './overlay/utils';
 
 interface StateItem {
   name: string;
@@ -241,6 +246,7 @@ export const getCompositeFiberFromElement = (element: Element) => {
     parentCompositeFiber,
   };
 };
+
 export const getChangedPropsDetailed = (fiber: Fiber): Array<PropsChange> => {
   const currentProps = fiber.memoizedProps ?? {};
   const previousProps = fiber.alternate?.memoizedProps ?? {};
@@ -1422,5 +1428,79 @@ export const safeGetValue = (
     return { value };
   } catch {
     return { value: null, error: 'Error accessing value' };
+  }
+};
+
+
+export const replayComponent = async (fiber: Fiber): Promise<void> => {
+  const { overrideProps, overrideHookState } = getOverrideMethods();
+  if (!overrideProps || !overrideHookState || !fiber) return;
+
+  const currentProps = fiber.memoizedProps || {};
+  const propKeys = Object.keys(currentProps).filter((key) => {
+    const value = currentProps[key];
+    if (Array.isArray(value) || typeof value === 'string') {
+      return !Number.isInteger(Number(key)) && key !== 'length';
+    }
+    return true;
+  });
+
+  for (const key of propKeys) {
+    try {
+      overrideProps(fiber, [key], currentProps[key]);
+    } catch {}
+  }
+
+  const currentState = getCurrentFiberState(fiber);
+  if (currentState) {
+    const stateNames = getStateNames(fiber);
+
+    // First, handle named state hooks
+    for (const [key, value] of Object.entries(currentState)) {
+      try {
+        const namedStateIndex = stateNames.indexOf(key);
+        if (namedStateIndex !== -1) {
+          const hookId = namedStateIndex.toString();
+          // For arrays and objects, we need to clone to trigger updates
+          const stateValue = Array.isArray(value)
+            ? [...value]
+            : typeof value === 'object' && value !== null
+              ? { ...value }
+              : value;
+          overrideHookState(fiber, hookId, [], stateValue);
+        }
+      } catch {}
+    }
+
+    // Then handle unnamed state hooks
+    let hookIndex = 0;
+    let currentHook = fiber.memoizedState;
+    while (currentHook !== null) {
+      try {
+        const hookId = hookIndex.toString();
+        const value = currentHook.memoizedState;
+
+        // Only update if this hook isn't already handled by named states
+        if (!stateNames.includes(hookId)) {
+          // For arrays and objects, we need to clone to trigger updates
+          const stateValue = Array.isArray(value)
+            ? [...value]
+            : typeof value === 'object' && value !== null
+              ? { ...value }
+              : value;
+          overrideHookState(fiber, hookId, [], stateValue);
+        }
+      } catch {}
+
+      currentHook = currentHook.next as typeof currentHook;
+      hookIndex++;
+    }
+  }
+
+  // Recursively handle children
+  let child = fiber.child;
+  while (child) {
+    await replayComponent(child);
+    child = child.sibling;
   }
 };

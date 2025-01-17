@@ -108,30 +108,32 @@ const HeaderInspect = () => {
   const isSettingsOpen = signalIsSettingsOpen.value;
 
   useSubscribeFocusedFiber(() => {
+    if (Store.inspectState.value.kind !== 'focused') return;
     cancelAnimationFrame(refRaf.current ?? 0);
     refRaf.current = requestAnimationFrame(() => {
-      if (Store.inspectState.value.kind !== 'focused') return;
-      const focusedElement = Store.inspectState.value.focusedDomElement;
-      const { parentCompositeFiber } =
-        getCompositeComponentFromElement(focusedElement);
-      if (!parentCompositeFiber) return;
+      if (Store.inspectState.value.kind === 'focused') {
+        const focusedElement = Store.inspectState.value.focusedDomElement;
+        const { parentCompositeFiber } =
+          getCompositeComponentFromElement(focusedElement);
+        if (!parentCompositeFiber) return;
 
-      const displayName = getDisplayName(parentCompositeFiber.type);
-      const reportData = Store.reportData.get(getFiberId(parentCompositeFiber));
+        const displayName = getDisplayName(parentCompositeFiber.type);
+        const reportData = Store.reportData.get(getFiberId(parentCompositeFiber));
 
-      const count = reportData?.count || 0;
-      const time = reportData?.time || 0;
+        const count = reportData?.count || 0;
+        const time = reportData?.time || 0;
 
-      if (refComponentName.current && refMetrics.current) {
-        refComponentName.current.dataset.text = displayName ?? 'Unknown';
-        const formattedTime =
-          time > 0
-            ? time < 0.1 - Number.EPSILON
-              ? '< 0.1ms'
-              : `${Number(time.toFixed(1))}ms`
-            : '';
+        if (refComponentName.current && refMetrics.current) {
+          refComponentName.current.dataset.text = displayName ?? 'Unknown';
+          const formattedTime =
+            time > 0
+              ? time < 0.1 - Number.EPSILON
+                ? '< 0.1ms'
+                : `${Number(time.toFixed(1))}ms`
+              : '';
 
-        refMetrics.current.dataset.text = `${count} re-renders${formattedTime ? ` • ${formattedTime}` : ''}`;
+          refMetrics.current.dataset.text = `${count} re-renders${formattedTime ? ` • ${formattedTime}` : ''}`;
+        }
       }
     });
   });

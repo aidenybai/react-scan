@@ -11,12 +11,13 @@ import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
 import { cn } from '~web/utils/helpers';
-import { globalInspectorState, inspectorState } from '.';
+import { globalInspectorState } from '.';
 import { flashManager } from './flash-overlay';
 import {
   getCurrentFiberState,
   isPromise,
 } from './overlay/utils';
+import { inspectorState } from './states';
 import {
   detectValueType,
   formatForClipboard,
