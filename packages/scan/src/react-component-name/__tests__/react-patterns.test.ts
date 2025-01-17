@@ -58,6 +58,8 @@ describe('modern React patterns', () => {
 
   it('handles components with error boundaries', async () => {
     const input = `
+      import React from 'react';
+
       class ErrorBoundary extends React.Component {
         state = { hasError: false }
 

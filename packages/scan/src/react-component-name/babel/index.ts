@@ -1,7 +1,6 @@
 import { NodePath, PluginObj } from '@babel/core';
 import * as t from '@babel/types';
 import { isComponentishName } from './is-componentish-name';
-import { isStatementTopLevel } from './is-statement-top-level';
 import { pathReferencesImport } from './path-references-import';
 import { unwrapNode, unwrapPath } from './unwrap';
 
@@ -185,7 +184,7 @@ const BABEL_PLUGIN: PluginObj = {
 
       path.traverse({
         ClassDeclaration(path) {
-          if (isStatementTopLevel(path) && isReactClassComponent(path)) {
+          if (isReactClassComponent(path)) {
             if (!path.node.id) {
               return;
             }
@@ -197,35 +196,30 @@ const BABEL_PLUGIN: PluginObj = {
           }
         },
         FunctionDeclaration(path) {
-          if (isStatementTopLevel(path)) {
-            const decl = path.node;
+          const decl = path.node;
 
-            if (
-              // Check if the declaration has an identifier, and then check
-              decl.id &&
-              // if the name is component-ish
-              isComponentishName(decl.id.name) &&
-              !decl.generator &&
-              // Might be component-like, but the only valid components
-              // have zero, one or two (forwardRef) parameters
-              decl.params.length < 3
-            ) {
-              if (!path.node.id) {
-                return;
-              }
-              const name = path.node.id.name;
-              if (assignedNames.has(name)) {
-                return;
-              }
-              assignDisplayName(path, name);
+          if (
+            // Check if the declaration has an identifier, and then check
+            decl.id &&
+            // if the name is component-ish
+            isComponentishName(decl.id.name) &&
+            !decl.generator &&
+            // Might be component-like, but the only valid components
+            // have zero, one or two (forwardRef) parameters
+            decl.params.length < 3
+          ) {
+            if (!path.node.id) {
+              return;
             }
+            const name = path.node.id.name;
+            if (assignedNames.has(name)) {
+              return;
+            }
+            assignDisplayName(path, name);
           }
         },
         VariableDeclarator(path) {
           if (!path.parentPath.isVariableDeclaration()) {
-            return;
-          }
-          if (!isStatementTopLevel(path.parentPath)) {
             return;
           }
           const identifier = path.node.id;
