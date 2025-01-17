@@ -41,12 +41,16 @@ function assignDisplayName(
   name: string,
 ): void {
   statement.insertAfter([
-    t.expressionStatement(
-      t.assignmentExpression(
-        '=',
-        t.memberExpression(t.identifier(name), t.identifier('displayName')),
-        t.stringLiteral(name),
-      ),
+    t.tryStatement(
+      t.blockStatement([
+        t.expressionStatement(
+          t.assignmentExpression(
+            '=',
+            t.memberExpression(t.identifier(name), t.identifier('displayName')),
+            t.stringLiteral(name),
+          ),
+        ),
+      ]),
     ),
   ]);
 }
@@ -70,6 +74,16 @@ function isReactClassComponent(path: NodePath<t.Class>): boolean {
     return true;
   }
   return false;
+}
+
+function isEmotionStyled(path: NodePath<t.Node>): boolean {
+  return pathReferencesImport(
+    path,
+    '@emotion/styled',
+    ['default'],
+    false,
+    false,
+  );
 }
 
 function isReactComponent(expr: NodePath<t.Expression>): boolean {
@@ -99,6 +113,56 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
     ) {
       return true;
     }
+    // @emotion/styled
+    if (isEmotionStyled(callee)) {
+      return true;
+    }
+    const identifier = unwrapPath(callee, t.isIdentifier);
+    if (identifier) {
+      // Assume HOCs
+      if (/^with[A-Z]/.test(identifier.node.name)) {
+        return true;
+      }
+    }
+    const memberExpr = unwrapPath(callee, t.isMemberExpression);
+    // @emotion/styled
+    if (memberExpr) {
+      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+      if (object && isEmotionStyled(object)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  const taggedExpr = unwrapPath(expr, t.isTaggedTemplateExpression);
+  if (taggedExpr) {
+    const tag = taggedExpr.get('tag');
+
+    // @emotion/styled
+    const memberExpr = unwrapPath(tag, t.isMemberExpression);
+    if (memberExpr) {
+      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+      if (object && isEmotionStyled(object)) {
+        return true;
+      }
+
+      return false;
+    }
+
+    // @emotion/styled
+    const callExpr = unwrapPath(tag, t.isCallExpression);
+    if (callExpr) {
+      const callee = callExpr.get('callee');
+      if (isEmotionStyled(callee)) {
+        return true;
+      }
+
+      return false;
+    }
+
+    return false;
   }
 
   return false;
