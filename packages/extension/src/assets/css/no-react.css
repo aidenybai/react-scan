@@ -49,7 +49,7 @@ html.freeze #react-scan-toast {
 }
 
 #react-scan-toast .icon {
-  font-size: 16px;
+  font-size: .75rem;
 }
 
 @media (max-width: 320px) {

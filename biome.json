@@ -7,7 +7,57 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": []
+    "ignore": [
+      "examples/**",
+      "**/dist/**",
+      "**/build/**",
+      "node_modules",
+      "**/node_modules/**",
+      "**/*.css",
+      "**/*.astro",
+      "packages/website",
+      "kitchen-sink"
+    ]
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": false,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedFunctionParameters": {
+          "level": "warn",
+          "fix": "unsafe"
+        },
+        "noUnusedImports": {
+          "level": "warn",
+          "fix": "unsafe"
+        },
+        "noUnusedLabels": {
+          "level": "warn",
+          "fix": "unsafe"
+        },
+        "noUnusedPrivateClassMembers": {
+          "level": "warn",
+          "fix": "unsafe"
+        },
+        "noUnusedVariables": {
+          "level": "warn",
+          "fix": "unsafe"
+        }
+      },
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error"
+      }
+    }
   },
   "formatter": {
     "enabled": true,
@@ -16,19 +66,10 @@
     "lineWidth": 80,
     "lineEnding": "lf"
   },
-  "organizeImports": {
-    "enabled": true
-  },
-  "linter": {
-    "enabled": false
-  },
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
-      "indentStyle": "space",
-      "indentWidth": 2,
-      "lineWidth": 80,
-      "lineEnding": "lf"
+      "trailingCommas": "all"
     }
   }
 }

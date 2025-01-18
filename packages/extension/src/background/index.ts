@@ -26,7 +26,7 @@ const init = async (tab: browser.Tabs.Tab) => {
 };
 
 // Listen for tab updates - only handle complete state
-browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete') {
     void init(tab);
   }

@@ -64,8 +64,8 @@ pnpm pack:all
 ```
 
 This will create:
-- `chrome-react-scanner-extension-v1.0.1.zip`
-- `firefox-react-scanner-extension-v1.0.1.zip`
-- `brave-react-scanner-extension-v1.0.1.zip`
+- `chrome-react-scanner-extension-v1.0.2.zip`
+- `firefox-react-scanner-extension-v1.0.2.zip`
+- `brave-react-scanner-extension-v1.0.2.zip`
 
 in the `build` directory.

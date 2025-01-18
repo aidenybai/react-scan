@@ -1,7 +1,6 @@
-import { getDisplayName } from 'bippy';
-import { type Fiber } from 'react-reconciler';
-import { getCompositeComponentFromElement } from '~web/components/inspector/utils';
-import { Store } from '../..';
+import { type Fiber, getDisplayName } from 'bippy';
+import { getCompositeComponentFromElement, getCurrentCompositeComponentFromElement } from '~web/components/inspector/utils';
+import { Store } from '..';
 import type {
   PerformanceInteraction,
   PerformanceInteractionEntry,
@@ -90,15 +89,16 @@ const isMinified = (name: string): boolean => {
 };
 
 export const getInteractionPath = (
-  fiber: Fiber | null,
+  initialFiber: Fiber | null,
   filters: PathFilters = DEFAULT_FILTERS,
 ): Array<string> => {
-  if (!fiber) return [];
+  if (!initialFiber) return [];
 
-  const currentName = getDisplayName(fiber.type);
+  const currentName = getDisplayName(initialFiber.type);
   if (!currentName) return [];
 
   const stack = new Array<string>();
+  let fiber = initialFiber;
   while (fiber.return) {
     const name = getCleanComponentName(fiber.type);
     if (name && !isMinified(name) && shouldIncludeInPath(name, filters)) {
@@ -115,9 +115,13 @@ export const getInteractionPath = (
 
 let currentMouseOver: Element;
 
-const getCleanComponentName = (
-  component: any /** fiber.type is any */,
-): string => {
+interface FiberType {
+  displayName?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+const getCleanComponentName = (component: FiberType): string => {
   const name = getDisplayName(component);
   if (!name) return '';
 
@@ -128,11 +132,11 @@ const getCleanComponentName = (
 };
 
 // For future use, normalization of paths happens on server side now using path property of interaction
-const _normalizePath = (path: Array<string>): string => {
-  const cleaned = path.filter(Boolean);
-  const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);
-  return deduped.join('.');
-};
+// const _normalizePath = (path: Array<string>): string => {
+// 	const cleaned = path.filter(Boolean);
+// 	const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);
+// 	return deduped.join('.');
+// };
 
 const handleMouseover = (event: Event) => {
   if (!(event.target instanceof Element)) return;
@@ -151,7 +155,7 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
     if (!fiber) {
       continue;
     }
-    if (fiber.type && getDisplayName(fiber.type)) {
+    if (getDisplayName(fiber.type)) {
       parentCompositeFiber = fiber;
     }
   }

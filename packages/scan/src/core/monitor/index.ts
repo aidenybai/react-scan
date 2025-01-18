@@ -1,19 +1,23 @@
 'use client';
-import { getDisplayName, getTimings, isCompositeFiber } from 'bippy';
-import { type Fiber } from 'react-reconciler';
+import {
+  type Fiber,
+  getDisplayName,
+  getTimings,
+  isCompositeFiber,
+} from 'bippy';
 import { useEffect } from 'react';
 import {
   type MonitoringOptions,
   ReactScanInternals,
-  setOptions,
   Store,
+  setOptions,
 } from '..';
-import { createInstrumentation, type Render } from '../instrumentation';
+import { type Render, createInstrumentation } from '../instrumentation';
 import { updateFiberRenderData } from '../utils';
-import { initPerformanceMonitoring } from './performance';
-import { getSession } from './utils';
 import { flush } from './network';
 import { computeRoute } from './params/utils';
+import { initPerformanceMonitoring } from './performance';
+import { getSession } from './utils';
 
 // max retries before the set of components do not get reported (avoid memory leaks of the set of fibers stored on the component aggregation)
 const MAX_RETRIES_BEFORE_COMPONENT_GC = 7;
@@ -112,7 +116,7 @@ export const startMonitoring = () => {
   };
   const instrumentation = createInstrumentation('monitoring', {
     onCommitStart() {
-      ReactScanInternals.options.value.onCommitStart?.();
+      // ReactScanInternals.options.value.onCommitStart?.();
     },
     onError() {
       // todo: report to server?
@@ -126,10 +130,10 @@ export const startMonitoring = () => {
       if (isCompositeFiber(fiber)) {
         aggregateComponentRenderToInteraction(fiber, renders);
       }
-      ReactScanInternals.options.value.onRender?.(fiber, renders);
+      // ReactScanInternals.options.value.onRender?.(fiber, renders);
     },
     onCommitFinish() {
-      ReactScanInternals.options.value.onCommitFinish?.();
+      // ReactScanInternals.options.value.onCommitFinish?.();
     },
     trackChanges: false,
     forceAlwaysTrackRenders: true,

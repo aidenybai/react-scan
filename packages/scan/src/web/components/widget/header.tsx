@@ -1,12 +1,14 @@
-import { getDisplayName } from 'bippy';
-import { useEffect, useRef } from 'preact/hooks';
+import { getDisplayName, getFiberId } from 'bippy';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
-import { replayComponent } from '~web/components/inspector';
+import { signalIsSettingsOpen } from '~web/state';
+import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 import {
   getCompositeComponentFromElement,
   getOverrideMethods,
 } from '../inspector/utils';
+import { Arrows } from './toolbar/arrows';
 
 const REPLAY_DELAY_MS = 300;
 
@@ -19,54 +21,68 @@ export const BtnReplay = () => {
     },
   });
 
-  const { overrideProps, overrideHookState } = getOverrideMethods();
-  const canEdit = !!overrideProps;
+  const [canEdit, setCanEdit] = useState(false);
+  const isSettingsOpen = signalIsSettingsOpen.value;
 
-  const handleReplay = (e: MouseEvent) => {
-    e.stopPropagation();
-    const state = replayState.current;
-    const button = e.currentTarget as HTMLElement;
+  useEffect(() => {
+    const { overrideProps } = getOverrideMethods();
+    const canEdit = !!overrideProps;
 
-    const inspectState = Store.inspectState.value;
-    if (state.isReplaying || inspectState.kind !== 'focused') return;
+    requestAnimationFrame(() => {
+      setCanEdit(canEdit);
+    });
+  }, []);
 
-    const { parentCompositeFiber } = getCompositeComponentFromElement(
-      inspectState.focusedDomElement,
-    );
-    if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
+  // const handleReplay = (e: MouseEvent) => {
+  //   e.stopPropagation();
+  //   const { overrideProps, overrideHookState } = getOverrideMethods();
+  //   const state = replayState.current;
+  //   const button = e.currentTarget as HTMLElement;
 
-    state.isReplaying = true;
-    state.toggleDisabled(true, button);
+  //   const inspectState = Store.inspectState.value;
+  //   if (state.isReplaying || inspectState.kind !== 'focused') return;
 
-    void replayComponent(parentCompositeFiber)
-      .catch(() => void 0)
-      .finally(() => {
-        clearTimeout(refTimeout.current);
-        if (document.hidden) {
-          state.isReplaying = false;
-          state.toggleDisabled(false, button);
-        } else {
-          refTimeout.current = setTimeout(() => {
-            state.isReplaying = false;
-            state.toggleDisabled(false, button);
-          }, REPLAY_DELAY_MS);
-        }
-      });
-  };
+  //   const { parentCompositeFiber } = getCompositeComponentFromElement(
+  //     inspectState.focusedDomElement,
+  //   );
+  //   if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
+
+  //   state.isReplaying = true;
+  //   state.toggleDisabled(true, button);
+
+  //   void replayComponent(parentCompositeFiber)
+  //     .catch(() => void 0)
+  //     .finally(() => {
+  //       clearTimeout(refTimeout.current);
+  //       if (document.hidden) {
+  //         state.isReplaying = false;
+  //         state.toggleDisabled(false, button);
+  //       } else {
+  //         refTimeout.current = setTimeout(() => {
+  //           state.isReplaying = false;
+  //           state.toggleDisabled(false, button);
+  //         }, REPLAY_DELAY_MS);
+  //       }
+  //     });
+  // };
 
   if (!canEdit) return null;
 
   return (
     <button
+      type="button"
       title="Replay component"
-      className="react-scan-replay-button"
-      onClick={handleReplay}
+      // onClick={handleReplay}
+      className={cn('react-scan-replay-button', {
+        'opacity-0 pointer-events-none': isSettingsOpen,
+      })}
     >
       <Icon name="icon-replay" />
     </button>
   );
 };
 const useSubscribeFocusedFiber = (onUpdate: () => void) => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     const subscribe = () => {
       if (Store.inspectState.value.kind !== 'focused') {
@@ -84,10 +100,12 @@ const useSubscribeFocusedFiber = (onUpdate: () => void) => {
   }, []);
 };
 
-export const Header = () => {
+const HeaderInspect = () => {
   const refRaf = useRef<number | null>(null);
   const refComponentName = useRef<HTMLSpanElement>(null);
   const refMetrics = useRef<HTMLSpanElement>(null);
+
+  const isSettingsOpen = signalIsSettingsOpen.value;
 
   useSubscribeFocusedFiber(() => {
     cancelAnimationFrame(refRaf.current ?? 0);
@@ -99,7 +117,8 @@ export const Header = () => {
       if (!parentCompositeFiber) return;
 
       const displayName = getDisplayName(parentCompositeFiber.type);
-      const reportData = Store.reportData.get(parentCompositeFiber);
+      const reportData = Store.reportData.get(getFiberId(parentCompositeFiber));
+
       const count = reportData?.count || 0;
       const time = reportData?.time || 0;
 
@@ -117,7 +136,52 @@ export const Header = () => {
     });
   });
 
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 flex items-center gap-x-2',
+        'translate-y-0',
+        'transition-transform duration-300',
+        {
+          '-translate-y-[200%]': isSettingsOpen,
+        },
+      )}
+    >
+      <span ref={refComponentName} className="with-data-text" />
+      <span
+        ref={refMetrics}
+        className="with-data-text mr-auto cursor-pointer !overflow-visible text-xs text-[#888]"
+        title="Click to toggle between rerenders and total renders"
+      />
+    </div>
+  );
+};
+
+const HeaderSettings = () => {
+  const isSettingsOpen = signalIsSettingsOpen.value;
+  return (
+    <span
+      data-text="Settings"
+      className={cn(
+        'absolute inset-0 flex items-center',
+        'with-data-text',
+        '-translate-y-[200%]',
+        'transition-transform duration-300',
+        {
+          'translate-y-0': isSettingsOpen,
+        },
+      )}
+    />
+  );
+};
+
+export const Header = () => {
   const handleClose = () => {
+    if (signalIsSettingsOpen.value) {
+      signalIsSettingsOpen.value = false;
+      return;
+    }
+
     Store.inspectState.value = {
       kind: 'inspect-off',
     };
@@ -125,14 +189,14 @@ export const Header = () => {
 
   return (
     <div className="react-scan-header">
-      <span ref={refComponentName} className="with-data-text" />
-      <span
-        ref={refMetrics}
-        className="with-data-text mr-auto cursor-pointer !overflow-visible text-xs text-[#888]"
-        title="Click to toggle between rerenders and total renders"
-      />
-      <BtnReplay />
+      <div className="relative flex-1 h-full">
+        <HeaderSettings />
+        <HeaderInspect />
+      </div>
+      {Store.inspectState.value.kind === 'focused' ? <Arrows /> : null}
+      {/* {Store.inspectState.value.kind !== 'inspect-off' && <BtnReplay />} */}
       <button
+        type="button"
         title="Close"
         className="react-scan-close-button"
         onClick={handleClose}

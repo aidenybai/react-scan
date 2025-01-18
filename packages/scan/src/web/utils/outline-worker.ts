@@ -45,6 +45,7 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
     'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
   let ctx: OffscreenCanvasRenderingContext2D | undefined;
 
+  // biome-ignore lint/suspicious/noConstEnum: TS enums are bloated
   const enum Reason {
     Commit = 0b001,
     Unstable = 0b010,

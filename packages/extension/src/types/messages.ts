@@ -6,9 +6,9 @@ export const BroadcastSchema = z.object({
     'react-scan:is-running',
     'react-scan:toggle-state',
     'react-scan:react-version',
-    'react-scan:is-focused'
+    'react-scan:is-focused',
   ]),
-  data: z.any().optional()
+  data: z.any().optional(),
 });
 
 export type BroadcastMessage = z.infer<typeof BroadcastSchema>;

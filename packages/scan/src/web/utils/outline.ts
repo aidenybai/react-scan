@@ -1,13 +1,15 @@
-import { type Fiber } from 'react-reconciler';
-import { ReactScanInternals, type OutlineKey } from '~core/index';
-import { type AggregatedChange } from '~core/instrumentation';
+// THIS FILE WILL BE DELETED
+
+import type { Fiber } from 'bippy';
+import { type OutlineKey, ReactScanInternals } from '~core/index';
+import type { AggregatedChange } from '~core/instrumentation';
 import { getLabelText, joinAggregations } from '~core/utils';
 import { lerp } from '~web/utils/lerp';
 import { throttle } from './helpers';
 import { LRUMap } from './lru';
-import { outlineWorker, type DrawingQueue } from './outline-worker';
+import { type DrawingQueue, outlineWorker } from './outline-worker';
 
-const enum Reason {
+enum Reason {
   Commit = 0b001,
   Unstable = 0b010,
   Unnecessary = 0b100,
@@ -65,6 +67,10 @@ export const recalcOutlines = throttle(async () => {
 // batchGetBoundingRects function can return in sub <10ms under good conditions, but may take much longer under poor conditions.
 // We interpolate the outline rects to avoid the appearance of jitter
 // reference: https://w3c.github.io/IntersectionObserver/
+/**
+ *
+ * @deprecated use getBatchedRectMap
+ */
 export const batchGetBoundingRects = (
   elements: Array<Element>,
 ): Promise<Map<Element, DOMRect>> => {
@@ -105,7 +111,7 @@ export const flushOutlines = async () => {
   recalcOutlines();
 
   ReactScanInternals.scheduledOutlines = new Map();
-  ReactScanInternals.options.value.onPaintStart?.(flattenedScheduledOutlines);
+  // ReactScanInternals.options.value.onPaintStart?.(flattenedScheduledOutlines);
 
   if (!animationFrameId) {
     animationFrameId = requestAnimationFrame(fadeOutOutline);
@@ -115,17 +121,18 @@ export const flushOutlines = async () => {
 let animationFrameId: number | null = null;
 
 const shouldSkipInterpolation = (rect: DOMRect) => {
-  // animations tend to transform out of screen/ to a very tiny size, those are noisy so we don't lerp them
-  if (
-    rect.top >= window.innerHeight || // completely below viewport
-    rect.bottom <= 0 || // completely above viewport
-    rect.left >= window.innerWidth || // completely right of viewport
-    rect.right <= 0 // completely left of viewport
-  ) {
-    return true;
-  }
+  return false;
+  // // animations tend to transform out of screen/ to a very tiny size, those are noisy so we don't lerp them
+  // if (
+  //   rect.top >= window.innerHeight || // completely below viewport
+  //   rect.bottom <= 0 || // completely above viewport
+  //   rect.left >= window.innerWidth || // completely right of viewport
+  //   rect.right <= 0 // completely left of viewport
+  // ) {
+  //   return true;
+  // }
 
-  return !ReactScanInternals.options.value.smoothlyAnimateOutlines;
+  // return !ReactScanInternals.options.value.smoothlyAnimateOutlines;
 };
 
 const INTERPOLATION_SPEED = 0.2;
@@ -141,14 +148,12 @@ export const fadeOutOutline = () => {
     const invariantActiveOutline = activeOutline as {
       [K in keyof Outline]: NonNullable<Outline[K]>;
     };
-    let frame;
+    let frame: number | null = null;
 
     for (const aggregatedRender of invariantActiveOutline.groupedAggregatedRender.values()) {
-      aggregatedRender.frame! += 1;
-
-      frame = frame
-        ? Math.max(aggregatedRender.frame!, frame)
-        : aggregatedRender.frame!;
+      const newFrame = (aggregatedRender.frame ?? 0) + 1;
+      aggregatedRender.frame = newFrame;
+      frame = frame ? Math.max(newFrame, frame) : newFrame;
     }
 
     if (!frame) {
@@ -178,9 +183,6 @@ export const fadeOutOutline = () => {
 
     // don't re-create to avoid gc time
     phases.clear();
-
-    let unstable = false;
-    let isUnnecessary = false;
 
     for (const render of invariantActiveOutline.groupedAggregatedRender.values()) {
       if (render.unnecessary) {
@@ -272,7 +274,7 @@ export const fadeOutOutline = () => {
       fiber,
       aggregatedRender,
     ] of invariantActiveOutline.groupedAggregatedRender) {
-      if (aggregatedRender.frame! >= totalFrames) {
+      if ((aggregatedRender.frame ?? 0) >= totalFrames) {
         invariantActiveOutline.groupedAggregatedRender.delete(fiber);
       }
     }
@@ -330,7 +332,7 @@ export interface Outline {
   estimatedTextWidth: number | null; // todo: estimated is stupid just make it the actual
 }
 
-export const enum RenderPhase {
+export enum RenderPhase {
   Mount = 0b001,
   Update = 0b010,
   Unmount = 0b100,
@@ -509,8 +511,8 @@ const activateOutlines = async () => {
               value.frame = 45; // todo: make this max frame, not hardcoded
 
               // for interpolation reference equality
-              if (existingOutline) {
-                existingOutline.current = value.computedCurrent!;
+              if (existingOutline && value.computedCurrent) {
+                existingOutline.current = value.computedCurrent;
               }
             }
           }
@@ -563,14 +565,17 @@ function ascendingTransformedOutlineLabel(
 function getTransformedOutlineLabels(
   labels: Array<OutlineLabel>,
 ): Array<TransformedOutlineLabel> {
-  let array: Array<TransformedOutlineLabel> = [];
+  const array: Array<TransformedOutlineLabel> = [];
 
   for (let i = 0, len = labels.length, label: OutlineLabel; i < len; i++) {
     label = labels[i];
-    array.push({
-      original: label,
-      rect: applyLabelTransform(label.activeOutline.current!, label.textWidth),
-    });
+    const current = label.activeOutline.current;
+    if (current) {
+      array.push({
+        original: label,
+        rect: applyLabelTransform(current, label.textWidth),
+      });
+    }
   }
 
   array.sort(ascendingTransformedOutlineLabel);
@@ -581,7 +586,7 @@ function getTransformedOutlineLabels(
 function getMergedOutlineLabels(
   labels: Array<OutlineLabel>,
 ): Array<MergedOutlineLabel> {
-  let array: Array<MergedOutlineLabel> = [];
+  const array: Array<MergedOutlineLabel> = [];
 
   for (let i = 0, len = labels.length; i < len; i++) {
     array.push(toMergedLabel(labels[i]));
@@ -641,12 +646,17 @@ function toMergedLabel(
   label: OutlineLabel,
   rectOverride?: DOMRect,
 ): MergedOutlineLabel {
+  const current = label.activeOutline.current;
+  const groupedAggregatedRender = label.activeOutline.groupedAggregatedRender;
   const rect =
     rectOverride ??
-    applyLabelTransform(label.activeOutline.current!, label.textWidth);
-  const groupedArray = Array.from(
-    label.activeOutline.groupedAggregatedRender!.values(),
-  );
+    (current
+      ? applyLabelTransform(current, label.textWidth)
+      : new DOMRect(0, 0, 0, 0));
+  const groupedArray = groupedAggregatedRender
+    ? Array.from(groupedAggregatedRender.values())
+    : [];
+
   return {
     alpha: label.alpha,
     color: label.color,
@@ -768,8 +778,9 @@ function getMeasuringContext(): MeasuringContext {
 }
 
 export const measureTextCached = (text: string): TextMetrics => {
-  if (textMeasurementCache.has(text)) {
-    return textMeasurementCache.get(text)!;
+  const cached = textMeasurementCache.get(text);
+  if (cached) {
+    return cached;
   }
   const ctx = getMeasuringContext();
   ctx.font = `11px ${MONO_FONT}`;

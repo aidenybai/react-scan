@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ChangeReason, type Render } from '~core/instrumentation';
 import { getLabelText } from '~core/utils';
 
@@ -32,8 +33,8 @@ export const log = (renders: Array<Render>) => {
     ]);
     if (!labelText) continue;
 
-    let prevChangedProps: Record<string, any> | null = null;
-    let nextChangedProps: Record<string, any> | null = null;
+    let prevChangedProps: Record<string, unknown> | null = null;
+    let nextChangedProps: Record<string, unknown> | null = null;
 
     if (render.changes) {
       for (let i = 0, len = render.changes.length; i < len; i++) {
@@ -67,28 +68,28 @@ export const log = (renders: Array<Render>) => {
     logMap.set(labelText, changeLog);
   }
   for (const [name, changeLog] of Array.from(logMap.entries())) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.group(
       `%c${name}`,
       'background: hsla(0,0%,70%,.3); border-radius:3px; padding: 0 2px;',
     );
     for (const { type, prev, next, unstable } of changeLog) {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.log(`${type}:`, unstable ? '⚠️' : '', prev, '!==', next);
     }
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.groupEnd();
   }
 };
 
 export const logIntro = () => {
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: Intended debug output
   console.log(
-    `%c[·] %cReact Scan`,
+    '%c[·] %cReact Scan',
     'font-weight:bold;color:#7a68e8;font-size:20px;',
     'font-weight:bold;font-size:14px;',
   );
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: Intended debug output
   console.log(
     'Try React Scan Monitoring to target performance issues in production: https://react-scan.com/monitoring',
   );

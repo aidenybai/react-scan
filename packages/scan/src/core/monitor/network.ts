@@ -1,12 +1,12 @@
-import { Store } from '../..';
-import { GZIP_MIN_LEN, GZIP_MAX_LEN, MAX_PENDING_REQUESTS } from './constants';
-import { getSession } from './utils';
+import { Store } from '..';
+import { GZIP_MAX_LEN, GZIP_MIN_LEN, MAX_PENDING_REQUESTS } from './constants';
 import type {
-  Interaction,
-  IngestRequest,
-  InternalInteraction,
   Component,
+  IngestRequest,
+  Interaction,
+  InternalInteraction,
 } from './types';
+import { getSession } from './utils';
 
 const INTERACTION_TIME_TILL_COMPLETED = 4000;
 
@@ -33,18 +33,19 @@ export const flush = async (): Promise<void> => {
   for (let i = 0; i < interactions.length; i++) {
     const interaction = interactions[i];
     const timeSinceStart = now - interaction.performanceEntry.startTime;
-    // these interactions were retried enough and should be discarded to avoid mem leak
-    if (timeSinceStart > 30000) {
-      continue;
-    } else if (timeSinceStart <= INTERACTION_TIME_TILL_COMPLETED) {
-      pendingInteractions.push(interaction);
-    } else {
-      completedInteractions.push(interaction);
+    if (timeSinceStart <= 30000) {
+      // Skip interactions older than 30 seconds to prevent memory leaks
+      if (timeSinceStart <= INTERACTION_TIME_TILL_COMPLETED) {
+        pendingInteractions.push(interaction);
+      } else {
+        completedInteractions.push(interaction);
+      }
     }
   }
 
-  // nothing to flush
-  if (!completedInteractions.length) return;
+  if (!completedInteractions.length)
+    // nothing to flush
+    return;
 
   // idempotent
   const session = await getSession({
@@ -157,6 +158,7 @@ export const flush = async (): Promise<void> => {
       ...session,
       url: window.location.toString(),
       route: monitor.route, // this might be inaccurate but used to caculate which paths all the unique sessions are coming from without having to join on the interactions table (expensive)
+      wifi: session.wifi ?? '',
     },
   };
 
@@ -197,8 +199,14 @@ export const compress = async (payload: string): Promise<ArrayBuffer> => {
  *
  * @see https://gist.github.com/aidenybai/473689493f2d5d01bbc52e2da5950b45#file-palette-dev-browser-dist-palette-dev-mjs-L365
  */
+interface RequestHeaders {
+  'Content-Type': string;
+  'Content-Encoding'?: string;
+  'x-api-key'?: string;
+}
+
 export const transport = async (
-  url: string,
+  initialUrl: string,
   payload: IngestRequest,
 ): Promise<{ ok: boolean }> => {
   const fail = { ok: false };
@@ -210,11 +218,12 @@ export const transport = async (
     shouldCompress && supportsCompression ? await compress(json) : json;
 
   if (!navigator.onLine) return fail;
-  const headers: any = {
+  const headerValues: RequestHeaders = {
     'Content-Type': CONTENT_TYPE,
     'Content-Encoding': shouldCompress ? 'gzip' : undefined,
-    'x-api-key': Store.monitor.value?.apiKey,
+    'x-api-key': Store.monitor.value?.apiKey ?? undefined,
   };
+  let url = initialUrl;
   if (shouldCompress) url += '?z=1';
   const size = typeof body === 'string' ? body.length : body.byteLength;
 
@@ -245,6 +254,6 @@ export const transport = async (
       MAX_PENDING_REQUESTS > (Store.monitor.value?.pendingRequests ?? 0),
     priority: 'low',
     // mode: 'no-cors',
-    headers,
+    headers: headerValues as unknown as HeadersInit,
   });
 };

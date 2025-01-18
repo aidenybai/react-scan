@@ -13,16 +13,16 @@ import { cn } from '~web/utils/helpers';
 export const Search = () => {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const refInput = useRef<HTMLInputElement>(null);
+  const refList = useRef<HTMLDivElement>(null);
 
-  // Add search state
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   const handleSelect = useCallback((element: HTMLElement) => {
     Store.inspectState.value = {
       kind: 'focused',
@@ -32,7 +32,6 @@ export const Search = () => {
     handleClose();
   }, []);
 
-  // Add keyboard shortcut for search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -47,7 +46,6 @@ export const Search = () => {
 
   const elements = useMemo(() => getInspectableElements(), []);
 
-  // Get current focused element
   const currentElement =
     Store.inspectState.value.kind === 'focused'
       ? Store.inspectState.value.focusedDomElement
@@ -63,18 +61,16 @@ export const Search = () => {
 
   useEffect(() => {
     if (isOpen) {
-      inputRef.current?.focus();
+      refInput.current?.focus();
 
-      // Find and select current element in the list
       if (currentElement) {
         const index = filteredElements.findIndex(
           (item) => item.element === currentElement,
         );
         if (index !== -1) {
           setSelectedIndex(index);
-          // Scroll the item into view
           requestAnimationFrame(() => {
-            const itemElement = listRef.current?.children[index] as HTMLElement;
+            const itemElement = refList.current?.children[index] as HTMLElement;
             if (itemElement) {
               itemElement.scrollIntoView({ block: 'center' });
             }
@@ -113,7 +109,7 @@ export const Search = () => {
   return (
     <div className="absolute inset-x-0 top-full z-50 mt-1 rounded border border-white/10 bg-[#1e1e1e] shadow-lg">
       <input
-        ref={inputRef}
+        ref={refInput}
         type="text"
         value={search}
         onChange={(e) => {
@@ -125,29 +121,32 @@ export const Search = () => {
         placeholder="Search components..."
       />
       <div
-        ref={listRef}
+        ref={refList}
         className="fixed inset-0 max-h-[calc(100%_-_36px)] overflow-y-auto bg-slate-700 p-2"
       >
-        {filteredElements.map((item, index) => (
-          <div
-            key={index}
-            onClick={() => {
-              handleSelect(item.element);
-            }}
-            className={cn(
-              'flex items-center px-2 py-1 cursor-pointer hover:bg-white/5',
-              selectedIndex === index && 'bg-white/10',
-            )}
-            style={{
-              paddingLeft: `${item.depth * 16 + 8}px`,
-            }}
-          >
-            <span className="truncate">
-              {item.depth > 0 && '└─ '}
-              {item.name}
-            </span>
-          </div>
-        ))}
+        {
+          filteredElements.map((item, index) => (
+            <button
+              type="button"
+              key={`${item.name}-${item.depth}-${index}`}
+              onClick={() => {
+                handleSelect(item.element);
+              }}
+              className={cn(
+                'flex items-center px-2 py-1 cursor-pointer hover:bg-white/5',
+                selectedIndex === index && 'bg-white/10',
+              )}
+              style={{
+                paddingLeft: `${item.depth * 16 + 8}px`,
+              }}
+            >
+              <span className="truncate">
+                {item.depth > 0 && '└─ '}
+                {item.name}
+              </span>
+            </button>
+          ))
+        }
       </div>
     </div>
   );

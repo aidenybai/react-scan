@@ -13,23 +13,45 @@ export const FpsMeter = () => {
     return () => clearInterval(intervalId);
   }, []);
 
+  const getFpsColor = (fps: number | null) => {
+    if (!fps) return '#fff';
+    if (fps < 30) return '#f87171';
+    if (fps < 50) return '#fbbf24';
+    return '#fff';
+  };
+
   return (
     <span
       style={{
-        width: 'fit-content',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'end',
+        gap: '4px',
+        padding: '0 8px',
+        height: '24px',
+        fontSize: '12px',
+        fontFamily: 'var(--font-mono)',
+        color: '#666',
+        backgroundColor: '#0a0a0a',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '3px',
+        whiteSpace: 'nowrap',
+        marginLeft: '12px',
+        minWidth: '72px',
       }}
-      data-text={String(fps)}
-      className={cn(
-        'with-data-text',
-        'flex gap-1 items-center',
-        'ml-2 px-2',
-        'h-full',
-        'text-white text-xs font-mono whitespace-nowrap',
-        'bg-neutral-700',
-        'rounded-full',
-      )}
     >
-      <span className="text-xxs">FPS</span>
+      <span style={{ color: '#666', letterSpacing: '0.5px' }}>FPS</span>
+      <span
+        style={{
+          color: getFpsColor(fps),
+          transition: 'color 150ms ease',
+          minWidth: '28px',
+          textAlign: 'right',
+          fontWeight: 500,
+        }}
+      >
+        {fps}
+      </span>
     </span>
   );
 };

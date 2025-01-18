@@ -91,16 +91,16 @@ svg {
   @apply z-[2147483678];
   @apply animate-fade-in animation-duration-300 animation-delay-300;
   @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
+}
 
-  button {
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
+.button {
+	&:hover {
+		background: rgba(255, 255, 255, 0.1);
+	}
 
-    &:active {
-      background: rgba(255, 255, 255, 0.15);
-    }
-  }
+	&:active {
+		background: rgba(255, 255, 255, 0.15);
+	}
 }
 
 .resize-line-wrapper {
@@ -111,7 +111,7 @@ svg {
 .resize-line {
   @apply absolute inset-0;
   @apply overflow-hidden;
-  @apply bg-black/90;
+  @apply bg-black;
   @apply transition-all duration-150;
 
   svg {
@@ -205,7 +205,6 @@ svg {
   }
 }
 
-/* HEADER */
 .react-scan-header {
   @apply flex items-center gap-x-2;
   @apply pl-3 pr-2;
@@ -220,7 +219,7 @@ svg {
   @apply p-1;
   @apply min-w-fit;
   @apply rounded;
-  @apply transition-colors duration-150;
+  @apply transition-all duration-300;
 }
 
 .react-scan-replay-button {
@@ -264,17 +263,12 @@ svg {
   }
 }
 
-.react-scan-inspector {
-  font-size: 13px;
-  color: #fff;
-  width: 100%;
-}
-
 .react-scan-section {
-  @apply flex flex-col py-1;
-  @apply py-2 px-4;
-  @apply bg-black text-[#888];
+  @apply flex flex-col;
+  @apply py-2 px-2;
+  @apply text-[#888];
   @apply before:content-[attr(data-section)] before:text-gray-500;
+  font-size: .75rem;
 
   > .react-scan-property {
     @apply -ml-3.5;
@@ -309,7 +303,7 @@ svg {
 }
 
 .react-scan-key {
-  @apply min-w-8 max-w-60 truncate text-white;
+  @apply w-fit max-w-60 text-white;
 }
 
 .react-scan-input {
@@ -336,18 +330,101 @@ svg {
 }
 
 .react-scan-expandable {
-  @apply grid grid-rows-[0fr];
-  @apply transition-all duration-150;
+  display: grid;
+  grid-template-rows: 0fr;
+  @apply overflow-hidden;
+  @apply transition-all duration-75;
+  transition-timing-function: ease-out;
+
+  > * {
+    min-height: 0;
+  }
 
   &.react-scan-expanded {
-    @apply pt-2;
-    @apply grid-rows-[1fr];
+    grid-template-rows: 1fr;
+    transition-duration: 100ms;
+  }
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  -webkit-transition: .3s;
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: .3s;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: #5f3f9a
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #5f3f9a
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(14px);
+  -ms-transform: translateX(14px);
+  transform: translateX(14px);
+}
+
+.slider.round {
+  border-radius: 18px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+
+
+.react-scan-what-changed-expandable {
+  display: grid;
+  grid-template-rows: 0fr;
+  @apply overflow-hidden;
+  @apply transition-all duration-75;
+  transition-timing-function: ease-out;
+
+  > * {
+    min-height: 0;
+  }
+
+  &.react-scan-expanded {
+    grid-template-rows: 1fr;
+    transition-duration: 100ms;
   }
 }
 
 .react-scan-nested {
   @apply relative;
-  /* @apply border-l-1 border-gray-500/30; */
   @apply overflow-hidden;
 
   &:before {
@@ -358,16 +435,16 @@ svg {
   }
 }
 
-.react-scan-hidden {
-  display: none;
-}
+.react-scan-settings {
+  @apply absolute inset-0;
+  @apply flex flex-col gap-4;
+  @apply py-2 px-4;
+  @apply text-[#888];
 
-.react-scan-array-container {
-  overflow-y: auto;
-  @apply ml-5;
-  margin-top: 8px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding-left: 8px;
+  >div {
+    @apply flex items-center justify-between;
+    @apply transition-colors duration-300;
+  }
 }
 
 .react-scan-preview-line {
@@ -376,14 +453,56 @@ svg {
 }
 
 .react-scan-flash-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  z-index: 999999;
-  mix-blend-mode: multiply;
-  background: rgba(142, 97, 227, 0.9);
-  transition: opacity 150ms ease-in;
-  pointer-events: none;
+  @apply absolute inset-0;
+  @apply opacity-0;
+  @apply z-[999999];
+  @apply pointer-events-none;
+  @apply transition-opacity duration-150;
+  @apply mix-blend-multiply;
+  @apply bg-purple-500/90;
+}
+
+.react-scan-toggle {
+  @apply relative;
+
+  input {
+    @apply absolute inset-0;
+    @apply opacity-0 z-20;
+    @apply cursor-pointer;
+  }
+
+  input:checked {
+    +div {
+      @apply bg-neutral-600;
+
+      &::before {
+        @apply translate-x-full;
+        @apply left-auto;
+        @apply bg-[#8e61e3];
+        @apply border-neutral-600;
+      }
+    }
+  }
+
+  >div {
+    @apply relative;
+    @apply w-8 h-4;
+    @apply bg-neutral-700;
+    @apply rounded-full;
+    @apply pointer-events-none;
+    @apply transition-colors duration-300;
+    &:before {
+      @apply content-[''];
+      @apply absolute top-1/2 left-0;
+      @apply -translate-y-1/2;
+      @apply w-4 h-4;
+      @apply bg-neutral-500;
+      @apply border-2 border-neutral-700;
+      @apply rounded-full;
+      @apply shadow-sm;
+      @apply transition-all duration-300;
+    }
+  }
 }
 
 .react-scan-flash-active {
@@ -402,4 +521,38 @@ svg {
   &.fade-in {
     opacity: 1;
   }
+}
+
+.react-scan-what-changed {
+  ul {
+    @apply list-disc;
+    @apply pl-4;
+  }
+
+  li {
+    @apply whitespace-nowrap;
+    > div {
+      @apply flex items-center justify-between gap-x-2;
+    }
+  }
+}
+
+@keyframes countFlash {
+  0% {
+    background-color: rgba(168, 85, 247, 0.3);
+    transform: scale(1.05);
+  }
+  100% {
+    background-color: rgba(168, 85, 247, 0.1);
+    transform: scale(1);
+  }
+}
+
+.count-badge {
+  background-color: rgba(168, 85, 247, 0.1);
+  transition: all 300ms ease-out;
+}
+
+.count-flash {
+  animation: countFlash 300ms ease-out forwards;
 }

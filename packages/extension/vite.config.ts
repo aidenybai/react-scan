@@ -1,4 +1,5 @@
-import { defineConfig, UserConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+import { type UserConfig, defineConfig, loadEnv } from 'vite';
 import webExtension, { readJsonFile } from 'vite-plugin-web-extension';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
@@ -9,32 +10,35 @@ const BROWSER_TYPES = {
   BRAVE: 'brave',
 } as const;
 
+type BrowserType = (typeof BROWSER_TYPES)[keyof typeof BROWSER_TYPES];
+
 export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), '');
-  const browser = env.BROWSER || BROWSER_TYPES.CHROME;
+  const browser = (env.BROWSER || BROWSER_TYPES.CHROME) as BrowserType;
 
   const isBrave = browser === BROWSER_TYPES.BRAVE;
 
   // Validate Brave binary
   if (env.NODE_ENV === 'development' && isBrave && !env.BRAVE_BINARY) {
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.error(`
-  ⚛️  React Scan
-  ==============
-  🚫 Error: BRAVE_BINARY environment variable is missing
+    ⚛️  React Scan
+    ==============
+    🚫 Error: BRAVE_BINARY environment variable is missing
 
-  This is required for Brave browser development.
-  Please check .env.example and set up your .env file with the correct path:
+    This is required for Brave browser development.
+    Please check .env.example and set up your .env file with the correct path:
 
-  📍 For macOS:
-     BRAVE_BINARY="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+    📍 For macOS:
+       BRAVE_BINARY="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
 
-  📍 For Windows:
-     BRAVE_BINARY="C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+    📍 For Windows:
+       BRAVE_BINARY="C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
 
-  📍 For Linux:
-     BRAVE_BINARY="/usr/bin/brave"
-  ===============
-`);
+    📍 For Linux:
+       BRAVE_BINARY="/usr/bin/brave"
+    ===============
+    `);
     process.exit(0);
   }
 
@@ -44,7 +48,7 @@ export default defineConfig(({ mode }): UserConfig => {
       case BROWSER_TYPES.FIREFOX:
         return env.FIREFOX_BINARY;
       case BROWSER_TYPES.BRAVE:
-        return env.BRAVE_BINARY;
+        return env.BRAVE_BINARY || env.CHROME_BINARY;
       case BROWSER_TYPES.CHROME:
         return env.CHROME_BINARY;
       default:
@@ -53,7 +57,7 @@ export default defineConfig(({ mode }): UserConfig => {
   };
 
   // Generate manifest with package info
-  function generateManifest() {
+  const generateManifest = () => {
     const manifest = readJsonFile('src/manifest.json');
     const pkg = readJsonFile('package.json');
 
@@ -63,7 +67,7 @@ export default defineConfig(({ mode }): UserConfig => {
       version: pkg.version,
       ...manifest,
     };
-  }
+  };
 
   // Vite configuration
   return {
@@ -75,17 +79,19 @@ export default defineConfig(({ mode }): UserConfig => {
       minifyIdentifiers: false,
     },
     plugins: [
+      react(),
       tsconfigPaths(),
       webExtension({
         manifest: generateManifest,
         // Use Chrome config for Brave
-        browser: isBrave ? BROWSER_TYPES.CHROME : browser,
         webExtConfig: {
-          browser: isBrave ? BROWSER_TYPES.CHROME : browser,
-          target: isBrave ? BROWSER_TYPES.CHROME : browser,
+          target: isBrave
+            ? 'chromium'
+            : browser === 'firefox'
+              ? 'firefox-desktop'
+              : 'chromium',
           chromiumBinary: getBrowserBinary(),
           firefoxBinary: env.FIREFOX_BINARY,
-          braveBinary: env.BRAVE_BINARY,
           startUrl: ['https://github.com/aidenybai/react-scan'],
         },
       }),

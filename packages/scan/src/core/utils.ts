@@ -1,11 +1,12 @@
-import { getType } from 'bippy';
-import { type Fiber } from 'react-reconciler';
+// @ts-nocheck
+import { type Fiber, getType } from 'bippy';
+// import type { ComponentType } from 'preact';
 import { ReactScanInternals } from '~core/index';
-import { type AggregatedRender } from '~web/utils/outline';
-import type { AggregatedChange, Render, RenderChange } from './instrumentation';
+import type { AggregatedRender } from '~web/utils/outline';
+import type { AggregatedChange, Render } from './instrumentation';
 
 export const aggregateChanges = (
-  changes: Array<RenderChange>,
+  changes: Array<Change>,
   prevAggregatedChange?: AggregatedChange,
 ) => {
   const newChange = {
@@ -75,7 +76,7 @@ function getComponentGroupNames(group: ComponentData[]): string {
   const max = Math.min(4, len);
 
   for (let i = 1; i < max; i++) {
-    result += ', ' + group[i].name;
+    result += `, ${group[i].name}`;
   }
 
   return result;
@@ -105,30 +106,30 @@ export const getLabelText = (
 ) => {
   let labelText = '';
 
-  // TODO(Alexis): perhaps simplify this block up to the sorted line
-  const componentsByCount = new Map<number, Array<ComponentData>>();
+  const componentsByCount = new Map<
+    number,
+    Array<{ name: string; forget: boolean; time: number }>
+  >();
 
-  for (const {
-    forget,
-    time,
-    aggregatedCount,
-    name,
-  } of groupedAggregatedRenders) {
+  for (const aggregatedRender of groupedAggregatedRenders) {
+    const { forget, time, aggregatedCount, name } = aggregatedRender;
     if (!componentsByCount.has(aggregatedCount)) {
       componentsByCount.set(aggregatedCount, []);
     }
-    componentsByCount
-      .get(aggregatedCount)!
-      .push({ name, forget, time: time ?? 0 });
+    const components = componentsByCount.get(aggregatedCount);
+    if (components) {
+      components.push({ name, forget, time: time ?? 0 });
+    }
   }
 
   const sortedCounts = Array.from(componentsByCount.keys()).sort(descending);
 
   const parts: Array<string> = [];
   let cumulativeTime = 0;
-
   for (const count of sortedCounts) {
-    const componentGroup = componentsByCount.get(count)!;
+    const componentGroup = componentsByCount.get(count);
+    if (!componentGroup) continue;
+
     let text = getComponentGroupNames(componentGroup);
     const totalTime = getComponentGroupTotalTime(componentGroup);
     const hasForget = componentGroupHasForget(componentGroup);
@@ -140,11 +141,11 @@ export const getLabelText = (
     }
 
     if (count > 1) {
-      text += ' ×' + count;
+      text += ` × ${count}`;
     }
 
     if (hasForget) {
-      text = '✨' + text;
+      text = `✨${text}`;
     }
 
     parts.push(text);
@@ -155,11 +156,11 @@ export const getLabelText = (
   if (!labelText.length) return null;
 
   if (labelText.length > 40) {
-    labelText = labelText.slice(0, 40) + '…';
+    labelText = `${labelText.slice(0, 40)}…`;
   }
 
   if (cumulativeTime >= 0.01) {
-    labelText += ' (' + cumulativeTime.toFixed(2) + 'ms)';
+    labelText += ` (${Number(cumulativeTime.toFixed(2))}ms)`;
   }
 
   return labelText;
@@ -187,11 +188,11 @@ export interface RenderData {
   time: number;
   renders: Array<Render>;
   displayName: string | null;
-  type: React.ComponentType<any> | null;
+  type: any;
   changes?: Array<RenderChange>;
 }
 
 export function isEqual(a: unknown, b: unknown): boolean {
-  // eslint-disable-next-line no-self-compare
+  // biome-ignore lint/suspicious/noSelfCompare: reliable way to detect NaN values in JavaScript
   return a === b || (a !== a && b !== b);
 }

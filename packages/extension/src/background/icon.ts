@@ -17,7 +17,7 @@ const ANIMATION_CONFIG = {
   stopFrame: 6,
 } as const;
 
-let animationInterval: number | null = null;
+let animationInterval: TTimer | null = null;
 const preRenderedFrames: Array<Record<string, {
   width: number;
   height: number;
@@ -208,7 +208,7 @@ browser.tabs.onUpdated.addListener((_, changeInfo) => {
   }
 });
 
-browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
   if (message.type === 'react-scan:is-focused') {
     debouncedUpdateIcon(message.data.state);
   }

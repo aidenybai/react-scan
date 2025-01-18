@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fastSerialize } from '~core/instrumentation';
 
 describe('fastSerialize', () => {
@@ -18,7 +18,7 @@ describe('fastSerialize', () => {
   it('serializes numbers', () => {
     expect(fastSerialize(42)).toBe('42');
     expect(fastSerialize(0)).toBe('0');
-    expect(fastSerialize(NaN)).toBe('NaN');
+    expect(fastSerialize(Number.NaN)).toBe('NaN');
   });
 
   it('serializes booleans', () => {
@@ -27,9 +27,8 @@ describe('fastSerialize', () => {
   });
 
   it('serializes functions', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const testFunc = (x: 2) => 3
-    expect(fastSerialize(testFunc)).toBe('(x) => 3');
+    const testFunc = (_x: 2) => 3;
+    expect(fastSerialize(testFunc)).toBe('(_x) => 3');
   });
 
   it('serializes arrays', () => {
@@ -49,7 +48,6 @@ describe('fastSerialize', () => {
   });
 
   it('serializes objects with custom constructors', () => {
-    // eslint-disable-next-line @typescript-eslint/no-extraneous-class
     class CustomClass {}
     const instance = new CustomClass();
     expect(fastSerialize(instance)).toBe('CustomClass{…}');

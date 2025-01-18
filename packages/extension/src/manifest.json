@@ -37,9 +37,7 @@
   },
   "background": {
     "{{chrome}}.service_worker": "src/background/index.ts",
-    "{{firefox}}.scripts": [
-      "src/background/index.ts"
-    ]
+    "{{firefox}}.scripts": ["src/background/index.ts"]
   },
   "{{chrome}}.permissions": [
     "activeTab",
@@ -57,58 +55,32 @@
     "webRequestBlocking",
     "<all_urls>"
   ],
-  "{{chrome}}.host_permissions": [
-    "<all_urls>"
-  ],
-  "{{chrome}}.declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "react_scan_csp_rules",
-        "enabled": false,
-        "path": "rules.json"
-      }
-    ]
-  },
+  "{{chrome}}.host_permissions": ["<all_urls>"],
   "{{firefox}}.content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "src/inject/react-scan.ts"
-      ],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "src/inject/index.ts"
-      ],
+      "js": ["src/inject/react-scan.ts"],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "src/content/index.ts"
-      ],
+      "js": ["src/inject/index.ts"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.ts"],
       "run_at": "document_start"
     }
   ],
   "{{chrome}}.web_accessible_resources": [
     {
-      "resources": [
-        "icon/*"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["icon/*"],
+      "matches": ["<all_urls>"]
     }
   ],
-  "{{firefox}}.web_accessible_resources": [
-    "src/content.js",
-    "icon/*"
-  ]
+  "{{firefox}}.web_accessible_resources": ["src/content.js", "icon/*"]
 }

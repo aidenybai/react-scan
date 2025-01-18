@@ -1,14 +1,21 @@
-import { useCallback, useEffect } from 'preact/hooks';
-import { ReactScanInternals, Store, setOptions } from '~core/index';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
+import {
+  LocalStorageOptions,
+  ReactScanInternals,
+  setOptions,
+  Store,
+} from '~core/index';
 import { Icon } from '~web/components/icon';
 import FpsMeter from '~web/components/widget/fps-meter';
 import { Arrows } from '~web/components/widget/toolbar/arrows';
-import { cn } from '~web/utils/helpers';
+import { signalIsSettingsOpen } from '~web/state';
+import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 
 export const Toolbar = constant(() => {
-  const inspectState = Store.inspectState;
+  const refSettingsButton = useRef<HTMLButtonElement>(null);
 
+  const inspectState = Store.inspectState;
   const isInspectActive = inspectState.value.kind === 'inspecting';
   const isInspectFocused = inspectState.value.kind === 'focused';
 
@@ -38,19 +45,26 @@ export const Toolbar = constant(() => {
   }, []);
 
   const onToggleActive = useCallback(() => {
-    if (ReactScanInternals.instrumentation) {
-      ReactScanInternals.instrumentation.isPaused.value =
-        !ReactScanInternals.instrumentation.isPaused.value;
+    if (!ReactScanInternals.instrumentation) {
+      return;
     }
+    // todo: set a single source of truth
+    const isPaused = !ReactScanInternals.instrumentation.isPaused.value;
+    ReactScanInternals.instrumentation.isPaused.value = isPaused;
+    const existingLocalStorageOptions =
+      readLocalStorage<LocalStorageOptions>('react-scan-options');
+    saveLocalStorage('react-scan-options', {
+      ...existingLocalStorageOptions,
+      enabled: !isPaused,
+    });
   }, []);
 
-  const onSoundToggle = useCallback(() => {
-    const newSoundState = !ReactScanInternals.options.value.playSound;
-    setOptions({ playSound: newSoundState });
-  }, []);
+  // const onToggleSettings = useCallback(() => {
+  //   signalIsSettingsOpen.value = !signalIsSettingsOpen.value;
+  // }, []);
 
   useEffect(() => {
-    const unsubscribe = Store.inspectState.subscribe((state) => {
+    const unSubState = Store.inspectState.subscribe((state) => {
       if (state.kind === 'uninitialized') {
         Store.inspectState.value = {
           kind: 'inspect-off',
@@ -58,8 +72,13 @@ export const Toolbar = constant(() => {
       }
     });
 
+    const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
+      refSettingsButton.current?.classList.toggle('text-inspect', state);
+    });
+
     return () => {
-      unsubscribe();
+      unSubState();
+      unSubSettings();
     };
   }, []);
 
@@ -68,71 +87,73 @@ export const Toolbar = constant(() => {
 
   if (isInspectActive) {
     inspectIcon = <Icon name="icon-inspect" />;
-    inspectColor = 'rgba(142, 97, 227, 1)';
+    inspectColor = '#8e61e3';
   } else if (isInspectFocused) {
     inspectIcon = <Icon name="icon-focus" />;
-    inspectColor = 'rgba(142, 97, 227, 1)';
+    inspectColor = '#8e61e3';
   } else {
     inspectIcon = <Icon name="icon-inspect" />;
     inspectColor = '#999';
   }
 
   return (
-    <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
-      <button
-        title="Inspect element"
-        onClick={onToggleInspect}
-        className="flex items-center justify-center px-3"
-        style={{ color: inspectColor }}
-      >
-        {inspectIcon}
-      </button>
+    <div
+      className={cn(
+        'flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden gap-x-[6px]',
+        // isInspectFocused && 'border-t-1 border-white/10',
+      )}
+    >
+      <div className="h-full flex items-center min-w-fit gap-x-[6px]">
+        <button
+          type="button"
+          id="react-scan-inspect-element"
+          title="Inspect element"
+          onClick={onToggleInspect}
+          className="button flex items-center justify-center px-3 h-full"
+          style={{ color: inspectColor }}
+        >
+          {inspectIcon}
+        </button>
 
-      <button
-        id="react-scan-power"
-        title={
-          ReactScanInternals.instrumentation?.isPaused.value ? 'Start' : 'Stop'
-        }
-        onClick={onToggleActive}
-        className={cn('flex items-center justify-center px-3', {
-          'text-white': !ReactScanInternals.instrumentation?.isPaused.value,
-          'text-[#999]': ReactScanInternals.instrumentation?.isPaused.value,
-        })}
+        <label className="switch">
+          <input
+            type="checkbox"
+            id="react-scan-power"
+            title={
+              ReactScanInternals.instrumentation?.isPaused.value
+                ? 'Start'
+                : 'Stop'
+            }
+            checked={!ReactScanInternals.instrumentation?.isPaused.value}
+            onChange={onToggleActive}
+          />
+          <span className="slider round"></span>
+        </label>
+        {/* <button
+        ref={refSettingsButton}
+        type="button"
+        title="Settings"
+        onClick={onToggleSettings}
+        className="button flex items-center justify-center px-3"
       >
-        <Icon
-          name={`icon-${ReactScanInternals.instrumentation?.isPaused.value ? 'eye-off' : 'eye'}`}
-        />
-      </button>
-      <button
-        id="react-scan-sound-toggle"
-        onClick={onSoundToggle}
-        title={
-          ReactScanInternals.options.value.playSound ? 'Sound On' : 'Sound Off'
-        }
-        className={cn('flex items-center justify-center px-3', {
-          'text-white': ReactScanInternals.options.value.playSound,
-          'text-[#999]': !ReactScanInternals.options.value.playSound,
-        })}
-      >
-        <Icon
-          name={`icon-${ReactScanInternals.options.value.playSound ? 'volume-on' : 'volume-off'}`}
-        />
-      </button>
+        <Icon name="icon-settings" />
+      </button> */}
 
-      <Arrows />
+        {/* todo, only render arrows when inspecting element */}
+
+        {/* i think i want to put wrap this with config if user doesn't want to see it (specifically robinhood) */}
+      </div>
       <div
         className={cn(
-          'flex items-center justify-center whitespace-nowrap py-1.5 px-2 text-sm text-white',
-          {
-            'ml-auto': !isInspectFocused,
-          },
+          'flex items-center justify-end w-full',
+          'py-1.5 px-2',
+          'whitespace-nowrap text-sm text-white',
         )}
       >
         react-scan
+        {/* this fps meter is bad we can improve it */}
         <FpsMeter />
       </div>
     </div>
   );
 });
-
-export default Toolbar;

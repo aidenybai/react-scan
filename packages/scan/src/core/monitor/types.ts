@@ -1,4 +1,4 @@
-import { type Fiber } from 'react-reconciler';
+import type { Fiber } from 'bippy';
 
 export enum Device {
   DESKTOP = 0,

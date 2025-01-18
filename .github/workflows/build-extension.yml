@@ -42,6 +42,7 @@ jobs:
         run: |
           pnpm build
           cd packages/extension
+          rm -rf build
           pnpm pack:all
 
       - name: Commit changes

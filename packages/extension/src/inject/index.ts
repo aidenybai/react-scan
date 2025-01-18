@@ -1,10 +1,9 @@
+import { sleep, storageGetItem, storageSetItem } from '@pivanov/utils';
 import { broadcast, canLoadReactScan, hasReactFiber } from '../utils/helpers';
-import { sleep, storageGetItem, storageSetItem } from '@pivanov/utils'
 import { createReactNotAvailableUI, toggleReactIsNotAvailable } from './react-is-not-available';
 
 
 window.addEventListener('DOMContentLoaded', async () => {
-
   if (!canLoadReactScan) {
     return;
   }
@@ -16,28 +15,31 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!isReactAvailable) {
     _reactScan.setOptions({
       enabled: false,
-      showToolbar: false
+      showToolbar: false,
     });
     createReactNotAvailableUI();
   }
 
-  const isDefaultEnabled = await storageGetItem<boolean>('react-scan', 'enabled');
+  const isDefaultEnabled = await storageGetItem<boolean>(
+    'react-scan',
+    'enabled',
+  );
   _reactScan.setOptions({
     enabled: !!isDefaultEnabled,
-    showToolbar: !!isDefaultEnabled
+    showToolbar: !!isDefaultEnabled,
   });
 
   broadcast.onmessage = async (type, data) => {
     if (type === 'react-scan:toggle-state') {
       broadcast.postMessage('react-scan:react-version', {
-        version: isReactAvailable
+        version: isReactAvailable,
       });
 
       if (isReactAvailable) {
         const state = data?.state;
         _reactScan.setOptions({
           enabled: state,
-          showToolbar: state
+          showToolbar: state,
         });
         void storageSetItem('react-scan', 'enabled', state);
       } else {
@@ -48,7 +50,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   _reactScan.ReactScanInternals.Store.inspectState.subscribe((state) => {
     broadcast.postMessage('react-scan:is-focused', {
-      state: state.kind === 'focused'
+      state: state.kind === 'focused',
     });
   });
 });
