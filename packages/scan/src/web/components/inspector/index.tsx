@@ -49,8 +49,8 @@ export const inspectorState = signal<InspectorState>({
 class InspectorErrorBoundary extends Component {
   state: { error: Error | null; hasError: boolean } = { hasError: false, error: null };
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError(e: Error) {
+    return { hasError: true, error: e };
   }
 
   handleReset = () => {

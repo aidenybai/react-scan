@@ -6,7 +6,7 @@ import {
   ForwardRefTag,
   FunctionComponentTag,
   MemoComponentTag,
-  MemoizedState,
+  type MemoizedState,
   SimpleMemoComponentTag,
   createFiberVisitor,
   didFiberCommit,
@@ -18,7 +18,6 @@ import {
   instrument,
   traverseContexts,
   traverseProps,
-  traverseState,
 } from 'bippy';
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
@@ -28,16 +27,12 @@ import {
   type RenderPhase,
 } from '~web/utils/outline';
 import {
-  Change,
-  ClassComponentStateChange,
-  ContextChange,
-  FunctionalComponentStateChange,
+  type Change,
+  type ContextChange,
   ReactScanInternals,
-  StateChange,
+  type StateChange,
   Store,
-  getIsProduction,
 } from './index';
-import { outlineFiber } from 'src/new-outlines';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -200,7 +195,7 @@ export const getPropsChanges = (fiber: Fiber) => {
     ...Object.keys(nextProps),
   ]);
   for (const propName in allKeys) {
-    const prevValue = prevProps?.[propName];
+    // const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
     const change: Change = {
@@ -247,7 +242,9 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     }
 
     return changes;
-  } else if (fiber.tag === ClassComponentTag) {
+  }
+
+  if (fiber.tag === ClassComponentTag) {
     // when we have class component fiber, memoizedState is the component state
     const change: StateChange = {
       type: ChangeReason.ClassState,
@@ -260,6 +257,7 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     }
     return changes;
   }
+
   return changes;
 };
 interface ContextFiber {
@@ -268,7 +266,7 @@ interface ContextFiber {
 }
 
 let lastContextId = 0;
-const contextIdMap = new WeakMap<any, number>();
+const contextIdMap = new WeakMap<ContextFiber, number>();
 const getContextId = (contextFiber: ContextFiber) => {
   const existing = contextIdMap.get(contextFiber);
   if (existing) {
@@ -285,7 +283,7 @@ function getContextChangesTraversal(
   prevValue: ContextFiber | null | undefined,
 ): void {
   if (!nextValue || !prevValue) return;
-  const prevMemoizedValue = prevValue.memoizedValue;
+  // const prevMemoizedValue = prevValue.memoizedValue;
   const nextMemoizedValue = nextValue.memoizedValue;
 
   const change: ContextChange = {
@@ -294,7 +292,7 @@ function getContextChangesTraversal(
       (nextValue.context as { displayName: string | undefined }).displayName ??
       'UnnamedContext',
     value: nextMemoizedValue,
-    contextType: getContextId(nextValue.context as any),
+    contextType: getContextId(nextValue.context as ContextFiber),
 
     // unstable: false,
   };
@@ -451,10 +449,8 @@ export const createInstrumentation = (
 
         if (allInstances.some((instance) => instance.config.trackChanges)) {
           const propsChanges = getChangedPropsDetailed(fiber);
-
           const stateChanges = getStateChanges(fiber);
-
-          const contextChanges = null!;
+          const contextChanges = getContextChanges(fiber);
 
           changes.push.apply(changes, propsChanges);
           changes.push.apply(changes, stateChanges);

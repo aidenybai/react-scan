@@ -23,7 +23,7 @@ import {
   getBestCorner,
 } from './helpers';
 import { ResizeHandle } from './resize-handle';
-import { Settings } from './settings';
+// import { Settings } from './settings';
 import { Toolbar } from './toolbar';
 
 export const Widget = () => {

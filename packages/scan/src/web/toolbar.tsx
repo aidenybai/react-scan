@@ -5,10 +5,10 @@ import { Widget } from './components/widget';
 
 export let scriptLevelToolbar: HTMLDivElement | null = null
 class ToolbarErrorBoundary extends Component {
-  state: { hasError: boolean; error: any } = { hasError: false, error: null };
+  state: { hasError: boolean; error: Error | null } = { hasError: false, error: null };
 
-  static getDerivedStateFromError(e: any) {
-    return { hasError: true, error: e };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   handleReset = () => {
@@ -28,6 +28,7 @@ class ToolbarErrorBoundary extends Component {
               {this.state.error?.message || JSON.stringify(this.state.error)}
             </div>
             <button
+              type="button"
               onClick={this.handleReset}
               className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
             >

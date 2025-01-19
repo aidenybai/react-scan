@@ -102,10 +102,6 @@ export const flushOutlines = async () => {
     return;
   }
 
-  const flattenedScheduledOutlines = Array.from(
-    ReactScanInternals.scheduledOutlines.values(),
-  );
-
   await activateOutlines();
 
   recalcOutlines();

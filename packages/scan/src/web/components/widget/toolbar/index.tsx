@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 import {
-  LocalStorageOptions,
+  type LocalStorageOptions,
   ReactScanInternals,
-  setOptions,
   Store,
 } from '~core/index';
 import { Icon } from '~web/components/icon';
 import FpsMeter from '~web/components/widget/fps-meter';
-import { Arrows } from '~web/components/widget/toolbar/arrows';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
@@ -127,7 +125,7 @@ export const Toolbar = constant(() => {
             checked={!ReactScanInternals.instrumentation?.isPaused.value}
             onChange={onToggleActive}
           />
-          <span className="slider round"></span>
+          <span className="slider round" />
         </label>
         {/* <button
         ref={refSettingsButton}

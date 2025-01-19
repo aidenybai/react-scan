@@ -1,14 +1,14 @@
+import { getFiberId } from 'bippy';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  ChangesListener,
-  ChangesPayload,
-  ContextChange,
+  type ChangesListener,
+  type ChangesPayload,
+  type ContextChange,
   Store,
 } from '~core/index';
+import { isEqual } from '~core/utils';
 // import { AllAggregatedChanges } from './utils';
 import { inspectorState } from '.';
-import { getFiberId } from 'bippy';
-import { isEqual } from '~core/utils';
 
 const CHANGES_QUEUE_INTERVAL = 50;
 
@@ -22,10 +22,10 @@ export type AggregatedChanges = {
 };
 
 export type AllAggregatedChanges = {
-  propsChanges: Map<any, AggregatedChanges>;
-  stateChanges: Map<any, AggregatedChanges>;
+  propsChanges: Map<string, AggregatedChanges>;
+  stateChanges: Map<string, AggregatedChanges>;
   contextChanges: Map<
-    any,
+    number,
     | { changes: AggregatedChanges; kind: 'initialized' }
     | {
         // this looks weird, because it is
@@ -56,7 +56,7 @@ const getContextChangesValue = (
 };
 const processChanges = (
   changes: Array<{ name: string; value: unknown; prevValue?: unknown }>,
-  targetMap: Map<any, AggregatedChanges>,
+  targetMap: Map<string, AggregatedChanges>,
 ) => {
   for (const change of changes) {
     const existing = targetMap.get(change.name);
@@ -101,7 +101,7 @@ const processContextChanges = (
           changes: {
             count: 1,
             currentValue: change.value,
-            id: change.contextType,
+            id: change.contextType.toString(),
             lastUpdated: Date.now(),
             name: change.name,
             previousValue: existing.value,
@@ -115,7 +115,7 @@ const processContextChanges = (
         changes: {
           count: existing.changes.count + 1,
           currentValue: change.value,
-          id: change.contextType,
+          id: change.contextType.toString(),
           lastUpdated: Date.now(),
           name: change.name,
           previousValue: existing.changes.currentValue,
@@ -127,7 +127,7 @@ const processContextChanges = (
 
     aggregatedChanges.contextChanges.set(change.contextType, {
       kind: 'partially-initialized',
-      id: change.contextType,
+      id: change.contextType.toString(),
       lastUpdated: Date.now(),
       name: change.name,
       value: change.value,
@@ -142,14 +142,14 @@ const collapseQueue = (queue: Array<ChangesPayload>) => {
     stateChanges: new Map(),
   };
 
-  queue.forEach((changes) => {
+  for (const changes of queue) {
     // context is a special case since we don't send precise diffs and need to be idempotent
     processContextChanges(changes.contextChanges, localAggregatedChanges);
 
     processChanges(changes.stateChanges, localAggregatedChanges.stateChanges);
 
     processChanges(changes.propsChanges, localAggregatedChanges.propsChanges);
-  });
+  }
 
   return localAggregatedChanges;
 };
@@ -233,7 +233,7 @@ const mergeContextChanges = (
                 previousValue: incomingChange.changes.previousValue, // we always want to show this value, since this will be the true state transition (if you make the previousValue the last seen currentValue, u will have weird behavior with primitive state updates)
               },
             });
-            return;
+            break;
           }
           case 'partially-initialized': {
             contextChanges.set(key, {
@@ -241,15 +241,16 @@ const mergeContextChanges = (
               changes: {
                 count: existingChange.changes.count + 1,
                 currentValue: incomingChange.value,
-                id: incomingChange.id,
+                id: incomingChange.id.toString(),
                 lastUpdated: incomingChange.lastUpdated,
                 name: incomingChange.name,
                 previousValue: existingChange.changes.currentValue,
               },
             });
-            return;
+            break;
           }
         }
+        break;
       }
       case 'partially-initialized': {
         switch (incomingChange.kind) {
@@ -259,13 +260,13 @@ const mergeContextChanges = (
               changes: {
                 count: incomingChange.changes.count + 1,
                 currentValue: incomingChange.changes.currentValue,
-                id: incomingChange.changes.id,
+                id: incomingChange.changes.id.toString(),
                 lastUpdated: incomingChange.changes.lastUpdated,
                 name: incomingChange.changes.name,
                 previousValue: existingChange.value,
               },
             });
-            return;
+            break;
           }
           case 'partially-initialized': {
             contextChanges.set(key, {
@@ -273,15 +274,16 @@ const mergeContextChanges = (
               changes: {
                 count: 1,
                 currentValue: incomingChange.value,
-                id: incomingChange.id,
+                id: incomingChange.id.toString(),
                 lastUpdated: incomingChange.lastUpdated,
                 name: incomingChange.name,
                 previousValue: existingChange.value,
               },
             });
-            return;
+            break;
           }
         }
+        break;
       }
     }
   });
@@ -348,6 +350,7 @@ export const useInspectedFiberChangeStore = ({
 
   const fiberId = fiber ? getFiberId(fiber) : null;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fiber is a dependency
   useEffect(() => {
     const interval = setInterval(() => {
       // optimization to avoid unconditional renders
@@ -406,6 +409,7 @@ export const useInspectedFiberChangeStore = ({
   }, [fiberId]);
 
   // cleanup
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fiberId is a dependency
   useEffect(() => {
     return () => {
       setAggregatedChanges({

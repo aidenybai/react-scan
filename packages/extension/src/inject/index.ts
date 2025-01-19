@@ -3,7 +3,6 @@ import * as reactScan from 'react-scan';
 import { broadcast, canLoadReactScan, hasReactFiber } from '../utils/helpers';
 import { createReactNotAvailableUI, toggleReactIsNotAvailable } from './react-is-not-available';
 
-console.log('@@@ 2');
 window.reactScan = reactScan.setOptions;
 
 reactScan.scan({

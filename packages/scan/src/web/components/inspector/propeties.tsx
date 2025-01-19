@@ -1,6 +1,4 @@
-import { signal } from '@preact/signals';
-import { type Fiber, getDisplayName, getFiberId } from 'bippy';
-import { Component } from 'preact';
+import { getDisplayName } from 'bippy';
 import {
   useCallback,
   useEffect,
@@ -8,46 +6,26 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
-import {
-  ChangesListener,
-  ChangesPayload,
-  ContextChange,
-  FunctionalComponentStateChange,
-  PropsChange,
-  Store,
-} from '~core/index';
+
 import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
-import { signalIsSettingsOpen } from '~web/state';
-import { cn, tryOrElse } from '~web/utils/helpers';
-import { constant } from '~web/utils/preact/constant';
+import { cn } from '~web/utils/helpers';
 import { globalInspectorState, inspectorState } from '.';
-import { DiffValueView } from './diff-value';
 import { flashManager } from './flash-overlay';
 import {
-  type InspectorData,
-  collectInspectorData,
   getCurrentFiberState,
-  getStateNames,
   isPromise,
-  resetStateTracking,
 } from './overlay/utils';
 import {
   detectValueType,
   formatForClipboard,
-  formatFunctionPreview,
   formatInitialValue,
-  formatPath,
   formatValue,
-  formatValuePreview,
-  getCompositeFiberFromElement,
-  getObjectDiff,
   getOverrideMethods,
   getPath,
   isEditableValue,
   isExpandable,
-  sanitizeErrorMessage,
   sanitizeString,
   updateNestedValue,
 } from './utils';
@@ -82,12 +60,6 @@ interface EditableValueProps {
   value: unknown;
   onSave: (newValue: unknown) => void;
   onCancel: () => void;
-}
-
-interface ContextInfo {
-  value: unknown;
-  displayName?: string;
-  contextType: any;
 }
 
 interface StateItem {
@@ -306,37 +278,11 @@ export const PropertyElement = ({
 
   const { overrideProps, overrideHookState } = getOverrideMethods();
   const canEdit = useMemo(() => {
-    return (
-      allowEditing &&
-      (section === 'props'
-        ? !!overrideProps && name !== 'children'
-        : section === 'state'
-          ? !!overrideHookState
-          : false)
-    );
+    if (!allowEditing) return false;
+    if (section === 'props') return !!overrideProps && name !== 'children';
+    if (section === 'state') return !!overrideHookState;
+    return false;
   }, [section, overrideProps, overrideHookState, allowEditing, name]);
-
-  const isBadRender = useMemo(() => {
-    const isFirstRender = !globalInspectorState.lastRendered.has(currentPath);
-
-    if (isFirstRender) {
-      if (typeof value === 'function') {
-        return true;
-      }
-
-      if (typeof value !== 'object') {
-        return false;
-      }
-    }
-
-    const shouldShowChange =
-      !isFirstRender ||
-      !isEqual(globalInspectorState.lastRendered.get(currentPath), value);
-
-    const isBadRender = level === 0 && shouldShowChange && !isPromise(value);
-
-    return isBadRender;
-  }, [currentPath, level, value]);
 
   const handleEdit = useCallback(() => {
     if (canEdit) {
@@ -362,16 +308,16 @@ export const PropertyElement = ({
           if (item.name === baseStateKey) {
             if (statePath.length === 1) {
               return { ...item, value: newValue };
-            } else {
-              return {
-                ...item,
-                value: updateNestedValue(
-                  item.value,
-                  statePath.slice(1),
-                  newValue,
-                ),
-              };
             }
+
+            return {
+              ...item,
+              value: updateNestedValue(
+                item.value,
+                statePath.slice(1),
+                newValue,
+              ),
+            };
           }
           return item;
         });

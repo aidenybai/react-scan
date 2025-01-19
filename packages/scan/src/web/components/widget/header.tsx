@@ -10,16 +10,16 @@ import {
 } from '../inspector/utils';
 import { Arrows } from './toolbar/arrows';
 
-const REPLAY_DELAY_MS = 300;
+// const REPLAY_DELAY_MS = 300;
 
 export const BtnReplay = () => {
-  const refTimeout = useRef<TTimer>();
-  const replayState = useRef({
-    isReplaying: false,
-    toggleDisabled: (disabled: boolean, button: HTMLElement) => {
-      button.classList[disabled ? 'add' : 'remove']('disabled');
-    },
-  });
+  // const refTimeout = useRef<TTimer>();
+  // const replayState = useRef({
+  //   isReplaying: false,
+  //   toggleDisabled: (disabled: boolean, button: HTMLElement) => {
+  //     button.classList[disabled ? 'add' : 'remove']('disabled');
+  //   },
+  // });
 
   const [canEdit, setCanEdit] = useState(false);
   const isSettingsOpen = signalIsSettingsOpen.value;

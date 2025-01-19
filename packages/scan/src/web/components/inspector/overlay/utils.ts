@@ -1,11 +1,12 @@
 import {
   ClassComponentTag,
-  Fiber,
+  type ContextDependency,
+  type Fiber,
   // type Fiber,
   ForwardRefTag,
   FunctionComponentTag,
   MemoComponentTag,
-  MemoizedState,
+  type MemoizedState,
   // type MemoizedState,
   SimpleMemoComponentTag,
 } from 'bippy';
@@ -13,33 +14,9 @@ import { isEqual } from '~core/utils';
 import { isCurrentTree } from '../utils';
 // import { getAllFiberContexts } from '~core/web/inspect-element/utils';
 
-interface ContextDependency<T = unknown> {
-  context: ReactContext<T>;
-  next: ContextDependency<T> | null;
-}
-
-interface ContextValue {
-  displayValue: Record<string, unknown>;
-  rawValue?: unknown;
-  isUserContext?: boolean;
-}
-
-interface ReactContext<T = unknown> {
-  $$typeof: symbol;
-  Consumer: ReactContext<T>;
-  Provider: {
-    $$typeof: symbol;
-    _context: ReactContext<T>;
-  };
-  _currentValue: T;
-  _currentValue2: T;
-  displayName?: string;
-}
-
 const stateChangeCounts = new Map<string, number>();
 const propsChangeCounts = new Map<string, number>();
 const contextChangeCounts = new Map<string, number>();
-let lastRenderedStates = new WeakMap<Fiber, Record<string, unknown>>();
 
 const STATE_NAME_REGEX = /\[(?<name>\w+),\s*set\w+\]/g;
 const PROPS_ORDER_REGEX = /\(\s*{\s*(?<props>[^}]+)\s*}\s*\)/;
@@ -244,7 +221,6 @@ export const resetStateTracking = () => {
   stateChangeCounts.clear();
   propsChangeCounts.clear();
   contextChangeCounts.clear();
-  lastRenderedStates = new WeakMap<Fiber, Record<string, unknown>>();
 };
 
 export const getStateChangeCount = (name: string): number =>
@@ -303,18 +279,7 @@ interface ExtendedMemoizedState extends MemoizedState {
   element?: unknown;
 }
 
-const getStateValue = (memoizedState: ExtendedMemoizedState): unknown => {
-  if (!memoizedState) return undefined;
-
-  const queue = memoizedState.queue;
-  if (queue) {
-    return queue.lastRenderedState;
-  }
-
-  return memoizedState.memoizedState;
-};
-
-export const getStateFromFiber = (fiber: Fiber): any => {
+export const getStateFromFiber = (fiber: Fiber) => {
   if (!fiber) return {};
   // only funtional components have memo tags,
   if (
@@ -325,7 +290,7 @@ export const getStateFromFiber = (fiber: Fiber): any => {
   ) {
     // Functional component, need to traverse hooks
     let memoizedState: MemoizedState | null = fiber.memoizedState;
-    const state: any = {};
+    const state: Record<string, unknown> = {};
     let index = 0;
 
     while (memoizedState) {
@@ -337,12 +302,16 @@ export const getStateFromFiber = (fiber: Fiber): any => {
     }
 
     return state;
-  } else if (fiber.tag === ClassComponentTag) {
+  }
+
+  if (fiber.tag === ClassComponentTag) {
     // Class component, memoizedState is the component state
     return fiber.memoizedState || {};
   }
+
   return {};
 };
+
 export const getCurrentFiberState = (
   fiber: Fiber,
 ): Record<string, unknown> | null => {
@@ -354,7 +323,7 @@ export const getCurrentFiberState = (
     ? (fiber.actualStartTime ?? 0) > (fiber.alternate.actualStartTime ?? 0)
     : true;
 
-  let memoizedState: ExtendedMemoizedState | null = currentIsNewer
+  const memoizedState: ExtendedMemoizedState | null = currentIsNewer
     ? fiber.memoizedState
     : (fiber.alternate?.memoizedState ?? fiber.memoizedState);
 
@@ -508,10 +477,12 @@ export const collectInspectorData = (recvFiber: Fiber): InspectorData => {
 interface ContextInfo {
   value: unknown;
   displayName: string;
-  contextType: any;
+  contextType: unknown;
 }
-export const getAllFiberContexts = (fiber: Fiber): Map<any, ContextInfo> => {
-  const contexts = new Map<any, ContextInfo>();
+export const getAllFiberContexts = (
+  fiber: Fiber,
+): Map<unknown, ContextInfo> => {
+  const contexts = new Map<unknown, ContextInfo>();
 
   if (!fiber) {
     return contexts;
@@ -523,19 +494,19 @@ export const getAllFiberContexts = (fiber: Fiber): Map<any, ContextInfo> => {
     const dependencies = currentFiber.dependencies;
 
     if (dependencies?.firstContext) {
-      let contextItem: any = dependencies.firstContext;
+      let contextItem: ContextDependency<unknown> | null =
+        dependencies.firstContext;
 
       while (contextItem) {
         const memoizedValue = contextItem.memoizedValue;
         const displayName = contextItem.context?.displayName;
 
-        if (!contexts.has(memoizedValue)) {
+        if (!contexts.has(contextItem.context)) {
           contexts.set(contextItem.context, {
             value: memoizedValue,
             displayName: displayName ?? 'UnnamedContext',
             contextType: null,
           });
-        } else {
         }
 
         if (contextItem === contextItem.next) {
@@ -544,7 +515,6 @@ export const getAllFiberContexts = (fiber: Fiber): Map<any, ContextInfo> => {
 
         contextItem = contextItem.next;
       }
-    } else {
     }
 
     currentFiber = currentFiber.return;

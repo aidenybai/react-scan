@@ -6,13 +6,12 @@ import {
   isHostFiber,
   traverseFiber,
 } from 'bippy';
-import { PropsChange, ReactScanInternals, Store } from '~core/index';
+import { type PropsChange, ReactScanInternals } from '~core/index';
 import { ChangeReason } from '~core/instrumentation';
 import { isEqual } from '~core/utils';
 import { batchGetBoundingRects } from '~web/utils/outline';
 import { globalInspectorState } from '.';
 import type { ExtendedReactRenderer } from '../../../types';
-import { safeStringify } from './logging';
 import { ensureRecord, isPromise } from './overlay/utils';
 
 interface StateItem {
@@ -195,7 +194,8 @@ export const getAssociatedFiberRect = async (element: Element) => {
   if (!stateNode) return null;
 
   const rect = (await batchGetBoundingRects([stateNode])).get(stateNode);
-  return rect!;
+  if (!rect) return null;
+  return rect;
 };
 
 // todo-before-stable(rob): refactor these
@@ -1064,7 +1064,7 @@ export function hackyJsFormatter(code: string) {
   //
   // 1) Collapse runs of whitespace to single spaces
   //
-  code = code.replace(/\s+/g, ' ').trim();
+  const normalizedCode = code.replace(/\s+/g, ' ').trim();
 
   //
   // 2) Tokenize
@@ -1084,11 +1084,11 @@ export function hackyJsFormatter(code: string) {
   //
   const rawTokens = [];
   let current = '';
-  for (let i = 0; i < code.length; i++) {
-    const c = code[i];
+  for (let i = 0; i < normalizedCode.length; i++) {
+    const c = normalizedCode[i];
 
     // Detect arrow =>
-    if (c === '=' && code[i + 1] === '>') {
+    if (c === '=' && normalizedCode[i + 1] === '>') {
       if (current.trim()) rawTokens.push(current.trim());
       rawTokens.push('=>');
       current = '';
@@ -1234,7 +1234,7 @@ export function hackyJsFormatter(code: string) {
       if (noSpaceBefore || /^[),;:\].}>]$/.test(tok)) {
         line += tok;
       } else {
-        line += ' ' + tok;
+        line += ` ${tok}`;
       }
     }
   }
@@ -1333,7 +1333,7 @@ export function hackyJsFormatter(code: string) {
         !(arrowParamSet.has(i) && top === '(') &&
         !(genericSet.has(i) && top === '<')
       ) {
-        if (['{', '[', '(', '<'].includes(top!)) {
+        if (top && ['{', '[', '(', '<'].includes(top)) {
           newLine();
         }
       }
@@ -1355,7 +1355,7 @@ export function hackyJsFormatter(code: string) {
 
 // Update the formatFunctionPreview to use the new formatter
 export const formatFunctionPreview = (
-  fn: Function,
+  fn: { toString(): string },
   expanded = false,
 ): string => {
   try {
@@ -1383,7 +1383,7 @@ export const formatValuePreview = (value: unknown): string => {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
   if (typeof value === 'string')
-    return `"${value.length > 150 ? value.slice(0, 20) + '...' : value}"`;
+    return `"${value.length > 150 ? `${value.slice(0, 20)}...` : value}"`;
   if (typeof value === 'number' || typeof value === 'boolean')
     return String(value);
   if (typeof value === 'function') return formatFunctionPreview(value);
@@ -1407,8 +1407,8 @@ export const safeGetValue = (
   if (typeof value === 'function') return { value };
   if (typeof value !== 'object') return { value };
 
-  // Handle promises without accessing them
   if (value instanceof Promise) {
+    // Handle promises without accessing them
     return { value: 'Promise' };
   }
 
@@ -1420,7 +1420,7 @@ export const safeGetValue = (
     }
 
     return { value };
-  } catch (e) {
+  } catch {
     return { value: null, error: 'Error accessing value' };
   }
 };

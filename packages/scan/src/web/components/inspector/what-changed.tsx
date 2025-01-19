@@ -1,8 +1,8 @@
 import { getDisplayName, getType } from 'bippy';
-import { ReactNode } from 'preact/compat';
+import type { ReactNode } from 'preact/compat';
 import {
-  Dispatch,
-  StateUpdater,
+  type Dispatch,
+  type StateUpdater,
   useEffect,
   useRef,
   useState,
@@ -19,7 +19,7 @@ import {
   useInspectedFiberChangeStore,
 } from './use-change-store';
 import {
-  AggregatedChanges,
+  type AggregatedChanges,
   formatFunctionPreview,
   formatPath,
   getObjectDiff,
@@ -42,7 +42,7 @@ const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
     }
 
     return { value };
-  } catch (e) {
+  } catch {
     return { value: null, error: 'Error accessing value' };
   }
 };
@@ -99,14 +99,12 @@ export const WhatChanged = constant(() => {
     }
   }, [hasInitialized, shouldShowChanges]);
 
-  const initializedContextChanges = new Map(
-    Array.from(aggregatedChanges.contextChanges.entries())
-      .filter(([, value]) => value.kind === 'initialized')
-      .map(([key, value]) => [
-        key,
-        value.kind === 'partially-initialized' ? null! : value.changes,
-      ]),
-  );
+  const initializedContextChanges = new Map();
+  for (const [key, value] of aggregatedChanges.contextChanges) {
+    if (value.kind === 'initialized') {
+      initializedContextChanges.set(key, value.changes);
+    }
+  }
 
   if (!shouldShowChanges) {
     return null;
@@ -160,11 +158,11 @@ export const WhatChanged = constant(() => {
 });
 
 const renderStateName = (key: string, componentName: string) => {
-  if (isNaN(Number(key))) {
+  if (Number.isNaN(Number(key))) {
     return key;
   }
 
-  const n = parseInt(key);
+  const n = Number.parseInt(key);
   const getOrdinalSuffix = (num: number) => {
     const lastDigit = num % 10;
     const lastTwoDigits = num % 100;
@@ -215,6 +213,7 @@ const WhatsChangedHeader = ({
 }) => {
   return (
     <button
+      type="button"
       onClick={() => {
         setIsExpanded((state) => {
           setUnViewedChanges(0);
@@ -253,7 +252,7 @@ const Section = ({
   title,
 }: {
   title: string;
-  changes: Map<any, AggregatedChanges>;
+    changes: Map<string, AggregatedChanges>;
   renderName?: (name: string) => ReactNode;
 }) => {
   const [expandedFns, setExpandedFns] = useState(new Set<string>());
@@ -283,6 +282,7 @@ const Section = ({
           return (
             <div key={entryKey}>
               <button
+                type="button"
                 onClick={() => {
                   setExpandedEntries((prev) => {
                     const next = new Set(prev);
@@ -418,7 +418,7 @@ const DiffChange = ({
     // todo: split up function view and normal view
     return (
       <div
-        key={i}
+        key={`${formatPath(diffChange.path)}-${i}`}
         className="flex flex-col"
         style={{
           marginBottom: i < diff.changes.length - 1 ? '8px' : 0,
@@ -437,9 +437,10 @@ const DiffChange = ({
             return formatPath(diffChange.path);
           })()}
         </div>
-        <div
+        <button
+          type="button"
           className={cn(
-            'group overflow-x-auto flex items-start text-[#f87171] bg-[#2a1515] py-[3px] px-1.5 rounded-[2px]',
+            'text-left group overflow-x-auto flex items-start text-[#f87171] bg-[#2a1515] py-[3px] px-1.5 rounded-[2px]',
             isFunction && 'cursor-pointer',
           )}
           onClick={
@@ -468,7 +469,7 @@ const DiffChange = ({
                 <div className="flex gap-1 items-start w-full">
                   <span className="flex-1">
                     {formatFunctionPreview(
-                      prevDiffValue as Function,
+                      prevDiffValue as (...args: unknown[]) => unknown,
                       expandedFns.has(`${formatPath(diffChange.path)}-prev`),
                     )}
                   </span>
@@ -509,10 +510,11 @@ const DiffChange = ({
               />
             )}
           </span>
-        </div>
-        <div
+        </button>
+        <button
+          type="button"
           className={cn(
-            'group flex overflow-x-auto items-start text-[#4ade80] bg-[#1a2a1a] py-[3px] px-1.5 rounded-[2px] mt-0.5',
+            'text-left group flex overflow-x-auto items-start text-[#4ade80] bg-[#1a2a1a] py-[3px] px-1.5 rounded-[2px] mt-0.5',
             isFunction && 'cursor-pointer',
           )}
           onClick={
@@ -541,7 +543,7 @@ const DiffChange = ({
                 <div className="flex gap-1 items-start w-full">
                   <span className="flex-1">
                     {formatFunctionPreview(
-                      currDiffValue as Function,
+                      currDiffValue as (...args: unknown[]) => unknown,
                       expandedFns.has(`${formatPath(diffChange.path)}-current`),
                     )}
                   </span>
@@ -582,7 +584,7 @@ const DiffChange = ({
               />
             )}
           </span>
-        </div>
+        </button>
       </div>
     );
   });
