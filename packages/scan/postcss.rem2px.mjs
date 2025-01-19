@@ -6,7 +6,7 @@ const remToPx = (options = {}) => {
 
   const convertRemToPx = (value) => {
     // Handle all cases: calc(), min(), max(), clamp(), and regular values
-    return value.replace(remRegex, (match, negative, num) => {
+    return value.replace(remRegex, (_match, negative, num) => {
       const pixels = Number.parseFloat(num) * baseValue;
       return `${negative ? '-' : ''}${pixels}px`;
     });

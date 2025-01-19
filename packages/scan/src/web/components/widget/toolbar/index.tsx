@@ -5,6 +5,7 @@ import {
   Store,
 } from '~core/index';
 import { Icon } from '~web/components/icon';
+import { Toggle } from '~web/components/toggle';
 import FpsMeter from '~web/components/widget/fps-meter';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
@@ -42,7 +43,10 @@ export const Toolbar = constant(() => {
     }
   }, []);
 
-  const onToggleActive = useCallback(() => {
+  const onToggleActive = useCallback((e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!ReactScanInternals.instrumentation) {
       return;
     }
@@ -113,20 +117,16 @@ export const Toolbar = constant(() => {
           {inspectIcon}
         </button>
 
-        <label className="switch">
-          <input
-            type="checkbox"
-            id="react-scan-power"
-            title={
-              ReactScanInternals.instrumentation?.isPaused.value
-                ? 'Start'
-                : 'Stop'
-            }
-            checked={!ReactScanInternals.instrumentation?.isPaused.value}
-            onChange={onToggleActive}
-          />
-          <span className="slider round" />
-        </label>
+        <Toggle
+          checked={!ReactScanInternals.instrumentation?.isPaused.value}
+          onChange={onToggleActive}
+          title={
+            ReactScanInternals.instrumentation?.isPaused.value
+              ? 'Start'
+              : 'Stop'
+          }
+        />
+
         {/* <button
         ref={refSettingsButton}
         type="button"

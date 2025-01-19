@@ -116,7 +116,7 @@ export const flushOutlines = async () => {
 
 let animationFrameId: number | null = null;
 
-const shouldSkipInterpolation = (rect: DOMRect) => {
+const shouldSkipInterpolation = (_rect: DOMRect) => {
   return false;
   // // animations tend to transform out of screen/ to a very tiny size, those are noisy so we don't lerp them
   // if (

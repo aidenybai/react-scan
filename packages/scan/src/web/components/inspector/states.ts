@@ -20,6 +20,7 @@ export interface TimelineState {
   updates: TimelineUpdate[];
   currentIndex: number;
   isReplaying: boolean;
+  playbackSpeed: 1 | 2 | 4;
   totalUpdates: number;
 }
 
@@ -29,6 +30,7 @@ const timelineStateDefault: TimelineState = {
   updates: [],
   currentIndex: -1,
   isReplaying: false,
+  playbackSpeed: 1,
   totalUpdates: 0,
 };
 
@@ -68,7 +70,10 @@ export const globalInspectorState = {
       updates: [],
       currentIndex: -1,
       isReplaying: false,
+      playbackSpeed: 1,
       totalUpdates: 0,
     };
   },
 };
+
+export const inspectorUpdateSignal = signal(0);

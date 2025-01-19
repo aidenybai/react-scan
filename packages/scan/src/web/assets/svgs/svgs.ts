@@ -1,18 +1,5 @@
 export const ICONS = `
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-  <symbol id="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/>
-    <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
-    <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/>
-    <path d="m2 2 20 20"/>
-  </symbol>
-
-  <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-    <circle cx="12" cy="12" r="3" />
-  </symbol>
-
-
   <symbol id="icon-inspect" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/>
     <path d="M5 3a2 2 0 0 0-2 2"/>
@@ -107,8 +94,6 @@ export const ICONS = `
     <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
   </symbol>
 
-
-  
   <symbol id="icon-function" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
     <path d="M9 17c2 0 2.8-1 2.8-2.8V10c0-2 1-3.3 3.2-3"/>
@@ -126,8 +111,6 @@ export const ICONS = `
     <path d="M4 2C2.8 3.7 2 5.7 2 8"/>
   </symbol>
 
-
-
   <symbol id="icon-triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
     <path d="M12 9v4"/>
@@ -142,6 +125,15 @@ export const ICONS = `
   <symbol id="icon-toggle-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect width="20" height="12" x="2" y="6" rx="6" ry="6"/>
     <circle cx="16" cy="12" r="2"/>
+  </symbol>
+
+  <symbol id="icon-play" viewBox="0 0 24 24">
+    <polygon points="6 3 20 12 6 21 6 3"/>
+  </symbol>
+
+  <symbol id="icon-pause" viewBox="0 0 24 24">
+    <rect x="14" y="4" width="4" height="16" rx="1"/>
+    <rect x="6" y="4" width="4" height="16" rx="1"/>
   </symbol>
 </svg>
 `;

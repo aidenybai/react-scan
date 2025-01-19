@@ -53,7 +53,7 @@ interface PropertyElementProps {
 }
 
 interface PropertySectionProps {
-  title: string;
+  onToggleExpanded: () => void;
   section: 'props' | 'state' | 'context';
 }
 
@@ -193,13 +193,6 @@ export const PropertyElement = ({
     if (section === 'context') {
       // we avoid flashing context purple to avoid confusion to user that this causes a render
       // it may be the case context changes but a fiber does not a depend on it, and the fiber is memoized
-      /**
-       * we avoid flashing context purple to avoid confusion to user that this causes a render.
-       * It may be the case context changes, but a fiber does not a depend on it, and the fiber is memoized
-       *
-       * To add purple flashes correctly, we should distribute the value to the store used in whats-changed and read those values
-       * here to determine when to flash
-       */
       return;
     }
 
@@ -546,7 +539,7 @@ export const PropertyElement = ({
   );
 };
 
-export const PropertySection = ({ title, section }: PropertySectionProps) => {
+export const PropertySection = ({ onToggleExpanded, section }: PropertySectionProps) => {
   const { fiberProps, fiberState, fiberContext } = inspectorState.value;
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -587,6 +580,11 @@ export const PropertySection = ({ title, section }: PropertySectionProps) => {
     fiberContext.changes,
   ]);
 
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded(state => !state);
+    onToggleExpanded();
+  }, [onToggleExpanded]);
+
   if (
     !currentData ||
     (Array.isArray(currentData)
@@ -601,11 +599,11 @@ export const PropertySection = ({ title, section }: PropertySectionProps) => {
     : Object.keys(currentData).length;
 
   return (
-    <div className="react-scan-section">
+    <>
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center w-full"
+        onClick={toggleExpanded}
+        className="react-section-header sticky"
       >
         <Icon
           name="icon-chevron-right"
@@ -614,18 +612,22 @@ export const PropertySection = ({ title, section }: PropertySectionProps) => {
             'rotate-90': isExpanded,
           })}
         />
-        <span className="ml-1">
-          {title} {!isExpanded && propertyCount > 0 && `(${propertyCount})`}
+        <span className="capitalize">
+          {section} {!isExpanded && propertyCount > 0 && `(${propertyCount})`}
         </span>
       </button>
-      <div
-        className={cn('react-scan-expandable', {
-          'react-scan-expanded': isExpanded,
-        })}
-      >
-        <div>
-          {Array.isArray(currentData)
-            ? currentData.map(({ name, value }) => (
+      <div className="react-scan-section">
+        <div
+          className={cn(
+            'react-scan-expandable',
+            {
+              'react-scan-expanded py-0.5': isExpanded,
+            },
+          )}
+        >
+          <div>
+            {Array.isArray(currentData)
+              ? currentData.map(({ name, value }) => (
                 <PropertyElement
                   key={name}
                   name={name}
@@ -636,7 +638,7 @@ export const PropertySection = ({ title, section }: PropertySectionProps) => {
                   changedKeys={changedKeys}
                 />
               ))
-            : Object.entries(currentData).map(([key, value]) => (
+              : Object.entries(currentData).map(([key, value]) => (
                 <PropertyElement
                   key={key}
                   name={key}
@@ -647,8 +649,9 @@ export const PropertySection = ({ title, section }: PropertySectionProps) => {
                   changedKeys={changedKeys}
                 />
               ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

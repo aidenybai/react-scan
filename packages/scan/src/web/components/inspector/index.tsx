@@ -1,6 +1,6 @@
 import type { Fiber } from 'bippy';
 import { Component } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
@@ -17,6 +17,7 @@ import {
   TIMELINE_MAX_UPDATES,
   type TimelineUpdate,
   inspectorState,
+  inspectorUpdateSignal,
   timelineState,
 } from './states';
 import { getCompositeFiberFromElement } from './utils';
@@ -32,9 +33,13 @@ export const globalInspectorState = {
     resetStateTracking();
     inspectorState.value = {
       fiber: null,
-      fiberProps: { current: [], changes: new Set() },
-      fiberState: { current: [], changes: new Set() },
-      fiberContext: { current: [], changes: new Set() },
+      fiberProps: { current: [], changes: new Set(), changesCounts: new Map() },
+      fiberState: { current: [], changes: new Set(), changesCounts: new Map() },
+      fiberContext: {
+        current: [],
+        changes: new Set(),
+        changesCounts: new Map(),
+      },
     };
   },
 };
@@ -82,10 +87,31 @@ class InspectorErrorBoundary extends Component {
 }
 
 export const Inspector = constant(() => {
+  const refTimer = useRef<TTimer>();
+  const refInspector = useRef<HTMLDivElement>(null);
   const refLastInspectedFiber = useRef<Fiber | null>(null);
   const refPendingUpdates = useRef<Set<Fiber>>(new Set<Fiber>());
   const isSettingsOpen = signalIsSettingsOpen.value;
 
+  const calculateStickyTop = useCallback(() => {
+    clearTimeout(refTimer.current);
+    refTimer.current = setTimeout(() => {
+      const stickyElements = Array.from(refInspector.current?.children || []);
+      if (!stickyElements.length) return;
+
+      let cumulativeHeight = 0;
+
+      for (const element of stickyElements) {
+        const sticky = element as HTMLElement;
+        if (sticky.classList.contains('react-section-header')) {
+          sticky.style.setProperty('top', `${cumulativeHeight}px`);
+          cumulativeHeight += sticky.offsetHeight;
+        }
+      }
+    }, 500);
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     const processUpdate = () => {
       if (refPendingUpdates.current.size === 0) return;
@@ -133,6 +159,7 @@ export const Inspector = constant(() => {
       }
 
       if (state.kind === 'focused') {
+        calculateStickyTop();
         signalIsSettingsOpen.value = false;
       }
 
@@ -142,13 +169,14 @@ export const Inspector = constant(() => {
       if (!parentCompositeFiber) return;
 
       if (refLastInspectedFiber.current?.type !== parentCompositeFiber.type) {
+        refLastInspectedFiber.current = parentCompositeFiber;
         refPendingUpdates.current.clear();
         globalInspectorState.cleanup();
         scheduleUpdate(parentCompositeFiber);
       }
     });
 
-    const unSubLastReportTime = Store.lastReportTime.subscribe(() => {
+    const unSubInspectorUpdate = inspectorUpdateSignal.subscribe(() => {
       const inspectState = Store.inspectState.value;
       if (inspectState.kind !== 'focused' || !inspectState.focusedDomElement) {
         refPendingUpdates.current.clear();
@@ -169,19 +197,16 @@ export const Inspector = constant(() => {
 
       scheduleUpdate(parentCompositeFiber);
 
-      requestAnimationFrame(() => {
-        if (!element.isConnected) {
-          refPendingUpdates.current.clear();
-          refLastInspectedFiber.current = null;
-          globalInspectorState.cleanup();
-          Store.inspectState.value = {
-            kind: 'inspecting',
-            hoveredDomElement: null,
-          };
-        }
-      });
+      if (!element.isConnected) {
+        refPendingUpdates.current.clear();
+        refLastInspectedFiber.current = null;
+        globalInspectorState.cleanup();
+        Store.inspectState.value = {
+          kind: 'inspecting',
+          hoveredDomElement: null,
+        };
+      }
     });
-
     const unSubInspectorState = inspectorState.subscribe((state) => {
       if (!state.fiber || !refLastInspectedFiber.current) return;
       if (state.fiber.type !== refLastInspectedFiber.current.type) return;
@@ -198,6 +223,8 @@ export const Inspector = constant(() => {
 
       const { updates, currentIndex, totalUpdates } = timelineState.value;
       let newUpdates: TimelineUpdate[];
+
+      const newTotal = totalUpdates + 1;
 
       if (updates.length >= TIMELINE_MAX_UPDATES) {
         if (currentIndex < updates.length - 1) {
@@ -216,10 +243,6 @@ export const Inspector = constant(() => {
       }
 
       const newIndex = newUpdates.length - 1;
-      const newTotal =
-        currentIndex < updates.length - 1
-          ? totalUpdates - (updates.length - currentIndex - 1) + 1
-          : totalUpdates + 1;
 
       timelineState.value = {
         ...timelineState.value,
@@ -231,7 +254,7 @@ export const Inspector = constant(() => {
 
     return () => {
       unSubState();
-      unSubLastReportTime();
+      unSubInspectorUpdate();
       unSubInspectorState();
       refPendingUpdates.current.clear();
       globalInspectorState.cleanup();
@@ -241,23 +264,23 @@ export const Inspector = constant(() => {
   return (
     <InspectorErrorBoundary>
       <div
+        ref={refInspector}
         className={cn(
           'react-scan-inspector',
           'opacity-0',
-          'max-h-0',
-          'overflow-hidden',
+          'h-full',
+          'overflow-y-auto overflow-x-hidden',
           'transition-opacity duration-150 delay-0',
           'pointer-events-none',
           {
-            'opacity-100 delay-300 pointer-events-auto max-h-["auto"]':
-              !isSettingsOpen,
+            'opacity-100 delay-300 pointer-events-auto': !isSettingsOpen,
           },
         )}
       >
-        <WhatChanged />
-        <PropertySection title="Props" section="props" />
-        <PropertySection title="State" section="state" />
-        <PropertySection title="Context" section="context" />
+        <WhatChanged onToggleExpanded={calculateStickyTop} />
+        <PropertySection onToggleExpanded={calculateStickyTop} section="props" />
+        <PropertySection onToggleExpanded={calculateStickyTop} section="state" />
+        <PropertySection onToggleExpanded={calculateStickyTop} section="context" />
       </div>
     </InspectorErrorBoundary>
   );
