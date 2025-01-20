@@ -754,7 +754,7 @@ describe('edge cases', () => {
     expect(result).toContain("DialogTrigger.displayName = 'DialogTrigger'");
   });
 
-  it.skip('handles legacy and unconventional component patterns', async () => {
+  it('handles legacy and unconventional component patterns', async () => {
     const input = `
 
 

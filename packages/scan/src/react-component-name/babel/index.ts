@@ -180,6 +180,9 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
     }
     const identifier = unwrapPath(callee, t.isIdentifier);
     if (identifier) {
+      if (identifier.node.name === 'createReactClass') {
+        return true;
+      }
       // Assume HOCs
       if (/^with[A-Z]/.test(identifier.node.name)) {
         return true;
