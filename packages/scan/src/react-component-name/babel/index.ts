@@ -54,22 +54,41 @@ function assignDisplayName(
   ]);
 }
 
+const REACT_CLASS = ['Component', 'PureComponent'];
+
+function isNamespaceExport(
+  namespace: string,
+  moduleExports: string[],
+  path: NodePath<t.Expression>,
+): boolean {
+  const identifier = unwrapPath(path, t.isIdentifier);
+  if (identifier) {
+    return moduleExports.includes(identifier.node.name);
+  }
+  const memberExpr = unwrapPath(path, t.isMemberExpression);
+  if (memberExpr) {
+    const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+    if (object && object.node.name === namespace) {
+      const property = memberExpr.get('property');
+      return (
+        property.isIdentifier() && moduleExports.includes(property.node.name)
+      );
+    }
+  }
+  return false;
+}
+
 function isReactClassComponent(path: NodePath<t.Class>): boolean {
   const superClass = path.get('superClass');
 
   if (!superClass.isExpression()) {
     return false;
   }
+  if (isNamespaceExport('React', REACT_CLASS, superClass)) {
+    return true;
+  }
   // The usual
-  if (
-    pathReferencesImport(
-      superClass,
-      'react',
-      ['Component', 'PureComponent'],
-      false,
-      true,
-    )
-  ) {
+  if (pathReferencesImport(superClass, 'react', REACT_CLASS, false, true)) {
     return true;
   }
   return false;
@@ -81,7 +100,10 @@ function isStyledComponent(
   path: NodePath<t.Expression>,
 ): boolean {
   function isStyledImport(path: NodePath<t.Node>): boolean {
-    return pathReferencesImport(path, moduleName, importName, false, false);
+    return (
+      (path.isIdentifier() && path.node.name === 'styled') ||
+      pathReferencesImport(path, moduleName, importName, false, false)
+    );
   }
   const callExpr = unwrapPath(path, t.isCallExpression);
   if (callExpr) {
@@ -131,6 +153,8 @@ function isStyledComponent(
   return false;
 }
 
+const REACT_FACTORY = ['forwardRef', 'memo', 'createContext', 'createClass'];
+
 function isReactComponent(expr: NodePath<t.Expression>): boolean {
   // Check for class components
   const classExpr = unwrapPath(expr, t.isClassExpression);
@@ -148,13 +172,9 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
     const callee = callExpr.get('callee');
     // React
     if (
-      pathReferencesImport(
-        callee,
-        'react',
-        ['forwardRef', 'memo', 'createContext'],
-        false,
-        true,
-      )
+      (callee.isExpression() &&
+        isNamespaceExport('React', REACT_FACTORY, callee)) ||
+      pathReferencesImport(callee, 'react', REACT_FACTORY, false, true)
     ) {
       return true;
     }
