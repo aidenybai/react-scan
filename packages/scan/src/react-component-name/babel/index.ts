@@ -153,7 +153,13 @@ function isStyledComponent(
   return false;
 }
 
-const REACT_FACTORY = ['forwardRef', 'memo', 'createContext', 'createClass'];
+const REACT_FACTORY = [
+  'forwardRef',
+  'memo',
+  'createContext',
+  'createClass',
+  'lazy',
+];
 
 function isReactComponent(expr: NodePath<t.Expression>): boolean {
   // Check for class components
