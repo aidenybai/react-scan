@@ -7,6 +7,7 @@ import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { Icon } from '../icon';
+import { ComponentStack } from './component-stack';
 import { flashManager } from './flash-overlay';
 import {
   type InspectorData,
@@ -157,7 +158,6 @@ export const Inspector = constant(() => {
     });
 
     const unSubReport = Store.lastReportTime.subscribe(() => {
-
       const inspectState = Store.inspectState.value;
       if (inspectState.kind !== 'focused') {
         pendingUpdates.clear();
@@ -215,6 +215,7 @@ export const Inspector = constant(() => {
         <PropertySection title="Props" section="props" />
         <PropertySection title="State" section="state" />
         <PropertySection title="Context" section="context" />
+        <ComponentStack />
       </div>
     </InspectorErrorBoundary>
   );

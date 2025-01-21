@@ -2,7 +2,13 @@
   "name": "react-scan",
   "version": "0.1.0",
   "description": "Scan your React app for renders",
-  "keywords": ["react", "react-scan", "react scan", "render", "performance"],
+  "keywords": [
+    "react",
+    "react-scan",
+    "react scan",
+    "render",
+    "performance"
+  ],
   "homepage": "https://react-scan.million.dev",
   "bugs": {
     "url": "https://github.com/aidenybai/react-scan/issues"
@@ -166,17 +172,27 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "monitoring": ["./dist/core/monitor/index.d.ts"],
-      "monitoring/next": ["./dist/core/monitor/params/next.d.ts"],
+      "monitoring": [
+        "./dist/core/monitor/index.d.ts"
+      ],
+      "monitoring/next": [
+        "./dist/core/monitor/params/next.d.ts"
+      ],
       "monitoring/react-router-legacy": [
         "./dist/core/monitor/params/react-router-v5.d.ts"
       ],
       "monitoring/react-router": [
         "./dist/core/monitor/params/react-router-v6.d.ts"
       ],
-      "monitoring/remix": ["./dist/core/monitor/params/remix.d.ts"],
-      "monitoring/astro": ["./dist/core/monitor/params/astro/index.ts"],
-      "react-component-name/vite": ["./dist/react-component-name/vite.d.ts"],
+      "monitoring/remix": [
+        "./dist/core/monitor/params/remix.d.ts"
+      ],
+      "monitoring/astro": [
+        "./dist/core/monitor/params/astro/index.ts"
+      ],
+      "react-component-name/vite": [
+        "./dist/react-component-name/vite.d.ts"
+      ],
       "react-component-name/webpack": [
         "./dist/react-component-name/webpack.d.ts"
       ],
@@ -192,12 +208,23 @@
       "react-component-name/rollup": [
         "./dist/react-component-name/rollup.d.ts"
       ],
-      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"],
-      "react-component-name/loader": ["./dist/react-component-name/loader.d.ts"]
+      "react-component-name/astro": [
+        "./dist/react-component-name/astro.d.ts"
+      ],
+      "react-component-name/loader": [
+        "./dist/react-component-name/loader.d.ts"
+      ]
     }
   },
   "bin": "bin/cli.js",
-  "files": ["dist", "bin", "package.json", "README.md", "LICENSE", "auto.d.ts"],
+  "files": [
+    "dist",
+    "bin",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "auto.d.ts"
+  ],
   "scripts": {
     "build": "npm run build:css && NODE_ENV=production tsup",
     "postbuild": "pnpm copy-astro && node ../../scripts/version-warning.mjs",
@@ -236,6 +263,7 @@
     "@remix-run/react": "*",
     "@types/babel__core": "^7.20.5",
     "@types/react": "^18.0.0",
+    "@types/react-reconciler": "^0.28.9",
     "@types/react-router": "^5.1.0",
     "@vercel/style-guide": "^6.0.0",
     "clsx": "^2.1.1",
@@ -246,6 +274,7 @@
     "publint": "^0.2.12",
     "react": "*",
     "react-dom": "*",
+    "react-reconciler": "^0.31.0",
     "react-router": "^5.0.0",
     "react-router-dom": "^5.0.0 || ^6.0.0 || ^7.0.0",
     "tailwind-merge": "^2.5.5",

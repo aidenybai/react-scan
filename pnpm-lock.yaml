@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.1.0(next@15.0.3(@babel/core@7.26.0)(react@19.0.0))(react@19.0.0)
+        version: 1.1.0(next@15.0.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -20,7 +20,7 @@ importers:
         version: 22.10.2
       '@vercel/style-guide':
         specifier: ^6.0.0
-        version: 6.0.0(eslint@8.57.1)(prettier@3.3.3)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2))
+        version: 6.0.0(eslint@8.57.1)(prettier@3.3.3)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2)(terser@5.36.0))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.4.49)
@@ -224,6 +224,9 @@ importers:
       '@types/react':
         specifier: ^18.0.0
         version: 18.3.12
+      '@types/react-reconciler':
+        specifier: ^0.28.9
+        version: 0.28.9(@types/react@18.3.12)
       '@types/react-router':
         specifier: ^5.1.0
         version: 5.1.20
@@ -254,6 +257,9 @@ importers:
       react-dom:
         specifier: '*'
         version: 18.2.0(react@18.2.0)
+      react-reconciler:
+        specifier: ^0.31.0
+        version: 0.31.0(react@18.2.0)
       react-router:
         specifier: ^5.0.0
         version: 5.3.4(react@18.2.0)
@@ -277,13 +283,13 @@ importers:
     dependencies:
       '@vercel/analytics':
         specifier: ^1.4.1
-        version: 1.4.1(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+        version: 1.4.1(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.1.0(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+        version: 1.1.0(next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       next:
         specifier: 15.0.3
-        version: 15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+        version: 15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       react:
         specifier: 19.0.0-rc-66855b96-20241106
         version: 19.0.0-rc-66855b96-20241106
@@ -292,7 +298,7 @@ importers:
         version: 19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106)
       react-scan:
         specifier: ^0.0.48
-        version: 0.0.48(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react-router-dom@6.28.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-router@6.28.0(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(rollup@4.28.0)
+        version: 0.0.48(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react-router-dom@6.28.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-router@6.28.0(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(rollup@4.28.0)
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -1688,6 +1694,11 @@ packages:
 
   '@types/react-dom@18.0.9':
     resolution: {integrity: sha512-qnVvHxASt/H7i+XG1U1xMiY5t+IHcPGUK7TDMDzom08xa7e86eCeKOiLZezwCKVxJn6NEiiy2ekgX8aQssjIKg==}
+
+  '@types/react-reconciler@0.28.9':
+    resolution: {integrity: sha512-HHM3nxyUZ3zAylX8ZEyrDNd2XZOnQ0D5XfunJF5FLQnZbHHYq4UWvW1QfelQNXv1ICNkwYhfxjwfnqivYB6bFg==}
+    peerDependencies:
+      '@types/react': '*'
 
   '@types/react-router@5.1.20':
     resolution: {integrity: sha512-jGjmu/ZqS7FjSH6owMcD5qpq19+1RS9DeVRqfl1FeBMxTDQAGwlMWOcs52NDoXaNKyG3d1cYQFMs9rCrb88o9Q==}
@@ -4183,6 +4194,12 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
+  react-reconciler@0.31.0:
+    resolution: {integrity: sha512-7Ob7Z+URmesIsIVRjnLoDGwBEG/tVitidU0nMsqX/eeJaLY89RISO/10ERe0MqmzuKUUB1rmY+h1itMbUHg9BQ==}
+    engines: {node: '>=0.10.0'}
+    peerDependencies:
+      react: ^19.0.0
+
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
     engines: {node: '>=0.10.0'}
@@ -6205,6 +6222,10 @@ snapshots:
     dependencies:
       '@types/react': 18.3.12
 
+  '@types/react-reconciler@0.28.9(@types/react@18.3.12)':
+    dependencies:
+      '@types/react': 18.3.12
+
   '@types/react-router@5.1.20':
     dependencies:
       '@types/history': 4.7.11
@@ -6437,10 +6458,10 @@ snapshots:
       next: 15.0.3(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
-  '@vercel/analytics@1.4.1(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)':
+  '@vercel/analytics@1.4.1(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)':
     optionalDependencies:
       '@remix-run/react': 2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3)
-      next: 15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+      next: 15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       react: 19.0.0-rc-66855b96-20241106
 
   '@vercel/analytics@1.4.1(@remix-run/react@2.15.0(react-dom@19.0.0-rc.1(react@19.0.0-rc.1))(react@19.0.0-rc.1)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(babel-plugin-react-compiler@19.0.0-beta-a7bf2bd-20241110)(react-dom@19.0.0-rc.1(react@19.0.0-rc.1))(react@19.0.0-rc.1))(react@19.0.0-rc.1)':
@@ -6449,15 +6470,15 @@ snapshots:
       next: 15.0.3(@babel/core@7.26.0)(babel-plugin-react-compiler@19.0.0-beta-a7bf2bd-20241110)(react-dom@19.0.0-rc.1(react@19.0.0-rc.1))(react@19.0.0-rc.1)
       react: 19.0.0-rc.1
 
-  '@vercel/speed-insights@1.1.0(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)':
+  '@vercel/speed-insights@1.1.0(next@15.0.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)':
     optionalDependencies:
-      next: 15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
-      react: 19.0.0-rc-66855b96-20241106
-
-  '@vercel/speed-insights@1.1.0(next@15.0.3(@babel/core@7.26.0)(react@19.0.0))(react@19.0.0)':
-    optionalDependencies:
-      next: 15.0.3(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      next: 15.0.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
+
+  '@vercel/speed-insights@1.1.0(next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)':
+    optionalDependencies:
+      next: 15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+      react: 19.0.0-rc-66855b96-20241106
 
   '@vercel/style-guide@6.0.0(eslint@8.57.1)(prettier@3.3.3)(typescript@5.7.3)(vitest@1.0.0(@types/node@20.17.10)(terser@5.36.0))':
     dependencies:
@@ -6467,7 +6488,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)
       '@typescript-eslint/parser': 7.18.0(eslint@8.57.1)(typescript@5.7.3)
       eslint-config-prettier: 9.1.0(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
       eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import@2.31.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1)
@@ -6492,7 +6513,7 @@ snapshots:
       - supports-color
       - vitest
 
-  '@vercel/style-guide@6.0.0(eslint@8.57.1)(prettier@3.3.3)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2))':
+  '@vercel/style-guide@6.0.0(eslint@8.57.1)(prettier@3.3.3)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2)(terser@5.36.0))':
     dependencies:
       '@babel/core': 7.26.0
       '@babel/eslint-parser': 7.25.9(@babel/core@7.26.0)(eslint@8.57.1)
@@ -6500,7 +6521,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)
       '@typescript-eslint/parser': 7.18.0(eslint@8.57.1)(typescript@5.7.3)
       eslint-config-prettier: 9.1.0(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
       eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import@2.31.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1)
@@ -6512,7 +6533,7 @@ snapshots:
       eslint-plugin-testing-library: 6.5.0(eslint@8.57.1)(typescript@5.7.3)
       eslint-plugin-tsdoc: 0.2.17
       eslint-plugin-unicorn: 51.0.1(eslint@8.57.1)
-      eslint-plugin-vitest: 0.3.26(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2))
+      eslint-plugin-vitest: 0.3.26(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2)(terser@5.36.0))
       prettier-plugin-packagejson: 2.5.6(prettier@3.3.3)
     optionalDependencies:
       eslint: 8.57.1
@@ -7525,7 +7546,7 @@ snapshots:
     dependencies:
       eslint: 8.57.1
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1)):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0):
     dependencies:
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1)
 
@@ -7543,7 +7564,7 @@ snapshots:
       debug: 4.3.7
       enhanced-resolve: 5.17.1
       eslint: 8.57.1
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1)
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1)
       fast-glob: 3.3.2
       get-tsconfig: 4.8.1
       is-bun-module: 1.3.0
@@ -7572,7 +7593,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -7583,7 +7604,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -7611,7 +7632,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1)
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.0.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1)
       hasown: 2.0.2
       is-core-module: 2.15.1
       is-glob: 4.0.3
@@ -7640,7 +7661,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1)
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0)(eslint@8.57.1)
       hasown: 2.0.2
       is-core-module: 2.15.1
       is-glob: 4.0.3
@@ -7770,13 +7791,13 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-vitest@0.3.26(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2)):
+  eslint-plugin-vitest@0.3.26(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)(vitest@1.0.0(@types/node@22.10.2)(terser@5.36.0)):
     dependencies:
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.1)(typescript@5.7.3)
       eslint: 8.57.1
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.3))(eslint@8.57.1)(typescript@5.7.3)
-      vitest: 1.0.0(@types/node@22.10.2)
+      vitest: 1.0.0(@types/node@22.10.2)(terser@5.36.0)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -8790,7 +8811,33 @@ snapshots:
       - babel-plugin-macros
     optional: true
 
-  next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106):
+  next@15.0.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+    dependencies:
+      '@next/env': 15.0.3
+      '@swc/counter': 0.1.3
+      '@swc/helpers': 0.5.13
+      busboy: 1.6.0
+      caniuse-lite: 1.0.30001684
+      postcss: 8.4.31
+      react: 19.0.0
+      react-dom: 19.0.0(react@19.0.0)
+      styled-jsx: 5.1.6(@babel/core@7.26.0)(react@19.0.0)
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 15.0.3
+      '@next/swc-darwin-x64': 15.0.3
+      '@next/swc-linux-arm64-gnu': 15.0.3
+      '@next/swc-linux-arm64-musl': 15.0.3
+      '@next/swc-linux-x64-gnu': 15.0.3
+      '@next/swc-linux-x64-musl': 15.0.3
+      '@next/swc-win32-arm64-msvc': 15.0.3
+      '@next/swc-win32-x64-msvc': 15.0.3
+      sharp: 0.33.5
+    transitivePeerDependencies:
+      - '@babel/core'
+      - babel-plugin-macros
+    optional: true
+
+  next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106):
     dependencies:
       '@next/env': 15.0.3
       '@swc/counter': 0.1.3
@@ -8800,7 +8847,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.0.0-rc-66855b96-20241106
       react-dom: 19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106)
-      styled-jsx: 5.1.6(@babel/core@7.26.0)(react@19.0.0-rc-66855b96-20241106)
+      styled-jsx: 5.1.6(react@19.0.0-rc-66855b96-20241106)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.0.3
       '@next/swc-darwin-x64': 15.0.3
@@ -9207,6 +9254,11 @@ snapshots:
 
   react-is@18.3.1: {}
 
+  react-reconciler@0.31.0(react@18.2.0):
+    dependencies:
+      react: 18.2.0
+      scheduler: 0.25.0
+
   react-refresh@0.14.2: {}
 
   react-router-dom@6.28.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
@@ -9284,7 +9336,7 @@ snapshots:
       mri: 1.2.0
       playwright: 1.49.0
 
-  react-scan@0.0.48(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react-router-dom@6.28.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-router@6.28.0(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(rollup@4.28.0):
+  react-scan@0.0.48(@remix-run/react@2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3))(next@15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react-router-dom@6.28.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106))(react-router@6.28.0(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(rollup@4.28.0):
     dependencies:
       '@babel/core': 7.26.0
       '@babel/generator': 7.26.2
@@ -9306,7 +9358,7 @@ snapshots:
       tsx: 4.0.0
     optionalDependencies:
       '@remix-run/react': 2.15.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)(typescript@5.7.3)
-      next: 15.0.3(@babel/core@7.26.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
+      next: 15.0.3(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       react-router: 6.28.0(react@19.0.0-rc-66855b96-20241106)
       react-router-dom: 6.28.0(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react@19.0.0-rc-66855b96-20241106)
       unplugin: 2.1.0
@@ -9798,13 +9850,6 @@ snapshots:
       '@babel/core': 7.26.0
     optional: true
 
-  styled-jsx@5.1.6(@babel/core@7.26.0)(react@19.0.0-rc-66855b96-20241106):
-    dependencies:
-      client-only: 0.0.1
-      react: 19.0.0-rc-66855b96-20241106
-    optionalDependencies:
-      '@babel/core': 7.26.0
-
   styled-jsx@5.1.6(@babel/core@7.26.0)(react@19.0.0-rc.1):
     dependencies:
       client-only: 0.0.1
@@ -9812,6 +9857,11 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.26.0
     optional: true
+
+  styled-jsx@5.1.6(react@19.0.0-rc-66855b96-20241106):
+    dependencies:
+      client-only: 0.0.1
+      react: 19.0.0-rc-66855b96-20241106
 
   sucrase@3.35.0:
     dependencies:
@@ -10136,7 +10186,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@1.0.0(@types/node@22.10.2):
+  vite-node@1.0.0(@types/node@22.10.2)(terser@5.36.0):
     dependencies:
       cac: 6.7.14
       debug: 4.3.7
@@ -10279,7 +10329,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@1.0.0(@types/node@22.10.2):
+  vitest@1.0.0(@types/node@22.10.2)(terser@5.36.0):
     dependencies:
       '@vitest/expect': 1.0.0
       '@vitest/runner': 1.0.0
@@ -10300,7 +10350,7 @@ snapshots:
       tinybench: 2.9.0
       tinypool: 0.8.4
       vite: 5.4.3(@types/node@22.10.2)(terser@5.36.0)
-      vite-node: 1.0.0(@types/node@22.10.2)
+      vite-node: 1.0.0(@types/node@22.10.2)(terser@5.36.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.10.2
