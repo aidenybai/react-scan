@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 
@@ -171,24 +171,22 @@ const ComponentStackListItem = ({ fiber }: { fiber: Fiber }) => {
   );
 };
 
-const ComponentStackList = ({ fiber }: { fiber: Fiber }) => {
-  const stack = getFiberStack(fiber).reverse();
-
-  return (
-    <div>
-      {stack.map((node) => (
-        <ComponentStackListItem key={getFiberId(node)} fiber={node} />
-      ))}
-    </div>
-  );
-};
-
 export const ComponentStack = () => {
   const { fiber } = inspectorState.value;
   const [isExpanded, setIsExpanded] = useState(true);
 
+  const stack = useMemo(
+    // FIXME: once getFiberStack is fixed, remove `reverse`
+    () => (fiber ? getFiberStack(fiber).slice(1).reverse() : []),
+    [fiber],
+  );
+
   if (!fiber) {
     return null;
+  }
+
+  if (stack.length === 0) {
+    return;
   }
 
   return (
@@ -212,7 +210,11 @@ export const ComponentStack = () => {
           'react-scan-expanded': isExpanded,
         })}
       >
-        <ComponentStackList fiber={fiber} />
+        <div>
+          {stack.map((node) => (
+            <ComponentStackListItem key={getFiberId(node)} fiber={node} />
+          ))}
+        </div>
       </div>
     </div>
   );
