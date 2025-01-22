@@ -46,7 +46,7 @@ export const transform = async (
   }
 };
 
-export const DEFAULT_INCLUDE = '**/*.{mtsx,mjsx,tsx,jsx,ts,js}';
+export const DEFAULT_INCLUDE = '**/*.{mtsx,mjsx,tsx,jsx}';
 export const DEFAULT_EXCLUDE = '**/node_modules/**';
 export const reactComponentNamePlugin = createUnplugin<Options>(
   (options?: Options) => {
