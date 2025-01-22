@@ -230,12 +230,15 @@ function isReactComponent(
   return false;
 }
 
-export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
+export const reactScanComponentNamePlugin = (
+  options?: Options,
+  filename?: string,
+): PluginObj => ({
   name: 'react-scan/component-name',
   visitor: {
     Program(path) {
       const assignedNames = getAssignedDisplayNames(path);
-
+      let count = 0;
       path.traverse({
         ClassDeclaration(path) {
           if (isReactClassComponent(path)) {
@@ -251,6 +254,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
               name,
               options?.flags?.noTryCatchDisplayNames,
             );
+            count++;
           }
         },
         FunctionDeclaration(path) {
@@ -278,6 +282,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
               name,
               options?.flags?.noTryCatchDisplayNames,
             );
+            count++;
           }
         },
         VariableDeclarator(path) {
@@ -301,10 +306,15 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
                 name,
                 options?.flags?.noTryCatchDisplayNames,
               );
+              count++;
             }
           }
         },
       });
+
+      if (filename && options?.flags?.printNumberOfDisplayNames) {
+        console.log('\x1b[36m%s\x1b[0m', `RCN: ${filename}: ${count}`);
+      }
     },
   },
 });
