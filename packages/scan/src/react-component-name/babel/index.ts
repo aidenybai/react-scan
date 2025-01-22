@@ -174,7 +174,6 @@ function isStyledComponent(
 const REACT_FACTORY = [
   'forwardRef',
   'memo',
-  'createContext',
   'createClass',
   // 'lazy',
 ];
@@ -198,6 +197,10 @@ function isReactComponent(
   if (callExpr) {
     const callee = callExpr.get('callee');
     // React
+    const factory = [...REACT_FACTORY];
+    if (!flags?.noCreateContext) {
+      factory.push('createContext');
+    }
     if (
       (callee.isExpression() &&
         isNamespaceExport('React', REACT_FACTORY, callee)) ||

@@ -7,6 +7,7 @@ export interface Options {
   flags?: {
     noTryCatchDisplayNames?: boolean;
     noStyledComponents?: boolean;
+    noCreateContext?: boolean;
     ignoreComponentSubstrings?: Array<string>;
   };
 }
