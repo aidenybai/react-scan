@@ -230,10 +230,7 @@ function isReactComponent(
   return false;
 }
 
-export const reactScanComponentNamePlugin = (
-  options?: Options,
-  filename?: string,
-): PluginObj => ({
+export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
   name: 'react-scan/component-name',
   visitor: {
     Program(path) {
@@ -311,10 +308,6 @@ export const reactScanComponentNamePlugin = (
           }
         },
       });
-
-      if (filename && options?.flags?.printNumberOfDisplayNames) {
-        console.log('\x1b[36m%s\x1b[0m', `RCN: ${filename}: ${count}`);
-      }
     },
   },
 });

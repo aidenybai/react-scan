@@ -14,7 +14,7 @@ export const transform = async (
 
   try {
     const result = await transformAsync(code, {
-      plugins: [reactScanComponentNamePlugin(options, id)],
+      plugins: [reactScanComponentNamePlugin(options)],
       ignore: [/\/(?<c>build|node_modules)\//],
       parserOpts: {
         plugins: ['jsx', 'typescript', 'decorators'],

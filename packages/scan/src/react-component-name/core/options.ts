@@ -5,7 +5,6 @@ export interface Options {
   exclude?: FilterPattern;
   enforce?: 'pre' | 'post' | undefined;
   flags?: {
-    printNumberOfDisplayNames?: boolean;
     noTryCatchDisplayNames?: boolean;
     noStyledComponents?: boolean;
     noCreateContext?: boolean;
