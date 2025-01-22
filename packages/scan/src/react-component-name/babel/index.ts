@@ -1,5 +1,6 @@
 import { NodePath, PluginObj } from '@babel/core';
 import * as t from '@babel/types';
+import { Options } from '../core/options';
 import { isComponentishName } from './is-componentish-name';
 import { pathReferencesImport } from './path-references-import';
 import { unwrapNode, unwrapPath } from './unwrap';
@@ -38,20 +39,37 @@ function isValidFunction(
 function assignDisplayName(
   statement: NodePath<t.Statement>,
   name: string,
+  dontAddTryCatch = false,
 ): void {
-  statement.insertAfter([
-    t.tryStatement(
-      t.blockStatement([
-        t.expressionStatement(
-          t.assignmentExpression(
-            '=',
-            t.memberExpression(t.identifier(name), t.identifier('displayName')),
-            t.stringLiteral(name),
-          ),
+  if (dontAddTryCatch) {
+    statement.insertAfter([
+      t.expressionStatement(
+        t.assignmentExpression(
+          '=',
+          t.memberExpression(t.identifier(name), t.identifier('displayName')),
+          t.stringLiteral(name),
         ),
-      ]),
-    ),
-  ]);
+      ),
+    ]);
+  } else {
+    statement.insertAfter([
+      t.tryStatement(
+        t.blockStatement([
+          t.expressionStatement(
+            t.assignmentExpression(
+              '=',
+              t.memberExpression(
+                t.identifier(name),
+                t.identifier('displayName'),
+              ),
+              t.stringLiteral(name),
+            ),
+          ),
+        ]),
+        t.catchClause(t.identifier('error'), t.blockStatement([])),
+      ),
+    ]);
+  }
 }
 
 const REACT_CLASS = ['Component', 'PureComponent'];
@@ -161,7 +179,10 @@ const REACT_FACTORY = [
   'lazy',
 ];
 
-function isReactComponent(expr: NodePath<t.Expression>): boolean {
+function isReactComponent(
+  expr: NodePath<t.Expression>,
+  flags: Options['flags'],
+): boolean {
   // Check for class components
   const classExpr = unwrapPath(expr, t.isClassExpression);
   if (classExpr && isReactClassComponent(classExpr)) {
@@ -196,6 +217,7 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
     }
   }
 
+  if (flags?.noStyledComponents) return false;
   if (isStyledComponent('@emotion/styled', ['default'], expr)) {
     return true;
   }
@@ -205,7 +227,7 @@ function isReactComponent(expr: NodePath<t.Expression>): boolean {
   return false;
 }
 
-const BABEL_PLUGIN: PluginObj = {
+export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
   name: 'react-scan/component-name',
   visitor: {
     Program(path) {
@@ -221,7 +243,11 @@ const BABEL_PLUGIN: PluginObj = {
             if (assignedNames.has(name)) {
               return;
             }
-            assignDisplayName(path, name);
+            assignDisplayName(
+              path,
+              name,
+              options?.flags?.noTryCatchDisplayNames,
+            );
           }
         },
         FunctionDeclaration(path) {
@@ -231,7 +257,7 @@ const BABEL_PLUGIN: PluginObj = {
             // Check if the declaration has an identifier, and then check
             decl.id &&
             // if the name is component-ish
-            isComponentishName(decl.id.name) &&
+            isComponentishName(decl.id.name, options?.flags) &&
             !decl.generator &&
             // Might be component-like, but the only valid components
             // have zero, one or two (forwardRef) parameters
@@ -244,7 +270,11 @@ const BABEL_PLUGIN: PluginObj = {
             if (assignedNames.has(name)) {
               return;
             }
-            assignDisplayName(path, name);
+            assignDisplayName(
+              path,
+              name,
+              options?.flags?.noTryCatchDisplayNames,
+            );
           }
         },
         VariableDeclarator(path) {
@@ -256,20 +286,22 @@ const BABEL_PLUGIN: PluginObj = {
           if (!(init.isExpression() && t.isIdentifier(identifier))) {
             return;
           }
-          if (!isComponentishName(identifier.name)) {
+          if (!isComponentishName(identifier.name, options?.flags)) {
             return;
           }
-          if (isReactComponent(init)) {
+          if (isReactComponent(init, options?.flags)) {
             const name = identifier.name;
 
             if (!assignedNames.has(name)) {
-              assignDisplayName(path.parentPath, name);
+              assignDisplayName(
+                path.parentPath,
+                name,
+                options?.flags?.noTryCatchDisplayNames,
+              );
             }
           }
         },
       });
     },
   },
-};
-
-export const reactScanComponentNamePlugin = (): PluginObj => BABEL_PLUGIN;
+});

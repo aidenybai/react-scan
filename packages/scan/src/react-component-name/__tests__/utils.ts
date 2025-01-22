@@ -1,12 +1,14 @@
-import { reactComponentNamePlugin } from "..";
+import { Options, reactComponentNamePlugin } from '..';
 
 type TransformFn = (
   code: string,
   id: string,
 ) => Promise<{ code: string } | string | null>;
 
-export const transform = async (code: string) => {
-  const plugin = reactComponentNamePlugin.vite({}) as { transform: TransformFn };
+export const transform = async (code: string, options?: Options) => {
+  const plugin = reactComponentNamePlugin.vite(options || {}) as {
+    transform: TransformFn;
+  };
   const transformFn = plugin.transform;
   if (!transformFn) return code;
 

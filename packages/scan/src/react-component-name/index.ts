@@ -2,22 +2,19 @@ import { transformAsync } from '@babel/core';
 import { createFilter } from '@rollup/pluginutils';
 import { createUnplugin } from 'unplugin';
 import { reactScanComponentNamePlugin } from './babel';
+import { Options } from './core/options';
 
-export interface Options {
-  include?: Array<string | RegExp>;
-  exclude?: Array<string | RegExp>;
-  parseDependencies?: boolean;
-}
 export const transform = async (
   code: string,
   id: string,
   filter: (id: string) => boolean,
+  options?: Options,
 ) => {
   if (!filter(id)) return null;
 
   try {
     const result = await transformAsync(code, {
-      plugins: [reactScanComponentNamePlugin],
+      plugins: [reactScanComponentNamePlugin(options)],
       ignore: [/\/(?<c>build|node_modules)\//],
       parserOpts: {
         plugins: ['jsx', 'typescript', 'decorators'],
@@ -71,10 +68,11 @@ export const reactComponentNamePlugin = createUnplugin<Options>(
       name: 'react-component-name',
       enforce: 'post',
       async transform(code, id) {
-        return transform(code, id, filter);
+        return transform(code, id, filter, options);
       },
     };
   },
 );
 
 export default reactComponentNamePlugin;
+export type { Options };
