@@ -176,7 +176,7 @@ const REACT_FACTORY = [
   'memo',
   'createContext',
   'createClass',
-  'lazy',
+  // 'lazy',
 ];
 
 function isReactComponent(
