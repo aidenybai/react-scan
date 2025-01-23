@@ -5,13 +5,12 @@ import {
   isHostFiber,
   traverseFiber,
 } from 'bippy';
-import { PropsChange, ReactScanInternals, Store } from '~core/index';
+import { PropsChange, ReactScanInternals } from '~core/index';
 import { ChangeReason } from '~core/instrumentation';
 import { isEqual } from '~core/utils';
 import { batchGetBoundingRects } from '~web/utils/outline';
 import { globalInspectorState } from '.';
 import type { ExtendedReactRenderer } from '../../../types';
-import { safeStringify } from './logging';
 import { ensureRecord, isPromise } from './overlay/utils';
 
 interface StateItem {
@@ -50,7 +49,7 @@ interface ReactInternalProps {
   [key: string]: Fiber;
 }
 
-export const getFiberFromElement = (element: Element): Fiber | null => {
+const getFiberFromElement = (element: Element): Fiber | null => {
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
     const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (!hook.renderers) return null;
@@ -82,7 +81,7 @@ export const getFiberFromElement = (element: Element): Fiber | null => {
   return null;
 };
 
-export const getFirstStateNode = (fiber: Fiber): Element | null => {
+const getFirstStateNode = (fiber: Fiber): Element | null => {
   let current: Fiber | null = fiber;
   while (current) {
     if (current.stateNode instanceof Element) {
@@ -108,9 +107,7 @@ export const getFirstStateNode = (fiber: Fiber): Element | null => {
   return null;
 };
 
-export const getNearestFiberFromElement = (
-  element: Element | null,
-): Fiber | null => {
+const getNearestFiberFromElement = (element: Element | null): Fiber | null => {
   if (!element) return null;
 
   try {
@@ -124,7 +121,7 @@ export const getNearestFiberFromElement = (
   }
 };
 
-export const getParentCompositeFiber = (fiber: Fiber) => {
+const getParentCompositeFiber = (fiber: Fiber) => {
   let curr: Fiber | null = fiber;
   let prevHost = null;
 
@@ -667,7 +664,7 @@ export const formatForClipboard = (value: unknown): string => {
   }
 };
 
-export const parseArrayValue = (value: string): Array<unknown> => {
+const parseArrayValue = (value: string): Array<unknown> => {
   if (value.trim() === '[]') return [];
 
   const result: Array<unknown> = [];
@@ -730,7 +727,7 @@ export const parseArrayValue = (value: string): Array<unknown> => {
   return result;
 };
 
-export const parseValue = (value: string, currentType: unknown): unknown => {
+const parseValue = (value: string, currentType: unknown): unknown => {
   try {
     switch (typeof currentType) {
       case 'number':
@@ -911,7 +908,7 @@ export const updateNestedValue = (
   }
 };
 
-export const areFunctionsEqual = (prev: unknown, current: unknown): boolean => {
+const areFunctionsEqual = (prev: unknown, current: unknown): boolean => {
   try {
     // Check if both values are actually functions
     if (typeof prev !== 'function' || typeof current !== 'function') {
@@ -1038,24 +1035,25 @@ export const formatPath = (path: string[]): string => {
   }, '');
 };
 
-export const formatFunctionBody = (body: string): string => {
-  // Remove newlines and extra spaces
-  let formatted = body.replace(/\s+/g, ' ').trim();
+// Alexis: unused
+// const formatFunctionBody = (body: string): string => {
+//   // Remove newlines and extra spaces
+//   let formatted = body.replace(/\s+/g, ' ').trim();
 
-  // Add newlines after {, ; and before }
-  formatted = formatted
-    .replace(/{/g, '{\n  ')
-    .replace(/;/g, ';\n  ')
-    .replace(/}/g, '\n}')
-    .replace(/{\s+}/g, '{ }'); // Clean up empty blocks
+//   // Add newlines after {, ; and before }
+//   formatted = formatted
+//     .replace(/{/g, '{\n  ')
+//     .replace(/;/g, ';\n  ')
+//     .replace(/}/g, '\n}')
+//     .replace(/{\s+}/g, '{ }'); // Clean up empty blocks
 
-  // Clean up arrow functions
-  formatted = formatted.replace(/=> {\n/g, '=> {').replace(/\n\s*}\s*$/g, ' }');
+//   // Clean up arrow functions
+//   formatted = formatted.replace(/=> {\n/g, '=> {').replace(/\n\s*}\s*$/g, ' }');
 
-  return formatted;
-};
+//   return formatted;
+// };
 
-export function hackyJsFormatter(code: string) {
+function hackyJsFormatter(code: string) {
   //
   // 1) Collapse runs of whitespace to single spaces
   //

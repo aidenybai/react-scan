@@ -1,6 +1,6 @@
 import { createDeferred, type Deferred } from './deferred';
 
-export type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
+type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
 
 function setupWorker<T, R>(setup: () => (arg: T) => R) {
   const callback = setup();

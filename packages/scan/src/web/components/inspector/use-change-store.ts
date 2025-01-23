@@ -1,3 +1,4 @@
+import { getFiberId } from 'bippy';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   ChangesListener,
@@ -5,10 +6,9 @@ import {
   ContextChange,
   Store,
 } from '~core/index';
+import { isEqual } from '~core/utils';
 // import { AllAggregatedChanges } from './utils';
 import { inspectorState } from '.';
-import { getFiberId } from 'bippy';
-import { isEqual } from '~core/utils';
 
 const CHANGES_QUEUE_INTERVAL = 50;
 
@@ -142,14 +142,14 @@ const collapseQueue = (queue: Array<ChangesPayload>) => {
     stateChanges: new Map(),
   };
 
-  queue.forEach((changes) => {
+  for (const changes of queue) {
     // context is a special case since we don't send precise diffs and need to be idempotent
     processContextChanges(changes.contextChanges, localAggregatedChanges);
 
     processChanges(changes.stateChanges, localAggregatedChanges.stateChanges);
 
     processChanges(changes.propsChanges, localAggregatedChanges.propsChanges);
-  });
+  }
 
   return localAggregatedChanges;
 };
@@ -163,6 +163,7 @@ const mergeSimpleChanges = <
 ): T => {
   const mergedChanges = new Map();
 
+  // FIXME(Alexis) whut
   existingChanges.forEach((value, key) => {
     mergedChanges.set(key, value);
   });
@@ -188,29 +189,31 @@ const mergeSimpleChanges = <
   return mergedChanges as T;
 };
 
+// FIXME(Alexis): needs a return type
 const mergeContextChanges = (
   existing: AllAggregatedChanges,
   incoming: AllAggregatedChanges,
 ) => {
   const contextChanges: AllAggregatedChanges['contextChanges'] = new Map();
 
-  existing.contextChanges.forEach((value, key) => {
+  for (const [key, value] of existing.contextChanges) {
     contextChanges.set(key, value);
-  });
+  }
 
-  incoming.contextChanges.forEach((incomingChange, key) => {
+  for (const [key, incomingChange] of incoming.contextChanges) {
     const existingChange = contextChanges.get(key);
 
     if (!existingChange) {
       contextChanges.set(key, incomingChange);
-      return;
+      continue;
     }
+
     if (
       getContextChangesValue(incomingChange) ===
       getContextChangesValue(existingChange)
     ) {
       // we do this for a second time just in context merge to handle the partial initialization case (the collapsed queue will not have the information to remove the partially initialized set of changes)
-      return;
+      continue;
     }
 
     switch (existingChange.kind) {
@@ -233,7 +236,7 @@ const mergeContextChanges = (
                 previousValue: incomingChange.changes.previousValue, // we always want to show this value, since this will be the true state transition (if you make the previousValue the last seen currentValue, u will have weird behavior with primitive state updates)
               },
             });
-            return;
+            continue;
           }
           case 'partially-initialized': {
             contextChanges.set(key, {
@@ -247,7 +250,7 @@ const mergeContextChanges = (
                 previousValue: existingChange.changes.currentValue,
               },
             });
-            return;
+            continue;
           }
         }
       }
@@ -265,7 +268,7 @@ const mergeContextChanges = (
                 previousValue: existingChange.value,
               },
             });
-            return;
+            continue;
           }
           case 'partially-initialized': {
             contextChanges.set(key, {
@@ -279,12 +282,12 @@ const mergeContextChanges = (
                 previousValue: existingChange.value,
               },
             });
-            return;
+            continue;
           }
         }
       }
     }
-  });
+  }
 
   return contextChanges;
 };
@@ -311,20 +314,27 @@ const mergeChanges = (
   };
 };
 
+function getTotalChanges(changes: AggregatedChanges[]): number {
+  const len = changes.length;
+  if (len === 0) {
+    return 0;
+  }
+  let sum = changes[0].count;
+  for (let i = 1; i < len; i++) {
+    sum += changes[i].count;
+  }
+  return sum;
+}
+
 /**
  * Calculate total count of changes across props, state and context
  */
 export const calculateTotalChanges = (changes: AllAggregatedChanges) => {
   return (
-    Array.from(changes.propsChanges.values()).reduce(
-      (acc, change) => acc + change.count,
-      0,
-    ) +
-    Array.from(changes.stateChanges.values()).reduce(
-      (acc, change) => acc + change.count,
-      0,
-    ) +
+    getTotalChanges(Array.from(changes.propsChanges.values())) +
+    getTotalChanges(Array.from(changes.stateChanges.values())) +
     Array.from(changes.contextChanges.values())
+      // FIXME(Alexis): filter/reduce = bad
       .filter(
         (change): change is Extract<typeof change, { kind: 'initialized' }> =>
           change.kind === 'initialized',

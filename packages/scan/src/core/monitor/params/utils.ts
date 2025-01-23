@@ -61,10 +61,10 @@ export function computeReactRouterRoute(
   });
 }
 
-export function turnValueToRegExp(value: string): RegExp {
+function turnValueToRegExp(value: string): RegExp {
   return new RegExp(`/${escapeRegExp(value)}(?=[/?#]|$)`);
 }
 
-export function escapeRegExp(string: string): string {
+function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

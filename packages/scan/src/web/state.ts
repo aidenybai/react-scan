@@ -28,7 +28,7 @@ export const defaultWidgetConfig = {
   },
 } as WidgetConfig;
 
-export const getInitialWidgetConfig = (): WidgetConfig => {
+const getInitialWidgetConfig = (): WidgetConfig => {
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
   if (!stored) {
     saveLocalStorage(LOCALSTORAGE_KEY, {

@@ -32,7 +32,7 @@ const END_COLOR = { r: 185, g: 49, b: 115 };
 const MONO_FONT =
   'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
-export const getOutlineKey = (rect: DOMRect): string => {
+const getOutlineKey = (rect: DOMRect): string => {
   return `${rect.top}-${rect.left}-${rect.width}-${rect.height}`;
 };
 
@@ -44,7 +44,7 @@ if (typeof window !== 'undefined') {
   incrementFrameId();
 }
 
-export const recalcOutlines = throttle(async () => {
+const recalcOutlines = throttle(async () => {
   const { activeOutlines } = ReactScanInternals;
   const domNodes: Array<Element> = [];
   for (const activeOutline of activeOutlines.values()) {
@@ -137,7 +137,7 @@ const shouldSkipInterpolation = (rect: DOMRect) => {
 
 const INTERPOLATION_SPEED = 0.2;
 
-export const fadeOutOutline = () => {
+const fadeOutOutline = () => {
   const drawingQueue: Array<DrawingQueue> = [];
   const pendingLabeledOutlines: Array<OutlineLabel> = [];
   const phases = new Set<string>();
@@ -360,7 +360,7 @@ export interface AggregatedRender {
   computedCurrent: DOMRect | null; // reference to dom rect to copy over to new outline made at new position
 }
 
-export const areFibersEqual = (fiberA: Fiber, fiberB: Fiber) => {
+const areFibersEqual = (fiberA: Fiber, fiberB: Fiber) => {
   if (fiberA === fiberB) {
     return true;
   }
@@ -383,7 +383,7 @@ export const areFibersEqual = (fiberA: Fiber, fiberB: Fiber) => {
   return false;
 };
 
-export const getIsOffscreen = (rect: DOMRect) => {
+const getIsOffscreen = (rect: DOMRect) => {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
@@ -597,7 +597,7 @@ function getMergedOutlineLabels(
 
 // todo: optimize me so this can run always
 // note: this can be implemented in nlogn using https://en.wikipedia.org/wiki/Sweep_line_algorithm
-export const mergeOverlappingLabels = (
+const mergeOverlappingLabels = (
   labels: Array<OutlineLabel>,
 ): Array<MergedOutlineLabel> => {
   if (labels.length > 1500) {
@@ -777,7 +777,7 @@ function getMeasuringContext(): MeasuringContext {
   return offscreenContext;
 }
 
-export const measureTextCached = (text: string): TextMetrics => {
+const measureTextCached = (text: string): TextMetrics => {
   const cached = textMeasurementCache.get(text);
   if (cached) {
     return cached;

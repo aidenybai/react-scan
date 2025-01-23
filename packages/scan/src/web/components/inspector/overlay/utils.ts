@@ -247,12 +247,12 @@ export const resetStateTracking = () => {
   lastRenderedStates = new WeakMap<Fiber, Record<string, unknown>>();
 };
 
-export const getStateChangeCount = (name: string): number =>
-  stateChangeCounts.get(name) ?? 0;
-export const getPropsChangeCount = (name: string): number =>
-  propsChangeCounts.get(name) ?? 0;
-export const getContextChangeCount = (name: string): number =>
-  contextChangeCounts.get(name) ?? 0;
+// const getStateChangeCount = (name: string): number =>
+//   stateChangeCounts.get(name) ?? 0;
+// const getPropsChangeCount = (name: string): number =>
+//   propsChangeCounts.get(name) ?? 0;
+// const getContextChangeCount = (name: string): number =>
+//   contextChangeCounts.get(name) ?? 0;
 
 export const getStateNames = (fiber: Fiber): Array<string> => {
   const componentSource = fiber.type?.toString?.() || '';
@@ -264,7 +264,7 @@ export const getStateNames = (fiber: Fiber): Array<string> => {
     : [];
 };
 
-export const isDirectComponent = (fiber: Fiber): boolean => {
+const isDirectComponent = (fiber: Fiber): boolean => {
   if (!fiber || !fiber.type) return false;
 
   const isFunctionalComponent = typeof fiber.type === 'function';
@@ -303,18 +303,18 @@ interface ExtendedMemoizedState extends MemoizedState {
   element?: unknown;
 }
 
-const getStateValue = (memoizedState: ExtendedMemoizedState): unknown => {
-  if (!memoizedState) return undefined;
+// const getStateValue = (memoizedState: ExtendedMemoizedState): unknown => {
+//   if (!memoizedState) return undefined;
 
-  const queue = memoizedState.queue;
-  if (queue) {
-    return queue.lastRenderedState;
-  }
+//   const queue = memoizedState.queue;
+//   if (queue) {
+//     return queue.lastRenderedState;
+//   }
 
-  return memoizedState.memoizedState;
-};
+//   return memoizedState.memoizedState;
+// };
 
-export const getStateFromFiber = (fiber: Fiber): any => {
+const getStateFromFiber = (fiber: Fiber): any => {
   if (!fiber) return {};
   // only funtional components have memo tags,
   if (
@@ -510,7 +510,7 @@ interface ContextInfo {
   displayName: string;
   contextType: any;
 }
-export const getAllFiberContexts = (fiber: Fiber): Map<any, ContextInfo> => {
+const getAllFiberContexts = (fiber: Fiber): Map<any, ContextInfo> => {
   const contexts = new Map<any, ContextInfo>();
 
   if (!fiber) {

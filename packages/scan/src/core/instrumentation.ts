@@ -64,18 +64,18 @@ export const getFPS = () => {
 
   return fps;
 };
+// Alexis: Unused
+// export const isElementVisible = (el: Element) => {
+//   const style = window.getComputedStyle(el);
+//   return (
+//     style.display !== 'none' &&
+//     style.visibility !== 'hidden' &&
+//     style.contentVisibility !== 'hidden' &&
+//     style.opacity !== '0'
+//   );
+// };
 
-export const isElementVisible = (el: Element) => {
-  const style = window.getComputedStyle(el);
-  return (
-    style.display !== 'none' &&
-    style.visibility !== 'hidden' &&
-    style.contentVisibility !== 'hidden' &&
-    style.opacity !== '0'
-  );
-};
-
-export const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
+const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
   const prevValueString = fastSerialize(prevValue);
   const nextValueString = fastSerialize(nextValue);
   return (
@@ -85,18 +85,19 @@ export const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
   );
 };
 
-export const isElementInViewport = (
-  el: Element,
-  rect = el.getBoundingClientRect(),
-) => {
-  const isVisible =
-    rect.bottom > 0 &&
-    rect.right > 0 &&
-    rect.top < window.innerHeight &&
-    rect.left < window.innerWidth;
+// Alexis: unused
+// const isElementInViewport = (
+//   el: Element,
+//   rect = el.getBoundingClientRect(),
+// ) => {
+//   const isVisible =
+//     rect.bottom > 0 &&
+//     rect.right > 0 &&
+//     rect.top < window.innerHeight &&
+//     rect.left < window.innerWidth;
 
-  return isVisible && rect.width && rect.height;
-};
+//   return isVisible && rect.width && rect.height;
+// };
 
 // biome-ignore lint/suspicious/noConstEnum: Using const enum for better performance since it's inlined at compile time and removed from the JS output
 export const enum ChangeReason {
@@ -189,30 +190,31 @@ export function fastSerialize(value: unknown, depth = 0): string {
   return str;
 }
 
-export const getPropsChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
+// Alexis: unused
+// const getPropsChanges = (fiber: Fiber) => {
+//   const changes: Array<Change> = [];
 
-  const prevProps = fiber.alternate?.memoizedProps || {};
-  const nextProps = fiber.memoizedProps || {};
+//   const prevProps = fiber.alternate?.memoizedProps || {};
+//   const nextProps = fiber.memoizedProps || {};
 
-  const allKeys = new Set([
-    ...Object.keys(prevProps),
-    ...Object.keys(nextProps),
-  ]);
-  for (const propName in allKeys) {
-    const prevValue = prevProps?.[propName];
-    const nextValue = nextProps?.[propName];
+//   const allKeys = new Set([
+//     ...Object.keys(prevProps),
+//     ...Object.keys(nextProps),
+//   ]);
+//   for (const propName in allKeys) {
+//     const prevValue = prevProps?.[propName];
+//     const nextValue = nextProps?.[propName];
 
-    const change: Change = {
-      type: ChangeReason.Props,
-      name: propName,
-      value: nextValue,
-    };
-    changes.push(change);
-  }
+//     const change: Change = {
+//       type: ChangeReason.Props,
+//       name: propName,
+//       value: nextValue,
+//     };
+//     changes.push(change);
+//   }
 
-  return changes;
-};
+//   return changes;
+// };
 
 export const getStateChanges = (fiber: Fiber): StateChange[] => {
   if (!fiber) return [];
@@ -377,7 +379,7 @@ function isRenderUnnecessaryTraversal(
 }
 
 // FIXME: calculation is slow
-export const isRenderUnnecessary = (fiber: Fiber) => {
+const isRenderUnnecessary = (fiber: Fiber) => {
   if (!didFiberCommit(fiber)) return true;
 
   const mutatedHostFibers = getMutatedHostFibers(fiber);

@@ -1,5 +1,5 @@
 import { type Fiber, getDisplayName } from 'bippy';
-import { getCompositeComponentFromElement, getCurrentCompositeComponentFromElement } from '~web/components/inspector/utils';
+import { getCompositeComponentFromElement } from '~web/components/inspector/utils';
 import { Store } from '..';
 import type {
   PerformanceInteraction,
@@ -88,7 +88,7 @@ const isMinified = (name: string): boolean => {
   );
 };
 
-export const getInteractionPath = (
+const getInteractionPath = (
   initialFiber: Fiber | null,
   filters: PathFilters = DEFAULT_FILTERS,
 ): Array<string> => {

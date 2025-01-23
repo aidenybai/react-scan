@@ -1,22 +1,22 @@
 import type { ActiveOutline, OutlineData } from './types';
 
 export const OUTLINE_ARRAY_SIZE = 7;
-export const MONO_FONT =
+const MONO_FONT =
   'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
-export const INTERPOLATION_SPEED = 0.1;
-export const lerp = (start: number, end: number) => {
+const INTERPOLATION_SPEED = 0.1;
+const lerp = (start: number, end: number) => {
   return Math.floor(start + (end - start) * INTERPOLATION_SPEED);
 };
 
-export const MAX_PARTS_LENGTH = 4;
-export const MAX_LABEL_LENGTH = 40;
-export const TOTAL_FRAMES = 45;
+const MAX_PARTS_LENGTH = 4;
+const MAX_LABEL_LENGTH = 40;
+const TOTAL_FRAMES = 45;
 
-export const primaryColor = '115,97,230';
-export const secondaryColor = '128,128,128';
+const primaryColor = '115,97,230';
+// const secondaryColor = '128,128,128';
 
-export const getLabelText = (outlines: ActiveOutline[]): string => {
+const getLabelText = (outlines: ActiveOutline[]): string => {
   const nameByCount = new Map<string, number>();
   for (const outline of outlines) {
     const { name, count } = outline;
@@ -57,7 +57,7 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   return labelText;
 };
 
-export const getAreaFromOutlines = (outlines: ActiveOutline[]) => {
+const getAreaFromOutlines = (outlines: ActiveOutline[]) => {
   let area = 0;
   for (const outline of outlines) {
     area += outline.width * outline.height;
@@ -70,23 +70,7 @@ export const updateOutlines = (
   outlines: OutlineData[],
 ) => {
   for (const { id, name, count, x, y, width, height, didCommit } of outlines) {
-    const outline: ActiveOutline = {
-      id,
-      name,
-      count,
-      x,
-      y,
-      width,
-      height,
-      frame: 0,
-      targetX: x,
-      targetY: y,
-      targetWidth: width,
-      targetHeight: height,
-      didCommit,
-    };
-    const key = String(outline.id);
-
+    const key = String(id);
     const existingOutline = activeOutlines.get(key);
     if (existingOutline) {
       existingOutline.count++;
@@ -97,7 +81,21 @@ export const updateOutlines = (
       existingOutline.targetHeight = height;
       existingOutline.didCommit = didCommit;
     } else {
-      activeOutlines.set(key, outline);
+      activeOutlines.set(key, {
+        id,
+        name,
+        count,
+        x,
+        y,
+        width,
+        height,
+        frame: 0,
+        targetX: x,
+        targetY: y,
+        targetWidth: width,
+        targetHeight: height,
+        didCommit,
+      });
     }
   }
 };
@@ -200,8 +198,7 @@ export const drawCanvas = (
     rectMap.set(rectKey, rect);
   }
 
-  for (const rect of rectMap.values()) {
-    const { x, y, width, height, alpha } = rect;
+  for (const { x, y, width, height, alpha } of rectMap.values()) {
     ctx.strokeStyle = `rgba(${primaryColor},${alpha})`;
     ctx.lineWidth = 1;
 
@@ -285,16 +282,16 @@ export const drawCanvas = (
         y + height > otherY &&
         otherY + otherHeight > y
       ) {
-        label.text = getLabelText([...label.outlines, ...otherLabel.outlines]);
+        label.text = getLabelText(
+          ([] as ActiveOutline[]).concat(label.outlines, otherLabel.outlines),
+        );
         label.width = ctx.measureText(label.text).width;
         labelMap.delete(otherKey);
       }
     }
   }
 
-  for (const label of labelMap.values()) {
-    const { x, y, alpha, width, height, text } = label;
-
+  for (const { x, y, alpha, width, height, text } of labelMap.values()) {
     let labelY: number = y - height - 4;
 
     if (labelY < 0) {

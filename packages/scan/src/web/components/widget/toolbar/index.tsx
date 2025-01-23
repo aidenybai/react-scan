@@ -6,7 +6,7 @@ import {
   Store,
 } from '~core/index';
 import { Icon } from '~web/components/icon';
-import FpsMeter from '~web/components/widget/fps-meter';
+import {FpsMeter} from '~web/components/widget/fps-meter';
 import { Arrows } from '~web/components/widget/toolbar/arrows';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';

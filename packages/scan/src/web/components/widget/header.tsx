@@ -1,86 +1,83 @@
 import { getDisplayName, getFiberId } from 'bippy';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
-import {
-  getCompositeComponentFromElement,
-  getOverrideMethods,
-} from '../inspector/utils';
+import { getCompositeComponentFromElement } from '../inspector/utils';
 import { Arrows } from './toolbar/arrows';
 
-const REPLAY_DELAY_MS = 300;
+// const REPLAY_DELAY_MS = 300;
 
-export const BtnReplay = () => {
-  const refTimeout = useRef<TTimer>();
-  const replayState = useRef({
-    isReplaying: false,
-    toggleDisabled: (disabled: boolean, button: HTMLElement) => {
-      button.classList[disabled ? 'add' : 'remove']('disabled');
-    },
-  });
+// export const BtnReplay = () => {
+//   const refTimeout = useRef<TTimer>();
+//   const replayState = useRef({
+//     isReplaying: false,
+//     toggleDisabled: (disabled: boolean, button: HTMLElement) => {
+//       button.classList[disabled ? 'add' : 'remove']('disabled');
+//     },
+//   });
 
-  const [canEdit, setCanEdit] = useState(false);
-  const isSettingsOpen = signalIsSettingsOpen.value;
+//   const [canEdit, setCanEdit] = useState(false);
+//   const isSettingsOpen = signalIsSettingsOpen.value;
 
-  useEffect(() => {
-    const { overrideProps } = getOverrideMethods();
-    const canEdit = !!overrideProps;
+//   useEffect(() => {
+//     const { overrideProps } = getOverrideMethods();
+//     const canEdit = !!overrideProps;
 
-    requestAnimationFrame(() => {
-      setCanEdit(canEdit);
-    });
-  }, []);
+//     requestAnimationFrame(() => {
+//       setCanEdit(canEdit);
+//     });
+//   }, []);
 
-  // const handleReplay = (e: MouseEvent) => {
-  //   e.stopPropagation();
-  //   const { overrideProps, overrideHookState } = getOverrideMethods();
-  //   const state = replayState.current;
-  //   const button = e.currentTarget as HTMLElement;
+//   // const handleReplay = (e: MouseEvent) => {
+//   //   e.stopPropagation();
+//   //   const { overrideProps, overrideHookState } = getOverrideMethods();
+//   //   const state = replayState.current;
+//   //   const button = e.currentTarget as HTMLElement;
 
-  //   const inspectState = Store.inspectState.value;
-  //   if (state.isReplaying || inspectState.kind !== 'focused') return;
+//   //   const inspectState = Store.inspectState.value;
+//   //   if (state.isReplaying || inspectState.kind !== 'focused') return;
 
-  //   const { parentCompositeFiber } = getCompositeComponentFromElement(
-  //     inspectState.focusedDomElement,
-  //   );
-  //   if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
+//   //   const { parentCompositeFiber } = getCompositeComponentFromElement(
+//   //     inspectState.focusedDomElement,
+//   //   );
+//   //   if (!parentCompositeFiber || !overrideProps || !overrideHookState) return;
 
-  //   state.isReplaying = true;
-  //   state.toggleDisabled(true, button);
+//   //   state.isReplaying = true;
+//   //   state.toggleDisabled(true, button);
 
-  //   void replayComponent(parentCompositeFiber)
-  //     .catch(() => void 0)
-  //     .finally(() => {
-  //       clearTimeout(refTimeout.current);
-  //       if (document.hidden) {
-  //         state.isReplaying = false;
-  //         state.toggleDisabled(false, button);
-  //       } else {
-  //         refTimeout.current = setTimeout(() => {
-  //           state.isReplaying = false;
-  //           state.toggleDisabled(false, button);
-  //         }, REPLAY_DELAY_MS);
-  //       }
-  //     });
-  // };
+//   //   void replayComponent(parentCompositeFiber)
+//   //     .catch(() => void 0)
+//   //     .finally(() => {
+//   //       clearTimeout(refTimeout.current);
+//   //       if (document.hidden) {
+//   //         state.isReplaying = false;
+//   //         state.toggleDisabled(false, button);
+//   //       } else {
+//   //         refTimeout.current = setTimeout(() => {
+//   //           state.isReplaying = false;
+//   //           state.toggleDisabled(false, button);
+//   //         }, REPLAY_DELAY_MS);
+//   //       }
+//   //     });
+//   // };
 
-  if (!canEdit) return null;
+//   if (!canEdit) return null;
 
-  return (
-    <button
-      type="button"
-      title="Replay component"
-      // onClick={handleReplay}
-      className={cn('react-scan-replay-button', {
-        'opacity-0 pointer-events-none': isSettingsOpen,
-      })}
-    >
-      <Icon name="icon-replay" />
-    </button>
-  );
-};
+//   return (
+//     <button
+//       type="button"
+//       title="Replay component"
+//       // onClick={handleReplay}
+//       className={cn('react-scan-replay-button', {
+//         'opacity-0 pointer-events-none': isSettingsOpen,
+//       })}
+//     >
+//       <Icon name="icon-replay" />
+//     </button>
+//   );
+// };
 const useSubscribeFocusedFiber = (onUpdate: () => void) => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {

@@ -1,24 +1,34 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useComputed, useSignal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
 import { getFPS } from '~core/instrumentation';
-import { cn } from '~web/utils/helpers';
+import { constant } from '~web/utils/preact/constant';
 
-export const FpsMeter = () => {
-  const [fps, setFps] = useState<number | null>(null);
+export const FpsMeter = constant(() => {
+  const fps = useSignal<number | null>(null);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setFps(getFPS());
+      fps.value = getFPS();
     }, 100);
 
     return () => clearInterval(intervalId);
   }, []);
 
-  const getFpsColor = (fps: number | null) => {
-    if (!fps) return '#fff';
-    if (fps < 30) return '#f87171';
-    if (fps < 50) return '#fbbf24';
+  const fpsColor = useComputed(() => {
+    const current = fps.value;
+    if (!current) return '#fff';
+    if (current < 30) return '#f87171';
+    if (current < 50) return '#fbbf24';
     return '#fff';
-  };
+  });
+
+  const fpsStyle = useComputed(() => ({
+    color: fpsColor.value,
+    transition: 'color 150ms ease',
+    minWidth: '28px',
+    textAlign: 'right',
+    fontWeight: 500,
+  }));
 
   return (
     <span
@@ -41,19 +51,7 @@ export const FpsMeter = () => {
       }}
     >
       <span style={{ color: '#666', letterSpacing: '0.5px' }}>FPS</span>
-      <span
-        style={{
-          color: getFpsColor(fps),
-          transition: 'color 150ms ease',
-          minWidth: '28px',
-          textAlign: 'right',
-          fontWeight: 500,
-        }}
-      >
-        {fps}
-      </span>
+      <span style={fpsStyle}>{fps}</span>
     </span>
   );
-};
-
-export default FpsMeter;
+});

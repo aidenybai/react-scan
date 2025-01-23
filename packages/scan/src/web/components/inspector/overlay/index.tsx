@@ -38,10 +38,10 @@ const ANIMATION_CONFIG = {
   },
 } as const;
 
-export const OVERLAY_DPR =
+const OVERLAY_DPR =
   typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
 
-export const currentLockIconRect: LockIconRect | null = null;
+// const currentLockIconRect: LockIconRect | null = null;
 
 export const ScanOverlay = () => {
   const refCanvas = useRef<HTMLCanvasElement>(null);

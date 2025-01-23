@@ -95,7 +95,7 @@ interface StateItem {
   value: unknown;
 }
 
-export const EditableValue = ({
+const EditableValue = ({
   value,
   onSave,
   onCancel,
@@ -186,7 +186,7 @@ export const EditableValue = ({
   );
 };
 
-export const PropertyElement = ({
+const PropertyElement = ({
   name,
   value,
   section,

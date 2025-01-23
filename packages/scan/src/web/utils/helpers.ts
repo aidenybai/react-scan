@@ -34,56 +34,6 @@ export const throttle = <E>(
     return undefined;
   };
 };
-export const debounce = <T extends (enabled: boolean | null) => Promise<void>>(
-  fn: T,
-  wait: number,
-  options: { leading?: boolean; trailing?: boolean } = {},
-) => {
-  let timeoutId: number | undefined;
-  let lastArg: boolean | null | undefined;
-  let isLeadingInvoked = false;
-
-  const debounced = (enabled: boolean | null) => {
-    lastArg = enabled;
-
-    if (options.leading && !isLeadingInvoked) {
-      isLeadingInvoked = true;
-      fn(enabled);
-      return;
-    }
-
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-
-    if (options.trailing !== false) {
-      timeoutId = window.setTimeout(() => {
-        isLeadingInvoked = false;
-        timeoutId = undefined;
-        if (lastArg !== undefined) {
-          fn(lastArg);
-        }
-      }, wait);
-    }
-  };
-
-  debounced.cancel = () => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
-      isLeadingInvoked = false;
-      lastArg = undefined;
-    }
-  };
-
-  return debounced;
-};
-
-export const createElement = (htmlString: string): HTMLElement => {
-  const template = document.createElement('template');
-  template.innerHTML = htmlString.trim();
-  return template.content.firstElementChild as HTMLElement;
-};
 
 export const tryOrElse = <T>(fn: () => T, defaultValue: T): T => {
   try {

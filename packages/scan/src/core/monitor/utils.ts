@@ -31,13 +31,13 @@ const getDeviceType = () => {
 /**
  * Measure layout time
  */
-export const doubleRAF = (callback: (...args: unknown[]) => void) => {
+const doubleRAF = (callback: (...args: unknown[]) => void) => {
   return requestAnimationFrame(() => {
     requestAnimationFrame(callback);
   });
 };
 
-export const generateId = () => {
+const generateId = () => {
   const alphabet =
     'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
   let id = '';

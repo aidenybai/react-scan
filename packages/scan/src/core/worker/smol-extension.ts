@@ -1,4 +1,4 @@
-export type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
+type SmolWorkerCallback<T, R> = () => (arg: T) => Promise<R>;
 
 export class SmolWorkerExtension<T, R> {
   private setup?: (arg: T) => Promise<R>;

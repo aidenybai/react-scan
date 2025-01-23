@@ -187,7 +187,7 @@ export const flush = async (): Promise<void> => {
 const CONTENT_TYPE = 'application/json';
 const supportsCompression = typeof CompressionStream === 'function';
 
-export const compress = async (payload: string): Promise<ArrayBuffer> => {
+const compress = async (payload: string): Promise<ArrayBuffer> => {
   const stream = new Blob([payload], { type: CONTENT_TYPE })
     .stream()
     .pipeThrough(new CompressionStream('gzip'));
@@ -205,7 +205,7 @@ interface RequestHeaders {
   'x-api-key'?: string;
 }
 
-export const transport = async (
+const transport = async (
   initialUrl: string,
   payload: IngestRequest,
 ): Promise<{ ok: boolean }> => {
