@@ -515,6 +515,8 @@ export const start = () => {
 
   const options = getOptions();
 
+  idempotent_createToolbar(!!options.value.showToolbar);
+
   initReactScanInstrumentation({
     onActive: () => {
       const rdtHook = getRDTHook();
@@ -540,8 +542,6 @@ export const start = () => {
         );
         return;
       }
-
-      idempotent_createToolbar(!!options.value.showToolbar);
 
       const host = getCanvasEl();
       if (host) {
