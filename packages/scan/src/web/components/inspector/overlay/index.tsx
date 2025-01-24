@@ -6,7 +6,6 @@ import {
   findComponentDOMNode,
   getAssociatedFiberRect,
   getCompositeComponentFromElement,
-  // getCurrentCompositeComponentFromElement,
   nonVisualTags,
 } from '~web/components/inspector/utils';
 import { signalIsSettingsOpen } from '~web/state';
@@ -288,12 +287,6 @@ export const ScanOverlay = () => {
 
     if (!parentCompositeFiber || !targetRect) return;
 
-    if (targetRect.width <= 0 || targetRect.height <= 0) {
-      handleNonHoverableArea();
-
-      return;
-    }
-
     setupOverlayAnimation(canvas, ctx, targetRect, kind, parentCompositeFiber);
   };
 
@@ -399,7 +392,6 @@ export const ScanOverlay = () => {
     refEventCatcher.current.style.pointerEvents = 'none';
     const element = document.elementFromPoint(e?.clientX ?? 0, e?.clientY ?? 0);
 
-    // if (element.title)
     refEventCatcher.current.style.removeProperty('pointer-events');
 
     clearTimeout(refTimeout.current);
@@ -531,7 +523,6 @@ export const ScanOverlay = () => {
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-
     if (e.key !== 'Escape') return;
 
     const state = Store.inspectState.peek();

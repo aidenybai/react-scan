@@ -188,7 +188,7 @@ export interface RenderData {
   time: number;
   renders: Array<Render>;
   displayName: string | null;
-  type: any;
+  type: unknown;
   changes?: Array<RenderChange>;
 }
 

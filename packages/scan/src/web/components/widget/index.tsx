@@ -23,7 +23,6 @@ import {
   getBestCorner,
 } from './helpers';
 import { ResizeHandle } from './resize-handle';
-import { Settings } from './settings';
 import { Toolbar } from './toolbar';
 
 export const Widget = () => {
@@ -124,8 +123,7 @@ export const Widget = () => {
 
   }, []);
 
-  const handleDrag = useCallback(
-    (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+  const handleDrag = useCallback((e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
       e.preventDefault();
 
       if (!refWidget.current || (e.target as HTMLElement).closest('button'))
@@ -178,7 +176,13 @@ export const Widget = () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
 
-        if (!hasMoved) return;
+        // Calculate total movement distance
+        const totalDeltaX = Math.abs(lastMouseX - initialMouseX);
+        const totalDeltaY = Math.abs(lastMouseY - initialMouseY);
+        const totalMovement = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+
+        // Only consider it a move if we moved more than 60 pixels
+        if (!hasMoved || totalMovement < 60) return;
 
         const newCorner = getBestCorner(
           lastMouseX,
@@ -378,14 +382,14 @@ export const Widget = () => {
             <div
               className={cn(
                 'relative',
-                'flex-1',
+                'flex-1 flex',
                 'text-white',
                 'bg-[#0A0A0A]',
                 'transition-opacity duration-150 delay-150',
                 'overflow-y-scroll overflow-x-hidden',
               )}
             >
-              <Inspector />
+              {Store.inspectState.value.kind === 'focused' && <Inspector />}
               {/* <Settings /> */}
             </div>
           </div>

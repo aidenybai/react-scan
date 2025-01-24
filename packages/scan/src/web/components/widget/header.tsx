@@ -1,25 +1,26 @@
-import { getDisplayName, getFiberId } from 'bippy';
+import { getDisplayName } from 'bippy';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
+import { timelineState } from '../inspector/states';
 import {
   getCompositeComponentFromElement,
   getOverrideMethods,
 } from '../inspector/utils';
 import { Arrows } from './toolbar/arrows';
 
-const REPLAY_DELAY_MS = 300;
+// const REPLAY_DELAY_MS = 300;
 
 export const BtnReplay = () => {
-  const refTimeout = useRef<TTimer>();
-  const replayState = useRef({
-    isReplaying: false,
-    toggleDisabled: (disabled: boolean, button: HTMLElement) => {
-      button.classList[disabled ? 'add' : 'remove']('disabled');
-    },
-  });
+  // const refTimeout = useRef<TTimer>();
+  // const replayState = useRef({
+  //   isReplaying: false,
+  //   toggleDisabled: (disabled: boolean, button: HTMLElement) => {
+  //     button.classList[disabled ? 'add' : 'remove']('disabled');
+  //   },
+  // });
 
   const [canEdit, setCanEdit] = useState(false);
   const isSettingsOpen = signalIsSettingsOpen.value;
@@ -81,60 +82,76 @@ export const BtnReplay = () => {
     </button>
   );
 };
-const useSubscribeFocusedFiber = (onUpdate: () => void) => {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
-  useEffect(() => {
-    const subscribe = () => {
-      if (Store.inspectState.value.kind !== 'focused') {
-        return;
-      }
-      onUpdate();
-    };
+// const useSubscribeFocusedFiber = (onUpdate: () => void) => {
+//   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+//   useEffect(() => {
+//     const subscribe = () => {
+//       if (Store.inspectState.value.kind !== 'focused') {
+//         return;
+//       }
+//       onUpdate();
+//     };
 
-    const unSubReportTime = Store.lastReportTime.subscribe(subscribe);
-    const unSubState = Store.inspectState.subscribe(subscribe);
-    return () => {
-      unSubReportTime();
-      unSubState();
-    };
-  }, []);
-};
+//     const unSubReportTime = Store.lastReportTime.subscribe(subscribe);
+//     const unSubState = Store.inspectState.subscribe(subscribe);
+//     return () => {
+//       unSubReportTime();
+//       unSubState();
+//     };
+//   }, []);
+// };
 
 const HeaderInspect = () => {
-  const refRaf = useRef<number | null>(null);
   const refComponentName = useRef<HTMLSpanElement>(null);
-  const refMetrics = useRef<HTMLSpanElement>(null);
-
+  const refReRenders = useRef<HTMLSpanElement>(null);
+  const refTiming = useRef<HTMLSpanElement>(null);
   const isSettingsOpen = signalIsSettingsOpen.value;
 
-  useSubscribeFocusedFiber(() => {
-    cancelAnimationFrame(refRaf.current ?? 0);
-    refRaf.current = requestAnimationFrame(() => {
-      if (Store.inspectState.value.kind !== 'focused') return;
-      const focusedElement = Store.inspectState.value.focusedDomElement;
-      const { parentCompositeFiber } =
-        getCompositeComponentFromElement(focusedElement);
+  useEffect(() => {
+    const unSubState = Store.inspectState.subscribe((state) => {
+      if (state.kind !== 'focused' || !refComponentName.current) return;
+
+      const focusedElement = state.focusedDomElement;
+      const { parentCompositeFiber } = getCompositeComponentFromElement(focusedElement);
       if (!parentCompositeFiber) return;
 
       const displayName = getDisplayName(parentCompositeFiber.type);
-      const reportData = Store.reportData.get(getFiberId(parentCompositeFiber));
+      refComponentName.current.dataset.text = displayName ?? 'Unknown';
+    });
 
-      const count = reportData?.count || 0;
-      const time = reportData?.time || 0;
+    return () => unSubState();
+  }, []);
 
-      if (refComponentName.current && refMetrics.current) {
-        refComponentName.current.dataset.text = displayName ?? 'Unknown';
-        const formattedTime =
-          time > 0
-            ? time < 0.1 - Number.EPSILON
-              ? '< 0.1ms'
-              : `${Number(time.toFixed(1))}ms`
-            : '';
+  useEffect(() => {
+    const unSubTimeline = timelineState.subscribe((state) => {
+      if (Store.inspectState.value.kind !== 'focused') return;
+      if (!refReRenders.current || !refTiming.current) return;
 
-        refMetrics.current.dataset.text = `${count} re-renders${formattedTime ? ` • ${formattedTime}` : ''}`;
+      const { totalUpdates, currentIndex, updates, isVisible, windowOffset, latestFiber } = state;
+
+      const reRenders = Math.max(0, totalUpdates - 1);
+      const headerText = isVisible
+        ? `#${windowOffset + currentIndex} Re-render`
+        : `${reRenders} Re-renders`;
+
+      let formattedTime = '';
+      if (reRenders > 0 && currentIndex >= 0 && currentIndex < updates.length) {
+        const time = latestFiber?.actualDuration ?? 0;
+        formattedTime = time > 0
+          ? time < 0.1 - Number.EPSILON
+            ? '< 0.1ms'
+            : `${Number(time.toFixed(1))}ms`
+          : '';
+      }
+
+      refReRenders.current.dataset.text = `${headerText}${reRenders > 0 ? ' •' : ''}`;
+      if (formattedTime) {
+        refTiming.current.dataset.text = formattedTime;
       }
     });
-  });
+
+    return () => unSubTimeline();
+  }, []);
 
   return (
     <div
@@ -148,11 +165,17 @@ const HeaderInspect = () => {
       )}
     >
       <span ref={refComponentName} className="with-data-text" />
-      <span
-        ref={refMetrics}
-        className="with-data-text mr-auto cursor-pointer !overflow-visible text-xs text-[#888]"
-        title="Click to toggle between rerenders and total renders"
-      />
+      <div className="flex items-center gap-x-2 mr-auto text-xs text-[#888]">
+        <span
+          ref={refReRenders}
+          className="with-data-text cursor-pointer !overflow-visible"
+          title="Click to toggle between rerenders and total renders"
+        />
+        <span
+          ref={refTiming}
+          className="with-data-text !overflow-visible"
+        />
+      </div>
     </div>
   );
 };
@@ -193,7 +216,8 @@ export const Header = () => {
         <HeaderSettings />
         <HeaderInspect />
       </div>
-      {Store.inspectState.value.kind === 'focused' ? <Arrows /> : null}
+
+      <Arrows />
       {/* {Store.inspectState.value.kind !== 'inspect-off' && <BtnReplay />} */}
       <button
         type="button"

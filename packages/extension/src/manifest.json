@@ -78,9 +78,9 @@
   ],
   "{{chrome}}.web_accessible_resources": [
     {
-      "resources": ["icon/*"],
+      "resources": ["icon/*", "workers/*"],
       "matches": ["<all_urls>"]
     }
   ],
-  "{{firefox}}.web_accessible_resources": ["src/content.js", "icon/*"]
+  "{{firefox}}.web_accessible_resources": ["icon/*", "workers/*"]
 }

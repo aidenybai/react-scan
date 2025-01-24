@@ -1,4 +1,4 @@
-import { Options, reactComponentNamePlugin } from '..';
+import { type Options, reactComponentNamePlugin } from '..';
 
 type TransformFn = (
   code: string,

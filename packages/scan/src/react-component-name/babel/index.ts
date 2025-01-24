@@ -1,6 +1,6 @@
-import { NodePath, PluginObj } from '@babel/core';
+import type { NodePath, PluginObj } from '@babel/core';
 import * as t from '@babel/types';
-import { Options } from '../core/options';
+import type { Options } from '../core/options';
 import { isComponentishName } from './is-componentish-name';
 import { pathReferencesImport } from './path-references-import';
 import { unwrapNode, unwrapPath } from './unwrap';
@@ -235,6 +235,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
   visitor: {
     Program(path) {
       const assignedNames = getAssignedDisplayNames(path);
+      // biome-ignore lint/correctness/noUnusedVariables: @pivanov => @Alexis do we need this?
       let count = 0;
       path.traverse({
         ClassDeclaration(path) {
