@@ -7,7 +7,7 @@ interface SliderProps {
   value: number;
   min: number;
   max: number;
-  showThumb?: boolean;
+  totalUpdates?: number;
 }
 
 export const Slider = ({
@@ -16,44 +16,58 @@ export const Slider = ({
   max,
   onChange,
   className,
-  showThumb = true,
+  totalUpdates = max + 1,
 }: SliderProps) => {
-  const refInput = useRef<HTMLInputElement>(null);
   const refThumb = useRef<HTMLSpanElement>(null);
+  const refLastValue = useRef<number>(value);
 
-  const calculateThumbPosition = useCallback((value: number, min: number, max: number) => {
-    if (!refInput.current || !refThumb.current) return 0;
+  const updateThumbPosition = useCallback((value: number) => {
+    if (!refThumb.current) return;
 
-    const inputWidth = refInput.current.offsetWidth;
-    const thumbWidth = refThumb.current.offsetWidth;
     const range = Math.max(1, max - min);
     const valueOffset = value - min;
-    const percentage = range <= 1 ? (value === max ? 1 : 0) : valueOffset / range;
-    const maxPosition = inputWidth - thumbWidth;
+    const percentage = min === max ? 0 : Math.min(100, Math.round((valueOffset / range) * 100));
 
-    return Math.max(0, Math.min(percentage * maxPosition, maxPosition));
-  }, []);
+    refThumb.current.style.setProperty('left', `${percentage}%`);
+  }, [min, max]);
 
-  const updateThumbPosition = useCallback(() => {
-    if (!refThumb.current) return;
-    const pixels = calculateThumbPosition(value, min, max);
-    refThumb.current.style.setProperty('left', `${pixels}px`);
-  }, [calculateThumbPosition, value, min, max]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
-    updateThumbPosition();
-  }, []);
+    updateThumbPosition(value);
+  }, [min, max, value]);
+
+  const handleChange = useCallback((e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const newValue = Number.parseInt(target.value, 10);
+
+    if (newValue >= totalUpdates) {
+      return;
+    }
+
+    if (refLastValue.current !== newValue) {
+      refLastValue.current = newValue;
+      updateThumbPosition(newValue);
+      onChange(e);
+    }
+  }, [onChange, updateThumbPosition, totalUpdates]);
 
   return (
-    <div className={cn('react-scan-slider relative', className)}>
+    <div
+      onMouseDown={(e) => {
+        e.stopPropagation();
+      }}
+      className={cn(
+        'react-scan-slider relative',
+        'flex-1',
+        className
+      )}
+    >
       <input
-        ref={refInput}
         type="range"
         value={value}
         min={min}
         max={max}
-        onChange={onChange}
+        onChange={handleChange}
         className={cn(
           'react-scan-slider',
           'flex-1',
@@ -65,20 +79,14 @@ export const Slider = ({
           className
         )}
       />
-      <span
-        ref={refThumb}
+      <div
         className={cn(
-          'absolute top-1/2 -translate-y-1/2',
-          'w-3 h-3',
-          'rounded-full',
-          'bg-green-500',
-          'opacity-0',
-          'transition-opacity duration-150 ease',
-          {
-            'opacity-100': showThumb,
-          }
+          'absolute inset-0 right-2',
+          'pointer-events-none',
         )}
-      />
+      >
+        <span ref={refThumb} />
+      </div>
     </div>
   );
 };

@@ -31,7 +31,6 @@ function TodoInput({
         className="flex-1 border p-2"
         placeholder="Add task..."
       />
-      {inputInternal}
       <AddButton onClick={addTodo} />
     </div>
   );

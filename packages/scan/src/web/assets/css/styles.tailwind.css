@@ -28,6 +28,10 @@
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, .4);
   }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @-moz-document url-prefix() {
@@ -277,7 +281,7 @@ svg {
   @apply px-2;
   @apply text-[#888];
   @apply before:content-[attr(data-section)] before:text-gray-500;
-  font-size: .75rem;
+  @apply text-xs;
 
   > .react-scan-property {
     @apply -ml-3.5;
@@ -312,7 +316,8 @@ svg {
 }
 
 .react-scan-key {
-  @apply w-fit max-w-60 text-white;
+  @apply w-fit max-w-60;
+  @apply text-white whitespace-nowrap;
 }
 
 .react-scan-input {
@@ -340,12 +345,7 @@ svg {
 
 .react-scan-expandable {
   @apply grid grid-rows-[0fr];
-  @apply overflow-hidden;
   @apply transition-all duration-75;
-
-  > * {
-    min-height: 0;
-  }
 
   &.react-scan-expanded {
     @apply grid-rows-[1fr];
@@ -385,7 +385,7 @@ svg {
 .react-scan-flash-overlay {
   @apply absolute inset-0;
   @apply opacity-0;
-  @apply z-[999999];
+  @apply z-50;
   @apply pointer-events-none;
   @apply transition-opacity duration-150;
   @apply mix-blend-multiply;
@@ -506,7 +506,7 @@ svg {
 
 .react-scan-slider {
   @apply relative;
-  @apply min-h-1.5;
+  @apply min-h-6;
 
   > input {
     @apply absolute inset-0;
@@ -529,14 +529,12 @@ svg {
   }
 
   span {
-    @apply absolute left-0;
-    @apply w-2 h-2;
+    @apply absolute left-0 top-1/2 -translate-y-1/2;
+    @apply w-2.5 h-2.5;
     @apply rounded-lg;
     @apply bg-[#8e61e3];
-    @apply cursor-pointer;
     @apply pointer-events-none;
-    @apply transition-all duration-[32ms];
-
+    @apply transition-transform duration-75;
     /* &::before {
       @apply content-[''];
       @apply absolute inset-0;

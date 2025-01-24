@@ -10,11 +10,10 @@ import {
 } from 'bippy';
 import { isEqual } from '~core/utils';
 
-const stateChangeCounts = new Map<string, number>();
+const stateChangeCounts = new Map<string | number, number>();
 const propsChangeCounts = new Map<string, number>();
 const contextChangeCounts = new Map<string, number>();
 
-// Track last component type to detect switches
 let lastComponentType: unknown = null;
 
 const STATE_NAME_REGEX = /\[(?<name>\w+),\s*set\w+\]/g;
@@ -286,24 +285,36 @@ interface ExtendedMemoizedState extends MemoizedState {
   element?: unknown;
 }
 
-export const getStateFromFiber = (fiber: Fiber) => {
+export interface SectionData {
+  current: Array<{ name: string | number; value: unknown }>;
+  changes: Set<string | number>;
+  changesCounts: Map<string | number, number>;
+}
+
+export interface InspectorData {
+  fiberProps: SectionData;
+  fiberState: SectionData;
+  fiberContext: SectionData;
+}
+
+export const getStateFromFiber = (
+  fiber: Fiber,
+): Record<string | number, unknown> => {
   if (!fiber) return {};
 
-  // only funtional components have memo tags,
   if (
     fiber.tag === FunctionComponentTag ||
     fiber.tag === ForwardRefTag ||
     fiber.tag === SimpleMemoComponentTag ||
     fiber.tag === MemoComponentTag
   ) {
-    // Functional component, need to traverse hooks
     let memoizedState: MemoizedState | null = fiber.memoizedState;
-    const state: Record<string, unknown> = {};
+    const state: Record<number, unknown> = {};
     let index = 0;
 
     while (memoizedState) {
       if (memoizedState.queue && memoizedState.memoizedState !== undefined) {
-        state[index.toString()] = memoizedState.memoizedState;
+        state[index] = memoizedState.memoizedState;
       }
       memoizedState = memoizedState.next;
       index++;
@@ -313,7 +324,6 @@ export const getStateFromFiber = (fiber: Fiber) => {
   }
 
   if (fiber.tag === ClassComponentTag) {
-    // Class component, memoizedState is the component state
     return fiber.memoizedState || {};
   }
 
@@ -351,41 +361,39 @@ const getPropsOrder = (fiber: Fiber): Array<string> => {
     .filter(Boolean);
 };
 
-export interface SectionData {
-  current: Array<{ name: string; value: unknown }>;
-  changes: Set<string>;
-  changesCounts: Map<string, number>;
-}
-
-export interface InspectorData {
-  fiberProps: SectionData;
-  fiberState: SectionData;
-  fiberContext: SectionData;
-}
-
 export const collectInspectorData = (fiber: Fiber): InspectorData => {
-  const emptyData = {
+  const emptyPropsData = {
     current: [],
-    changes: new Set<string>(),
-    changesCounts: new Map<string, number>(),
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
+  };
+
+  const emptyStateData = {
+    current: [],
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
+  };
+
+  const emptyContextData = {
+    current: [],
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
   };
 
   if (!fiber) {
     return {
-      fiberProps: emptyData,
-      fiberState: emptyData,
-      fiberContext: emptyData,
+      fiberProps: emptyPropsData,
+      fiberState: emptyStateData,
+      fiberContext: emptyContextData,
     };
   }
 
-  // Always use the current fiber and its alternate for comparison
   const alternateFiber = fiber.alternate;
 
-  // Props
   const propsData: SectionData = {
     current: [],
-    changes: new Set(),
-    changesCounts: new Map(),
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
   };
 
   if (fiber.memoizedProps) {
@@ -394,7 +402,6 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
     const orderedProps = getPropsOrder(fiber);
     const remainingProps = new Set(Object.keys(currentProps));
 
-    // First add props in their original order
     for (const key of orderedProps) {
       if (key in currentProps) {
         const value = currentProps[key];
@@ -405,7 +412,6 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
             : value,
         });
 
-        // Check for changes
         if (prevProps && key in prevProps && !isEqual(prevProps[key], value)) {
           propsData.changes.add(key);
           const count = (propsChangeCounts.get(key) ?? 0) + 1;
@@ -416,7 +422,6 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
       }
     }
 
-    // Then add any remaining props that weren't in the original order
     for (const key of remainingProps) {
       const value = currentProps[key];
       propsData.current.push({
@@ -426,7 +431,6 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
           : value,
       });
 
-      // Check for changes
       if (prevProps && key in prevProps && !isEqual(prevProps[key], value)) {
         propsData.changes.add(key);
         const count = (propsChangeCounts.get(key) ?? 0) + 1;
@@ -436,38 +440,34 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
     }
   }
 
-  // State
   const stateData: SectionData = {
     current: [],
-    changes: new Set(),
-    changesCounts: new Map(),
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
   };
 
   const currentState = getStateFromFiber(fiber);
   const prevState = alternateFiber ? getStateFromFiber(alternateFiber) : {};
 
-  // Track state changes - only increment counters if we have a previous render
   for (const [index, value] of Object.entries(currentState)) {
     stateData.current.push({
-      name: index.toString(),
+      name: fiber.tag === ClassComponentTag ? index : Number(index),
       value,
     });
 
-    // Only track changes after first render and when values actually differ
     if (alternateFiber && !isEqual(prevState[index], value)) {
-      stateData.changes.add(index);
-      const count = stateChangeCounts.get(index) ?? 0;
-      const newCount = count + 1;
-      stateChangeCounts.set(index, newCount);
-      stateData.changesCounts.set(index, newCount);
+      const stateKey = fiber.tag === ClassComponentTag ? index : Number(index);
+      stateData.changes.add(stateKey);
+      const count = (stateChangeCounts.get(stateKey) ?? 0) + 1;
+      stateChangeCounts.set(stateKey, count);
+      stateData.changesCounts.set(stateKey, count);
     }
   }
 
-  // Track context values and their changes
   const contextData: SectionData = {
     current: [],
-    changes: new Set(),
-    changesCounts: new Map(),
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
   };
 
   const currentContexts = getAllFiberContexts(fiber);
@@ -475,7 +475,6 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
     ? getAllFiberContexts(alternateFiber)
     : new Map();
 
-  // Track current contexts and detect value changes
   const seenContexts = new Set<string>();
   for (const [contextType, ctx] of currentContexts) {
     const name = ctx.displayName;
@@ -487,7 +486,7 @@ export const collectInspectorData = (fiber: Fiber): InspectorData => {
     seenContexts.add(contextKey);
 
     contextData.current.push({
-      name,
+      name: name,
       value: ctx.value,
     });
 

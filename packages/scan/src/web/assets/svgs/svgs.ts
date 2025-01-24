@@ -26,27 +26,6 @@ export const ICONS = `
     <path d="M18 15h-6v4l-7-7 7-7v4h6v6z"/>
   </symbol>
 
-  <symbol id="icon-volume-on" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/>
-    <path d="M16 9a5 5 0 0 1 0 6"/>
-    <path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>
-  </symbol>
-
-  <symbol id="icon-volume-off" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/>
-    <line x1="22" x2="16" y1="9" y2="15"/>
-    <line x1="16" x2="22" y1="9" y2="15"/>
-  </symbol>
-
-  <symbol id="icon-scan-eye" viewBox="0 0 24 24">
-    <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-    <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-    <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-    <circle cx="12" cy="12" r="1"/>
-    <path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/>
-  </symbol>
-
   <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/>
     <line x1="6" y1="6" x2="18" y2="18"/>
@@ -76,12 +55,6 @@ export const ICONS = `
     <path d="M20 6 9 17l-5-5"/>
   </symbol>
 
-  <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
-    <path d="M12 9v4"/>
-    <path d="M12 17h.01"/>
-  </symbol>
-
   <symbol id="icon-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="m9 18 6-6-6-6"/>
   </symbol>
@@ -100,40 +73,15 @@ export const ICONS = `
     <path d="M9 11.2h5.7"/>
   </symbol>
 
-  <symbol id="icon-shield" viewBox="0 0 24 24">
-    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
-  </symbol>
-
-  <symbol id="icon-bell-ring" viewBox="0 0 24 24">
-    <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
-    <path d="M22 8c0-2.3-.8-4.3-2-6"/>
-    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
-    <path d="M4 2C2.8 3.7 2 5.7 2 8"/>
-  </symbol>
-
   <symbol id="icon-triangle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
     <path d="M12 9v4"/>
     <path d="M12 17h.01"/>
   </symbol>
 
-  <symbol id="icon-toggle-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect width="20" height="12" x="2" y="6" rx="6" ry="6"/>
-    <circle cx="8" cy="12" r="2"/>
-  </symbol>
-
-  <symbol id="icon-toggle-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect width="20" height="12" x="2" y="6" rx="6" ry="6"/>
-    <circle cx="16" cy="12" r="2"/>
-  </symbol>
-
-  <symbol id="icon-play" viewBox="0 0 24 24">
-    <polygon points="6 3 20 12 6 21 6 3"/>
-  </symbol>
-
-  <symbol id="icon-pause" viewBox="0 0 24 24">
-    <rect x="14" y="4" width="4" height="16" rx="1"/>
-    <rect x="6" y="4" width="4" height="16" rx="1"/>
+  <symbol id="icon-gallery-horizontal-end" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 7v10"/><path d="M6 5v14"/>
+    <rect width="12" height="18" x="10" y="3" rx="2"/>
   </symbol>
 </svg>
 `;

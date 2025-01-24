@@ -4,6 +4,7 @@ import { Widget } from './components/widget';
 
 
 export let scriptLevelToolbar: HTMLDivElement | null = null
+
 class ToolbarErrorBoundary extends Component {
   state: { hasError: boolean; error: Error | null } = { hasError: false, error: null };
 

@@ -1,6 +1,5 @@
 import {
   type Fiber,
-  ReactDevToolsGlobalHook,
   getDisplayName,
   isCompositeFiber,
   isHostFiber,
@@ -14,10 +13,13 @@ import { globalInspectorState } from '.';
 import type { ExtendedReactRenderer } from '../../../types';
 import {
   ensureRecord,
+  getAllFiberContexts,
   getCurrentFiberState,
   getStateNames,
   isPromise,
 } from './overlay/utils';
+import { TIMELINE_MAX_UPDATES } from './states';
+import type { MinimalFiberInfo } from './states';
 
 interface StateItem {
   name: string;
@@ -58,9 +60,8 @@ interface ReactInternalProps {
 export const getFiberFromElement = (element: Element): Fiber | null => {
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
     const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-    if (!hook?.renderers) {
-      return null;
-    }
+    if (!hook?.renderers) return null;
+
     for (const [, renderer] of Array.from(hook.renderers)) {
       try {
         const fiber = renderer.findFiberByHostInstance?.(element);
@@ -271,22 +272,16 @@ export const getChangedPropsDetailed = (fiber: Fiber): Array<PropsChange> => {
   return changes;
 };
 
-type OverrideHookState = (
-  fiber: Fiber,
-  id: string,
-  path: Array<unknown>,
-  value: unknown,
-) => void;
-
-type OverrideProps = (
-  fiber: Fiber,
-  path: Array<string>,
-  value: unknown,
-) => void;
-
-interface OverrideMethods {
-  overrideProps: OverrideProps | null;
-  overrideHookState: OverrideHookState | null;
+export interface OverrideMethods {
+  overrideProps:
+    | ((fiber: Fiber, path: string[], value: unknown) => void)
+    | null;
+  overrideHookState:
+    | ((fiber: Fiber, id: string, path: string[], value: unknown) => void)
+    | null;
+  overrideContext:
+    | ((fiber: Fiber, contextType: unknown, value: unknown) => void)
+    | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -294,16 +289,17 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 export const getOverrideMethods = (): OverrideMethods => {
-  let overrideProps = null;
-  let overrideHookState = null;
+  let overrideProps: OverrideMethods['overrideProps'] = null;
+  let overrideHookState: OverrideMethods['overrideHookState'] = null;
+  let overrideContext: OverrideMethods['overrideContext'] = null;
 
   if ('__REACT_DEVTOOLS_GLOBAL_HOOK__' in window) {
     const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (!hook?.renderers) {
-      return { overrideProps: null, overrideHookState: null };
+      return { overrideProps: null, overrideHookState: null, overrideContext: null };
     }
 
-    for (const [_, renderer] of Array.from(hook.renderers)) {
+    for (const [, renderer] of Array.from(hook.renderers)) {
       try {
         const devToolsRenderer = renderer as ExtendedReactRenderer;
 
@@ -312,7 +308,7 @@ export const getOverrideMethods = (): OverrideMethods => {
           overrideHookState = (
             fiber: Fiber,
             id: string,
-            path: Array<unknown>,
+            path: string[],
             value: unknown,
           ) => {
             // Find the hook
@@ -332,6 +328,8 @@ export const getOverrideMethods = (): OverrideMethods => {
               }
             }
 
+            // Chain updates through all renderers to ensure consistency across different React renderers
+            // (e.g., React DOM + React Native Web in the same app)
             prevOverrideHookState(fiber, id, path, value);
             devToolsRenderer.overrideHookState?.(fiber, id, path, value);
           };
@@ -346,19 +344,45 @@ export const getOverrideMethods = (): OverrideMethods => {
             path: Array<string>,
             value: unknown,
           ) => {
+            // Chain updates through all renderers to maintain consistency
             prevOverrideProps(fiber, path, value);
             devToolsRenderer.overrideProps?.(fiber, path, value);
           };
         } else if (devToolsRenderer.overrideProps) {
           overrideProps = devToolsRenderer.overrideProps;
         }
+
+        // For context, we don't need the chaining pattern since we're using overrideProps internally
+        // to update the context provider's value prop, which already handles the chaining
+        overrideContext = (
+          fiber: Fiber,
+          contextType: unknown,
+          value: unknown,
+        ) => {
+          // Find the provider fiber for this context
+          let current: Fiber | null = fiber;
+          while (current) {
+            const type = current.type as { Provider?: unknown };
+            if (type === contextType || type?.Provider === contextType) {
+              // Found the provider, update both current and alternate fibers
+              if (overrideProps) {
+                overrideProps(current, ['value'], value);
+                if (current.alternate) {
+                  overrideProps(current.alternate, ['value'], value);
+                }
+              }
+              break;
+            }
+            current = current.return;
+          }
+        };
       } catch {
         /**/
       }
     }
   }
 
-  return { overrideProps, overrideHookState };
+  return { overrideProps, overrideHookState, overrideContext };
 };
 
 export const nonVisualTags = new Set([
@@ -457,6 +481,50 @@ export const getInspectableElements = (
   traverse(root);
   return result;
 };
+
+const fiberMap = new WeakMap<HTMLElement, Fiber>();
+
+export const getInspectableAncestors = (
+  element: HTMLElement,
+): Array<InspectableElement> => {
+  const result: Array<InspectableElement> = [];
+
+  const findInspectableFiber = (
+    element: HTMLElement | null,
+  ): HTMLElement | null => {
+    if (!element) return null;
+    const { parentCompositeFiber } = getCompositeComponentFromElement(element);
+    if (!parentCompositeFiber) return null;
+
+    const componentRoot = findComponentDOMNode(parentCompositeFiber);
+    if (componentRoot === element) {
+      // Store the fiber reference in WeakMap
+      fiberMap.set(element, parentCompositeFiber);
+      return element;
+    }
+    return null;
+  };
+
+  let current: HTMLElement | null = element;
+  while (current && current !== document.body) {
+    const inspectable = findInspectableFiber(current);
+    if (inspectable) {
+      // Get fiber from WeakMap
+      const fiber = fiberMap.get(inspectable);
+      if (fiber) {
+        result.unshift({
+          element: inspectable,
+          depth: 0,
+          name: getDisplayName(fiber.type) ?? 'Unknown',
+        });
+      }
+    }
+    current = current.parentElement;
+  }
+
+  return result;
+};
+
 type DiffResult = {
   type: 'primitive' | 'reference' | 'object';
   changes: Array<{
@@ -1431,76 +1499,159 @@ export const safeGetValue = (
   }
 };
 
+export interface TimelineSliderValues {
+  leftValue: number;
+  min: number;
+  max: number;
+  value: number;
+  rightValue: number;
+}
+
+export const calculateSliderValues = (
+  totalUpdates: number,
+  currentIndex: number,
+): TimelineSliderValues => {
+  if (totalUpdates <= TIMELINE_MAX_UPDATES) {
+    return {
+      leftValue: 0,
+      min: 0,
+      max: totalUpdates - 1,
+      value: currentIndex,
+      rightValue: totalUpdates - 1,
+    };
+  }
+
+  return {
+    leftValue: totalUpdates - TIMELINE_MAX_UPDATES,
+    min: 0,
+    max: TIMELINE_MAX_UPDATES - 1,
+    value: currentIndex,
+    rightValue: totalUpdates - 1,
+  };
+};
+
 
 export const replayComponent = async (fiber: Fiber): Promise<void> => {
-  const { overrideProps, overrideHookState } = getOverrideMethods();
+  const { overrideProps, overrideHookState, overrideContext } =
+    getOverrideMethods();
   if (!overrideProps || !overrideHookState || !fiber) return;
 
-  const currentProps = fiber.memoizedProps || {};
-  const propKeys = Object.keys(currentProps).filter((key) => {
-    const value = currentProps[key];
-    if (Array.isArray(value) || typeof value === 'string') {
-      return !Number.isInteger(Number(key)) && key !== 'length';
-    }
-    return true;
-  });
+  try {
+    // Handle props updates
+    const currentProps = fiber.memoizedProps || {};
+    const propKeys = Object.keys(currentProps).filter((key) => {
+      const value = currentProps[key];
+      if (Array.isArray(value) || typeof value === 'string') {
+        return !Number.isInteger(Number(key)) && key !== 'length';
+      }
+      return true;
+    });
 
-  for (const key of propKeys) {
-    try {
-      overrideProps(fiber, [key], currentProps[key]);
-    } catch {}
-  }
-
-  const currentState = getCurrentFiberState(fiber);
-  if (currentState) {
-    const stateNames = getStateNames(fiber);
-
-    // First, handle named state hooks
-    for (const [key, value] of Object.entries(currentState)) {
+    for (const key of propKeys) {
       try {
-        const namedStateIndex = stateNames.indexOf(key);
-        if (namedStateIndex !== -1) {
-          const hookId = namedStateIndex.toString();
-          // For arrays and objects, we need to clone to trigger updates
-          const stateValue = Array.isArray(value)
-            ? [...value]
-            : typeof value === 'object' && value !== null
-              ? { ...value }
-              : value;
-          overrideHookState(fiber, hookId, [], stateValue);
-        }
+        const value = currentProps[key];
+        // For arrays and objects, we need to clone to trigger updates
+        const propValue = Array.isArray(value)
+          ? [...value]
+          : typeof value === 'object' && value !== null
+            ? { ...value }
+            : value;
+        overrideProps(fiber, [key], propValue);
       } catch {}
     }
 
-    // Then handle unnamed state hooks
-    let hookIndex = 0;
-    let currentHook = fiber.memoizedState;
-    while (currentHook !== null) {
-      try {
-        const hookId = hookIndex.toString();
-        const value = currentHook.memoizedState;
+    // Handle state updates
+    const currentState = getCurrentFiberState(fiber);
+    if (currentState) {
+      const stateNames = getStateNames(fiber);
 
-        // Only update if this hook isn't already handled by named states
-        if (!stateNames.includes(hookId)) {
-          // For arrays and objects, we need to clone to trigger updates
-          const stateValue = Array.isArray(value)
-            ? [...value]
-            : typeof value === 'object' && value !== null
-              ? { ...value }
-              : value;
-          overrideHookState(fiber, hookId, [], stateValue);
-        }
-      } catch {}
+      // First, handle named state hooks
+      for (const [key, value] of Object.entries(currentState)) {
+        try {
+          const namedStateIndex = stateNames.indexOf(key);
+          if (namedStateIndex !== -1) {
+            const hookId = namedStateIndex.toString();
+            // For arrays and objects, we need to clone to trigger updates
+            const stateValue = Array.isArray(value)
+              ? [...value]
+              : typeof value === 'object' && value !== null
+                ? { ...value }
+                : value;
+            overrideHookState(fiber, hookId, [], stateValue);
+          }
+        } catch {}
+      }
 
-      currentHook = currentHook.next as typeof currentHook;
-      hookIndex++;
+      // Then handle unnamed state hooks
+      let hookIndex = 0;
+      let currentHook = fiber.memoizedState;
+      while (currentHook !== null) {
+        try {
+          const hookId = hookIndex.toString();
+          const value = currentHook.memoizedState;
+
+          // Only update if this hook isn't already handled by named states
+          if (!stateNames.includes(hookId)) {
+            // For arrays and objects, we need to clone to trigger updates
+            const stateValue = Array.isArray(value)
+              ? [...value]
+              : typeof value === 'object' && value !== null
+                ? { ...value }
+                : value;
+            overrideHookState(fiber, hookId, [], stateValue);
+          }
+        } catch {}
+
+        currentHook = currentHook.next as typeof currentHook;
+        hookIndex++;
+      }
     }
-  }
 
-  // Recursively handle children
-  let child = fiber.child;
-  while (child) {
-    await replayComponent(child);
-    child = child.sibling;
-  }
+    // Handle context updates
+    if (overrideContext) {
+      const contexts = getAllFiberContexts(fiber);
+      if (contexts) {
+        for (const [contextType, ctx] of contexts) {
+          try {
+            // Find the provider fiber for this context
+            let current: Fiber | null = fiber;
+            while (current) {
+              const type = current.type as { Provider?: unknown };
+              if (type === contextType || type?.Provider === contextType) {
+                // Get the value we want to update to
+                const newValue = ctx.value;
+                if (newValue === undefined || newValue === null) break;
+
+                // Only update if the value has actually changed
+                const currentValue = current.memoizedProps?.value;
+                if (isEqual(currentValue, newValue)) break;
+
+                // Update the provider's value prop
+                overrideProps(current, ['value'], newValue);
+                if (current.alternate) {
+                  overrideProps(current.alternate, ['value'], newValue);
+                }
+                break;
+              }
+              current = current.return;
+            }
+          } catch {}
+        }
+      }
+    }
+
+    // Recursively handle children
+    let child = fiber.child;
+    while (child) {
+      await replayComponent(child);
+      child = child.sibling;
+    }
+  } catch {}
 };
+
+export const extractMinimalFiberInfo = (fiber: Fiber): MinimalFiberInfo => ({
+  displayName: getDisplayName(fiber) || 'Unknown',
+  type: fiber.type,
+  key: fiber.key,
+  id: fiber.index,
+});

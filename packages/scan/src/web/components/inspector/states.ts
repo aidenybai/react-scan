@@ -1,15 +1,19 @@
 import { signal } from '@preact/signals';
 import type { Fiber } from 'bippy';
+import type { ComponentType } from 'preact';
 import { flashManager } from './flash-overlay';
-import {
-  type InspectorData,
-  type SectionData,
-  resetStateTracking,
-} from './overlay/utils';
+import { type SectionData, resetStateTracking } from './overlay/utils';
+
+export interface MinimalFiberInfo {
+  key: string | null;
+  id?: string | number;
+  displayName: string;
+  type: ComponentType<unknown> | string;
+}
 
 export interface TimelineUpdate {
-  fiber: Fiber;
   timestamp: number;
+  fiberInfo: MinimalFiberInfo;
   props: SectionData;
   state: SectionData;
   context: SectionData;
@@ -19,43 +23,109 @@ export interface TimelineUpdate {
 export interface TimelineState {
   updates: TimelineUpdate[];
   currentIndex: number;
-  isReplaying: boolean;
   playbackSpeed: 1 | 2 | 4;
   totalUpdates: number;
+  isVisible: boolean;
+  windowOffset: number;
+  isViewingHistory: boolean;
+  latestFiber: Fiber | null;
 }
 
-export const TIMELINE_MAX_UPDATES = 100;
+export const TIMELINE_MAX_UPDATES = 1000;
 
 const timelineStateDefault: TimelineState = {
   updates: [],
-  currentIndex: -1,
-  isReplaying: false,
+  currentIndex: 0,
   playbackSpeed: 1,
   totalUpdates: 0,
+  isVisible: false,
+  windowOffset: 0,
+  isViewingHistory: false,
+  latestFiber: null,
 };
 
 export const timelineState = signal<TimelineState>(timelineStateDefault);
 
-interface InspectorState extends InspectorData {
-  fiber: Fiber | null;
-}
+export const inspectorUpdateSignal = signal<number>(0);
 
-const inspectorStateDefault: InspectorState = {
-  fiber: null,
-  fiberProps: {
-    current: [],
-    changes: new Set(),
-    changesCounts: new Map(),
+export const timelineActions = {
+  showTimeline: () => {
+    timelineState.value = {
+      ...timelineState.value,
+      isVisible: true,
+    };
   },
-  fiberState: {
-    current: [],
-    changes: new Set(),
-    changesCounts: new Map(),
+
+  hideTimeline: () => {
+    timelineState.value = {
+      ...timelineState.value,
+      isVisible: false,
+      currentIndex: timelineState.value.updates.length - 1,
+    };
   },
-  fiberContext: { current: [], changes: new Set(), changesCounts: new Map() },
+
+  updateFrame: (index: number, isViewingHistory: boolean) => {
+    timelineState.value = {
+      ...timelineState.value,
+      currentIndex: index,
+      isViewingHistory,
+    };
+  },
+
+  updatePlaybackSpeed: (speed: TimelineState['playbackSpeed']) => {
+    timelineState.value = {
+      ...timelineState.value,
+      playbackSpeed: speed,
+    };
+  },
+
+  addUpdate: (update: TimelineUpdate, latestFiber: Fiber | null) => {
+    const { updates, totalUpdates, currentIndex, isViewingHistory } =
+      timelineState.value;
+
+    const newUpdates = [...updates];
+    const newTotalUpdates = totalUpdates + 1;
+
+    if (newUpdates.length >= TIMELINE_MAX_UPDATES) {
+      newUpdates.shift();
+    }
+
+    newUpdates.push(update);
+
+    const newWindowOffset = Math.max(0, newTotalUpdates - TIMELINE_MAX_UPDATES);
+
+    let newCurrentIndex: number;
+    if (isViewingHistory) {
+      if (currentIndex === totalUpdates - 1) {
+        newCurrentIndex = newUpdates.length - 1;
+      } else if (currentIndex === 0) {
+        newCurrentIndex = 0;
+      } else {
+        if (newWindowOffset === 0) {
+          newCurrentIndex = currentIndex;
+        } else {
+          newCurrentIndex = currentIndex - 1;
+        }
+      }
+    } else {
+      newCurrentIndex = newUpdates.length - 1;
+    }
+
+    timelineState.value = {
+      ...timelineState.value,
+      latestFiber,
+      updates: newUpdates,
+      totalUpdates: newTotalUpdates,
+      windowOffset: newWindowOffset,
+      currentIndex: newCurrentIndex,
+      isViewingHistory,
+    };
+  },
+
+  reset: () => {
+    timelineState.value = timelineStateDefault;
+  },
 };
-
-export const inspectorState = signal<InspectorState>(inspectorStateDefault);
 
 export const globalInspectorState = {
   lastRendered: new Map<string, unknown>(),
@@ -65,15 +135,6 @@ export const globalInspectorState = {
     globalInspectorState.expandedPaths.clear();
     flashManager.cleanupAll();
     resetStateTracking();
-    inspectorState.value = inspectorStateDefault;
-    timelineState.value = {
-      updates: [],
-      currentIndex: -1,
-      isReplaying: false,
-      playbackSpeed: 1,
-      totalUpdates: 0,
-    };
+    timelineState.value = timelineStateDefault;
   },
 };
-
-export const inspectorUpdateSignal = signal(0);

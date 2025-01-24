@@ -1,21 +1,26 @@
-import type {
-  Fiber,
-  FiberRoot,
-  ReactDevToolsGlobalHook,
-  ReactRenderer,
-} from 'bippy';
+import type { Fiber } from 'bippy';
 
 type ReactScanInternals = typeof import('./core/index')['ReactScanInternals'];
 type Scan = typeof import('./index')['scan'];
 
-export interface ExtendedReactRenderer extends ReactRenderer {
+export interface ExtendedReactRenderer {
+  findFiberByHostInstance: (instance: Element) => Fiber | null;
+  version: string;
+  bundleType: number;
+  rendererPackageName: string;
   overrideHookState?: (
     fiber: Fiber,
     id: string,
-    path: Array<unknown>,
+    path: string[],
     value: unknown,
   ) => void;
-  overrideProps?: (fiber: Fiber, path: Array<string>, value: unknown) => void;
+  overrideProps?: (fiber: Fiber, path: string[], value: unknown) => void;
+  overrideContext?: (
+    fiber: Fiber,
+    contextType: unknown,
+    path: string[],
+    value: unknown,
+  ) => void;
 }
 
 declare global {

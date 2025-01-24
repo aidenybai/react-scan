@@ -37,7 +37,7 @@ export const DiffValueView = ({
     const seenObjects = new WeakSet();
 
     return (
-      <div className="pl-3">
+      <div>
         {
           entries.map(([key, val], i) => {
             const currentPath = path ? `${path}.${key}` : key;
@@ -54,7 +54,6 @@ export const DiffValueView = ({
               }
             }
 
-            // @TODO: @pivanov check what happend if it's primitive
             return (
               <div
                 key={key}
@@ -114,11 +113,8 @@ export const DiffValueView = ({
                   }
                 </div>
                 {
-                  canExpand && isExpanded && !isCircular && (
-                    <div className="pl-3">
-                      {renderExpandedValue(val, currentPath)}
-                    </div>
-                  )
+                  canExpand && isExpanded && !isCircular &&
+                  renderExpandedValue(val, currentPath)
                 }
               </div>
             );

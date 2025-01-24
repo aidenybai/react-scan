@@ -1,4 +1,3 @@
-import { getDisplayName, getType } from 'bippy';
 import { type ReactNode, memo } from 'preact/compat';
 import {
   type Dispatch,
@@ -11,18 +10,18 @@ import {
 import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
-import { useDelayedValue } from '~web/hooks/use-mount-delay';
+import type { useMergedRefs } from '~web/hooks/use-merged-refs';
 import { cn } from '~web/utils/helpers';
 import { throttle } from '~web/utils/helpers';
 import { DiffValueView } from './diff-value';
 import { isPromise } from './overlay/utils';
-import { inspectorState, timelineState } from './states';
+import { type MinimalFiberInfo, timelineState } from './states';
 import { formatFunctionPreview, formatPath, getObjectDiff } from './utils';
 
 export type Setter<T> = Dispatch<StateUpdater<T>>;
 
 type Change = {
-  name: string;
+  name: string | number;
   value: unknown;
   prevValue?: unknown;
   count: number;
@@ -50,27 +49,25 @@ const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
   }
 };
 
-export const WhatChanged = memo<{ onToggleExpanded: () => void }>(({ onToggleExpanded }) => {
-  const fiber = inspectorState.value.fiber;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [shouldShowChanges, setShouldShowChanges] = useState(false);
-  const isMounted = useDelayedValue(shouldShowChanges, 32, 100);
+interface WhatChangedProps {
+  isSticky?: boolean;
+  refSticky?:
+  | ReturnType<typeof useMergedRefs<HTMLElement>>
+  | ((node: HTMLElement | null) => void);
+  calculateStickyTop: (removeSticky?: boolean) => void;
+}
 
-  const memoizedRenderStateName = useCallback((name: string): ReactNode => {
-    const componentName = getDisplayName(getType(fiber)) ?? 'Unknown Component';
-    return renderStateName(name, componentName);
-  }, [fiber]);
+export const WhatChanged = memo(
+  ({ isSticky, refSticky, calculateStickyTop }: WhatChangedProps) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [shouldShowChanges, setShouldShowChanges] = useState(false);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
-  useEffect(() => {
-    let rafId = 0;
-    let hideTimeout: TTimer;
+    useEffect(() => {
+      const rafId = 0;
 
-    const unsubscribe = timelineState.subscribe(async (state) => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(hideTimeout);
+      const unsubscribe = timelineState.subscribe(async (state) => {
+        cancelAnimationFrame(rafId);
 
-      rafId = requestAnimationFrame(() => {
         const { currentIndex, updates } = state;
         const currentUpdate = updates[currentIndex];
         const prevUpdate = currentIndex > 0 ? updates[currentIndex - 1] : null;
@@ -81,74 +78,56 @@ export const WhatChanged = memo<{ onToggleExpanded: () => void }>(({ onToggleExp
           (currentUpdate?.context?.changes?.size ?? 0);
 
         const shouldShow =
-          currentUpdate?.fiber?.type === prevUpdate?.fiber?.type &&
+          currentUpdate?.fiberInfo.type === prevUpdate?.fiberInfo.type &&
           uniqueChanges > 0;
 
-        if (shouldShow) {
-          onToggleExpanded();
-          setShouldShowChanges(true);
-          setIsExpanded(true);
-        } else {
-          hideTimeout = setTimeout(() => {
-            setShouldShowChanges(false);
-          }, 32);
-        }
+        setShouldShowChanges(shouldShow);
       });
-    });
 
-    return () => {
-      unsubscribe();
-      cancelAnimationFrame(rafId);
-      clearTimeout(hideTimeout);
-    };
-  }, []);
+      return () => {
+        unsubscribe();
+        cancelAnimationFrame(rafId);
+      };
+    }, []);
 
-  const handleToggleExpanded = useCallback(() => {
-    onToggleExpanded();
-    setIsExpanded((state) => !state);
-  }, [onToggleExpanded]);
-
-  return (
-    <>
-      {
-        isMounted && (
-          <WhatsChangedHeader
-            isExpanded={isExpanded}
-            setIsExpanded={handleToggleExpanded}
-          />
-        )
-      }
-      <div
-        className={cn(
-          'react-scan-expandable',
-          {
-            'react-scan-expanded py-0.5': isExpanded,
-          },
-        )}
-      >
-        {
-          isMounted && (
-            <div
-              className={cn(
-                'flex flex-col gap-y-2',
-                'pl-7.5 pr-2',
-                'overflow-hidden',
-              )}
-            >
-              <Section title="Props" isExpanded={isExpanded} />
-              <Section
-                title="State"
-                isExpanded={isExpanded}
-                renderName={memoizedRenderStateName}
-              />
-              <Section title="Context" isExpanded={isExpanded} />
-            </div>
-          )
-        }
-      </div>
-    </>
-  );
-});
+    return (
+      <>
+        <WhatsChangedHeader
+          refSticky={refSticky}
+          isSticky={isSticky}
+          calculateStickyTop={calculateStickyTop}
+          isExpanded={isExpanded}
+          shouldShowChanges={shouldShowChanges}
+          setIsExpanded={setIsExpanded}
+        />
+        <div
+          className={cn('react-scan-expandable', {
+            'react-scan-expanded': isExpanded,
+          })}
+        >
+          <div className="overflow-hidden">
+            {
+              shouldShowChanges && (
+                <div
+                  className={cn(
+                    'relative',
+                  'flex flex-col gap-y-2',
+                  'pl-9 pr-2',
+                    'before:content-[""] before:absolute before:inset-x-0 before:bottom-0 before:h-[1px] before:bg-[#333]',
+                )}
+                >
+                  <Section title="Props" isExpanded={isExpanded} />
+                  <Section title="State" isExpanded={isExpanded} />
+                  <Section title="Context" isExpanded={isExpanded} />
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </>
+    );
+  },
+);
 
 const renderStateName = (key: string, componentName: string) => {
   if (Number.isNaN(Number(key))) {
@@ -185,168 +164,223 @@ const renderStateName = (key: string, componentName: string) => {
   );
 };
 
-const WhatsChangedHeader = memo<{ isExpanded: boolean; setIsExpanded: Setter<boolean> }>(({ isExpanded, setIsExpanded }) => {
+const WhatsChangedHeader = memo<{
+  refSticky?:
+  | ReturnType<typeof useMergedRefs<HTMLElement>>
+  | ((node: HTMLElement | null) => void);
+  isSticky?: boolean;
+  calculateStickyTop: (removeSticky?: boolean) => void;
+  isExpanded: boolean;
+  shouldShowChanges: boolean;
+  setIsExpanded: Setter<boolean>;
+}>(
+  ({
+    refSticky,
+    isSticky,
+    calculateStickyTop,
+    isExpanded,
+    shouldShowChanges,
+    setIsExpanded,
+  }) => {
+    const refProps = useRef<HTMLDivElement>(null);
+    const refState = useRef<HTMLDivElement>(null);
+    const refContext = useRef<HTMLDivElement>(null);
 
-  const refProps = useRef<HTMLDivElement>(null);
-  const refState = useRef<HTMLDivElement>(null);
-  const refContext = useRef<HTMLDivElement>(null);
+    const refStats = useRef<{
+      isPropsChanged: boolean;
+      isStateChanged: boolean;
+      isContextChanged: boolean;
+    }>({
+      isPropsChanged: false,
+      isStateChanged: false,
+      isContextChanged: false,
+    });
 
-  const refStats = useRef<{
-    isPropsChanged: boolean;
-    isStateChanged: boolean;
-    isContextChanged: boolean;
-  }>({
-    isPropsChanged: false,
-    isStateChanged: false,
-    isContextChanged: false,
-  });
+    useEffect(() => {
+      const flash = throttle(() => {
+        const flashElements = [];
+        if (refProps.current?.dataset.flash === 'true') {
+          flashElements.push(refProps.current);
+        }
+        if (refState.current?.dataset.flash === 'true') {
+          flashElements.push(refState.current);
+        }
+        if (refContext.current?.dataset.flash === 'true') {
+          flashElements.push(refContext.current);
+        }
 
-  useEffect(() => {
-    const flash = throttle(() => {
-      const flashElements = [];
-      if (refProps.current?.dataset.flash === 'true') {
-        flashElements.push(refProps.current);
-      }
-      if (refState.current?.dataset.flash === 'true') {
-        flashElements.push(refState.current);
-      }
-      if (refContext.current?.dataset.flash === 'true') {
-        flashElements.push(refContext.current);
-      }
+        for (const element of flashElements) {
+          element.classList.remove('count-flash-white');
+          void element.offsetWidth;
+          element.classList.add('count-flash-white');
+        }
+      }, 400);
 
-      for (const element of flashElements) {
-        element.classList.remove('count-flash-white');
-        void element.offsetWidth;
-        element.classList.add('count-flash-white');
-      }
-    }, 500);
+      const unsubscribe = timelineState.subscribe((state) => {
+        if (!refProps.current || !refState.current || !refContext.current) {
+          return;
+        }
 
-    const updateStats = () => {
-      if (!refProps.current || !refState.current || !refContext.current) return;
+        const { currentIndex, updates } = state;
+        const currentUpdate = updates[currentIndex];
 
-      const { currentIndex, updates } = timelineState.value;
-      const currentUpdate = updates[currentIndex];
+        if (!currentUpdate || currentIndex === 0) {
+          return;
+        };
 
-      flash();
+        flash();
 
-      if (!currentUpdate) return;
+        refStats.current = {
+          isPropsChanged: (currentUpdate.props?.changes?.size ?? 0) > 0,
+          isStateChanged: (currentUpdate.state?.changes?.size ?? 0) > 0,
+          isContextChanged: (currentUpdate.context?.changes?.size ?? 0) > 0,
+        };
 
-      refStats.current = {
-        isPropsChanged: (currentUpdate.props?.changes?.size ?? 0) > 0,
-        isStateChanged: (currentUpdate.state?.changes?.size ?? 0) > 0,
-        isContextChanged: (currentUpdate.context?.changes?.size ?? 0) > 0,
+        if (refProps.current.dataset.flash !== 'true') {
+          refProps.current.dataset.flash =
+            refStats.current.isPropsChanged.toString();
+        }
+        if (refState.current.dataset.flash !== 'true') {
+          refState.current.dataset.flash =
+            refStats.current.isStateChanged.toString();
+        }
+        if (refContext.current.dataset.flash !== 'true') {
+          refContext.current.dataset.flash =
+            refStats.current.isContextChanged.toString();
+        }
+      });
+
+      return () => {
+        unsubscribe();
       };
+    }, []);
 
-      if (refProps.current.dataset.flash !== 'true') {
-        refProps.current.dataset.flash = refStats.current.isPropsChanged.toString();
+    const toggleExpanded = useCallback(() => {
+      setIsExpanded(state => {
+        if (isSticky && isExpanded) {
+          return state;
+        }
+        return !state;
+      });
+    }, [setIsExpanded, isExpanded, isSticky]);
+
+    const onTransitionStart = useCallback((e: TransitionEvent) => {
+      if (e.propertyName === 'max-height') {
+        calculateStickyTop(true);
       }
-      if (refState.current.dataset.flash !== 'true') {
-        refState.current.dataset.flash = refStats.current.isStateChanged.toString();
+    }, [calculateStickyTop]);
+
+    const onTransitionEnd = useCallback((e: TransitionEvent) => {
+      if (e.propertyName === 'max-height') {
+        calculateStickyTop(false);
       }
-      if (refContext.current.dataset.flash !== 'true') {
-        refContext.current.dataset.flash = refStats.current.isContextChanged.toString();
-      }
-    };
+    }, [calculateStickyTop]);
 
-    const unsubscribe = timelineState.subscribe(updateStats);
 
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        setIsExpanded((state) => !state);
-      }}
-      className="react-section-header sticky"
-    >
-      <div className="flex items-center gap-x-2">
-        <Icon
-          name="icon-chevron-right"
-          size={12}
-          className={cn({
-            'rotate-90': isExpanded,
-          })}
-        />
-        What changed?
-      </div>
-
-      <div
+    return (
+      <button
+        ref={refSticky}
+        type="button"
+        onClick={toggleExpanded}
+        onTransitionStart={onTransitionStart}
+        onTransitionEnd={onTransitionEnd}
         className={cn(
-          'ml-auto',
-          'change-scope',
-          'opacity-0',
-          'transition-opacity duration-300',
+          'react-section-header',
+          'overflow-hidden',
+          'max-h-0',
+          'transition-[max-height]',
           {
-            'opacity-100': !isExpanded,
+            'max-h-8': shouldShowChanges,
           },
         )}
       >
-        <div ref={refProps}>props</div>
-        <div ref={refState}>state</div>
-        <div ref={refContext}>context</div>
-      </div>
-    </button>
-  );
-});
+        <div
+          className={cn(
+            'flex-1 react-scan-expandable',
+            {
+              'react-scan-expanded': shouldShowChanges,
+            },
+          )}
+        >
+          <div className="overflow-hidden">
+            <div className="flex items-center whitespace-nowrap">
+              <div className="flex items-center gap-x-2">
+                <div className="w-4 h-4 flex items-center justify-center">
+                  <Icon
+                    name="icon-chevron-right"
+                    size={12}
+                    className={cn({
+                      'rotate-90': isExpanded,
+                      'rotate-0': isSticky && isExpanded,
+                    })}
+                  />
+                </div>
+                What changed?
+              </div>
 
-const identity = <T,>(x: T) => x;
+              <div
+                className={cn(
+                  'ml-auto',
+                  'change-scope',
+                  'opacity-0',
+                  'transition-opacity duration-300 delay-150',
+                  {
+                    'opacity-100': !isExpanded,
+                  },
+                )}
+              >
+                <div ref={refProps}>props</div>
+                <div ref={refState}>state</div>
+                <div ref={refContext}>context</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  },
+);
 
-type SectionType = 'props' | 'state' | 'context';
+interface SectionProps {
+  title: string;
+  isExpanded: boolean;
+}
 
-type ChangeValues = {
-  name: string;
-  prevValue: unknown;
-  currValue: unknown;
-  prevError?: string;
-  currError?: string;
-  diff: {
-    changes: {
-      path: string[];
-      prevValue: unknown;
-      currentValue: unknown;
-    }[];
-  };
-  isFunction: boolean;
-};
+const Section = memo(({ title, isExpanded }: SectionProps) => {
+  const refFiberInfo = useRef<MinimalFiberInfo | null>(null);
+  const refLastUpdated = useRef(new Set<string | number>());
+  const refChangesValues = useRef(new Map<string | number, ChangeValues>());
+  const refLatestChanges = useRef<Change[]>([]);
+  const [changes, setChanges] = useState<Change[]>([]);
 
-const Section = memo(
-  ({
-    title,
-    renderName = identity,
-    isExpanded,
-  }: {
-    title: string;
-    isExpanded: boolean;
-    renderName?: (name: string) => ReactNode;
-  }) => {
-    const refLastUpdated = useRef(new Set<string>());
-    const refChangesValues = useRef(new Map<string, ChangeValues>());
-    const refLatestChanges = useRef<Change[]>([]);
-    const [changes, setChanges] = useState<Change[]>([]);
+  const [expandedFns, setExpandedFns] = useState(new Set<string>());
+  const [expandedEntries, setExpandedEntries] = useState(new Set<string>());
 
-    const [expandedFns, setExpandedFns] = useState(new Set<string>());
-    const [expandedEntries, setExpandedEntries] = useState(new Set<string>());
+  useEffect(() => {
+    const unsubscribe = timelineState.subscribe((state) => {
+      const { currentIndex, updates } = state;
+      const currentUpdate = currentIndex >= 0 ? updates[currentIndex] : null;
+      const prevUpdate = currentIndex > 0 ? updates[currentIndex - 1] : null;
+      const currentData = currentUpdate?.[title.toLowerCase() as SectionType];
+      const prevData = prevUpdate?.[title.toLowerCase() as SectionType];
 
-    const { currentIndex, updates } = timelineState.value;
-    const currentData =
-      updates[currentIndex][title.toLowerCase() as SectionType];
-    const prevData = currentIndex > 0
-      ? updates[currentIndex - 1][title.toLowerCase() as SectionType]
-      : { current: [], changes: new Set(), changesCounts: new Map() };
+      if (!currentData || !prevData) {
+        return;
+      }
 
-    useEffect(() => {
+      refFiberInfo.current = currentUpdate?.fiberInfo;
+
       refLastUpdated.current.clear();
-      const changesMap = new Map(
+
+      const changesMap = new Map<string | number, Change>(
         refLatestChanges.current.map((c) => [c.name, c]),
       );
 
       for (const { name, value } of currentData.current) {
         const count = currentData.changesCounts?.get(name) ?? 0;
-        const prevValue = prevData.current.find((p) => p.name === name)?.value;
+        const prevValue = prevData.current.find(
+          (p) => p.name === name,
+        )?.value;
 
         if (!isEqual(value, prevValue) || count > 0) {
           const { value: safePrevValue, error: prevError } =
@@ -382,29 +416,40 @@ const Section = memo(
 
       refLatestChanges.current = Array.from(changesMap.values());
       setChanges(refLatestChanges.current);
-    }, [currentData, prevData]);
+    });
 
-    const handleExpandEntry = useCallback((entryKey: string) => {
-      setExpandedEntries((prev) => {
-        const next = new Set(prev);
-        if (next.has(String(entryKey))) {
-          next.delete(String(entryKey));
-        } else {
-          next.add(String(entryKey));
-        }
-        return next;
-      });
-    }, []);
+    return () => {
+      unsubscribe();
+    };
+  }, [title]);
 
-    if (changes.length === 0) {
-      return null;
-    }
+  const handleExpandEntry = useCallback((entryKey: string) => {
+    setExpandedEntries((prev) => {
+      const next = new Set(prev);
+      if (next.has(String(entryKey))) {
+        next.delete(String(entryKey));
+      } else {
+        next.add(String(entryKey));
+      }
+      return next;
+    });
+  }, []);
 
-    return (
-      <div className="pb-2">
-        <div className="text-xs text-[#888] mb-1.5">{title}</div>
-        <div className="flex flex-col gap-2">
-          {changes.map((change) => {
+  const memoizedRenderStateName = useCallback((name: string): ReactNode => {
+    if (!refFiberInfo.current) return name;
+    return renderStateName(name, refFiberInfo.current.displayName);
+  }, []);
+
+  if (changes.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="pb-2">
+      <div className="text-xs text-[#888] mb-1.5">{title}</div>
+      <div className="flex flex-col gap-2">
+        {
+          changes.map((change) => {
             const isEntryExpanded = expandedEntries.has(String(change.name));
             const values = refChangesValues.current.get(change.name);
             if (!values) return null;
@@ -413,7 +458,7 @@ const Section = memo(
               <div key={change.name}>
                 <button
                   type="button"
-                  onClick={() => handleExpandEntry(change.name)}
+                  onClick={() => handleExpandEntry(String(change.name))}
                   className={cn(
                     'relative',
                     'flex items-center gap-2',
@@ -432,11 +477,9 @@ const Section = memo(
                       )}
                     />
                     <div className="whitespace-nowrap break-words text-left font-medium flex items-center gap-x-1.5">
-                      {renderName(change.name)}
+                      {memoizedRenderStateName(String(change.name))}
                       <CountBadge
-                        forceFlash={
-                          isExpanded && refLastUpdated.current.has(change.name)
-                        }
+                        forceFlash={isExpanded && refLastUpdated.current.has(change.name)}
                         count={change.count}
                         isFunction={values.isFunction}
                         showWarning={values.diff.changes.length === 0}
@@ -455,40 +498,64 @@ const Section = memo(
                 >
                   <div className="pl-3 text-xs font-mono border-l-1 border-[#333] overflow-hidden">
                     <div className="flex flex-col gap-0.5">
-                      {values.prevError || values.currError ? (
-                        <AccessError
-                          currError={values.currError}
-                          prevError={values.prevError}
-                        />
-                      ) : values.diff.changes.length > 0 ? (
-                        <DiffChange
-                          change={change}
-                          diff={values.diff}
-                          expandedFns={expandedFns}
-                          renderName={renderName}
-                          setExpandedFns={setExpandedFns}
-                          title={title}
-                        />
-                      ) : (
-                        <ReferenceOnlyChange
-                          currValue={values.currValue}
-                          entryKey={change.name}
-                          expandedFns={expandedFns}
-                          prevValue={values.prevValue}
-                          setExpandedFns={setExpandedFns}
-                        />
-                      )}
+                      {
+                        values.prevError || values.currError
+                          ? (
+                            <AccessError
+                              currError={values.currError}
+                              prevError={values.prevError}
+                            />
+                          )
+                          : values.diff.changes.length > 0
+                            ? (
+                              <DiffChange
+                                title={title}
+                                change={change}
+                                diff={values.diff}
+                                expandedFns={expandedFns}
+                                renderName={memoizedRenderStateName}
+                                setExpandedFns={setExpandedFns}
+                              />
+                            )
+                            : (
+                              <ReferenceOnlyChange
+                                currValue={values.currValue}
+                                entryKey={change.name}
+                                expandedFns={expandedFns}
+                                prevValue={values.prevValue}
+                                setExpandedFns={setExpandedFns}
+                              />
+                            )
+                      }
                     </div>
                   </div>
                 </div>
               </div>
             );
-          })}
-        </div>
+          })
+        }
       </div>
-    );
-  },
-);
+    </div>
+  );
+});
+
+type SectionType = 'props' | 'state' | 'context';
+
+type ChangeValues = {
+  name: string | number;
+  prevValue: unknown;
+  currValue: unknown;
+  prevError?: string;
+  currError?: string;
+  diff: {
+    changes: {
+      path: string[];
+      prevValue: unknown;
+      currentValue: unknown;
+    }[];
+  };
+  isFunction: boolean;
+};
 
 const AccessError = ({
   prevError,
@@ -551,7 +618,7 @@ const DiffChange = ({
     if (title === 'Props') {
       path =
         diffChange.path.length > 0
-          ? `${renderName(change.name)}.${formatPath(diffChange.path)}`
+        ? `${renderName(String(change.name))}.${formatPath(diffChange.path)}`
           : undefined;
     }
     if (title === 'State' && diffChange.path.length > 0) {
@@ -742,7 +809,7 @@ const ReferenceOnlyChange = ({
 }: {
   prevValue: unknown;
   currValue: unknown;
-  entryKey: string;
+    entryKey: string | number;
   expandedFns: Set<string>;
   setExpandedFns: (updater: (prev: Set<string>) => Set<string>) => void;
 }) => {
@@ -753,9 +820,9 @@ const ReferenceOnlyChange = ({
         <span className="flex-1 whitespace-pre-wrap font-mono">
           <DiffValueView
             value={prevValue}
-            expanded={expandedFns.has(`${entryKey}-prev`)}
+            expanded={expandedFns.has(`${String(entryKey)}-prev`)}
             onToggle={() => {
-              const key = `${entryKey}-prev`;
+              const key = `${String(entryKey)}-prev`;
               setExpandedFns((prev) => {
                 const next = new Set(prev);
                 if (next.has(key)) {
@@ -775,9 +842,9 @@ const ReferenceOnlyChange = ({
         <span className="flex-1 whitespace-pre-wrap font-mono">
           <DiffValueView
             value={currValue}
-            expanded={expandedFns.has(`${entryKey}-current`)}
+            expanded={expandedFns.has(`${String(entryKey)}-current`)}
             onToggle={() => {
-              const key = `${entryKey}-current`;
+              const key = `${String(entryKey)}-current`;
               setExpandedFns((prev) => {
                 const next = new Set(prev);
                 if (next.has(key)) {
