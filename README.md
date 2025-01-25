@@ -73,6 +73,8 @@ export default function Document() {
 Add the script tag to your `app/layout.tsx`:
 
 ```jsx
+import Script from "next/script";
+
 export default function RootLayout({
   children,
 }: {
@@ -81,7 +83,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js" async />
+        <Script
+          src="https://unpkg.com/react-scan/dist/auto.global.js"
+          strategy="beforeInteractive"
+          async
+        />
         {/* rest of your scripts go under */}
       </head>
       <body>{children}</body>
