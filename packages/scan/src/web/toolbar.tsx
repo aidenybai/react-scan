@@ -44,6 +44,7 @@ class ToolbarErrorBoundary extends Component {
 
 export const createToolbar = (root: ShadowRoot): HTMLElement => {
   const container = document.createElement('div');
+  container.id = 'react-scan-toolbar-root';
   window.__REACT_SCAN_TOOLBAR_CONTAINER__ = container;
   scriptLevelToolbar = container
   root.appendChild(container);

@@ -94,13 +94,13 @@ svg {
 }
 
 .button {
-	&:hover {
-		background: rgba(255, 255, 255, 0.1);
-	}
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 
-	&:active {
-		background: rgba(255, 255, 255, 0.15);
-	}
+  &:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
 }
 
 .resize-line-wrapper {
@@ -312,8 +312,8 @@ svg {
 }
 
 @keyframes blink {
-	from { opacity: 1; }
-	to { opacity: 0; }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 .react-scan-arrow {

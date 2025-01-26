@@ -68,15 +68,10 @@ const initRootContainer = (): RootContainer => {
     ICONS,
     'image/svg+xml',
   ).documentElement;
-  shadowRoot.appendChild(iconSprite);
 
-  const root = document.createElement('div');
-  root.id = 'react-scan-toolbar-root';
-  root.className = 'absolute z-2147483647';
 
+  fragment.appendChild(iconSprite);
   fragment.appendChild(cssStyles);
-  fragment.appendChild(root);
-
   shadowRoot.appendChild(fragment);
 
   document.documentElement.appendChild(rootContainer);
