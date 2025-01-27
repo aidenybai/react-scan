@@ -1,4 +1,4 @@
-# BrowserExtension Installation Guide
+# Browser Extension Installation Guide
 
 > [!WARNING]
 > React Scan's Browser extension is still pending approvals from the Chrome Web Store, Firefox Add-ons, and Brave Browser. Below is a guide to installing the extension manually.
