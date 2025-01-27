@@ -8,7 +8,6 @@ import {
   MemoComponentTag,
   MemoizedState,
   SimpleMemoComponentTag,
-  createFiberVisitor,
   didFiberCommit,
   getDisplayName,
   getMutatedHostFibers,
@@ -18,7 +17,7 @@ import {
   instrument,
   traverseContexts,
   traverseProps,
-  traverseState,
+  traverseRenderedFibers,
 } from 'bippy';
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
@@ -29,15 +28,11 @@ import {
 } from '~web/utils/outline';
 import {
   Change,
-  ClassComponentStateChange,
   ContextChange,
-  FunctionalComponentStateChange,
   ReactScanInternals,
   StateChange,
   Store,
-  getIsProduction,
 } from './index';
-import { outlineFiber } from 'src/new-outlines';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -433,69 +428,10 @@ export const createInstrumentation = (
   });
   if (!inited) {
     inited = true;
-    const visitor = createFiberVisitor({
-      onRender(fiber, phase) {
-        const type = getType(fiber.type);
-        if (!type) return null;
-
-        const allInstances = getAllInstances();
-        const validInstancesIndicies: Array<number> = [];
-        for (let i = 0, len = allInstances.length; i < len; i++) {
-          const instance = allInstances[i];
-          if (!instance.config.isValidFiber(fiber)) continue;
-          validInstancesIndicies.push(i);
-        }
-        if (!validInstancesIndicies.length) return null;
-
-        const changes: Array<Change> = [];
-
-        if (allInstances.some((instance) => instance.config.trackChanges)) {
-          const propsChanges = getChangedPropsDetailed(fiber);
-
-          const stateChanges = getStateChanges(fiber);
-
-          const contextChanges = null!;
-
-          changes.push.apply(changes, propsChanges);
-          changes.push.apply(changes, stateChanges);
-          changes.push.apply(changes, contextChanges);
-        }
-        const { selfTime } = getTimings(fiber);
-
-        const fps = getFPS();
-        const render: Render = {
-          phase: RENDER_PHASE_STRING_TO_ENUM[phase],
-          componentName: getDisplayName(type),
-          count: 1,
-          changes,
-          time: selfTime,
-          forget: hasMemoCache(fiber),
-          // todo: allow this to be toggle-able through toolbar
-          // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
-          unnecessary: TRACK_UNNECESSARY_RENDERS
-            ? isRenderUnnecessary(fiber)
-            : null,
-
-          didCommit: didFiberCommit(fiber),
-          fps,
-        };
-        for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {
-          const index = validInstancesIndicies[i];
-          const instance = allInstances[index];
-          instance.config.onRender(fiber, [render]);
-        }
-      },
-      onError(error) {
-        const allInstances = getAllInstances();
-        for (const instance of allInstances) {
-          instance.config.onError(error);
-        }
-      },
-    });
     instrument({
       name: 'react-scan',
       onActive: config.onActive,
-      onCommitFiberRoot(rendererID, root) {
+      onCommitFiberRoot(_rendererID, root) {
         instrumentation.fiberRoots.add(root);
         if (
           ReactScanInternals.instrumentation?.isPaused.value &&
@@ -509,7 +445,57 @@ export const createInstrumentation = (
         for (const instance of allInstances) {
           instance.config.onCommitStart();
         }
-        visitor(rendererID, root);
+
+        traverseRenderedFibers(
+          root.current,
+          (fiber: Fiber, phase: 'mount' | 'update' | 'unmount') => {
+            const type = getType(fiber.type);
+            if (!type) return;
+
+            const allInstances = getAllInstances();
+            const validInstancesIndicies: Array<number> = [];
+            for (let i = 0, len = allInstances.length; i < len; i++) {
+              const instance = allInstances[i];
+              if (!instance.config.isValidFiber(fiber)) continue;
+              validInstancesIndicies.push(i);
+            }
+            if (!validInstancesIndicies.length) return;
+
+            const changes: Array<Change> = [];
+
+            if (allInstances.some((instance) => instance.config.trackChanges)) {
+              const propsChanges = getChangedPropsDetailed(fiber);
+              const stateChanges = getStateChanges(fiber);
+              const contextChanges = getContextChanges(fiber);
+
+              changes.push.apply(changes, propsChanges);
+              changes.push.apply(changes, stateChanges);
+              changes.push.apply(changes, contextChanges);
+            }
+            const { selfTime } = getTimings(fiber);
+
+            const fps = getFPS();
+            const render: Render = {
+              phase: RENDER_PHASE_STRING_TO_ENUM[phase],
+              componentName: getDisplayName(type),
+              count: 1,
+              changes,
+              time: selfTime,
+              forget: hasMemoCache(fiber),
+              unnecessary: TRACK_UNNECESSARY_RENDERS
+                ? isRenderUnnecessary(fiber)
+                : null,
+              didCommit: didFiberCommit(fiber),
+              fps,
+            };
+            for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {
+              const index = validInstancesIndicies[i];
+              const instance = allInstances[index];
+              instance.config.onRender(fiber, [render]);
+            }
+          },
+        );
+
         for (const instance of allInstances) {
           instance.config.onCommitFinish();
         }
