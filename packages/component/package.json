@@ -1,0 +1,26 @@
+{
+  "name": "@react-scan/component",
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "peerDependencies": {
+    "react": ">=16.9",
+    "react-scan": "^0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.8",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^19.0.0",
+    "react-scan": "^0.1.1",
+    "rollup-preserve-directives": "^1.1.3",
+    "vite": "^6.0.11",
+    "vite-plugin-dts": "^4.5.0"
+  },
+  "exports": {
+    "types": "./dist/react-scan-component.d.ts",
+    "import": "./dist/react-scan-component.js",
+    "require": "./dist/react-scan-component.cjs",
+    "default": "./dist/react-scan-component.cjs"
+  }
+}
