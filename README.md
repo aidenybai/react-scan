@@ -326,9 +326,11 @@ Also, some personal complaints about React Devtools' highlight feature:
 
 Soon :)
 
-**Q: Chrome Extension wen?**
+**Q: Browser Extension wen?**
 
-Soon :)
+The browser extension is available for Chrome, Firefox, and Brave, but it's awaiting approval from browser extension stores.
+
+In the meanwhile, you can install it manually by following the instructions in [BROWSER_EXTENSION_GUIDE.md](BROWSER_EXTENSION_GUIDE.md).
 
 ## Resources & Contributing Back
 
