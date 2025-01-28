@@ -16,10 +16,25 @@ export const TOTAL_FRAMES = 45;
 export const primaryColor = '115,97,230';
 export const secondaryColor = '128,128,128';
 
+function getLabelTextPart(
+  partsEntries: [number, string[]][],
+  partsLength: number,
+  index: number,
+): string {
+  const [count, names] = partsEntries[index];
+  let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
+  if (part.length > MAX_LABEL_LENGTH) {
+    part = `${part.slice(0, MAX_LABEL_LENGTH)}…`;
+  }
+  if (index !== partsLength - 1) {
+    part += ', ';
+  }
+  return part;
+}
+
 export const getLabelText = (outlines: ActiveOutline[]): string => {
   const nameByCount = new Map<string, number>();
-  for (const outline of outlines) {
-    const { name, count } = outline;
+  for (const { name, count } of outlines) {
     nameByCount.set(name, (nameByCount.get(name) || 0) + count);
   }
 
@@ -33,21 +48,14 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
     }
   }
 
+  // TODO(Alexis): Optimize
   const partsEntries = Array.from(countByNames.entries()).sort(
     ([countA], [countB]) => countB - countA,
   );
   const partsLength = partsEntries.length;
-  let labelText = '';
-  for (let i = 0; i < partsLength; i++) {
-    const [count, names] = partsEntries[i];
-    let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
-    if (part.length > MAX_LABEL_LENGTH) {
-      part = `${part.slice(0, MAX_LABEL_LENGTH)}…`;
-    }
-    if (i !== partsLength - 1) {
-      part += ', ';
-    }
-    labelText += part;
+  let labelText = getLabelTextPart(partsEntries, partsLength, 0);
+  for (let i = 1; i < partsLength; i++) {
+    labelText += getLabelTextPart(partsEntries, partsLength, i);
   }
 
   if (labelText.length > MAX_LABEL_LENGTH) {
@@ -259,6 +267,7 @@ export const drawCanvas = (
     }
   }
 
+  // TODO(Alexis): optimize
   const sortedLabels = Array.from(labelMap.entries()).sort(
     ([_, a], [__, b]) => {
       return getAreaFromOutlines(b.outlines) - getAreaFromOutlines(a.outlines);
