@@ -1,26 +1,20 @@
-import { Signal, signal } from '@preact/signals';
 import {
   type Fiber,
-  FiberRoot,
-  createFiberVisitor,
   didFiberCommit,
   getDisplayName,
   getFiberId,
   getNearestHostFibers,
   getTimings,
   getType,
-  instrument,
   isCompositeFiber,
-  secure,
-  traverseFiber,
 } from 'bippy';
 import {
   Change,
   ContextChange,
-  ignoredProps,
   PropsChange,
   ReactScanInternals,
   Store,
+  ignoredProps,
 } from '~core/index';
 import {
   ChangeReason,
@@ -39,7 +33,6 @@ import {
   updateScroll,
 } from './canvas';
 import type { ActiveOutline, BlueprintOutline, OutlineData } from './types';
-import { Instrumentation } from 'next/dist/build/swc/types';
 
 // The worker code will be replaced at build time
 const workerCode = '__WORKER_CODE__';
@@ -104,48 +97,61 @@ const mergeRects = (rects: DOMRect[]) => {
   return new DOMRect(minX, minY, maxX - minX, maxY - minY);
 };
 
+interface IntersectionState {
+  resolveNext: ((value: IntersectionObserverEntry[]) => void) | null;
+  seenElements: Set<Element>;
+  uniqueElements: Set<Element>;
+  done: boolean;
+}
+
+function onIntersect(
+  this: IntersectionState,
+  entries: IntersectionObserverEntry[],
+  observer: IntersectionObserver,
+) {
+  const newEntries: IntersectionObserverEntry[] = [];
+
+  for (const entry of entries) {
+    const element = entry.target;
+    if (!this.seenElements.has(element)) {
+      this.seenElements.add(element);
+      newEntries.push(entry);
+    }
+  }
+
+  if (newEntries.length > 0 && this.resolveNext) {
+    this.resolveNext(newEntries);
+    this.resolveNext = null;
+  }
+
+  if (this.seenElements.size === this.uniqueElements.size) {
+    observer.disconnect();
+    this.done = true;
+    if (this.resolveNext) {
+      this.resolveNext([]);
+    }
+  }
+}
+
 export const getBatchedRectMap = async function* (
   elements: Element[],
 ): AsyncGenerator<IntersectionObserverEntry[], void, unknown> {
-  const uniqueElements = new Set(elements);
-  const seenElements = new Set<Element>();
+  const state: IntersectionState = {
+    uniqueElements: new Set(elements),
+    seenElements: new Set(),
+    resolveNext: null,
+    done: false,
+  };
+  const observer = new IntersectionObserver(onIntersect.bind(state));
 
-  let resolveNext: ((value: IntersectionObserverEntry[]) => void) | null = null;
-  let done = false;
-
-  const observer = new IntersectionObserver((entries) => {
-    const newEntries: IntersectionObserverEntry[] = [];
-
-    for (const entry of entries) {
-      const element = entry.target;
-      if (!seenElements.has(element)) {
-        seenElements.add(element);
-        newEntries.push(entry);
-      }
-    }
-
-    if (newEntries.length > 0 && resolveNext) {
-      resolveNext(newEntries);
-      resolveNext = null;
-    }
-
-    if (seenElements.size === uniqueElements.size) {
-      observer.disconnect();
-      done = true;
-      if (resolveNext) {
-        resolveNext([]);
-      }
-    }
-  });
-
-  for (const element of uniqueElements) {
+  for (const element of state.uniqueElements) {
     observer.observe(element);
   }
 
-  while (!done) {
+  while (!state.done) {
     const entries = await new Promise<IntersectionObserverEntry[]>(
       (resolve) => {
-        resolveNext = resolve;
+        state.resolveNext = resolve;
       },
     );
     if (entries.length > 0) {
@@ -174,6 +180,7 @@ export const flushOutlines = async () => {
 
   const rectsMap = new Map<Element, DOMRect>();
 
+  // TODO(Alexis): too complex, needs breakdown
   for await (const entries of getBatchedRectMap(elements)) {
     for (const entry of entries) {
       const element = entry.target;
@@ -399,9 +406,7 @@ export const getCanvasEl = () => {
 
   setInterval(() => {
     if (blueprintMapKeys.size) {
-      requestAnimationFrame(() => {
-        flushOutlines();
-      });
+      requestAnimationFrame(flushOutlines);
     }
   }, 16 * 2);
 
@@ -551,7 +556,7 @@ export const initReactScanInstrumentation = () => {
       if (!isOverlayPaused) {
         outlineFiber(fiber);
       }
-      
+
       if (ReactScanInternals.options.value.log) {
         // this can be expensive given enough re-renders
         log(renders);
