@@ -208,8 +208,7 @@ export const drawCanvas = (
     rectMap.set(rectKey, rect);
   }
 
-  for (const rect of rectMap.values()) {
-    const { x, y, width, height, alpha } = rect;
+  for (const { x, y, width, height, alpha } of rectMap.values()) {
     ctx.strokeStyle = `rgba(${primaryColor},${alpha})`;
     ctx.lineWidth = 1;
 
@@ -237,6 +236,7 @@ export const drawCanvas = (
 
   ctx.textRendering = 'optimizeSpeed';
 
+  // TODO(Alexis): optimizable?
   for (const outlines of groupedOutlinesMap.values()) {
     const first = outlines[0];
     const { x, y, frame } = first;
