@@ -489,13 +489,13 @@ const reportRenderToListeners = (fiber: Fiber) => {
           }),
         );
 
-        listeners.forEach((listener) => {
+        for (const listener of listeners) {
           listener({
             propsChanges,
             stateChanges,
             contextChanges,
           });
-        });
+        }
       }
       const fiberData: RenderData = {
         count: existingCount + 1,
