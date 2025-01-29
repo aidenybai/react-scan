@@ -16,6 +16,17 @@ const TOTAL_FRAMES = 45;
 const PRIMARY_COLOR = '115,97,230';
 // const SECONDARY_COLOR = '128,128,128';
 
+function sortEntry(prev: [number, string[]], next: [number, string[]]): number {
+  return next[0] - prev[0];
+}
+
+function getSortedEntries(
+  countByNames: Map<number, string[]>,
+): [number, string[]][] {
+  const entries = [...countByNames.entries()];
+  return entries.sort(sortEntry);
+}
+
 function getLabelTextPart([count, names]: [number, string[]]): string {
   let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
   if (part.length > MAX_LABEL_LENGTH) {
@@ -31,7 +42,7 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   }
 
   const countByNames = new Map<number, string[]>();
-  for (const [name, count] of nameByCount.entries()) {
+  for (const [name, count] of nameByCount) {
     const names = countByNames.get(count);
     if (names) {
       names.push(name);
@@ -41,9 +52,7 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   }
 
   // TODO(Alexis): Optimize
-  const partsEntries = Array.from(countByNames.entries()).sort(
-    ([countA], [countB]) => countB - countA,
-  );
+  const partsEntries = getSortedEntries(countByNames);
   let labelText = getLabelTextPart(partsEntries[0]);
   for (let i = 1, len = partsEntries.length; i < len; i++) {
     labelText += ', ' + getLabelTextPart(partsEntries[i]);
