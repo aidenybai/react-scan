@@ -294,7 +294,7 @@ export const drawCanvas = (
         y + height > otherY &&
         otherY + otherHeight > y
       ) {
-        label.text = getLabelText([...label.outlines, ...otherLabel.outlines]);
+        label.text = getLabelText(label.outlines.concat(otherLabel.outlines));
         label.width = ctx.measureText(label.text).width;
         labelMap.delete(otherKey);
       }
