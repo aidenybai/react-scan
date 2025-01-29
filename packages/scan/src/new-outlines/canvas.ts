@@ -1,20 +1,20 @@
 import type { ActiveOutline, OutlineData } from './types';
 
 export const OUTLINE_ARRAY_SIZE = 7;
-export const MONO_FONT =
+const MONO_FONT =
   'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
-export const INTERPOLATION_SPEED = 0.1;
-export const lerp = (start: number, end: number) => {
+const INTERPOLATION_SPEED = 0.1;
+const lerp = (start: number, end: number) => {
   return Math.floor(start + (end - start) * INTERPOLATION_SPEED);
 };
 
-export const MAX_PARTS_LENGTH = 4;
-export const MAX_LABEL_LENGTH = 40;
-export const TOTAL_FRAMES = 45;
+const MAX_PARTS_LENGTH = 4;
+const MAX_LABEL_LENGTH = 40;
+const TOTAL_FRAMES = 45;
 
-export const primaryColor = '115,97,230';
-export const secondaryColor = '128,128,128';
+const PRIMARY_COLOR = '115,97,230';
+// const SECONDARY_COLOR = '128,128,128';
 
 function getLabelTextPart(
   partsEntries: [number, string[]][],
@@ -209,13 +209,13 @@ export const drawCanvas = (
   }
 
   for (const { x, y, width, height, alpha } of rectMap.values()) {
-    ctx.strokeStyle = `rgba(${primaryColor},${alpha})`;
+    ctx.strokeStyle = `rgba(${PRIMARY_COLOR},${alpha})`;
     ctx.lineWidth = 1;
 
     ctx.beginPath();
     ctx.rect(x, y, width, height);
     ctx.stroke();
-    ctx.fillStyle = `rgba(${primaryColor},${alpha * 0.1})`;
+    ctx.fillStyle = `rgba(${PRIMARY_COLOR},${alpha * 0.1})`;
     ctx.fill();
   }
 
@@ -304,13 +304,13 @@ export const drawCanvas = (
   for (const label of labelMap.values()) {
     const { x, y, alpha, width, height, text } = label;
 
-    let labelY: number = y - height - 4;
+    let labelY = y - height - 4;
 
     if (labelY < 0) {
       labelY = 0;
     }
 
-    ctx.fillStyle = `rgba(${primaryColor},${alpha})`;
+    ctx.fillStyle = `rgba(${PRIMARY_COLOR},${alpha})`;
     ctx.fillRect(x, labelY, width + 4, height + 4);
 
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
