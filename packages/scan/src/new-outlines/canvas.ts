@@ -16,18 +16,10 @@ const TOTAL_FRAMES = 45;
 const PRIMARY_COLOR = '115,97,230';
 // const SECONDARY_COLOR = '128,128,128';
 
-function getLabelTextPart(
-  partsEntries: [number, string[]][],
-  partsLength: number,
-  index: number,
-): string {
-  const [count, names] = partsEntries[index];
+function getLabelTextPart([count, names]: [number, string[]]): string {
   let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
   if (part.length > MAX_LABEL_LENGTH) {
     part = `${part.slice(0, MAX_LABEL_LENGTH)}…`;
-  }
-  if (index !== partsLength - 1) {
-    part += ', ';
   }
   return part;
 }
@@ -52,10 +44,9 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   const partsEntries = Array.from(countByNames.entries()).sort(
     ([countA], [countB]) => countB - countA,
   );
-  const partsLength = partsEntries.length;
-  let labelText = getLabelTextPart(partsEntries, partsLength, 0);
-  for (let i = 1; i < partsLength; i++) {
-    labelText += getLabelTextPart(partsEntries, partsLength, i);
+  let labelText = getLabelTextPart(partsEntries[0]);
+  for (let i = 1, len = partsEntries.length; i < len; i++) {
+    labelText += ', ' + getLabelTextPart(partsEntries[i]);
   }
 
   if (labelText.length > MAX_LABEL_LENGTH) {
