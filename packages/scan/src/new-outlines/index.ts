@@ -395,9 +395,9 @@ export const getCanvasEl = () => {
             deltaY,
           });
         } else {
-          requestAnimationFrame(() => {
-            updateScroll(activeOutlines, deltaX, deltaY);
-          });
+          requestAnimationFrame(
+            updateScroll.bind(null, activeOutlines, deltaX, deltaY),
+          );
         }
         isScrollScheduled = false;
       }, 16 * 2);
