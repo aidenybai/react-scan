@@ -141,7 +141,7 @@ if (typeof window !== 'undefined') {
 
 > Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
 
-If you don't have a localv version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+If you don't have a local version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
 
 ```bash
 npx react-scan@latest http://localhost:3000
