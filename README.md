@@ -115,7 +115,7 @@ Add the script tag to your `index.html`:
 
 </details>
 
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
+If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/BROWSER_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
 
 ## API Reference
 
