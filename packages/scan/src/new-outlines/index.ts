@@ -348,6 +348,7 @@ export const getCanvasEl = () => {
   window.addEventListener('resize', () => {
     if (!isResizeScheduled) {
       isResizeScheduled = true;
+      // TODO(Alexis): bindable
       setTimeout(() => {
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -382,6 +383,7 @@ export const getCanvasEl = () => {
   window.addEventListener('scroll', () => {
     if (!isScrollScheduled) {
       isScrollScheduled = true;
+      // TODO(Alexis): bindable
       setTimeout(() => {
         const { scrollX, scrollY } = window;
         const deltaX = scrollX - prevScrollX;
