@@ -1,26 +1,20 @@
-import { Signal, signal } from '@preact/signals';
 import {
   type Fiber,
-  FiberRoot,
-  createFiberVisitor,
   didFiberCommit,
   getDisplayName,
   getFiberId,
   getNearestHostFibers,
   getTimings,
   getType,
-  instrument,
-  isCompositeFiber,
-  secure,
-  traverseFiber,
+  isCompositeFiber
 } from 'bippy';
 import {
   Change,
   ContextChange,
-  ignoredProps,
   PropsChange,
   ReactScanInternals,
   Store,
+  ignoredProps,
 } from '~core/index';
 import {
   ChangeReason,
@@ -39,7 +33,6 @@ import {
   updateScroll,
 } from './canvas';
 import type { ActiveOutline, BlueprintOutline, OutlineData } from './types';
-import { Instrumentation } from 'next/dist/build/swc/types';
 
 // The worker code will be replaced at build time
 const workerCode = '__WORKER_CODE__';
@@ -523,15 +516,18 @@ export const initReactScanInstrumentation = () => {
     onActive() {
       if (hasStopped()) return;
 
-      const host = getCanvasEl();
-      if (host) {
-        document.documentElement.appendChild(host);
-      }
-      globalThis.__REACT_SCAN__ = {
-        ReactScanInternals,
-      };
-      startReportInterval();
-      logIntro();
+      requestAnimationFrame(() => {
+        const host = getCanvasEl();
+        if (host) {
+          document.documentElement.appendChild(host);
+        }
+        globalThis.__REACT_SCAN__ = {
+          ReactScanInternals,
+        };
+        startReportInterval();
+        logIntro();
+      });
+
     },
     onError() {
       // todo: ingest errors without accidentally collecting data about user

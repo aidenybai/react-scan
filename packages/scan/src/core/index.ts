@@ -2,24 +2,13 @@ import { type Signal, signal } from '@preact/signals';
 import {
   type Fiber,
   detectReactBuildType,
-  getDisplayName,
-  getFiberId,
-  getNearestHostFiber,
   getRDTHook,
-  getTimings,
   getType,
-  isCompositeFiber,
   isInstrumentationActive,
-  traverseFiber,
 } from 'bippy';
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
-import {
-  type RenderData,
-  aggregateChanges,
-  aggregateRender,
-  updateFiberRenderData,
-} from 'src/core/utils';
+import { type RenderData } from 'src/core/utils';
 // import { initReactScanOverlay } from '~web/overlay';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
@@ -27,10 +16,8 @@ import { ICONS } from '~web/assets/svgs/svgs';
 import type { States } from '~web/components/inspector/utils';
 // import { initReactScanOverlay } from '~web/overlay';
 import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
-import { playGeigerClickSound } from '~web/utils/geiger';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import { log, logIntro } from '~web/utils/log';
-import { type Outline, flushOutlines } from '~web/utils/outline';
+import { type Outline } from '~web/utils/outline';
 import {
   ChangeReason,
   type Render,
@@ -69,12 +56,15 @@ const initRootContainer = (): RootContainer => {
     'image/svg+xml',
   ).documentElement;
 
-
   fragment.appendChild(iconSprite);
   fragment.appendChild(cssStyles);
   shadowRoot.appendChild(fragment);
 
-  document.documentElement.appendChild(rootContainer);
+  const currentContainer = rootContainer;
+
+  requestAnimationFrame(() => {
+    document.documentElement.appendChild(currentContainer);
+  });
 
   return { rootContainer, shadowRoot };
 };
