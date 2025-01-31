@@ -5,7 +5,7 @@ import {
   getTimings,
   isCompositeFiber,
 } from 'bippy';
-import { useEffect } from 'react';
+import { type FC, useEffect } from 'react';
 import {
   type MonitoringOptions,
   ReactScanInternals,
@@ -43,7 +43,13 @@ export type MonitoringWithoutRouteProps = Omit<
   'route' | 'path'
 >;
 
-export const Monitoring = ({
+const DEFAULT_URL = 'https://monitoring.react-scan.com/api/v1/ingest';
+
+function noopCatch() {
+  return null;
+}
+
+export const Monitoring: FC<MonitoringProps> = ({
   url,
   apiKey,
   params,
@@ -51,15 +57,15 @@ export const Monitoring = ({
   route = null,
   commit = null,
   branch = null,
-}: MonitoringProps) => {
+}) => {
   if (!apiKey)
     throw new Error('Please provide a valid API key for React Scan monitoring');
-  url ??= 'https://monitoring.react-scan.com/api/v1/ingest';
+  url ??= DEFAULT_URL;
 
   Store.monitor.value ??= {
     pendingRequests: 0,
     interactions: [],
-    session: getSession({ commit, branch }).catch(() => null),
+    session: getSession({ commit, branch }).catch(noopCatch),
     url,
     apiKey,
     route,
@@ -90,7 +96,7 @@ export const scanMonitoring = (options: MonitoringOptions) => {
 
 let flushInterval: ReturnType<typeof setInterval>;
 
-export const startMonitoring = () => {
+export const startMonitoring = (): void => {
   if (!Store.monitor.value) {
     if (process.env.NODE_ENV !== 'production') {
       throw new Error(
@@ -145,7 +151,7 @@ export const startMonitoring = () => {
 const aggregateComponentRenderToInteraction = (
   fiber: Fiber,
   renders: Array<Render>,
-) => {
+): void => {
   const monitor = Store.monitor.value;
   if (!monitor || !monitor.interactions || monitor.interactions.length === 0)
     return;
