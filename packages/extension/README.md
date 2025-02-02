@@ -64,8 +64,8 @@ pnpm pack:all
 ```
 
 This will create:
-- `chrome-extension-v1.0.3.zip`
-- `firefox-extension-v1.0.3.zip`
-- `brave-extension-v1.0.3.zip`
+- `chrome-extension-v1.0.4.zip`
+- `firefox-extension-v1.0.4.zip`
+- `brave-extension-v1.0.4.zip`
 
 in the `build` directory.
