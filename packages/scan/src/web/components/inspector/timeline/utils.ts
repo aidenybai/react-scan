@@ -62,15 +62,18 @@ export const trackChange = (
   const hasChanged = !isEqual(currentValue, previousValue);
 
   if (!existing) {
-    // For props and context, always start with count 0
+    // For props and context, start with count 1 if there's a change
     tracker.set(key, {
-      count: 0,
+      count: hasChanged && isInitialValue ? 1 : 0,
       currentValue,
       previousValue,
       lastUpdated: Date.now(),
     });
-    // For initial state, we want to show it as a change
-    return { hasChanged, count: isInitialValue ? 0 : 1 };
+
+    return {
+      hasChanged,
+      count: hasChanged && isInitialValue ? 1 : isInitialValue ? 0 : 1,
+    };
   }
 
   if (!isEqual(existing.currentValue, currentValue)) {
