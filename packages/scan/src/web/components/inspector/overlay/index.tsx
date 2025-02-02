@@ -11,7 +11,6 @@ import {
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, throttle } from '~web/utils/helpers';
 import { lerp } from '~web/utils/lerp';
-import { timelineState } from '../states';
 
 type DrawKind = 'locked' | 'inspecting';
 
@@ -101,24 +100,11 @@ export const ScanOverlay = () => {
   ) => {
     if (!fiber) return;
 
-    const currentUpdate = timelineState.value.updates[timelineState.value.currentIndex];
-
-    const stats = {
-      count: timelineState.value.updates.length - 1,
-      time: currentUpdate?.fiberInfo?.selfTime,
-    };
-
     const pillHeight = 24;
     const pillPadding = 8;
     const componentName =
       (fiber?.type && getDisplayName(fiber.type)) ?? 'Unknown';
-    let text = componentName;
-    if (stats.count > 0) {
-      text += ` • ×${stats.count}`;
-      if (stats.time) {
-        text += ` (${stats.time.toFixed(1)}ms)`;
-      }
-    }
+    const text = componentName;
 
     ctx.save();
     ctx.font = '12px system-ui, -apple-system, sans-serif';
