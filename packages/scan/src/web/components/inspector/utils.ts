@@ -231,17 +231,41 @@ export const getCompositeFiberFromElement = (
   let fiber = knownFiber ?? getNearestFiberFromElement(element);
   if (!fiber) return {};
 
-  // Get the current associated fiber
-  fiber = isCurrentTree(fiber) ? fiber : (fiber.alternate ?? fiber);
+  // Find root once and cache it
+  let curr: Fiber | null = fiber;
+  let rootFiber: Fiber | null = null;
+  let currentRootFiber: Fiber | null = null;
+
+  while (curr) {
+    if (!curr.stateNode) {
+      curr = curr.return;
+      continue;
+    }
+    if (ReactScanInternals.instrumentation?.fiberRoots.has(curr.stateNode)) {
+      rootFiber = curr;
+      currentRootFiber = curr.stateNode.current;
+      break;
+    }
+    curr = curr.return;
+  }
+
+  if (!rootFiber || !currentRootFiber) return {};
+
+  // Get the current associated fiber using cached root
+  fiber = isFiberInTree(fiber, currentRootFiber)
+    ? fiber
+    : (fiber.alternate ?? fiber);
+  if (!fiber) return {};
 
   if (!getFirstStateNode(fiber)) return {};
 
-  // Fetch the parent composite fiber efficiently
+  // Get parent composite fiber
   const parentCompositeFiber = getParentCompositeFiber(fiber)?.[0];
   if (!parentCompositeFiber) return {};
 
+  // Use cached root to check parent fiber
   return {
-    parentCompositeFiber: isCurrentTree(parentCompositeFiber)
+    parentCompositeFiber: isFiberInTree(parentCompositeFiber, currentRootFiber)
       ? parentCompositeFiber
       : (parentCompositeFiber.alternate ?? parentCompositeFiber),
   };

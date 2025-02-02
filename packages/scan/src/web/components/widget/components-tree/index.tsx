@@ -281,7 +281,7 @@ const TreeNodeItem = ({
             )}
           </>
         )}
-        {wrapperTypes.length > 1 && `×${wrapperTypes.length - 1}`}
+        {wrapperTypes.length > 1 && `×${wrapperTypes.length}`}
       </span>
     );
   }, [node.fiber, typeHighlight]);

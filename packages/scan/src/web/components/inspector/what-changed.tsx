@@ -38,7 +38,6 @@ const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
   }
 
   try {
-    // proxies or getter errors
     const proto = Object.getPrototypeOf(value);
     if (proto === Promise.prototype || proto?.constructor?.name === 'Promise') {
       return { value: 'Promise' };
@@ -88,6 +87,7 @@ export const WhatChangedSection = memo(() => {
       cancelAnimationFrame(rafId);
     };
   }, []);
+
   return (
     <>
       {
@@ -390,12 +390,11 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
       const currentData = currentUpdate?.[title.toLowerCase() as SectionType];
       const prevData = prevUpdate?.[title.toLowerCase() as SectionType];
 
-      if (!currentData || !prevData) {
+      if (!currentData) {
         return;
       }
 
       refFiberInfo.current = currentUpdate?.fiberInfo;
-
       refLastUpdated.current.clear();
 
       const changesMap = new Map<string | number, Change>(
@@ -403,12 +402,17 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
       );
 
       for (const { name, value } of currentData.current) {
-        const count = currentData.changesCounts?.get(name) ?? 0;
-        const prevValue = prevData.current.find(
+        const currentCount = currentData.changesCounts?.get(name) ?? 0;
+        const prevCount = prevData?.changesCounts?.get(name) ?? 0;
+        const count = Math.max(currentCount, prevCount);
+
+        const prevValue = prevData?.current.find(
           (p) => p.name === name,
         )?.value;
 
-        if (!isEqual(value, prevValue) || count > 0) {
+        const hasValueChange = !isEqual(value, prevValue);
+
+        if (count > 0 || hasValueChange) {
           const { value: safePrevValue, error: prevError } =
             safeGetValue(prevValue);
           const { value: safeCurrValue, error: currError } =
