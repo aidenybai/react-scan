@@ -1,5 +1,6 @@
+import { useSignal, useSignalEffect } from '@preact/signals';
 import { memo } from 'preact/compat';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useRef } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 
@@ -23,17 +24,21 @@ export const CopyToClipboard = memo(
     iconSize = 14,
   }: CopyToClipboardProps): JSX.Element => {
     const refTimeout = useRef<TTimer>();
-    const [isCopied, setIsCopied] = useState(false);
 
-    useEffect(() => {
-      if (isCopied) {
-        refTimeout.current = setTimeout(() => setIsCopied(false), 600);
+    const isCopied = useSignal(false);
+
+    useSignalEffect(() => {
+      if (isCopied.value) {
+        refTimeout.current = setTimeout(() => {
+          isCopied.value = false;
+        }, 600);
         return () => {
           clearTimeout(refTimeout.current);
         };
       }
-    }, [isCopied]);
+    });
 
+    // TODO(Alexis): remove hook when fine-grained reactivity is implemented.
     const copyToClipboard = useCallback(
       (e: MouseEvent) => {
         e.preventDefault();
@@ -41,7 +46,7 @@ export const CopyToClipboard = memo(
 
         navigator.clipboard.writeText(text).then(
           () => {
-            setIsCopied(true);
+            isCopied.value = true;
             onCopy?.(true, text);
           },
           () => {
@@ -49,7 +54,7 @@ export const CopyToClipboard = memo(
           },
         );
       },
-      [text, onCopy],
+      [text, onCopy, isCopied],
     );
 
     const ClipboardIcon = (
