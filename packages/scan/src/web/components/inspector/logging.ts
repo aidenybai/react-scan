@@ -6,7 +6,7 @@ export function safeStringify(value: unknown): string {
 
   return JSON.stringify(
     value,
-    (key, value) => {
+    (_key, value) => {
       if (typeof value === 'function') {
         return '[Function]';
       }

@@ -21,7 +21,7 @@
     "enabled": true
   },
   "linter": {
-    "enabled": false,
+    "enabled": true,
     "rules": {
       "recommended": true,
       "correctness": {
@@ -47,7 +47,8 @@
         }
       },
       "suspicious": {
-        "noExplicitAny": "error"
+        "noExplicitAny": "error",
+        "noConsole": "error"
       },
       "security": {
         "noDangerouslySetInnerHtml": "error"

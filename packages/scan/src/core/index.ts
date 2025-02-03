@@ -2,43 +2,24 @@ import { type Signal, signal } from '@preact/signals';
 import {
   type Fiber,
   detectReactBuildType,
-  getDisplayName,
-  getFiberId,
-  getNearestHostFiber,
   getRDTHook,
-  getTimings,
   getType,
-  isCompositeFiber,
   isInstrumentationActive,
-  traverseFiber,
 } from 'bippy';
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
-import {
-  type RenderData,
-  aggregateChanges,
-  aggregateRender,
-  updateFiberRenderData,
-} from 'src/core/utils';
+import type { RenderData } from 'src/core/utils';
 // import { initReactScanOverlay } from '~web/overlay';
-import {
-  getCanvasEl,
-  hasStopped,
-  initReactScanInstrumentation,
-  startReportInterval,
-} from 'src/new-outlines';
+import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
 import type { States } from '~web/components/inspector/utils';
-// import { initReactScanOverlay } from '~web/overlay';
 import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
-import { playGeigerClickSound } from '~web/utils/geiger';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import { log, logIntro } from '~web/utils/log';
-import { type Outline, flushOutlines } from '~web/utils/outline';
-import {
+import type { Outline } from '~web/utils/outline';
+import type {
   ChangeReason,
-  type Render,
+  Render,
   createInstrumentation,
 } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
@@ -46,8 +27,9 @@ import type { getSession } from './monitor/utils';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
-// let toolbarContainer: HTMLElement | null = null;
-let audioContext: AudioContext | null = null;
+
+// @TODO: @pivanov - add back in when options are implemented
+// const audioContext: AudioContext | null = null;
 
 interface RootContainer {
   rootContainer: HTMLDivElement;
@@ -73,15 +55,10 @@ const initRootContainer = (): RootContainer => {
     ICONS,
     'image/svg+xml',
   ).documentElement;
-  shadowRoot.appendChild(iconSprite);
 
-  const root = document.createElement('div');
-  root.id = 'react-scan-toolbar-root';
-  root.className = 'absolute z-2147483647';
 
+  fragment.appendChild(iconSprite);
   fragment.appendChild(cssStyles);
-  fragment.appendChild(root);
-
   shadowRoot.appendChild(fragment);
 
   document.documentElement.appendChild(rootContainer);
@@ -221,7 +198,6 @@ export interface StoreType {
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
-  changesListeners: Map<number, Array<ChangesListener>>;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -268,7 +244,7 @@ export type ContextChange = {
   value: unknown;
   prevValue?: unknown;
   count?: number | undefined;
-  contextType: any;
+  contextType: number;
 };
 
 export type Change = StateChange | PropsChange | ContextChange;
@@ -295,7 +271,6 @@ export const Store: StoreType = {
   reportData: new Map<number, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
-  changesListeners: new Map<number, Array<ChangesListener>>(),
 };
 
 export const ReactScanInternals: Internals = {
@@ -498,6 +473,13 @@ export const start = () => {
     return;
   }
 
+  if (
+    getIsProduction() &&
+    !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+  ) {
+    return;
+  }
+
   const localStorageOptions =
     readLocalStorage<LocalStorageOptions>('react-scan-options');
 
@@ -515,50 +497,14 @@ export const start = () => {
 
   const options = getOptions();
 
-  initReactScanInstrumentation({
-    onActive: () => {
-      const rdtHook = getRDTHook();
-
-      if (hasStopped()) return;
-
-      for (const renderer of rdtHook.renderers.values()) {
-        const buildType = detectReactBuildType(renderer);
-        if (buildType === 'production') {
-          isProduction = true;
-        }
-      }
-
-      if (
-        isProduction &&
-        !ReactScanInternals.options.value.dangerouslyForceRunInProduction
-      ) {
-        setOptions({ enabled: false, showToolbar: false });
-        // eslint-disable-next-line no-console
-        console.warn(
-          '[React Scan] Running in production mode is not recommended.\n' +
-            'If you really need this, set dangerouslyForceRunInProduction: true in options.',
-        );
-        return;
-      }
-
-      idempotent_createToolbar(!!options.value.showToolbar);
-
-      const host = getCanvasEl();
-      if (host) {
-        document.documentElement.appendChild(host);
-      }
-      globalThis.__REACT_SCAN__ = {
-        ReactScanInternals,
-      };
-      startReportInterval();
-      logIntro();
-    },
-  });
+  idempotent_createToolbar(!!options.value.showToolbar);
+  initReactScanInstrumentation();
 
   const isUsedInBrowserExtension = typeof window !== 'undefined';
   if (!Store.monitor.value && !isUsedInBrowserExtension) {
     setTimeout(() => {
       if (isInstrumentationActive()) return;
+      // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.error(
         '[React Scan] Failed to load. Must import React Scan before React runs.',
       );

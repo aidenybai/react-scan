@@ -1,25 +1,22 @@
-import { getDisplayName, getFiberId } from 'bippy';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import type { Fiber } from 'bippy';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
-import { cn } from '~web/utils/helpers';
+import { cn, getExtendedDisplayName } from '~web/utils/helpers';
 import { Icon } from '../icon';
-import {
-  getCompositeComponentFromElement,
-  getOverrideMethods,
-} from '../inspector/utils';
-import { Arrows } from './toolbar/arrows';
+import { timelineState } from '../inspector/states';
+import { getOverrideMethods } from '../inspector/utils';
 
-const REPLAY_DELAY_MS = 300;
+// const REPLAY_DELAY_MS = 300;
 
 export const BtnReplay = () => {
-  const refTimeout = useRef<TTimer>();
-  const replayState = useRef({
-    isReplaying: false,
-    toggleDisabled: (disabled: boolean, button: HTMLElement) => {
-      button.classList[disabled ? 'add' : 'remove']('disabled');
-    },
-  });
+  // const refTimeout = useRef<TTimer>();
+  // const replayState = useRef({
+  //   isReplaying: false,
+  //   toggleDisabled: (disabled: boolean, button: HTMLElement) => {
+  //     button.classList[disabled ? 'add' : 'remove']('disabled');
+  //   },
+  // });
 
   const [canEdit, setCanEdit] = useState(false);
   const isSettingsOpen = signalIsSettingsOpen.value;
@@ -81,60 +78,133 @@ export const BtnReplay = () => {
     </button>
   );
 };
-const useSubscribeFocusedFiber = (onUpdate: () => void) => {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
-  useEffect(() => {
-    const subscribe = () => {
-      if (Store.inspectState.value.kind !== 'focused') {
-        return;
-      }
-      onUpdate();
-    };
+// const useSubscribeFocusedFiber = (onUpdate: () => void) => {
+//   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+//   useEffect(() => {
+//     const subscribe = () => {
+//       if (Store.inspectState.value.kind !== 'focused') {
+//         return;
+//       }
+//       onUpdate();
+//     };
 
-    const unSubReportTime = Store.lastReportTime.subscribe(subscribe);
-    const unSubState = Store.inspectState.subscribe(subscribe);
-    return () => {
-      unSubReportTime();
-      unSubState();
-    };
-  }, []);
-};
+//     const unSubReportTime = Store.lastReportTime.subscribe(subscribe);
+//     const unSubState = Store.inspectState.subscribe(subscribe);
+//     return () => {
+//       unSubReportTime();
+//       unSubState();
+//     };
+//   }, []);
+// };
 
 const HeaderInspect = () => {
-  const refRaf = useRef<number | null>(null);
-  const refComponentName = useRef<HTMLSpanElement>(null);
-  const refMetrics = useRef<HTMLSpanElement>(null);
-
+  const refReRenders = useRef<HTMLSpanElement>(null);
+  const refTiming = useRef<HTMLSpanElement>(null);
   const isSettingsOpen = signalIsSettingsOpen.value;
+  const [currentFiber, setCurrentFiber] = useState<Fiber | null>(null);
 
-  useSubscribeFocusedFiber(() => {
-    cancelAnimationFrame(refRaf.current ?? 0);
-    refRaf.current = requestAnimationFrame(() => {
+  useEffect(() => {
+    const unSubState = Store.inspectState.subscribe((state) => {
+      if (state.kind !== 'focused') return;
+
+      const fiber = state.fiber;
+      if (!fiber) return;
+
+      setCurrentFiber(fiber);
+    });
+
+    return unSubState;
+  }, []);
+
+  useEffect(() => {
+    const unSubTimeline = timelineState.subscribe((state) => {
       if (Store.inspectState.value.kind !== 'focused') return;
-      const focusedElement = Store.inspectState.value.focusedDomElement;
-      const { parentCompositeFiber } =
-        getCompositeComponentFromElement(focusedElement);
-      if (!parentCompositeFiber) return;
+      if (!refReRenders.current || !refTiming.current) return;
 
-      const displayName = getDisplayName(parentCompositeFiber.type);
-      const reportData = Store.reportData.get(getFiberId(parentCompositeFiber));
+      const { totalUpdates, currentIndex, updates, isVisible, windowOffset } =
+        state;
 
-      const count = reportData?.count || 0;
-      const time = reportData?.time || 0;
+      const reRenders = Math.max(0, totalUpdates - 1);
+      const headerText = isVisible
+        ? `#${windowOffset + currentIndex} Re-render`
+        : `${reRenders} Re-renders`;
 
-      if (refComponentName.current && refMetrics.current) {
-        refComponentName.current.dataset.text = displayName ?? 'Unknown';
-        const formattedTime =
+      let formattedTime: string | undefined;
+      if (reRenders > 0 && currentIndex >= 0 && currentIndex < updates.length) {
+        const time = updates[currentIndex]?.fiberInfo?.selfTime;
+        formattedTime =
           time > 0
             ? time < 0.1 - Number.EPSILON
               ? '< 0.1ms'
               : `${Number(time.toFixed(1))}ms`
-            : '';
+            : undefined;
+      }
 
-        refMetrics.current.dataset.text = `${count} re-renders${formattedTime ? ` • ${formattedTime}` : ''}`;
+      refReRenders.current.dataset.text = `${headerText}${reRenders > 0 && formattedTime ? ' •' : ''}`;
+      if (formattedTime) {
+        refTiming.current.dataset.text = formattedTime;
       }
     });
-  });
+
+    return unSubTimeline;
+  }, []);
+
+  const componentName = useMemo(() => {
+    if (!currentFiber) return null;
+    const { name, wrappers, wrapperTypes } = getExtendedDisplayName(currentFiber);
+
+    const title = wrappers.length
+      ? `${wrappers.join('(')}(${name})${')'.repeat(wrappers.length)}`
+      : name ?? '';
+
+    const firstWrapperType = wrapperTypes[0];
+    return (
+      <span
+        title={title}
+        className="flex items-center gap-x-1"
+      >
+        {name ?? 'Unknown'}
+        <span
+          title={firstWrapperType?.title}
+          className="flex items-center gap-x-1 text-[10px] text-purple-400"
+        >
+          {
+            !!firstWrapperType && (
+              <>
+                <span
+                  key={firstWrapperType.type}
+                  className={cn(
+                    'rounded py-[1px] px-1',
+                    'truncate',
+                    {
+                      'bg-purple-800 text-neutral-400': firstWrapperType.compiler,
+                      'bg-neutral-700 text-neutral-300': !firstWrapperType.compiler,
+                      'bg-[#5f3f9a] text-white': firstWrapperType.type === 'memo',
+                    }
+                  )}
+                >
+                  {firstWrapperType.type}
+                </span>
+                {firstWrapperType.compiler && (
+                  <span className="text-yellow-300">✨</span>
+                )}
+              </>
+            )
+          }
+        </span>
+        {
+          wrapperTypes.length > 1 && (
+            <span className="text-[10px] text-neutral-400">
+              ×{wrapperTypes.length - 1}
+            </span>
+          )
+        }
+        <samp className="text-neutral-500">
+          {' • '}
+        </samp>
+      </span>
+    );
+  }, [currentFiber]);
 
   return (
     <div
@@ -147,12 +217,15 @@ const HeaderInspect = () => {
         },
       )}
     >
-      <span ref={refComponentName} className="with-data-text" />
-      <span
-        ref={refMetrics}
-        className="with-data-text mr-auto cursor-pointer !overflow-visible text-xs text-[#888]"
-        title="Click to toggle between rerenders and total renders"
-      />
+      {componentName}
+      <div className="flex items-center gap-x-2 mr-auto text-xs text-[#888]">
+        <span
+          ref={refReRenders}
+          className="with-data-text cursor-pointer !overflow-visible"
+          title="Click to toggle between rerenders and total renders"
+        />
+        <span ref={refTiming} className="with-data-text !overflow-visible" />
+      </div>
     </div>
   );
 };
@@ -193,7 +266,8 @@ export const Header = () => {
         <HeaderSettings />
         <HeaderInspect />
       </div>
-      {Store.inspectState.value.kind === 'focused' ? <Arrows /> : null}
+
+      {/* <Arrows /> */}
       {/* {Store.inspectState.value.kind !== 'inspect-off' && <BtnReplay />} */}
       <button
         type="button"

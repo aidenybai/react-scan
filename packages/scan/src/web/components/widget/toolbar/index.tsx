@@ -1,19 +1,21 @@
+// @TODO: @pivanov - finish the pin functionality
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 import {
-  LocalStorageOptions,
+  type LocalStorageOptions,
   ReactScanInternals,
-  setOptions,
   Store,
 } from '~core/index';
 import { Icon } from '~web/components/icon';
+import { Toggle } from '~web/components/toggle';
 import FpsMeter from '~web/components/widget/fps-meter';
-import { Arrows } from '~web/components/widget/toolbar/arrows';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 
 export const Toolbar = constant(() => {
   const refSettingsButton = useRef<HTMLButtonElement>(null);
+  // const [isPinned, setIsPinned] = useState(false);
+  // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);
 
   const inspectState = Store.inspectState;
   const isInspectActive = inspectState.value.kind === 'inspecting';
@@ -44,7 +46,10 @@ export const Toolbar = constant(() => {
     }
   }, []);
 
-  const onToggleActive = useCallback(() => {
+  const onToggleActive = useCallback((e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!ReactScanInternals.instrumentation) {
       return;
     }
@@ -70,6 +75,16 @@ export const Toolbar = constant(() => {
           kind: 'inspect-off',
         };
       }
+
+      // if (state.kind === 'focused' && state.fiber) {
+      //   const pinned = readLocalStorage<FiberMetadata>('react-scann-pinned');
+      //   setIsPinned(!!pinned);
+
+      //   const m = getFiberMetadata(state.fiber);
+      //   if (m !== null) {
+      //     setMetadata(m);
+      //   }
+      // }
     });
 
     const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
@@ -81,6 +96,16 @@ export const Toolbar = constant(() => {
       unSubSettings();
     };
   }, []);
+
+  // const onTogglePin = useCallback(() => {
+  //   if (isPinned) {
+  //     removeLocalStorage('react-scann-pinned');
+  //     setIsPinned(false);
+  //   } else {
+  //     saveLocalStorage('react-scann-pinned', metadata);
+  //     setIsPinned(true);
+  //   }
+  // }, [isPinned, metadata]);
 
   let inspectIcon = null;
   let inspectColor = '#999';
@@ -98,10 +123,7 @@ export const Toolbar = constant(() => {
 
   return (
     <div
-      className={cn(
-        'flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden gap-x-[6px]',
-        // isInspectFocused && 'border-t-1 border-white/10',
-      )}
+      className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden gap-x-[6px]"
     >
       <div className="h-full flex items-center min-w-fit gap-x-[6px]">
         <button
@@ -115,20 +137,37 @@ export const Toolbar = constant(() => {
           {inspectIcon}
         </button>
 
-        <label className="switch">
-          <input
-            type="checkbox"
-            id="react-scan-power"
-            title={
-              ReactScanInternals.instrumentation?.isPaused.value
-                ? 'Start'
-                : 'Stop'
-            }
-            checked={!ReactScanInternals.instrumentation?.isPaused.value}
-            onChange={onToggleActive}
-          />
-          <span className="slider round"></span>
-        </label>
+        <Toggle
+          checked={!ReactScanInternals.instrumentation?.isPaused.value}
+          onChange={onToggleActive}
+          title={
+            ReactScanInternals.instrumentation?.isPaused.value
+              ? 'Start'
+              : 'Stop'
+          }
+        />
+
+        {/* {
+          isInspectFocused && (
+            <button
+              type="button"
+              title={isPinned ? 'Unpin component' : 'Pin component'}
+              onClick={onTogglePin}
+              className="button flex items-center justify-center px-3 h-full"
+            >
+              <Icon
+                name={isPinned ? 'icon-lock-open' : 'icon-lock'}
+                className={cn(
+                  'text-neutral-400',
+                  {
+                    'text-white': isPinned,
+                  }
+                )}
+              />
+            </button>
+          )
+        } */}
+
         {/* <button
         ref={refSettingsButton}
         type="button"
@@ -145,8 +184,8 @@ export const Toolbar = constant(() => {
       </div>
       <div
         className={cn(
-          'flex items-center justify-end w-full',
-          'py-1.5 px-2',
+          'flex items-center justify-end w-full gap-x-2',
+          'pl-2 p-1.5',
           'whitespace-nowrap text-sm text-white',
         )}
       >

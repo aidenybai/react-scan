@@ -1,4 +1,4 @@
-import { type Fiber, getDisplayName, getFiberId } from 'bippy';
+import { type Fiber, getDisplayName } from 'bippy';
 import { useEffect, useRef } from 'preact/hooks';
 import { ReactScanInternals, Store } from '~core/index';
 import {
@@ -6,7 +6,6 @@ import {
   findComponentDOMNode,
   getAssociatedFiberRect,
   getCompositeComponentFromElement,
-  // getCurrentCompositeComponentFromElement,
   nonVisualTags,
 } from '~web/components/inspector/utils';
 import { signalIsSettingsOpen } from '~web/state';
@@ -100,26 +99,12 @@ export const ScanOverlay = () => {
     fiber: Fiber | null,
   ) => {
     if (!fiber) return;
-    const fiberId = getFiberId(fiber);
-
-    const reportDataFiber = Store.reportData.get(fiberId);
-
-    const stats = {
-      count: reportDataFiber?.count ?? 0,
-      time: reportDataFiber?.time ?? 0,
-    };
 
     const pillHeight = 24;
     const pillPadding = 8;
     const componentName =
       (fiber?.type && getDisplayName(fiber.type)) ?? 'Unknown';
-    let text = componentName;
-    if (stats.count) {
-      text += ` • ×${stats.count}`;
-      if (stats.time) {
-        text += ` (${stats.time.toFixed(1)}ms)`;
-      }
-    }
+    const text = componentName;
 
     ctx.save();
     ctx.font = '12px system-ui, -apple-system, sans-serif';
@@ -288,12 +273,6 @@ export const ScanOverlay = () => {
 
     if (!parentCompositeFiber || !targetRect) return;
 
-    if (targetRect.width <= 0 || targetRect.height <= 0) {
-      handleNonHoverableArea();
-
-      return;
-    }
-
     setupOverlayAnimation(canvas, ctx, targetRect, kind, parentCompositeFiber);
   };
 
@@ -399,7 +378,6 @@ export const ScanOverlay = () => {
     refEventCatcher.current.style.pointerEvents = 'none';
     const element = document.elementFromPoint(e?.clientX ?? 0, e?.clientY ?? 0);
 
-    // if (element.title)
     refEventCatcher.current.style.removeProperty('pointer-events');
 
     clearTimeout(refTimeout.current);
@@ -505,6 +483,7 @@ export const ScanOverlay = () => {
     Store.inspectState.value = {
       kind: 'focused',
       focusedDomElement: componentElement,
+      fiber: parentCompositeFiber,
     };
   };
 
@@ -531,7 +510,6 @@ export const ScanOverlay = () => {
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-
     if (e.key !== 'Escape') return;
 
     const state = Store.inspectState.peek();
@@ -728,6 +706,7 @@ export const ScanOverlay = () => {
       />
       <canvas
         ref={refCanvas}
+        dir="ltr"
         className={cn(
           'react-scan-inspector-overlay',
           'fixed inset-0 w-screen h-screen',

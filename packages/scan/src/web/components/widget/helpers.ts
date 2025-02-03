@@ -191,7 +191,7 @@ export const calculateBoundedSize = (
   delta: number,
   isWidth: boolean,
 ): number => {
-  const min = isWidth ? MIN_SIZE.width : MIN_SIZE.height * 5;
+  const min = isWidth ? MIN_SIZE.width : MIN_SIZE.initialHeight;
   const max = isWidth
     ? getWindowDimensions().maxWidth
     : getWindowDimensions().maxHeight;
@@ -240,7 +240,7 @@ export const calculateNewSizeAndPosition = (
     );
     newHeight = Math.min(
       maxHeight,
-      Math.max(MIN_SIZE.height * 5, proposedHeight),
+      Math.max(MIN_SIZE.initialHeight, proposedHeight),
     );
   }
   if (position.includes('top')) {
@@ -252,7 +252,7 @@ export const calculateNewSizeAndPosition = (
     );
     newHeight = Math.min(
       maxHeight,
-      Math.max(MIN_SIZE.height * 5, proposedHeight),
+      Math.max(MIN_SIZE.initialHeight, proposedHeight),
     );
     newY = initialPosition.y - (newHeight - initialSize.height);
   }

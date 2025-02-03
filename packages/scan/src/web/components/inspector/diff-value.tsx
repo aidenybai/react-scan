@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'preact/hooks';
-import { formatForClipboard, formatValuePreview, safeGetValue } from './utils';
+import { cn } from '~web/utils/helpers';
 import { CopyToClipboard } from '../copy-to-clipboard';
 import { Icon } from '../icon';
+import { formatForClipboard, formatValuePreview, safeGetValue } from './utils';
 
 export const DiffValueView = ({
   value,
@@ -19,7 +20,7 @@ export const DiffValueView = ({
   const [expandedPaths, setExpandedPaths] = useState(new Set<string>());
 
   if (error) {
-    return <span style={{ color: '#666', fontStyle: 'italic' }}>{error}</span>;
+    return <span className="text-gray-500 font-italic">{error}</span>;
   }
 
   const isExpandable =
@@ -36,113 +37,122 @@ export const DiffValueView = ({
     const seenObjects = new WeakSet();
 
     return (
-      <div style={{ paddingLeft: '12px' }}>
-        {entries.map(([key, val], i) => {
-          const currentPath = path ? `${path}.${key}` : key;
-          const fullPath = `${pathPrefix}.${currentPath}`;
-          const isExpanded = expandedPaths.has(fullPath);
-          const canExpand = val !== null && typeof val === 'object';
+      <div>
+        {
+          entries.map(([key, val], i) => {
+            const currentPath = path ? `${path}.${key}` : key;
+            const fullPath = `${pathPrefix}.${currentPath}`;
+            const isExpanded = expandedPaths.has(fullPath);
+            const canExpand = val !== null && typeof val === 'object';
 
-          let isCircular = false;
-          if (canExpand) {
-            if (seenObjects.has(val)) {
-              isCircular = true;
-            } else {
-              seenObjects.add(val);
+            let isCircular = false;
+            if (canExpand) {
+              if (seenObjects.has(val)) {
+                isCircular = true;
+              } else {
+                seenObjects.add(val);
+              }
             }
-          }
 
-          return (
-            <div key={key} style={{ marginTop: i > 0 ? '4px' : 0 }}>
+            return (
               <div
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                key={key}
+                className={cn({ 'mt-1': i > 0 })}
               >
-                {canExpand && !isCircular && (
-                  <button
-                    onClick={() => {
-                      setExpandedPaths((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(fullPath)) {
-                          next.delete(fullPath);
-                        } else {
-                          next.add(fullPath);
-                        }
-                        return next;
-                      });
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      marginTop: '2px',
-                      marginRight: '1px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      opacity: 0.5,
-                    }}
-                  >
-                    <Icon
-                      name="icon-chevron-right"
-                      size={12}
-                      style={{
-                        transform: isExpanded ? 'rotate(90deg)' : 'none',
-                        transition: 'transform 150ms',
-                        color: isNegative ? '#f87171' : '#4ade80',
-                      }}
-                    />
-                  </button>
-                )}
-                <span style={{ color: '#666' }}>{key}:</span>
-                {isCircular ? (
-                  <span style={{ color: '#666', fontStyle: 'italic' }}>
-                    [Circular]
-                  </span>
-                ) : !canExpand || !isExpanded ? (
-                  <span>{formatValuePreview(val)}</span>
-                ) : null}
-              </div>
-              {canExpand && isExpanded && !isCircular && (
-                <div style={{ paddingLeft: '12px' }}>
-                  {renderExpandedValue(val, currentPath)}
+                <div className="flex items-center gap-1">
+                  {
+                    canExpand && !isCircular && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedPaths((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(fullPath)) {
+                              next.delete(fullPath);
+                            } else {
+                              next.add(fullPath);
+                            }
+                            return next;
+                          });
+                        }}
+                        className={cn(
+                          'flex items-center',
+                          'p-0 mr-1',
+                          'opacity-50',
+                        )}
+                      >
+                        <Icon
+                          name="icon-chevron-right"
+                          size={12}
+                          className={cn(
+                            'transition-[transform,color]',
+                            'text-[#4ade80]',
+                            {
+                              'transform rotate-90': isExpanded,
+                              'text-[#f87171]': isNegative,
+                            },
+                          )}
+                        />
+                      </button>
+                    )
+                  }
+                  <span className="text-gray-500">{key}:</span>
+                  {
+                    isCircular
+                      ? (
+                        <span className="text-gray-500 font-italic">
+                          [Circular]
+                        </span>
+                      )
+                      : (!canExpand || !isExpanded)
+                        ? (
+                          <span>
+                            {formatValuePreview(val)}
+                          </span>
+                        ) : null
+                  }
                 </div>
-              )}
-            </div>
-          );
-        })}
+                {
+                  canExpand && isExpanded && !isCircular &&
+                  renderExpandedValue(val, currentPath)
+                }
+              </div>
+            );
+          })
+        }
       </div>
     );
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
-      {isExpandable && (
-        <button
-          onClick={onToggle}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            marginTop: '2px',
-            marginRight: '1px',
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            opacity: 0.5,
-          }}
-        >
-          <Icon
-            name="icon-chevron-right"
-            size={12}
-            style={{
-              transform: expanded ? 'rotate(90deg)' : 'none',
-              transition: 'transform 150ms',
-              color: isNegative ? '#f87171' : '#4ade80',
-            }}
-          />
-        </button>
-      )}
-      <div style={{ flex: 1 }}>
+    <div className="flex items-start gap-1">
+      {
+        isExpandable && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className={cn(
+              'flex items-center',
+              'p-0 mt-0.5 mr-1',
+              'opacity-50',
+            )}
+          >
+            <Icon
+              name="icon-chevron-right"
+              size={12}
+              className={cn(
+                'transition-[transform,color]',
+                'text-[#4ade80]',
+                {
+                  'transform rotate-90': expanded,
+                  'text-[#f87171]': isNegative,
+                },
+              )}
+            />
+          </button>
+        )
+      }
+      <div className="flex-1">
         {!expanded ? (
           <span>{formatValuePreview(safeValue)}</span>
         ) : (
@@ -151,7 +161,7 @@ export const DiffValueView = ({
       </div>
       <CopyToClipboard
         text={formatForClipboard(safeValue)}
-        className="opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        className="opacity-0 transition-opacity group-hover:opacity-100"
       >
         {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
       </CopyToClipboard>

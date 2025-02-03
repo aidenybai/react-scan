@@ -75,13 +75,17 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="mx-auto max-w-[700px] px-4 sm:px-8 pb-4 pt-12 sm:pt-20">
-          <Header />
-          {children}
+        <div className="fixed inset-x-0 inset-0 grid grid-rows-[1fr_auto]">
+          <div className="overflow-auto">
+            <main className="mx-auto w-full max-w-[700px] px-4 sm:px-8 pb-4 pt-12 sm:pt-20">
+              <Header />
+              {children}
+            </main>
+          </div>
+          <Footer />
         </div>
-        <Footer />
         <Analytics />
         <SpeedInsights />
       </body>
