@@ -2,7 +2,7 @@ import { transformAsync } from '@babel/core';
 import { createFilter } from '@rollup/pluginutils';
 import { createUnplugin } from 'unplugin';
 import { reactScanComponentNamePlugin } from './babel';
-import { Options } from './core/options';
+import type { Options } from './core/options';
 
 export const transform = async (
   code: string,
@@ -40,7 +40,7 @@ export const transform = async (
 
     return null;
   } catch (error) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: Intended debug output
     console.error('Error processing file:', id, error);
     return null;
   }

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
 import { cn, saveLocalStorage } from '~web/utils/helpers';
-import { LOCALSTORAGE_KEY, MIN_SIZE } from '../../constants';
+import { LOCALSTORAGE_KEY, MIN_CONTAINER_WIDTH, MIN_SIZE } from '../../constants';
 import { signalRefWidget, signalWidget } from '../../state';
 import {
   calculateNewSizeAndPosition,
@@ -131,6 +131,14 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         containerStyle.width = `${newSize.width}px`;
         containerStyle.height = `${newSize.height}px`;
 
+        // Adjust components tree width when widget is resized
+        const maxTreeWidth = Math.floor(newSize.width - (MIN_SIZE.width / 2));
+        const currentTreeWidth = signalWidget.value.componentsTree.width;
+        const newTreeWidth = Math.min(
+          maxTreeWidth,
+          Math.max(MIN_CONTAINER_WIDTH, currentTreeWidth)
+        );
+
         signalWidget.value = {
           ...signalWidget.value,
           dimensions: {
@@ -139,6 +147,10 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
             width: newSize.width,
             height: newSize.height,
             position: newPosition,
+          },
+          componentsTree: {
+            ...signalWidget.value.componentsTree,
+            width: newTreeWidth,
           },
         };
 
@@ -179,6 +191,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
 
       signalWidget.value = {
+        ...signalWidget.value,
         corner: newCorner,
         dimensions: {
           isFullWidth: isCurrentFullWidth,
@@ -200,6 +213,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         corner: newCorner,
         dimensions: signalWidget.value.dimensions,
         lastDimensions: signalWidget.value.lastDimensions,
+        componentsTree: signalWidget.value.componentsTree,
       });
     };
 
@@ -248,7 +262,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         : windowDims.maxHeight;
       if (isPartiallyMaximized) {
         newHeight = isCurrentFullHeight
-          ? MIN_SIZE.height * 5
+          ? MIN_SIZE.initialHeight
           : windowDims.maxHeight;
       }
     }
@@ -257,7 +271,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       if (position === 'left' || position === 'right') {
         newWidth = MIN_SIZE.width;
       } else {
-        newHeight = MIN_SIZE.height * 5;
+        newHeight = MIN_SIZE.initialHeight;
       }
     }
 
@@ -270,11 +284,26 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       position: newPosition,
     };
 
+    // Adjust components tree width when widget is resized
+    const maxTreeWidth = Math.floor(newWidth - (MIN_SIZE.width / 2));
+    const currentTreeWidth = signalWidget.value.componentsTree.width;
+    const defaultWidth = Math.floor(newWidth * 0.3); // Use 30% of window width as default
+
+    const newTreeWidth = isCurrentFullWidth
+      ? MIN_CONTAINER_WIDTH
+      : (position === 'left' || position === 'right') && !isCurrentFullWidth
+        ? Math.min(maxTreeWidth, Math.max(MIN_CONTAINER_WIDTH, defaultWidth))
+        : Math.min(maxTreeWidth, Math.max(MIN_CONTAINER_WIDTH, currentTreeWidth));
+
     requestAnimationFrame(() => {
       signalWidget.value = {
         corner: newCorner,
         dimensions: newDimensions,
         lastDimensions: dimensions,
+        componentsTree: {
+          ...signalWidget.value.componentsTree,
+          width: newTreeWidth,
+        },
       };
 
       containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
@@ -287,6 +316,10 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
       corner: newCorner,
       dimensions: newDimensions,
       lastDimensions: dimensions,
+      componentsTree: {
+        ...signalWidget.value.componentsTree,
+        width: newTreeWidth,
+      },
     });
   }, []);
 
@@ -303,7 +336,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         'peer',
         {
           'resize-left peer/left': position === 'left',
-          'resize-right peer/right': position === 'right',
+          'resize-right peer/right z-10': position === 'right',
           'resize-top peer/top': position === 'top',
           'resize-bottom peer/bottom': position === 'bottom',
         },
@@ -314,7 +347,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
           <Icon
             name="icon-ellipsis"
             size={18}
-            className={cn('text-white/80', {
+            className={cn('text-neutral-400', {
               'rotate-90': position === 'left' || position === 'right',
             })}
           />

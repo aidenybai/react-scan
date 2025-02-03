@@ -1,56 +1,44 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { getFPS } from '~core/instrumentation';
 import { cn } from '~web/utils/helpers';
 
 export const FpsMeter = () => {
-  const [fps, setFps] = useState<number | null>(null);
+  const refFps = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setFps(getFPS());
+      const fps = getFPS();
+      let color = '#fff';
+      if (fps) {
+        if (fps < 30) color = '#f87171';
+        if (fps < 50) color = '#fbbf24';
+      }
+      if (refFps.current) {
+        refFps.current.setAttribute('data-text', fps.toString());
+        refFps.current.style.color = color;
+      }
     }, 100);
 
     return () => clearInterval(intervalId);
   }, []);
 
-  const getFpsColor = (fps: number | null) => {
-    if (!fps) return '#fff';
-    if (fps < 30) return '#f87171';
-    if (fps < 50) return '#fbbf24';
-    return '#fff';
-  };
-
   return (
     <span
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'end',
-        gap: '4px',
-        padding: '0 8px',
-        height: '24px',
-        fontSize: '12px',
-        fontFamily: 'var(--font-mono)',
-        color: '#666',
-        backgroundColor: '#0a0a0a',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '3px',
-        whiteSpace: 'nowrap',
-        marginLeft: '12px',
-        minWidth: '72px',
-      }}
+      className={cn(
+        'flex items-center gap-x-1 px-1.5',
+        'h-full',
+        'rounded-xl',
+        'font-mono text-xs font-medium',
+        'bg-neutral-600',
+      )}
     >
-      <span style={{ color: '#666', letterSpacing: '0.5px' }}>FPS</span>
       <span
-        style={{
-          color: getFpsColor(fps),
-          transition: 'color 150ms ease',
-          minWidth: '28px',
-          textAlign: 'right',
-          fontWeight: 500,
-        }}
-      >
-        {fps}
+        ref={refFps}
+        data-text="120"
+        className="transition-color ease-in-out with-data-text"
+      />
+      <span className="tracking-wide font-mono text-xxs mt-[1px]">
+        FPS
       </span>
     </span>
   );

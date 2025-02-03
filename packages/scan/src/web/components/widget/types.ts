@@ -22,14 +22,20 @@ export interface WidgetDimensions {
   position: Position;
 }
 
+export interface ComponentsTreeConfig {
+  width: number;
+}
+
 export interface WidgetConfig {
   corner: Corner;
   dimensions: WidgetDimensions;
   lastDimensions: WidgetDimensions;
+  componentsTree: ComponentsTreeConfig;
 }
 
 export interface WidgetSettings {
   corner: Corner;
   dimensions: WidgetDimensions;
   lastDimensions: WidgetDimensions;
+  componentsTree: ComponentsTreeConfig;
 }

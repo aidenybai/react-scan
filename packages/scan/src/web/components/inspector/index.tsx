@@ -1,5 +1,4 @@
-import { signal } from '@preact/signals';
-import { type Fiber, getFiberId } from 'bippy';
+import type { Fiber } from 'bippy';
 import { Component } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
@@ -7,19 +6,17 @@ import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { Icon } from '../icon';
+import { StickySection } from '../sticky-section';
 import { flashManager } from './flash-overlay';
+import { PropertySection } from './properties';
 import {
-  type InspectorData,
-  collectInspectorData,
-  resetStateTracking,
-} from './overlay/utils';
-import { PropertySection } from './propeties';
-import { getCompositeFiberFromElement } from './utils';
-import { WhatChanged } from './what-changed';
-
-interface InspectorState extends InspectorData {
-  fiber: Fiber | null;
-}
+  type TimelineUpdate,
+  inspectorUpdateSignal,
+  timelineActions,
+} from './states';
+import { collectInspectorData, getStateNames, resetTracking } from './timeline/utils';
+import { extractMinimalFiberInfo, getCompositeFiberFromElement } from './utils';
+import { WhatChangedSection } from './what-changed';
 
 export const globalInspectorState = {
   lastRendered: new Map<string, unknown>(),
@@ -28,33 +25,25 @@ export const globalInspectorState = {
     globalInspectorState.lastRendered.clear();
     globalInspectorState.expandedPaths.clear();
     flashManager.cleanupAll();
-    resetStateTracking();
-    inspectorState.value = {
-      fiber: null,
-      fiberProps: { current: [], changes: new Set() },
-      fiberState: { current: [], changes: new Set() },
-      fiberContext: { current: [], changes: new Set() },
-    };
+    resetTracking();
+    timelineActions.reset();
   },
 };
 
-export const inspectorState = signal<InspectorState>({
-  fiber: null,
-  fiberProps: { current: [], changes: new Set() },
-  fiberState: { current: [], changes: new Set() },
-  fiberContext: { current: [], changes: new Set() },
-});
-
 // todo: add reset button and error message
 class InspectorErrorBoundary extends Component {
-  state: { error: any; hasError: boolean } = { hasError: false, error: null };
+  state: { error: Error | null; hasError: boolean } = {
+    hasError: false,
+    error: null,
+  };
 
-  static getDerivedStateFromError(e: any) {
+  static getDerivedStateFromError(e: Error) {
     return { hasError: true, error: e };
   }
 
   handleReset = () => {
     this.setState({ hasError: false, error: null });
+    globalInspectorState.cleanup();
   };
 
   render() {
@@ -69,8 +58,9 @@ class InspectorErrorBoundary extends Component {
             {this.state.error?.message || JSON.stringify(this.state.error)}
           </div>
           <button
+            type="button"
             onClick={this.handleReset}
-            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
           >
             Reset Inspector
           </button>
@@ -83,43 +73,35 @@ class InspectorErrorBoundary extends Component {
 }
 
 export const Inspector = constant(() => {
+  const refInspector = useRef<HTMLDivElement>(null);
   const refLastInspectedFiber = useRef<Fiber | null>(null);
-
   const isSettingsOpen = signalIsSettingsOpen.value;
 
   useEffect(() => {
-    let isProcessing = false;
-    const pendingUpdates = new Set<Fiber>();
+    const processUpdate = (fiber: Fiber) => {
+      if (!fiber) return;
 
-    const processNextUpdate = () => {
-      if (pendingUpdates.size === 0) {
-        isProcessing = false;
-        return;
-      }
+      refLastInspectedFiber.current = fiber;
+      const { data: inspectorData, shouldUpdate } = collectInspectorData(fiber);
 
-      const nextFiber = Array.from(pendingUpdates)[0];
-      pendingUpdates.delete(nextFiber);
-
-      try {
-        refLastInspectedFiber.current = nextFiber;
-        const collectedData = collectInspectorData(nextFiber);
-
-        inspectorState.value = {
-          fiber: nextFiber,
-          ...collectedData,
+      if (shouldUpdate) {
+        const update: TimelineUpdate = {
+          timestamp: Date.now(),
+          fiberInfo: extractMinimalFiberInfo(fiber),
+          props: inspectorData.fiberProps,
+          state: inspectorData.fiberState,
+          context: inspectorData.fiberContext,
+          stateNames: getStateNames(fiber),
         };
-      } finally {
-        if (pendingUpdates.size > 0) {
-          queueMicrotask(processNextUpdate);
-        } else {
-          isProcessing = false;
-        }
+
+        timelineActions.addUpdate(update, fiber);
       }
     };
 
     const unSubState = Store.inspectState.subscribe((state) => {
       if (state.kind !== 'focused' || !state.focusedDomElement) {
-        pendingUpdates.clear();
+        refLastInspectedFiber.current = null;
+        globalInspectorState.cleanup();
         return;
       }
 
@@ -129,43 +111,33 @@ export const Inspector = constant(() => {
 
       const { parentCompositeFiber } = getCompositeFiberFromElement(
         state.focusedDomElement,
+        state.fiber
       );
+
+
       if (!parentCompositeFiber) return;
 
-      pendingUpdates.clear();
-      globalInspectorState.cleanup();
-      refLastInspectedFiber.current = parentCompositeFiber;
+      const isNewComponent = refLastInspectedFiber.current?.type !== parentCompositeFiber.type;
 
-      const { fiberProps, fiberState, fiberContext } =
-        collectInspectorData(parentCompositeFiber);
-
-      inspectorState.value = {
-        fiber: parentCompositeFiber,
-        fiberProps: {
-          ...fiberProps,
-          changes: new Set(),
-        },
-        fiberState: {
-          ...fiberState,
-          changes: new Set(),
-        },
-        fiberContext: {
-          ...fiberContext,
-          changes: new Set(),
-        },
-      };
+      if (isNewComponent) {
+        refLastInspectedFiber.current = parentCompositeFiber;
+        globalInspectorState.cleanup();
+        processUpdate(parentCompositeFiber);
+      }
     });
 
-    const unSubReport = Store.lastReportTime.subscribe(() => {
-
+    const unSubInspectorUpdate = inspectorUpdateSignal.subscribe(() => {
       const inspectState = Store.inspectState.value;
-      if (inspectState.kind !== 'focused') {
-        pendingUpdates.clear();
+      if (inspectState.kind !== 'focused' || !inspectState.focusedDomElement) {
+        refLastInspectedFiber.current = null;
+        globalInspectorState.cleanup();
         return;
       }
 
-      const element = inspectState.focusedDomElement;
-      const { parentCompositeFiber } = getCompositeFiberFromElement(element);
+      const { parentCompositeFiber } = getCompositeFiberFromElement(
+        inspectState.focusedDomElement,
+        inspectState.fiber
+      );
 
       if (!parentCompositeFiber) {
         Store.inspectState.value = {
@@ -174,47 +146,51 @@ export const Inspector = constant(() => {
         return;
       }
 
-      if (parentCompositeFiber.type === refLastInspectedFiber.current?.type) {
-        pendingUpdates.add(parentCompositeFiber);
+      processUpdate(parentCompositeFiber);
 
-        if (!isProcessing) {
-          isProcessing = true;
-          queueMicrotask(processNextUpdate);
-        }
+      if (!inspectState.focusedDomElement.isConnected) {
+        refLastInspectedFiber.current = null;
+        globalInspectorState.cleanup();
+        Store.inspectState.value = {
+          kind: 'inspecting',
+          hoveredDomElement: null,
+        };
       }
     });
 
     return () => {
       unSubState();
-      unSubReport();
-      pendingUpdates.clear();
+      unSubInspectorUpdate();
       globalInspectorState.cleanup();
-      resetStateTracking();
     };
   }, []);
-  const fiber = inspectorState.value.fiber;
-  const fiberID = fiber ? getFiberId(fiber) : null;
 
   return (
     <InspectorErrorBoundary>
       <div
+        ref={refInspector}
         className={cn(
           'react-scan-inspector',
+          'flex-1',
           'opacity-0',
-          'max-h-0',
-          'overflow-hidden',
-          'transition-opacity duration-150 delay-0',
+          'overflow-y-auto overflow-x-hidden',
+          'transition-opacity delay-0',
           'pointer-events-none',
           {
-            'opacity-100 delay-300 pointer-events-auto max-h-["auto"]':
-              !isSettingsOpen,
+            'opacity-100 delay-300 pointer-events-auto': !isSettingsOpen,
           },
         )}
       >
-        <WhatChanged key={fiberID} />
-        <PropertySection title="Props" section="props" />
-        <PropertySection title="State" section="state" />
-        <PropertySection title="Context" section="context" />
+        <WhatChangedSection />
+        <StickySection>
+          {(props) => <PropertySection section="props" {...props} />}
+        </StickySection>
+        <StickySection>
+          {(props) => <PropertySection section="state" {...props} />}
+        </StickySection>
+        <StickySection>
+          {(props) => <PropertySection section="context" {...props} />}
+        </StickySection>
       </div>
     </InspectorErrorBoundary>
   );

@@ -1,14 +1,23 @@
+import { type FilterPattern, createFilter } from '@rollup/pluginutils';
 import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, transform } from '.';
-import { createFilter } from '@rollup/pluginutils';
+
+interface LoaderContext {
+  getOptions(): { include?: FilterPattern; exclude?: FilterPattern };
+  resourcePath: string;
+  async(): (
+    error: Error | null,
+    content?: string,
+    sourceMap?: string | object,
+  ) => void;
+}
 
 export default async function ReactComponentNameLoader(
-  this: any,
+  this: LoaderContext,
   code: string,
-  map: any,
+  sourceMap: string | object | undefined,
 ) {
-  if (typeof map === 'string') {
-    map = JSON.parse(map);
-  }
+  const parsedMap =
+    typeof sourceMap === 'string' ? JSON.parse(sourceMap) : sourceMap;
   const callback = this.async();
   try {
     const options = this.getOptions();
@@ -25,14 +34,14 @@ export default async function ReactComponentNameLoader(
         '**/.million/**/*',
       ],
     );
-    if (!filter(id)) return callback(null, code, map);
+    if (!filter(id)) return callback(null, code, parsedMap);
 
     const result = await transform(code, id, filter);
 
     callback(
       null,
       result?.code || '',
-      JSON.stringify(result?.map) || undefined,
+      result?.map ? JSON.stringify(result.map) : undefined,
     );
   } catch (e) {
     callback(e as Error);

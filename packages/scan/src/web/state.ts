@@ -4,7 +4,12 @@ import type {
   WidgetConfig,
   WidgetSettings,
 } from './components/widget/types';
-import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from './constants';
+import {
+  LOCALSTORAGE_KEY,
+  MIN_CONTAINER_WIDTH,
+  MIN_SIZE,
+  SAFE_AREA,
+} from './constants';
 import { readLocalStorage, saveLocalStorage } from './utils/helpers';
 
 export const signalIsSettingsOpen = signal(false);
@@ -26,6 +31,9 @@ export const defaultWidgetConfig = {
     height: MIN_SIZE.height,
     position: { x: SAFE_AREA, y: SAFE_AREA },
   },
+  componentsTree: {
+    width: MIN_CONTAINER_WIDTH,
+  },
 } as WidgetConfig;
 
 export const getInitialWidgetConfig = (): WidgetConfig => {
@@ -35,21 +43,24 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
       corner: defaultWidgetConfig.corner,
       dimensions: defaultWidgetConfig.dimensions,
       lastDimensions: defaultWidgetConfig.lastDimensions,
+      componentsTree: defaultWidgetConfig.componentsTree,
     });
 
     return defaultWidgetConfig;
   }
 
   return {
-    corner: stored.corner,
+    corner: stored.corner ?? defaultWidgetConfig.corner,
     dimensions: {
       isFullWidth: false,
       isFullHeight: false,
       width: MIN_SIZE.width,
       height: MIN_SIZE.height,
-      position: stored.dimensions.position,
+      position:
+        stored.dimensions.position ?? defaultWidgetConfig.dimensions.position,
     },
-    lastDimensions: stored.dimensions,
+    lastDimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+    componentsTree: stored.componentsTree ?? defaultWidgetConfig.componentsTree,
   };
 };
 
