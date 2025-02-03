@@ -1,4 +1,4 @@
-import { type Signal, signal } from '@preact/signals';
+import { type Signal, signal } from "@preact/signals";
 import {
   ClassComponentTag,
   type Fiber,
@@ -18,40 +18,62 @@ import {
   traverseContexts,
   traverseProps,
   traverseRenderedFibers,
-} from 'bippy';
-import { isValidElement } from 'preact';
-import { isEqual } from '~core/utils';
+} from "bippy";
+import { isValidElement } from "preact";
+import { isEqual } from "~core/utils";
+import {
+  RENDER_PHASE_STRING_TO_ENUM,
+  type RenderPhase,
+} from "~web/utils/outline";
 import {
   collectContextChanges,
   collectPropsChanges,
   collectStateChanges,
-} from '~web/components/inspector/timeline/utils';
-import {
-  RENDER_PHASE_STRING_TO_ENUM,
-  type RenderPhase,
-} from '~web/utils/outline';
+} from "~web/views/inspector/timeline/utils";
 import {
   type Change,
   type ContextChange,
   ReactScanInternals,
   type StateChange,
   Store,
-} from './index';
+} from "./index";
 
 let fps = 0;
 let lastTime = performance.now();
 let frameCount = 0;
 let initedFps = false;
 
-const updateFPS = () => {
+let fpsListeners: Array<(fps: number) => void> = [];
+
+export const listenToFps = (listener: (fps: number) => void) => {
+  fpsListeners.push(listener);
+  return () => {
+    fpsListeners = fpsListeners.filter(
+      (currListener) => currListener !== listener
+    );
+  };
+};
+
+const updateFPS = (onChange?: (fps: number) => void) => {
   frameCount++;
   const now = performance.now();
-  if (now - lastTime >= 1000) {
-    fps = frameCount;
+  const timeSinceLastUpdate = now - lastTime;
+
+  if (timeSinceLastUpdate >= 500) {
+    const calculatedFPS = Math.round((frameCount / timeSinceLastUpdate) * 1000);
+
+    if (calculatedFPS !== fps) {
+      for (const listener of fpsListeners) {
+        listener(calculatedFPS);
+      }
+    }
+
+    fps = calculatedFPS;
     frameCount = 0;
     lastTime = now;
   }
-  requestAnimationFrame(updateFPS);
+
+  requestAnimationFrame(() => updateFPS(onChange));
 };
 
 export const getFPS = () => {
@@ -67,10 +89,10 @@ export const getFPS = () => {
 export const isElementVisible = (el: Element) => {
   const style = window.getComputedStyle(el);
   return (
-    style.display !== 'none' &&
-    style.visibility !== 'hidden' &&
-    style.contentVisibility !== 'hidden' &&
-    style.opacity !== '0'
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    style.contentVisibility !== "hidden" &&
+    style.opacity !== "0"
   );
 };
 
@@ -86,7 +108,7 @@ export const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
 
 export const isElementInViewport = (
   el: Element,
-  rect = el.getBoundingClientRect(),
+  rect = el.getBoundingClientRect()
 ) => {
   const isVisible =
     rect.bottom > 0 &&
@@ -122,29 +144,29 @@ export interface Render {
   fps: number;
 }
 
-const unstableTypes = ['function', 'object'];
+const unstableTypes = ["function", "object"];
 
 const cache = new WeakMap<object, string>();
 
 export function fastSerialize(value: unknown, depth = 0): string {
-  if (depth < 0) return '…';
+  if (depth < 0) return "…";
 
   switch (typeof value) {
-    case 'function':
+    case "function":
       return value.toString();
-    case 'string':
+    case "string":
       return value;
-    case 'number':
-    case 'boolean':
-    case 'undefined':
+    case "number":
+    case "boolean":
+    case "undefined":
       return String(value);
-    case 'object':
+    case "object":
       break;
     default:
       return String(value);
   }
 
-  if (value === null) return 'null';
+  if (value === null) return "null";
 
   if (cache.has(value)) {
     const cached = cache.get(value);
@@ -154,13 +176,13 @@ export function fastSerialize(value: unknown, depth = 0): string {
   }
 
   if (Array.isArray(value)) {
-    const str = value.length ? `[${value.length}]` : '[]';
+    const str = value.length ? `[${value.length}]` : "[]";
     cache.set(value, str);
     return str;
   }
 
   if (isValidElement(value)) {
-    const type = getDisplayName(value.type) ?? '';
+    const type = getDisplayName(value.type) ?? "";
     const propCount = value.props ? Object.keys(value.props).length : 0;
     const str = `<${type} ${propCount}>`;
     cache.set(value, str);
@@ -169,14 +191,14 @@ export function fastSerialize(value: unknown, depth = 0): string {
 
   if (Object.getPrototypeOf(value) === Object.prototype) {
     const keys = Object.keys(value);
-    const str = keys.length ? `{${keys.length}}` : '{}';
+    const str = keys.length ? `{${keys.length}}` : "{}";
     cache.set(value, str);
     return str;
   }
 
   const ctor =
-    value && typeof value === 'object' ? value.constructor : undefined;
-  if (ctor && typeof ctor === 'function' && ctor.name) {
+    value && typeof value === "object" ? value.constructor : undefined;
+  if (ctor && typeof ctor === "function" && ctor.name) {
     const str = `${ctor.name}{…}`;
     cache.set(value, str);
     return str;
@@ -252,7 +274,7 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     // when we have class component fiber, memoizedState is the component state
     const change: StateChange = {
       type: ChangeReason.ClassState,
-      name: 'state',
+      name: "state",
       value: fiber.memoizedState,
       prevValue: fiber.alternate?.memoizedState,
     };
@@ -284,7 +306,7 @@ const getContextId = (contextFiber: ContextFiber) => {
 function getContextChangesTraversal(
   this: Array<Change>,
   nextValue: ContextFiber | null | undefined,
-  prevValue: ContextFiber | null | undefined,
+  prevValue: ContextFiber | null | undefined
 ): void {
   if (!nextValue || !prevValue) return;
   // const prevMemoizedValue = prevValue.memoizedValue;
@@ -294,7 +316,7 @@ function getContextChangesTraversal(
     type: ChangeReason.Context,
     name:
       (nextValue.context as { displayName: string | undefined }).displayName ??
-      'UnnamedContext',
+      "UnnamedContext",
     value: nextMemoizedValue,
     contextType: getContextId(nextValue.context as ContextFiber),
 
@@ -324,7 +346,11 @@ export const getContextChanges = (fiber: Fiber) => {
   return changes;
 };
 
-type OnRenderHandler = (fiber: Fiber, renders: Array<Render>) => void;
+type OnRenderHandler = (
+  fiber: Fiber,
+  renders: Array<Render>,
+  renderedAt: number
+) => void;
 type OnCommitStartHandler = () => void;
 type OnCommitFinishHandler = () => void;
 type OnErrorHandler = (error: unknown) => void;
@@ -368,7 +394,7 @@ function isRenderUnnecessaryTraversal(
   this: IsRenderUnnecessaryState,
   _propsName: string,
   prevValue: unknown,
-  nextValue: unknown,
+  nextValue: unknown
 ): void {
   if (
     !isEqual(prevValue, nextValue) &&
@@ -419,10 +445,9 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
 
 const TRACK_UNNECESSARY_RENDERS = false;
 
-
 export const createInstrumentation = (
   instanceKey: string,
-  config: InstrumentationConfig,
+  config: InstrumentationConfig
 ) => {
   const instrumentation: Instrumentation = {
     // this will typically be false, but in cases where a user provides showToolbar: true, this will be true
@@ -438,26 +463,28 @@ export const createInstrumentation = (
     inited = true;
 
     instrument({
-      name: 'react-scan',
+      name: "react-scan",
       onActive: config.onActive,
       onCommitFiberRoot(_rendererID, root) {
         instrumentation.fiberRoots.add(root);
-        if (
-          ReactScanInternals.instrumentation?.isPaused.value &&
-          (Store.inspectState.value.kind === 'inspect-off' ||
-            Store.inspectState.value.kind === 'uninitialized') &&
-          !config.forceAlwaysTrackRenders
-        ) {
-          return;
-        }
+        // for now we always track everything for notifications, it may be worth it to make this configurable
+        // if (
+        //   ReactScanInternals.instrumentation?.isPaused.value &&
+        //   (Store.inspectState.value.kind === "inspect-off" ||
+        //     Store.inspectState.value.kind === "uninitialized") &&
+        //   !config.forceAlwaysTrackRenders
+        // ) {
+        //   return;
+        // }
         const allInstances = getAllInstances();
         for (const instance of allInstances) {
           instance.config.onCommitStart();
         }
+        const renderedAt = Date.now();
 
         traverseRenderedFibers(
           root.current,
-          (fiber: Fiber, phase: 'mount' | 'update' | 'unmount') => {
+          (fiber: Fiber, phase: "mount" | "update" | "unmount") => {
             const type = getType(fiber.type);
             if (!type) return null;
 
@@ -477,7 +504,6 @@ export const createInstrumentation = (
               const changesState = collectStateChanges(fiber).changes;
               const changesContext = collectContextChanges(fiber).changes;
 
-              // Convert props changes
               changes.push.apply(
                 null,
                 changesProps.map(
@@ -486,11 +512,10 @@ export const createInstrumentation = (
                       type: ChangeReason.Props,
                       name: change.name,
                       value: change.value,
-                    }) as Change,
-                ),
+                    }) as Change
+                )
               );
 
-              // Convert state changes
               for (const change of changesState) {
                 if (fiber.tag === ClassComponentTag) {
                   changes.push({
@@ -507,7 +532,6 @@ export const createInstrumentation = (
                 }
               }
 
-              // Convert context changes
               changes.push.apply(
                 null,
                 changesContext.map(
@@ -517,8 +541,8 @@ export const createInstrumentation = (
                       name: change.name,
                       value: change.value,
                       contextType: Number(change.contextType),
-                    }) as Change,
-                ),
+                    }) as Change
+                )
               );
             }
 
@@ -544,9 +568,9 @@ export const createInstrumentation = (
             for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {
               const index = validInstancesIndicies[i];
               const instance = allInstances[index];
-              instance.config.onRender(fiber, [render]);
+              instance.config.onRender(fiber, [render], renderedAt);
             }
-          },
+          }
         );
 
         for (const instance of allInstances) {

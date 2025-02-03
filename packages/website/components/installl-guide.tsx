@@ -183,7 +183,7 @@ export default function App() {
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 className={`relative px-4 py-2 text-[15px] transition-colors ${activeTab === tab
-                  ? 'bg-[#1e1e1e] text-white before:absolute before:left-0 before:top-0 before:h-[1px] before:w-full before:bg-[#7a68e7]'
+                  ? 'bg-[#1e1e1e] text-white before:absolute before:left-0 before:top-0 before:h-[1px] before:w-full before:bg-[#A284F5]'
                   : 'text-[#969696] hover:text-white'
                   }`}
               >

@@ -1,9 +1,9 @@
-import { spawn } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
-import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
-import { bgMagenta, dim, red } from 'kleur';
-import mri from 'mri';
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { cancel, confirm, intro, isCancel, spinner } from "@clack/prompts";
+import { bgMagenta, dim, red } from "kleur";
+import mri from "mri";
 import {
   type Browser,
   type BrowserContext,
@@ -11,15 +11,15 @@ import {
   devices,
   firefox,
   webkit,
-} from 'playwright';
+} from "playwright";
 
 const truncateString = (str: string, maxLength: number) => {
   let result = str
-    .replace('http://', '')
-    .replace('https://', '')
-    .replace('www.', '');
+    .replace("http://", "")
+    .replace("https://", "")
+    .replace("www.", "");
 
-  if (result.endsWith('/')) {
+  if (result.endsWith("/")) {
     result = result.slice(0, -1);
   }
 
@@ -39,42 +39,42 @@ const inferValidURL = (maybeURL: string) => {
     try {
       return new URL(`https://${maybeURL}`).href;
     } catch {
-      return 'about:blank';
+      return "about:blank";
     }
   }
 };
 
 const getBrowserDetails = async (browserType: string) => {
   switch (browserType) {
-    case 'firefox':
-      return { browserType: firefox, channel: undefined, name: 'firefox' };
-    case 'webkit':
-      return { browserType: webkit, channel: undefined, name: 'webkit' };
+    case "firefox":
+      return { browserType: firefox, channel: undefined, name: "firefox" };
+    case "webkit":
+      return { browserType: webkit, channel: undefined, name: "webkit" };
     default:
-      return { browserType: chromium, channel: 'chrome', name: 'chrome' };
+      return { browserType: chromium, channel: "chrome", name: "chrome" };
   }
 };
 
 const userAgentStrings = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.2227.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.3497.92 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.2227.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.3497.92 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
 ];
 
 const applyStealthScripts = async (context: BrowserContext) => {
   await context.addInitScript(() => {
     // Override the navigator.webdriver property
-    Object.defineProperty(navigator, 'webdriver', {
+    Object.defineProperty(navigator, "webdriver", {
       get: () => undefined,
     });
 
     // Mock languages and plugins to mimic a real browser
-    Object.defineProperty(navigator, 'languages', {
-      get: () => ['en-US', 'en'],
+    Object.defineProperty(navigator, "languages", {
+      get: () => ["en-US", "en"],
     });
 
-    Object.defineProperty(navigator, 'plugins', {
+    Object.defineProperty(navigator, "plugins", {
       get: () => [1, 2, 3, 4, 5],
     });
 
@@ -91,14 +91,14 @@ const applyStealthScripts = async (context: BrowserContext) => {
     win.__PW_inspect = undefined;
 
     // Redefine the headless property
-    Object.defineProperty(navigator, 'headless', {
+    Object.defineProperty(navigator, "headless", {
       get: () => false,
     });
 
     // Override the permissions API
     const originalQuery = window.navigator.permissions.query;
     window.navigator.permissions.query = (parameters) =>
-      parameters.name === 'notifications'
+      parameters.name === "notifications"
         ? Promise.resolve({
             state: Notification.permission,
           } as PermissionStatus)
@@ -107,7 +107,7 @@ const applyStealthScripts = async (context: BrowserContext) => {
 };
 
 const init = async () => {
-  intro(`${bgMagenta('[·]')} React Scan`);
+  intro(`${bgMagenta("[·]")} React Scan`);
   const args = mri(process.argv.slice(2));
   let browser: Browser | undefined;
 
@@ -120,14 +120,14 @@ const init = async () => {
     ...device,
     acceptDownloads: true,
     viewport: null,
-    locale: 'en-US',
-    timezoneId: 'America/New_York',
+    locale: "en-US",
+    timezoneId: "America/New_York",
     args: [
-      '--enable-webgl',
-      '--use-gl=swiftshader',
-      '--enable-accelerated-2d-canvas',
-      '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
+      "--enable-webgl",
+      "--use-gl=swiftshader",
+      "--enable-accelerated-2d-canvas",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-web-security",
     ],
     userAgent:
       userAgentStrings[Math.floor(Math.random() * userAgentStrings.length)],
@@ -152,10 +152,10 @@ const init = async () => {
         const runInstall = () => {
           confirm({
             message:
-              'No drivers found. Install Playwright Chromium driver to continue?',
+              "No drivers found. Install Playwright Chromium driver to continue?",
           }).then((shouldInstall) => {
             if (isCancel(shouldInstall)) {
-              cancel('Operation cancelled.');
+              cancel("Operation cancelled.");
               process.exit(0);
             }
             if (!shouldInstall) {
@@ -163,20 +163,20 @@ const init = async () => {
             }
 
             const installProcess = spawn(
-              'npx',
-              ['playwright@latest', 'install', 'chromium'],
-              { stdio: 'inherit' },
+              "npx",
+              ["playwright@latest", "install", "chromium"],
+              { stdio: "inherit" }
             );
 
-            installProcess.on('close', (code) => {
+            installProcess.on("close", (code) => {
               if (!code) resolve();
               else
                 reject(
-                  new Error(`Installation process exited with code ${code}`),
+                  new Error(`Installation process exited with code ${code}`)
                 );
             });
 
-            installProcess.on('error', reject);
+            installProcess.on("error", reject);
           });
         };
 
@@ -189,7 +189,7 @@ const init = async () => {
         browser = await chromium.launch({ headless: false });
       } catch {
         cancel(
-          'No browser could be launched. Please run `npx playwright install` to install browser drivers.',
+          "No browser could be launched. Please run `npx playwright install` to install browser drivers."
         );
       }
     }
@@ -197,7 +197,7 @@ const init = async () => {
 
   if (!browser) {
     cancel(
-      'No browser could be launched. Please run `npx playwright install` to install browser drivers.',
+      "No browser could be launched. Please run `npx playwright install` to install browser drivers."
     );
     return;
   }
@@ -225,24 +225,26 @@ const init = async () => {
     })();`,
   });
 
-  const page = await context.newPage();
-
-  const scriptContent = fs.readFileSync(
-    path.resolve(__dirname, './auto.global.js'),
-    'utf8',
+  const scriptContent = await fs.readFile(
+    path.resolve(__dirname, "./auto.global.js"),
+    "utf8"
   );
 
-  const inputUrl = args._[0] || 'about:blank';
+  // Add React Scan script at context level so it's available for all pages
+  await context.addInitScript({
+    content: `window.hideIntro = true;${scriptContent}\n//# sourceURL=react-scan.js`,
+  });
+
+  const page = await context.newPage();
+
+  const inputUrl = args._[0] || "about:blank";
 
   const urlString = inferValidURL(inputUrl);
 
   await page.goto(urlString);
-  await page.waitForLoadState('load');
-  await page.waitForTimeout(500);
 
-  await page.addScriptTag({
-    content: `${scriptContent}\n//# sourceURL=react-scan.js`,
-  });
+  await page.waitForLoadState("load");
+  await page.waitForTimeout(500);
 
   const pollReport = async () => {
     if (page.url() !== currentURL) return;
@@ -261,7 +263,7 @@ const init = async () => {
       if (!Object.keys(reportData).length) return;
 
       // biome-ignore lint/suspicious/noConsole: Intended debug output
-      console.log('REACT_SCAN_REPORT', count);
+      console.log("REACT_SCAN_REPORT", count);
     });
   };
 
@@ -275,13 +277,13 @@ const init = async () => {
     if (interval) clearInterval(interval);
     currentURL = url;
     const truncatedURL = truncateString(url, 35);
-    currentSpinner?.stop(`${truncatedURL}${count ? ` (×${count})` : ''}`);
+    currentSpinner?.stop(`${truncatedURL}${count ? ` (×${count})` : ""}`);
     currentSpinner = spinner();
     currentSpinner.start(dim(`Scanning: ${truncatedURL}`));
     count = 0;
 
     try {
-      await page.waitForLoadState('load');
+      await page.waitForLoadState("load");
       await page.waitForTimeout(500);
 
       const hasReactScan = await page.evaluate(() => {
@@ -289,17 +291,12 @@ const init = async () => {
       });
 
       if (!hasReactScan) {
-        await page.addScriptTag({
-          content: scriptContent,
-        });
+        // Script is already registered at context level, just reload
+        await page.reload();
+        return;
       }
 
       await page.waitForTimeout(100);
-
-      await page.evaluate(() => {
-        if (typeof globalThis.reactScan !== 'function') return;
-        globalThis.reactScan({ report: true });
-      });
 
       interval = setInterval(() => {
         pollReport().catch(() => {});
@@ -311,18 +308,18 @@ const init = async () => {
 
   await inject(urlString);
 
-  page.on('framenavigated', async (frame) => {
+  page.on("framenavigated", async (frame) => {
     if (frame !== page.mainFrame()) return;
     const url = frame.url();
     inject(url);
   });
 
-  page.on('console', async (msg) => {
+  page.on("console", async (msg) => {
     const text = msg.text();
-    if (!text.startsWith('REACT_SCAN_REPORT')) {
+    if (!text.startsWith("REACT_SCAN_REPORT")) {
       return;
     }
-    const reportDataString = text.replace('REACT_SCAN_REPORT', '').trim();
+    const reportDataString = text.replace("REACT_SCAN_REPORT", "").trim();
     try {
       count = Number.parseInt(reportDataString, 10);
     } catch {
@@ -332,7 +329,7 @@ const init = async () => {
     const truncatedURL = truncateString(currentURL, 50);
     if (currentSpinner) {
       currentSpinner.message(
-        dim(`Scanning: ${truncatedURL}${count ? ` (×${count})` : ''}`),
+        dim(`Scanning: ${truncatedURL}${count ? ` (×${count})` : ""}`)
       );
     }
   });

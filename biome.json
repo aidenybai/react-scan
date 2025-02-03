@@ -23,7 +23,7 @@
     "enabled": true
   },
   "linter": {
-    "enabled": true,
+    "enabled": false,
     "rules": {
       "recommended": true,
       "correctness": {

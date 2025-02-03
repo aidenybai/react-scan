@@ -1,11 +1,11 @@
-import { scan } from './index';
-import { init } from './install-hook';
+import { scan } from "./index";
+import { init } from "./install-hook";
 
 init();
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   scan();
   window.reactScan = scan;
 }
 
-export * from './core';
+export * from "./core";

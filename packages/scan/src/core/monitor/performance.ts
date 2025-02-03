@@ -1,10 +1,10 @@
-import { type Fiber, getDisplayName } from 'bippy';
-import { getCompositeComponentFromElement } from '~web/components/inspector/utils';
-import { Store } from '..';
+import { type Fiber, getDisplayName } from "bippy";
+import { getCompositeComponentFromElement } from "~web/views/inspector/utils";
+import { Store } from "..";
 import type {
   PerformanceInteraction,
   PerformanceInteractionEntry,
-} from './types';
+} from "./types";
 
 interface PathFilters {
   skipProviders: boolean;
@@ -43,7 +43,7 @@ const FILTER_PATTERNS = {
 
 const shouldIncludeInPath = (
   name: string,
-  filters: PathFilters = DEFAULT_FILTERS,
+  filters: PathFilters = DEFAULT_FILTERS
 ): boolean => {
   const patternsToCheck: Array<RegExp> = [];
   if (filters.skipProviders) patternsToCheck.push(...FILTER_PATTERNS.providers);
@@ -65,10 +65,6 @@ const minifiedPatterns = [
 ];
 
 const isMinified = (name: string): boolean => {
-  if (!name || typeof name !== 'string') {
-    return true;
-  }
-
   for (let i = 0; i < minifiedPatterns.length; i++) {
     if (minifiedPatterns[i].test(name)) return true;
   }
@@ -90,7 +86,7 @@ const isMinified = (name: string): boolean => {
 
 export const getInteractionPath = (
   initialFiber: Fiber | null,
-  filters: PathFilters = DEFAULT_FILTERS,
+  filters: PathFilters = DEFAULT_FILTERS
 ): Array<string> => {
   if (!initialFiber) return [];
 
@@ -123,11 +119,11 @@ interface FiberType {
 
 const getCleanComponentName = (component: FiberType): string => {
   const name = getDisplayName(component);
-  if (!name) return '';
+  if (!name) return "";
 
   return name.replace(
     /^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/,
-    '$<inner>',
+    "$<inner>"
   );
 };
 
@@ -149,8 +145,7 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   while (!parentCompositeFiber && curr.parentElement) {
     curr = curr.parentElement;
 
-    const { parentCompositeFiber: fiber } =
-      getCompositeComponentFromElement(curr);
+    const fiber = getCompositeComponentFromElement(curr).parentCompositeFiber;
 
     if (!fiber) {
       continue;
@@ -162,22 +157,18 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   return parentCompositeFiber;
 };
 
-let unsubscribeTrackVisibilityChange: (() => void) | undefined;
 // fixme: compress me if this stays here for bad interaction time checks
-let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
+let lastVisibilityHiddenAt: number | "never-hidden" = "never-hidden";
+
+const onVisibilityChange = () => {
+  if (document.hidden) {
+    lastVisibilityHiddenAt = Date.now();
+  }
+};
 
 const trackVisibilityChange = () => {
-  unsubscribeTrackVisibilityChange?.();
-  const onVisibilityChange = () => {
-    if (document.hidden) {
-      lastVisibilityHiddenAt = Date.now();
-    }
-  };
-  document.addEventListener('visibilitychange', onVisibilityChange);
-
-  unsubscribeTrackVisibilityChange = () => {
-    document.removeEventListener('visibilitychange', onVisibilityChange);
-  };
+  document.removeEventListener("visibilitychange", onVisibilityChange);
+  document.addEventListener("visibilitychange", onVisibilityChange);
 };
 
 // todo: update monitoring api to expose filters for component names
@@ -186,10 +177,10 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
   const monitor = Store.monitor.value;
   if (!monitor) return;
 
-  document.addEventListener('mouseover', handleMouseover);
+  document.addEventListener("mouseover", handleMouseover);
   const disconnectPerformanceListener = setupPerformanceListener((entry) => {
     const target =
-      entry.target ?? (entry.type === 'pointer' ? currentMouseOver : null);
+      entry.target ?? (entry.type === "pointer" ? currentMouseOver : null);
     if (!target) {
       // most likely an invariant that we should log if its violated
       return;
@@ -222,31 +213,34 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
 
   return () => {
     disconnectPerformanceListener();
-    document.removeEventListener('mouseover', handleMouseover);
+    document.removeEventListener("mouseover", handleMouseover);
   };
 }
 
+const POINTER_EVENTS = new Set(["pointerdown", "pointerup", "click"]);
+const KEYBOARD_EVENTS = new Set(["keydown", "keyup"]);
+
 const getInteractionType = (
-  eventName: string,
-): 'pointer' | 'keyboard' | null => {
-  if (['pointerdown', 'pointerup', 'click'].includes(eventName)) {
-    return 'pointer';
+  eventName: string
+): "pointer" | "keyboard" | null => {
+  if (POINTER_EVENTS.has(eventName)) {
+    return "pointer";
   }
-  if (['keydown', 'keyup'].includes(eventName)) {
-    return 'keyboard';
+  if (KEYBOARD_EVENTS.has(eventName)) {
+    return "keyboard";
   }
   return null;
 };
 
 const setupPerformanceListener = (
-  onEntry: (interaction: PerformanceInteraction) => void,
+  onEntry: (interaction: PerformanceInteraction) => void
 ) => {
   trackVisibilityChange();
   const longestInteractionMap = new Map<string, PerformanceInteraction>();
   const interactionTargetMap = new Map<string, Element>();
 
   const processInteractionEntry = (entry: PerformanceInteractionEntry) => {
-    if (!(entry.interactionId || entry.entryType === 'first-input')) return;
+    if (!(entry.interactionId || entry.entryType === "first-input")) return;
 
     if (
       entry.interactionId &&
@@ -288,8 +282,8 @@ const setupPerformanceListener = (
           entry.duration - (entry.processingEnd - entry.startTime),
         timestamp: Date.now(),
         timeSinceTabInactive:
-          lastVisibilityHiddenAt === 'never-hidden'
-            ? 'never-hidden'
+          lastVisibilityHiddenAt === "never-hidden"
+            ? "never-hidden"
             : Date.now() - lastVisibilityHiddenAt,
         visibilityState: document.visibilityState,
         timeOrigin: performance.timeOrigin,
@@ -311,17 +305,17 @@ const setupPerformanceListener = (
 
   try {
     po.observe({
-      type: 'event',
+      type: "event",
       buffered: true,
       durationThreshold: 16,
     } as PerformanceObserverInit);
     po.observe({
-      type: 'first-input',
+      type: "first-input",
       buffered: true,
     });
   } catch {
     /* Should collect error logs*/
   }
 
-  return () => po.disconnect();
+  return po.disconnect.bind(po);
 };

@@ -7,7 +7,7 @@
   },
   "css.lint.unknownAtRules": "ignore",
   "[typescript]": {
-    "editor.defaultFormatter": "biomejs.biome"
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[javascript]": {
     "editor.defaultFormatter": "biomejs.biome"
@@ -24,5 +24,9 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "[css]": {
     "editor.defaultFormatter": "biomejs.biome"
-  }
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "cSpell.words": ["highlightable"]
 }

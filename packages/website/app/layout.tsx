@@ -3,8 +3,8 @@ import localFont from 'next/font/local';
 import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import Header from '../components/header';
-import Footer from '../components/footer';
+import Header from '../views/header';
+import Footer from '../views/footer';
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',

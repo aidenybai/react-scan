@@ -1,7 +1,7 @@
-import type { Fiber } from 'bippy';
-import { Store } from '~core/index';
-import { findComponentDOMNode } from '~web/components/inspector/utils';
-import { readLocalStorage } from './helpers';
+import type { Fiber } from "bippy";
+import { Store } from "~core/index";
+import { findComponentDOMNode } from "~web/views/inspector/utils";
+import { readLocalStorage } from "./helpers";
 
 export interface FiberMetadata {
   componentName: string;
@@ -12,7 +12,7 @@ export interface FiberMetadata {
   propKeys: string[];
 }
 
-const metadata = readLocalStorage<FiberMetadata>('react-scann-pinned');
+const metadata = readLocalStorage<FiberMetadata>("react-scann-pinned");
 
 export const getFiberPath = (fiber: Fiber): string => {
   const pathSegments: string[] = [];
@@ -21,36 +21,36 @@ export const getFiberPath = (fiber: Fiber): string => {
   while (currentFiber) {
     const elementType = currentFiber.elementType;
     const name =
-      typeof elementType === 'function'
+      typeof elementType === "function"
         ? elementType.displayName || elementType.name
-        : typeof elementType === 'string'
+        : typeof elementType === "string"
           ? elementType
-          : 'Unknown';
+          : "Unknown";
 
     const index =
-      currentFiber.index !== undefined ? `[${currentFiber.index}]` : '';
+      currentFiber.index !== undefined ? `[${currentFiber.index}]` : "";
     pathSegments.unshift(`${name}${index}`);
 
     currentFiber = currentFiber.return ?? null;
   }
 
-  return pathSegments.join('::');
+  return pathSegments.join("::");
 };
 
 export const getFiberMetadata = (fiber: Fiber): FiberMetadata | null => {
   if (!fiber || !fiber.elementType) return null;
 
-  const componentName = fiber.elementType.name || 'UnknownComponent';
+  const componentName = fiber.elementType.name || "UnknownComponent";
   const position = fiber.index !== undefined ? fiber.index : -1;
   const sibling = fiber.sibling?.elementType?.name || null;
 
   let parentFiber = fiber.return;
-  let parent = 'Root';
+  let parent = "Root";
 
   while (parentFiber) {
     const parentName = parentFiber.elementType?.name;
 
-    if (typeof parentName === 'string' && parentName.trim().length > 0) {
+    if (typeof parentName === "string" && parentName.trim().length > 0) {
       parent = parentName;
       break;
     }
@@ -61,7 +61,7 @@ export const getFiberMetadata = (fiber: Fiber): FiberMetadata | null => {
   const path = getFiberPath(fiber);
 
   const propKeys = fiber.pendingProps
-    ? Object.keys(fiber.pendingProps).filter((key) => key !== 'children')
+    ? Object.keys(fiber.pendingProps).filter((key) => key !== "children")
     : [];
 
   return { componentName, parent, position, sibling, path, propKeys };
@@ -73,7 +73,7 @@ const checkFiberMatch = (fiber: Fiber | undefined): boolean => {
   if (fiber.elementType.name !== metadata.componentName) return false;
 
   let currentParentFiber = fiber.return;
-  let parent = '';
+  let parent = "";
 
   while (currentParentFiber) {
     if (currentParentFiber.elementType?.name) {
@@ -102,7 +102,7 @@ const processFiberQueue = (): void => {
       const fiber = fiberQueue.shift();
       if (fiber && checkFiberMatch(fiber)) {
         // biome-ignore lint/suspicious/noConsole: Intended debug output
-        console.log('🎯 Pinned component found!', fiber);
+        console.log("🎯 Pinned component found!", fiber);
         isProcessing = false;
 
         const componentElement = findComponentDOMNode(fiber);
@@ -110,7 +110,7 @@ const processFiberQueue = (): void => {
         if (!componentElement) return;
 
         Store.inspectState.value = {
-          kind: 'focused',
+          kind: "focused",
           focusedDomElement: componentElement,
           fiber,
         };

@@ -61,8 +61,8 @@ export interface BlueprintOutline {
   count: number;
   elements: Element[];
   didCommit: 1 | 0;
+  renderedAt: number
 }
-
 declare global {
   var __REACT_SCAN_STOP__: boolean;
   var ReactScan: {

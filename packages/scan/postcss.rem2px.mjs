@@ -1,7 +1,6 @@
 const remToPx = (options = {}) => {
   const baseValue = options.baseValue || 16;
 
-  // Improved regex that handles all rem cases including negatives
   const remRegex = /(?<![-\w])(-)?((?:\d*\.)?\d+)rem\b/g;
 
   const convertRemToPx = (value) => {

@@ -1,13 +1,13 @@
 // @ts-nocheck
-import { type Fiber, getType } from 'bippy';
+import { type Fiber, getType } from "bippy";
 // import type { ComponentType } from 'preact';
-import { ReactScanInternals } from '~core/index';
-import type { AggregatedRender } from '~web/utils/outline';
-import type { AggregatedChange, Render } from './instrumentation';
+import { ReactScanInternals } from "~core/index";
+import type { AggregatedRender } from "~web/utils/outline";
+import type { AggregatedChange, Render } from "./instrumentation";
 
 export const aggregateChanges = (
   changes: Array<Change>,
-  prevAggregatedChange?: AggregatedChange,
+  prevAggregatedChange?: AggregatedChange
 ) => {
   const newChange = {
     type: prevAggregatedChange?.type ?? 0,
@@ -42,11 +42,11 @@ export const joinAggregations = ({
 
 export const aggregateRender = (
   newRender: Render,
-  prevAggregated: AggregatedRender,
+  prevAggregated: AggregatedRender
 ) => {
   prevAggregated.changes = aggregateChanges(
     newRender.changes,
-    prevAggregated.changes,
+    prevAggregated.changes
   );
   prevAggregated.aggregatedCount += 1;
   prevAggregated.didCommit = prevAggregated.didCommit || newRender.didCommit;
@@ -102,9 +102,9 @@ function componentGroupHasForget(group: ComponentData[]): boolean {
 }
 
 export const getLabelText = (
-  groupedAggregatedRenders: Array<AggregatedRender>,
+  groupedAggregatedRenders: Array<AggregatedRender>
 ) => {
-  let labelText = '';
+  let labelText = "";
 
   const componentsByCount = new Map<
     number,
@@ -137,7 +137,7 @@ export const getLabelText = (
     cumulativeTime += totalTime;
 
     if (componentGroup.length > 4) {
-      text += '…';
+      text += "…";
     }
 
     if (count > 1) {
@@ -151,7 +151,7 @@ export const getLabelText = (
     parts.push(text);
   }
 
-  labelText = parts.join(', ');
+  labelText = parts.join(", ");
 
   if (!labelText.length) return null;
 
@@ -169,7 +169,7 @@ export const getLabelText = (
 export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
   ReactScanInternals.options.value.onRender?.(fiber, renders);
   const type = getType(fiber.type) || fiber.type;
-  if (type && typeof type === 'function' && typeof type === 'object') {
+  if (type && typeof type === "function" && typeof type === "object") {
     const renderData = (type.renderData || {
       count: 0,
       time: 0,
@@ -196,3 +196,50 @@ export function isEqual(a: unknown, b: unknown): boolean {
   // biome-ignore lint/suspicious/noSelfCompare: reliable way to detect NaN values in JavaScript
   return a === b || (a !== a && b !== b);
 }
+
+export const playNotificationSound = (audioContext: AudioContext) => {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  const options = {
+    type: "sine" as OscillatorType,
+    freq: [
+      392,
+      //  523.25,
+      600 
+      //  659.25
+      ],
+    duration: 0.3,
+    gain: 0.12,
+  };
+
+  const frequencies = options.freq;
+  const timePerNote = options.duration / frequencies.length;
+
+  frequencies.forEach((freq, i) => {
+    oscillator.frequency.setValueAtTime(
+      freq,
+      audioContext.currentTime + i * timePerNote
+    );
+  });
+
+  oscillator.type = options.type;
+  gainNode.gain.setValueAtTime(options.gain, audioContext.currentTime);
+
+  gainNode.gain.setTargetAtTime(
+    0,
+    audioContext.currentTime + options.duration * 0.7,
+    0.05
+  );
+
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + options.duration);
+};
+
+
+
+
+

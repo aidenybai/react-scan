@@ -1,29 +1,38 @@
-import { type Signal, signal } from '@preact/signals';
+import { type Signal, signal } from "@preact/signals";
 import {
   type Fiber,
   detectReactBuildType,
   getRDTHook,
   getType,
   isInstrumentationActive,
-} from 'bippy';
-import type { ComponentType } from 'preact';
-import type { ReactNode } from 'preact/compat';
-import type { RenderData } from 'src/core/utils';
+} from "bippy";
+import type { ComponentType } from "preact";
+import type { ReactNode } from "preact/compat";
+import type { RenderData } from "src/core/utils";
 // import { initReactScanOverlay } from '~web/overlay';
-import { initReactScanInstrumentation } from 'src/new-outlines';
-import styles from '~web/assets/css/styles.css';
-import { ICONS } from '~web/assets/svgs/svgs';
-import type { States } from '~web/components/inspector/utils';
-import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
-import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import type { Outline } from '~web/utils/outline';
+import {
+  getCanvasEl,
+  hasStopped,
+  initReactScanInstrumentation,
+  startReportInterval,
+} from "src/new-outlines";
+import styles from "~web/assets/css/styles.css";
+import { ICONS } from "~web/assets/svgs/svgs";
+import { createToolbar, scriptLevelToolbar } from "~web/toolbar";
+import { readLocalStorage, saveLocalStorage } from "~web/utils/helpers";
+import { logIntro } from "~web/utils/log";
+import type { Outline } from "~web/utils/outline";
+import type { States } from "~web/views/inspector/utils";
 import type {
   ChangeReason,
   Render,
   createInstrumentation,
-} from './instrumentation';
-import type { InternalInteraction } from './monitor/types';
-import type { getSession } from './monitor/utils';
+} from "./instrumentation";
+import { InternalInteraction } from "./monitor/types";
+import { getSession } from "./monitor/utils";
+// import type { InternalInteraction } from "./monitor/types";
+// import type { getSession } from "./monitor/utils";
+import { startTimingTracking } from "./notifications/event-tracking";
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -41,24 +50,29 @@ const initRootContainer = (): RootContainer => {
     return { rootContainer, shadowRoot };
   }
 
-  rootContainer = document.createElement('div');
-  rootContainer.id = 'react-scan-root';
+  rootContainer = document.createElement("div");
+  rootContainer.id = "react-scan-root";
 
-  shadowRoot = rootContainer.attachShadow({ mode: 'open' });
+  shadowRoot = rootContainer.attachShadow({ mode: "open" });
 
   const fragment = document.createDocumentFragment();
 
-  const cssStyles = document.createElement('style');
+  const cssStyles = document.createElement("style");
   cssStyles.textContent = styles;
 
   const iconSprite = new DOMParser().parseFromString(
     ICONS,
-    'image/svg+xml',
+    "image/svg+xml"
   ).documentElement;
+  shadowRoot.appendChild(iconSprite);
 
+  const root = document.createElement("div");
+  root.id = "react-scan-toolbar-root";
+  root.className = "absolute z-2147483647";
 
-  fragment.appendChild(iconSprite);
   fragment.appendChild(cssStyles);
+  fragment.appendChild(root);
+
   shadowRoot.appendChild(fragment);
 
   document.documentElement.appendChild(rootContainer);
@@ -148,7 +162,7 @@ export interface Options {
    *
    * @default "fast"
    */
-  animationSpeed?: 'slow' | 'fast' | 'off';
+  animationSpeed?: "slow" | "fast" | "off";
 
   /**
    * Track unnecessary renders, and mark their outlines gray when detected
@@ -161,6 +175,13 @@ export interface Options {
    */
   trackUnnecessaryRenders?: boolean;
 
+  /**
+   * Should the FPS meter show in the toolbar
+   *
+   *  @default true
+   */
+  showFPS?: boolean;
+
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
@@ -170,12 +191,12 @@ export interface Options {
 
 export type MonitoringOptions = Pick<
   Options,
-  | 'enabled'
-  | 'onCommitStart'
-  | 'onCommitFinish'
-  | 'onPaintStart'
-  | 'onPaintFinish'
-  | 'onRender'
+  | "enabled"
+  | "onCommitStart"
+  | "onCommitFinish"
+  | "onPaintStart"
+  | "onPaintFinish"
+  | "onRender"
 >;
 
 interface Monitor {
@@ -187,6 +208,9 @@ interface Monitor {
   apiKey: string | null;
   commit: string | null;
   branch: string | null;
+  interactionListeningForRenders:
+    | ((fiber: Fiber, renders: Array<Render>) => void)
+    | null;
 }
 
 export interface StoreType {
@@ -198,6 +222,7 @@ export interface StoreType {
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
+  changesListeners: Map<number, Array<ChangesListener>>;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -206,7 +231,7 @@ export interface Internals {
   instrumentation: ReturnType<typeof createInstrumentation> | null;
   componentAllowList: WeakMap<ComponentType<unknown>, Options> | null;
   options: Signal<Options>;
-  scheduledOutlines: Map<Fiber, Outline>; // we clear t,his nearly immediately, so no concern of mem leak on the fiber
+  scheduledOutlines: Map<Fiber, Outline>; // we clear this nearly immediately, so no concern of mem leak on the fiber
   // outlines at the same coordinates always get merged together, so we pre-compute the merge ahead of time when aggregating in activeOutlines
   activeOutlines: Map<OutlineKey, Outline>; // we re-use the outline object on the scheduled outline
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
@@ -225,7 +250,7 @@ export type ClassComponentStateChange = {
   value: unknown;
   prevValue?: unknown;
   count?: number | undefined;
-  name: 'state';
+  name: "state";
 };
 
 export type StateChange =
@@ -261,16 +286,17 @@ export type ChangesListener = (changes: ChangesPayload) => void;
 export const Store: StoreType = {
   wasDetailsOpen: signal(true),
   isInIframe: signal(
-    typeof window !== 'undefined' && window.self !== window.top,
+    typeof window !== "undefined" && window.self !== window.top
   ),
   inspectState: signal<States>({
-    kind: 'uninitialized',
+    kind: "uninitialized",
   }),
   monitor: signal<Monitor | null>(null),
   fiberRoots: new Set<Fiber>(),
   reportData: new Map<number, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
+  changesListeners: new Map<number, Array<ChangesListener>>(),
 };
 
 export const ReactScanInternals: Internals = {
@@ -285,10 +311,11 @@ export const ReactScanInternals: Internals = {
     renderCountThreshold: 0,
     report: undefined,
     alwaysShowLabels: false,
-    animationSpeed: 'fast',
+    animationSpeed: "fast",
     dangerouslyForceRunInProduction: false,
     smoothlyAnimateOutlines: true,
     trackUnnecessaryRenders: false,
+    showFPS: true,
   }),
   onRender: null,
   scheduledOutlines: new Map(),
@@ -298,11 +325,11 @@ export const ReactScanInternals: Internals = {
 
 export type LocalStorageOptions = Omit<
   Options,
-  | 'onCommitStart'
-  | 'onRender'
-  | 'onCommitFinish'
-  | 'onPaintStart'
-  | 'onPaintFinish'
+  | "onCommitStart"
+  | "onRender"
+  | "onCommitFinish"
+  | "onPaintStart"
+  | "onPaintFinish"
 >;
 
 function isOptionKey(key: string): key is keyof Options {
@@ -318,14 +345,14 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
 
     const value = options[key];
     switch (key) {
-      case 'enabled':
+      case "enabled":
       // case 'includeChildren':
-      case 'log':
-      case 'showToolbar':
+      case "log":
+      case "showToolbar":
       // case 'report':
       // case 'alwaysShowLabels':
-      case 'dangerouslyForceRunInProduction':
-        if (typeof value !== 'boolean') {
+      case "dangerouslyForceRunInProduction":
+        if (typeof value !== "boolean") {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
           validOptions[key] = value;
@@ -339,42 +366,42 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       //     validOptions[key] = value as number;
       //   }
       //   break;
-      case 'animationSpeed':
-        if (!['slow', 'fast', 'off'].includes(value as string)) {
+      case "animationSpeed":
+        if (!["slow", "fast", "off"].includes(value as string)) {
           errors.push(
-            `- Invalid animation speed "${value}". Using default "fast"`,
+            `- Invalid animation speed "${value}". Using default "fast"`
           );
         } else {
-          validOptions[key] = value as 'slow' | 'fast' | 'off';
+          validOptions[key] = value as "slow" | "fast" | "off";
         }
         break;
-      case 'onCommitStart':
-        if (typeof value !== 'function') {
+      case "onCommitStart":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onCommitStart = value as () => void;
         }
         break;
-      case 'onCommitFinish':
-        if (typeof value !== 'function') {
+      case "onCommitFinish":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onCommitFinish = value as () => void;
         }
         break;
-      case 'onRender':
-        if (typeof value !== 'function') {
+      case "onRender":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onRender = value as (
             fiber: Fiber,
-            renders: Array<Render>,
+            renders: Array<Render>
           ) => void;
         }
         break;
-      case 'onPaintStart':
-      case 'onPaintFinish':
-        if (typeof value !== 'function') {
+      case "onPaintStart":
+      case "onPaintFinish":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions[key] = value as (outlines: Array<Outline>) => void;
@@ -397,7 +424,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
 
   if (errors.length > 0) {
     // biome-ignore lint/suspicious/noConsole: Intended debug output
-    console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
+    console.warn(`[React Scan] Invalid options:\n${errors.join("\n")}`);
   }
 
   return validOptions;
@@ -428,18 +455,18 @@ export const setOptions = (userOptions: Partial<Options>) => {
   };
 
   const { instrumentation } = ReactScanInternals;
-  if (instrumentation && 'enabled' in validOptions) {
+  if (instrumentation && "enabled" in validOptions) {
     instrumentation.isPaused.value = validOptions.enabled === false;
   }
 
   ReactScanInternals.options.value = newOptions;
 
   const existingLocalStorageOptions =
-    readLocalStorage<LocalStorageOptions>('react-scan-options');
+    readLocalStorage<LocalStorageOptions>("react-scan-options");
   // we always want to persist the local storage option specifically for enabled to avoid annoying the user
   // if the user doesn't have a toolbar we fallback to the true options because there wouldn't be a way to
   // revert the local storage value
-  saveLocalStorage('react-scan-options', {
+  saveLocalStorage("react-scan-options", {
     ...newOptions,
     enabled: newOptions.showToolbar
       ? (existingLocalStorageOptions?.enabled ?? newOptions.enabled ?? true)
@@ -461,7 +488,7 @@ export const getIsProduction = () => {
   rdtHook ??= getRDTHook();
   for (const renderer of rdtHook.renderers.values()) {
     const buildType = detectReactBuildType(renderer);
-    if (buildType === 'production') {
+    if (buildType === "production") {
       isProduction = true;
     }
   }
@@ -469,19 +496,24 @@ export const getIsProduction = () => {
 };
 
 export const start = () => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
 
-  if (
-    getIsProduction() &&
-    !ReactScanInternals.options.value.dangerouslyForceRunInProduction
-  ) {
-    return;
-  }
+  Store.monitor.value = {
+    pendingRequests: 0,
+    interactions: [],
+    session: new Promise((res) => res(null)),
+    url: null,
+    route: null,
+    apiKey: null,
+    commit: null,
+    branch: null,
+    interactionListeningForRenders: null,
+  };
 
   const localStorageOptions =
-    readLocalStorage<LocalStorageOptions>('react-scan-options');
+    readLocalStorage<LocalStorageOptions>("react-scan-options");
 
   if (localStorageOptions) {
     const { enabled } = localStorageOptions;
@@ -497,16 +529,56 @@ export const start = () => {
 
   const options = getOptions();
 
-  idempotent_createToolbar(!!options.value.showToolbar);
-  initReactScanInstrumentation();
 
-  const isUsedInBrowserExtension = typeof window !== 'undefined';
+  initReactScanInstrumentation({
+    onActive: () => {
+      const rdtHook = getRDTHook();
+
+      if (hasStopped()) return;
+
+      for (const renderer of rdtHook.renderers.values()) {
+        const buildType = detectReactBuildType(renderer);
+        if (buildType === "production") {
+          isProduction = true;
+        }
+      }
+
+      if (
+        isProduction &&
+        !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+      ) {
+        setOptions({ enabled: false, showToolbar: false });
+        // biome-ignore lint/suspicious/noConsole: Intended debug output
+        console.warn(
+          "[React Scan] Running in production mode is not recommended.\n" +
+            "If you really need this, set dangerouslyForceRunInProduction: true in options."
+        );
+        return;
+      }
+
+      startTimingTracking();
+
+      idempotent_createToolbar(!!options.value.showToolbar);
+
+      const host = getCanvasEl();
+      if (host) {
+        document.documentElement.appendChild(host);
+      }
+      globalThis.__REACT_SCAN__ = {
+        ReactScanInternals,
+      };
+      startReportInterval();
+      logIntro();
+    },
+  });
+
+  const isUsedInBrowserExtension = typeof window !== "undefined";
   if (!Store.monitor.value && !isUsedInBrowserExtension) {
     setTimeout(() => {
       if (isInstrumentationActive()) return;
       // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.error(
-        '[React Scan] Failed to load. Must import React Scan before React runs.',
+        "[React Scan] Failed to load. Must import React Scan before React runs."
       );
     }, 5000);
   }
@@ -560,7 +632,7 @@ export const useScan = (options: Options = {}) => {
 
 export const onRender = (
   type: unknown,
-  _onRender: (fiber: Fiber, renders: Array<Render>) => void,
+  _onRender: (fiber: Fiber, renders: Array<Render>) => void
 ) => {
   const prevOnRender = ReactScanInternals.onRender;
   ReactScanInternals.onRender = (fiber, renders) => {
@@ -576,7 +648,7 @@ export const ignoredProps = new WeakSet<
 >();
 
 export const ignoreScan = (node: ReactNode) => {
-  if (node && typeof node === 'object') {
+  if (node && typeof node === "object") {
     ignoredProps.add(node);
   }
 };

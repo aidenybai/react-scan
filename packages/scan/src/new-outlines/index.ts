@@ -5,23 +5,23 @@ import {
   getFiberId,
   getNearestHostFibers,
   isCompositeFiber,
-} from 'bippy';
-import { ReactScanInternals, Store, ignoredProps } from '~core/index';
-import { createInstrumentation } from '~core/instrumentation';
-import { inspectorUpdateSignal } from '~web/components/inspector/states';
-import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
-import { log, logIntro } from '~web/utils/log';
+} from "bippy";
+import { ReactScanInternals, Store, ignoredProps } from "~core/index";
+import { createInstrumentation } from "~core/instrumentation";
+import { readLocalStorage, removeLocalStorage } from "~web/utils/helpers";
+import { log, logIntro } from "~web/utils/log";
+import { inspectorUpdateSignal } from "~web/views/inspector/states";
 import {
   OUTLINE_ARRAY_SIZE,
   drawCanvas,
   initCanvas,
   updateOutlines,
   updateScroll,
-} from './canvas';
-import type { ActiveOutline, BlueprintOutline, OutlineData } from './types';
+} from "./canvas";
+import type { ActiveOutline, BlueprintOutline, OutlineData } from "./types";
 
 // The worker code will be replaced at build time
-const workerCode = '__WORKER_CODE__';
+const workerCode = "__WORKER_CODE__";
 
 let worker: Worker | null = null;
 let canvas: HTMLCanvasElement | null = null;
@@ -33,10 +33,10 @@ const activeOutlines = new Map<string, ActiveOutline>();
 const blueprintMap = new Map<Fiber, BlueprintOutline>();
 const blueprintMapKeys = new Set<Fiber>();
 
-export const outlineFiber = (fiber: Fiber) => {
+export const outlineFiber = (fiber: Fiber, renderedAt: number) => {
   if (!isCompositeFiber(fiber)) return;
   const name =
-    typeof fiber.type === 'string' ? fiber.type : getDisplayName(fiber);
+    typeof fiber.type === "string" ? fiber.type : getDisplayName(fiber);
   if (!name) return;
   const blueprint = blueprintMap.get(fiber);
   const nearestFibers = getNearestHostFibers(fiber);
@@ -48,10 +48,12 @@ export const outlineFiber = (fiber: Fiber) => {
       count: 1,
       elements: nearestFibers.map((fiber) => fiber.stateNode),
       didCommit: didCommit ? 1 : 0,
+      renderedAt,
     });
     blueprintMapKeys.add(fiber);
   } else {
     blueprint.count++;
+    blueprint.renderedAt = renderedAt;
   }
 };
 
@@ -83,9 +85,17 @@ const mergeRects = (rects: DOMRect[]) => {
   return new DOMRect(minX, minY, maxX - minX, maxY - minY);
 };
 
+const elementInvariant = (shouldBeEl: unknown) => {
+  if (!(shouldBeEl instanceof Element)) {
+    throw new Error("Element Invariant");
+  }
+};
+
 export const getBatchedRectMap = async function* (
-  elements: Element[],
+  elements: Element[]
 ): AsyncGenerator<IntersectionObserverEntry[], void, unknown> {
+  elements.forEach(elementInvariant);
+
   const uniqueElements = new Set(elements);
   const seenElements = new Set<Element>();
 
@@ -125,7 +135,7 @@ export const getBatchedRectMap = async function* (
     const entries = await new Promise<IntersectionObserverEntry[]>(
       (resolve) => {
         resolveNext = resolve;
-      },
+      }
     );
     if (entries.length > 0) {
       yield entries;
@@ -134,7 +144,7 @@ export const getBatchedRectMap = async function* (
 };
 
 const SupportedArrayBuffer =
-  typeof SharedArrayBuffer !== 'undefined' ? SharedArrayBuffer : ArrayBuffer;
+  typeof SharedArrayBuffer !== "undefined" ? SharedArrayBuffer : ArrayBuffer;
 
 export const flushOutlines = async () => {
   const elements: Element[] = [];
@@ -187,7 +197,7 @@ export const flushOutlines = async () => {
 
     if (blueprints.length > 0) {
       const arrayBuffer = new SupportedArrayBuffer(
-        blueprints.length * OUTLINE_ARRAY_SIZE * 4,
+        blueprints.length * OUTLINE_ARRAY_SIZE * 4
       );
       const sharedView = new Float32Array(arrayBuffer);
       const blueprintNames = new Array(blueprints.length);
@@ -226,7 +236,7 @@ export const flushOutlines = async () => {
 
       if (worker) {
         worker.postMessage({
-          type: 'draw-outlines',
+          type: "draw-outlines",
           data: arrayBuffer,
           names: blueprintNames,
         });
@@ -260,7 +270,7 @@ const draw = () => {
 const CANVAS_HTML_STR = `<canvas style="position:fixed;top:0;left:0;pointer-events:none;z-index:2147483646" aria-hidden="true"></canvas>`;
 
 const IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED =
-  typeof OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined';
+  typeof OffscreenCanvas !== "undefined" && typeof Worker !== "undefined";
 
 const getDpr = () => {
   return Math.min(window.devicePixelRatio || 1, 2);
@@ -268,9 +278,9 @@ const getDpr = () => {
 
 export const getCanvasEl = () => {
   cleanup();
-  const host = document.createElement('div');
-  host.setAttribute('data-react-scan', 'true');
-  const shadowRoot = host.attachShadow({ mode: 'open' });
+  const host = document.createElement("div");
+  host.setAttribute("data-react-scan", "true");
+  const shadowRoot = host.attachShadow({ mode: "open" });
 
   shadowRoot.innerHTML = CANVAS_HTML_STR;
   const canvasEl = shadowRoot.firstChild as HTMLCanvasElement;
@@ -289,31 +299,33 @@ export const getCanvasEl = () => {
 
   if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED) {
     try {
-      const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
-      removeLocalStorage('use-extension-worker');
+      const useExtensionWorker = readLocalStorage<boolean>(
+        "use-extension-worker"
+      );
+      removeLocalStorage("use-extension-worker");
 
       if (useExtensionWorker) {
         worker = new Worker(
           URL.createObjectURL(
-            new Blob([workerCode], { type: 'application/javascript' }),
-          ),
+            new Blob([workerCode], { type: "application/javascript" })
+          )
         );
 
         const offscreenCanvas = canvasEl.transferControlToOffscreen();
         worker?.postMessage(
           {
-            type: 'init',
+            type: "init",
             canvas: offscreenCanvas,
             width: canvasEl.width,
             height: canvasEl.height,
             dpr,
           },
-          [offscreenCanvas],
+          [offscreenCanvas]
         );
       }
     } catch (e) {
       // biome-ignore lint/suspicious/noConsole: Intended debug output
-      console.warn('Failed to initialize OffscreenCanvas worker:', e);
+      console.warn("Failed to initialize OffscreenCanvas worker:", e);
     }
   }
 
@@ -322,7 +334,7 @@ export const getCanvasEl = () => {
   }
 
   let isResizeScheduled = false;
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     if (!isResizeScheduled) {
       isResizeScheduled = true;
       setTimeout(() => {
@@ -333,7 +345,7 @@ export const getCanvasEl = () => {
         canvasEl.style.height = `${height}px`;
         if (worker) {
           worker.postMessage({
-            type: 'resize',
+            type: "resize",
             width,
             height,
             dpr,
@@ -356,7 +368,7 @@ export const getCanvasEl = () => {
   let prevScrollY = window.scrollY;
   let isScrollScheduled = false;
 
-  window.addEventListener('scroll', () => {
+  window.addEventListener("scroll", () => {
     if (!isScrollScheduled) {
       isScrollScheduled = true;
       setTimeout(() => {
@@ -367,7 +379,7 @@ export const getCanvasEl = () => {
         prevScrollY = scrollY;
         if (worker) {
           worker.postMessage({
-            type: 'scroll',
+            type: "scroll",
             deltaX,
             deltaY,
           });
@@ -403,7 +415,7 @@ export const stop = () => {
 };
 
 export const cleanup = () => {
-  const host = document.querySelector('[data-react-scan]');
+  const host = document.querySelector("[data-react-scan]");
   if (host) {
     host.remove();
   }
@@ -428,50 +440,46 @@ export const isValidFiber = (fiber: Fiber) => {
 
   return true;
 };
-export const initReactScanInstrumentation = () => {
+export const initReactScanInstrumentation = ({
+  onActive,
+}: {
+  onActive?: () => void;
+}) => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
-  const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
+  const instrumentation = createInstrumentation("react-scan-devtools-0.1.0", {
     onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
-    onActive: () => {
-      if (hasStopped()) return;
-
-      const host = getCanvasEl();
-      if (host) {
-        document.documentElement.appendChild(host);
-      }
-      globalThis.__REACT_SCAN__ = {
-        ReactScanInternals,
-      };
-      startReportInterval();
-      logIntro();
-    },
-    onError: () => {
+    onActive,
+    onError() {
       // todo: ingest errors without accidentally collecting data about user
     },
     isValidFiber,
-    onRender: (fiber, renders) => {
+    onRender: (fiber, renders, renderedAt) => {
+      if (isCompositeFiber(fiber)) {
+        Store.monitor.value?.interactionListeningForRenders?.(fiber, renders);
+      }
       const isOverlayPaused =
         ReactScanInternals.instrumentation?.isPaused.value;
       const isInspectorInactive =
-        Store.inspectState.value.kind === 'inspect-off' ||
-        Store.inspectState.value.kind === 'uninitialized';
+        Store.inspectState.value.kind === "inspect-off" ||
+        Store.inspectState.value.kind === "uninitialized";
       const shouldFullyAbort = isOverlayPaused && isInspectorInactive;
 
       if (shouldFullyAbort) {
         return;
       }
+
       if (!isOverlayPaused) {
-        outlineFiber(fiber);
+        outlineFiber(fiber, renderedAt);
       }
       if (ReactScanInternals.options.value.log) {
         // this can be expensive given enough re-renders
         log(renders);
       }
 
-      if (Store.inspectState.value.kind === 'focused') {
+      if (Store.inspectState.value.kind === "focused") {
         inspectorUpdateSignal.value = Date.now();
       }
 

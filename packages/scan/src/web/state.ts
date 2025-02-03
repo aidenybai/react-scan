@@ -1,22 +1,29 @@
-import { signal } from '@preact/signals';
-import type {
-  Corner,
-  WidgetConfig,
-  WidgetSettings,
-} from './components/widget/types';
+import { Signal, signal } from "@preact/signals";
 import {
   LOCALSTORAGE_KEY,
   MIN_CONTAINER_WIDTH,
   MIN_SIZE,
   SAFE_AREA,
-} from './constants';
-import { readLocalStorage, saveLocalStorage } from './utils/helpers';
+} from "./constants";
+import { readLocalStorage, saveLocalStorage } from "./utils/helpers";
+import { fadeOutHighlights } from "./views/notifications/render-bar-chart";
+import { DEBUG } from "./views/widget";
+import type {
+  Corner,
+  WidgetConfig,
+  WidgetSettings,
+} from "./views/widget/types";
 
 export const signalIsSettingsOpen = signal(false);
 export const signalRefWidget = signal<HTMLDivElement | null>(null);
+export const signalNotificationsOpen = signal<boolean>(DEBUG);
+export const signalNotificationDismissed = signal<boolean>(false);
+export const signalLastDismissTime = signal<number>(0);
+
+export const signalSettingsOpen = signal<boolean>(false);
 
 export const defaultWidgetConfig = {
-  corner: 'top-left' as Corner,
+  corner: "top-left" as Corner,
   dimensions: {
     isFullWidth: false,
     isFullHeight: false,
@@ -67,7 +74,7 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
 export const signalWidget = signal<WidgetConfig>(getInitialWidgetConfig());
 
 export const updateDimensions = (): void => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   const { dimensions } = signalWidget.value;
   const { width, height, position } = dimensions;

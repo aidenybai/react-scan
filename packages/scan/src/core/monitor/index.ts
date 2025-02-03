@@ -1,23 +1,23 @@
-'use client';
+"use client";
 import {
   type Fiber,
   getDisplayName,
   getTimings,
   isCompositeFiber,
-} from 'bippy';
-import { useEffect } from 'react';
+} from "bippy";
+import { type FC, useEffect } from "react";
 import {
   type MonitoringOptions,
   ReactScanInternals,
   Store,
   setOptions,
-} from '..';
-import { type Render, createInstrumentation } from '../instrumentation';
-import { updateFiberRenderData } from '../utils';
-import { flush } from './network';
-import { computeRoute } from './params/utils';
-import { initPerformanceMonitoring } from './performance';
-import { getSession } from './utils';
+} from "..";
+import { type Render, createInstrumentation } from "../instrumentation";
+import { updateFiberRenderData } from "../utils";
+import { flush } from "./network";
+import { computeRoute } from "./params/utils";
+import { initPerformanceMonitoring } from "./performance";
+import { getSession } from "./utils";
 
 // max retries before the set of components do not get reported (avoid memory leaks of the set of fibers stored on the component aggregation)
 const MAX_RETRIES_BEFORE_COMPONENT_GC = 7;
@@ -40,10 +40,16 @@ export interface MonitoringProps {
 
 export type MonitoringWithoutRouteProps = Omit<
   MonitoringProps,
-  'route' | 'path'
+  "route" | "path"
 >;
 
-export const Monitoring = ({
+const DEFAULT_URL = "https://monitoring.react-scan.com/api/v1/ingest";
+
+function noopCatch() {
+  return null;
+}
+
+export const Monitoring: FC<MonitoringProps> = ({
   url,
   apiKey,
   params,
@@ -51,26 +57,27 @@ export const Monitoring = ({
   route = null,
   commit = null,
   branch = null,
-}: MonitoringProps) => {
+}) => {
   if (!apiKey)
-    throw new Error('Please provide a valid API key for React Scan monitoring');
-  url ??= 'https://monitoring.react-scan.com/api/v1/ingest';
+    throw new Error("Please provide a valid API key for React Scan monitoring");
+  url ??= DEFAULT_URL;
 
   Store.monitor.value ??= {
     pendingRequests: 0,
     interactions: [],
-    session: getSession({ commit, branch }).catch(() => null),
+    session: getSession({ commit, branch }).catch(noopCatch),
     url,
     apiKey,
     route,
     commit,
     branch,
+    interactionListeningForRenders: null,
   };
 
   // When using Monitoring without framework, we need to compute the route from the path and params
   if (!route && path && params) {
     Store.monitor.value.route = computeRoute(path, params);
-  } else if (typeof window !== 'undefined') {
+  } else if (typeof window !== "undefined") {
     Store.monitor.value.route =
       route ?? path ?? new URL(window.location.toString()).pathname; // this is inaccurate on vanilla react if the path is not provided but used for session route
   }
@@ -90,11 +97,11 @@ export const scanMonitoring = (options: MonitoringOptions) => {
 
 let flushInterval: ReturnType<typeof setInterval>;
 
-export const startMonitoring = () => {
+export const startMonitoring = (): void => {
   if (!Store.monitor.value) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       throw new Error(
-        'Invariant: startMonitoring can never be called when monitoring is not initialized',
+        "Invariant: startMonitoring can never be called when monitoring is not initialized"
       );
     }
   }
@@ -114,7 +121,7 @@ export const startMonitoring = () => {
   globalThis.__REACT_SCAN__ = {
     ReactScanInternals,
   };
-  const instrumentation = createInstrumentation('monitoring', {
+  const instrumentation = createInstrumentation("monitoring", {
     onCommitStart() {
       // ReactScanInternals.options.value.onCommitStart?.();
     },
@@ -135,6 +142,9 @@ export const startMonitoring = () => {
     onCommitFinish() {
       // ReactScanInternals.options.value.onCommitFinish?.();
     },
+    // onPostCommitFiberRoot() {
+    //   // ...
+    // },
     trackChanges: false,
     forceAlwaysTrackRenders: true,
   });
@@ -144,8 +154,8 @@ export const startMonitoring = () => {
 
 const aggregateComponentRenderToInteraction = (
   fiber: Fiber,
-  renders: Array<Render>,
-) => {
+  renders: Array<Render>
+): void => {
   const monitor = Store.monitor.value;
   if (!monitor || !monitor.interactions || monitor.interactions.length === 0)
     return;
