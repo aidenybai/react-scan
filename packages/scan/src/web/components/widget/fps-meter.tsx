@@ -1,26 +1,32 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { getFPS } from '~core/instrumentation';
 import { cn } from '~web/utils/helpers';
 
 export const FpsMeter = () => {
-  const refFps = useRef<HTMLSpanElement>(null);
+  const fps = useSignal(120);
 
-  useEffect(() => {
+  useSignalEffect(() => {
     const intervalId = setInterval(() => {
-      const fps = getFPS();
-      let color = '#fff';
-      if (fps) {
-        if (fps < 30) color = '#f87171';
-        if (fps < 50) color = '#fbbf24';
-      }
-      if (refFps.current) {
-        refFps.current.setAttribute('data-text', fps.toString());
-        refFps.current.style.color = color;
-      }
+      fps.value = getFPS();
     }, 100);
 
     return () => clearInterval(intervalId);
-  }, []);
+  });
+
+  const fpsColor = useComputed(() => {
+    const current = fps.value;
+    if (current >= 50) {
+      return '#fff';
+    }
+    if (current >= 30) {
+      return '#fbbf24';
+    }
+    return '#f87171';
+  });
+
+  const style = useComputed(() => ({
+    color: fpsColor.value,
+  }));
 
   return (
     <span
@@ -33,13 +39,11 @@ export const FpsMeter = () => {
       )}
     >
       <span
-        ref={refFps}
-        data-text="120"
+        data-text={fps}
         className="transition-color ease-in-out with-data-text"
+        style={style}
       />
-      <span className="tracking-wide font-mono text-xxs mt-[1px]">
-        FPS
-      </span>
+      <span className="tracking-wide font-mono text-xxs mt-[1px]">FPS</span>
     </span>
   );
 };
