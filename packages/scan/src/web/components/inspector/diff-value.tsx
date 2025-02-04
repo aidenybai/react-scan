@@ -1,32 +1,30 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useSignal } from '@preact/signals';
+import { useMemo } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import { CopyToClipboard } from '../copy-to-clipboard';
 import { Icon } from '../icon';
 import { formatForClipboard, formatValuePreview, safeGetValue } from './utils';
 
-export const DiffValueView = ({
-  value,
-  expanded,
-  onToggle,
-  isNegative,
-}: {
+interface DiffValueViewProps {
   value: unknown;
-  expanded: boolean;
-  onToggle: () => void;
   isNegative: boolean;
-}) => {
-  const { value: safeValue, error } = safeGetValue(value);
-  const pathPrefix = useMemo(() => Math.random().toString(36).slice(2), []);
-  const [expandedPaths, setExpandedPaths] = useState(new Set<string>());
+  onToggle: () => void;
+  expanded: boolean;
+}
 
-  if (error) {
-    return <span className="text-gray-500 font-italic">{error}</span>;
-  }
+// TODO(Alexis): optimizable
+const DiffValueViewInner = ({
+  value,
+  isNegative,
+  onToggle,
+  expanded,
+}: DiffValueViewProps) => {
+  const pathPrefix = useMemo(() => Math.random().toString(36).slice(2), []);
+
+  const expandedPaths = useSignal(new Set<string>());
 
   const isExpandable =
-    safeValue !== null &&
-    typeof safeValue === 'object' &&
-    !(safeValue instanceof Promise);
+    value !== null && typeof value === 'object' && !(value instanceof Promise);
 
   const renderExpandedValue = (obj: unknown, path = ''): JSX.Element => {
     if (obj === null || typeof obj !== 'object') {
@@ -38,133 +36,117 @@ export const DiffValueView = ({
 
     return (
       <div>
-        {
-          entries.map(([key, val], i) => {
-            const currentPath = path ? `${path}.${key}` : key;
-            const fullPath = `${pathPrefix}.${currentPath}`;
-            const isExpanded = expandedPaths.has(fullPath);
-            const canExpand = val !== null && typeof val === 'object';
+        {entries.map(([key, val], i) => {
+          const currentPath = path ? `${path}.${key}` : key;
+          const fullPath = `${pathPrefix}.${currentPath}`;
+          const isExpanded = expandedPaths.value.has(fullPath);
+          const canExpand = val !== null && typeof val === 'object';
 
-            let isCircular = false;
-            if (canExpand) {
-              if (seenObjects.has(val)) {
-                isCircular = true;
-              } else {
-                seenObjects.add(val);
-              }
+          let isCircular = false;
+          if (canExpand) {
+            if (seenObjects.has(val)) {
+              isCircular = true;
+            } else {
+              seenObjects.add(val);
             }
+          }
 
-            return (
-              <div
-                key={key}
-                className={cn({ 'mt-1': i > 0 })}
-              >
-                <div className="flex items-center gap-1">
-                  {
-                    canExpand && !isCircular && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExpandedPaths((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(fullPath)) {
-                              next.delete(fullPath);
-                            } else {
-                              next.add(fullPath);
-                            }
-                            return next;
-                          });
-                        }}
-                        className={cn(
-                          'flex items-center',
-                          'p-0 mr-1',
-                          'opacity-50',
-                        )}
-                      >
-                        <Icon
-                          name="icon-chevron-right"
-                          size={12}
-                          className={cn(
-                            'transition-[transform,color]',
-                            'text-[#4ade80]',
-                            {
-                              'transform rotate-90': isExpanded,
-                              'text-[#f87171]': isNegative,
-                            },
-                          )}
-                        />
-                      </button>
-                    )
-                  }
-                  <span className="text-gray-500">{key}:</span>
-                  {
-                    isCircular
-                      ? (
-                        <span className="text-gray-500 font-italic">
-                          [Circular]
-                        </span>
-                      )
-                      : (!canExpand || !isExpanded)
-                        ? (
-                          <span>
-                            {formatValuePreview(val)}
-                          </span>
-                        ) : null
-                  }
-                </div>
-                {
-                  canExpand && isExpanded && !isCircular &&
-                  renderExpandedValue(val, currentPath)
-                }
+          return (
+            <div key={key} className={cn({ 'mt-1': i > 0 })}>
+              <div className="flex items-center gap-1">
+                {canExpand && !isCircular && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prev = expandedPaths.value;
+
+                      const next = new Set(prev);
+                      if (next.has(fullPath)) {
+                        next.delete(fullPath);
+                      } else {
+                        next.add(fullPath);
+                      }
+                      expandedPaths.value = next;
+                    }}
+                    className={cn(
+                      'flex items-center',
+                      'p-0 mr-1',
+                      'opacity-50',
+                    )}
+                  >
+                    <Icon
+                      name="icon-chevron-right"
+                      size={12}
+                      className={cn(
+                        'transition-[transform,color]',
+                        'text-[#4ade80]',
+                        {
+                          'transform rotate-90': isExpanded,
+                          'text-[#f87171]': isNegative,
+                        },
+                      )}
+                    />
+                  </button>
+                )}
+                <span className="text-gray-500">{key}:</span>
+                {isCircular ? (
+                  <span className="text-gray-500 font-italic">[Circular]</span>
+                ) : !canExpand || !isExpanded ? (
+                  <span>{formatValuePreview(val)}</span>
+                ) : null}
               </div>
-            );
-          })
-        }
+              {canExpand &&
+                isExpanded &&
+                !isCircular &&
+                renderExpandedValue(val, currentPath)}
+            </div>
+          );
+        })}
       </div>
     );
   };
 
   return (
     <div className="flex items-start gap-1">
-      {
-        isExpandable && (
-          <button
-            type="button"
-            onClick={onToggle}
-            className={cn(
-              'flex items-center',
-              'p-0 mt-0.5 mr-1',
-              'opacity-50',
-            )}
-          >
-            <Icon
-              name="icon-chevron-right"
-              size={12}
-              className={cn(
-                'transition-[transform,color]',
-                'text-[#4ade80]',
-                {
-                  'transform rotate-90': expanded,
-                  'text-[#f87171]': isNegative,
-                },
-              )}
-            />
-          </button>
-        )
-      }
+      {isExpandable && (
+        <button
+          type="button"
+          onClick={onToggle}
+          className={cn('flex items-center', 'p-0 mt-0.5 mr-1', 'opacity-50')}
+        >
+          <Icon
+            name="icon-chevron-right"
+            size={12}
+            className={cn('transition-[transform,color]', 'text-[#4ade80]', {
+              'transform rotate-90': expanded,
+              'text-[#f87171]': isNegative,
+            })}
+          />
+        </button>
+      )}
       <div className="flex-1">
         {!expanded ? (
-          <span>{formatValuePreview(safeValue)}</span>
+          <span>{formatValuePreview(value)}</span>
         ) : (
-          renderExpandedValue(safeValue)
+          renderExpandedValue(value)
         )}
       </div>
       <CopyToClipboard
-        text={formatForClipboard(safeValue)}
+        text={formatForClipboard(value)}
         className="opacity-0 transition-opacity group-hover:opacity-100"
       >
         {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
       </CopyToClipboard>
     </div>
   );
+};
+
+export const DiffValueView = ({ value, ...props }: DiffValueViewProps) => {
+  const { value: safeValue, error } = safeGetValue(value);
+
+  if (error) {
+    return <span className="text-gray-500 font-italic">{error}</span>;
+  }
+
+  return <DiffValueViewInner value={safeValue} {...props} />;
 };
