@@ -1,3 +1,10 @@
+import {
+  type Signal,
+  untracked,
+  useComputed,
+  useSignal,
+  useSignalEffect,
+} from '@preact/signals';
 import { type ReactNode, memo } from 'preact/compat';
 import {
   type Dispatch,
@@ -11,13 +18,18 @@ import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
 import type { useMergedRefs } from '~web/hooks/use-merged-refs';
-import { cn } from '~web/utils/helpers';
-import { throttle } from '~web/utils/helpers';
+import { cn, throttle } from '~web/utils/helpers';
+import { constant } from '~web/utils/preact/constant';
 import { StickySection } from '../sticky-section';
 import { DiffValueView } from './diff-value';
 import { type MinimalFiberInfo, timelineState } from './states';
 import { Timeline } from './timeline';
-import { formatFunctionPreview, formatPath, getObjectDiff, isPromise } from './utils';
+import {
+  formatFunctionPreview,
+  formatPath,
+  getObjectDiff,
+  isPromise,
+} from './utils';
 
 export type Setter<T> = Dispatch<StateUpdater<T>>;
 
@@ -50,112 +62,102 @@ const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
 };
 
 interface WhatChangedProps {
-  isSticky?: boolean;
+  isSticky: Signal<boolean>;
   refSticky?:
-  | ReturnType<typeof useMergedRefs<HTMLElement>>
-  | ((node: HTMLElement | null) => void);
+    | ReturnType<typeof useMergedRefs<HTMLElement>>
+    | ((node: HTMLElement | null) => void);
   calculateStickyTop: (removeSticky?: boolean) => void;
-  shouldShowChanges: boolean;
+  shouldShowChanges: Signal<boolean>;
 }
 
-export const WhatChangedSection = memo(() => {
-  const refShowTimeline = useRef(false);
-  const [shouldShowChanges, setShouldShowChanges] = useState(true);
-  useEffect(() => {
-    const rafId = 0;
+export const WhatChangedSection = constant(() => {
+  const shouldShowTimeline = useSignal(false);
+  const shouldShowChanges = useSignal(true);
 
-    const unsubscribe = timelineState.subscribe(async (state) => {
-      cancelAnimationFrame(rafId);
+  useSignalEffect(() => {
+    const state = timelineState.value;
 
-      const { currentIndex, updates } = state;
+    const { currentIndex, updates } = state;
 
-      if (currentIndex === 0) {
-        setShouldShowChanges(false);
-        return;
+    if (currentIndex === 0) {
+      shouldShowChanges.value = false;
+      return;
+    }
+
+    if (updates.length > 0) {
+      if (!untracked(() => shouldShowTimeline.value)) {
+        shouldShowTimeline.value = true;
       }
-
-      if (updates.length > 0) {
-        if (!refShowTimeline.current) {
-          refShowTimeline.current = true;
-        }
-        setShouldShowChanges(true);
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      cancelAnimationFrame(rafId);
-    };
-  }, []);
+      shouldShowChanges.value = true;
+    }
+  });
 
   return (
     <>
-      {
-        refShowTimeline.current && (
-          <StickySection>
-            {(props) => (
-              <Timeline {...props} />
-            )}
-          </StickySection>
-        )
-      }
+      {useComputed(
+        () =>
+          shouldShowTimeline.value && (
+            <StickySection>{(props) => <Timeline {...props} />}</StickySection>
+          ),
+      )}
       <StickySection>
         {(props) => (
-          <WhatChanged
-            {...props}
-            shouldShowChanges={shouldShowChanges}
-          />
+          <WhatChanged {...props} shouldShowChanges={shouldShowChanges} />
         )}
       </StickySection>
     </>
   );
 });
 
-export const WhatChanged = memo(({
-  isSticky,
-  refSticky,
-  calculateStickyTop,
-  shouldShowChanges,
-}: WhatChangedProps) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+export const WhatChanged = memo(
+  ({
+    isSticky,
+    refSticky,
+    calculateStickyTop,
+    shouldShowChanges,
+  }: WhatChangedProps) => {
+    const isExpanded = useSignal(true);
 
-  return (
-    <>
-      <WhatsChangedHeader
-        refSticky={refSticky}
-        isSticky={isSticky}
-        calculateStickyTop={calculateStickyTop}
-        isExpanded={isExpanded}
-        shouldShowChanges={shouldShowChanges}
-        setIsExpanded={setIsExpanded}
-      />
-      <div
-        className={cn('react-scan-expandable', {
-          'react-scan-expanded': isExpanded,
-        })}
-      >
-        <div className="overflow-hidden">
-          {
-            shouldShowChanges && (
-              <div
-                className={cn(
-                  'relative',
-                  'flex flex-col gap-y-2',
-                  'pl-9 pr-2',
-                  'before:content-[""] before:absolute before:inset-x-0 before:bottom-0 before:h-[1px] before:bg-[#333]',
-                )}
-              >
-                <Section title="Props" isExpanded={isExpanded} />
-                <Section title="State" isExpanded={isExpanded} />
-                <Section title="Context" isExpanded={isExpanded} />
-              </div>
-            )
-          }
+    return (
+      <>
+        <WhatsChangedHeader
+          refSticky={refSticky}
+          isSticky={isSticky}
+          calculateStickyTop={calculateStickyTop}
+          isExpanded={isExpanded}
+          shouldShowChanges={shouldShowChanges}
+        />
+        <div
+          className={useComputed(() =>
+            cn('react-scan-expandable', {
+              'react-scan-expanded': isExpanded.value,
+            }),
+          )}
+        >
+          <div className="overflow-hidden">
+            {useComputed(
+              () =>
+                shouldShowChanges.value && (
+                  <div
+                    className={cn(
+                      'relative',
+                      'flex flex-col gap-y-2',
+                      'pl-9 pr-2',
+                      'before:content-[""] before:absolute before:inset-x-0 before:bottom-0 before:h-[1px] before:bg-[#333]',
+                    )}
+                  >
+                    <Section title="Props" isExpanded={isExpanded} />
+                    <Section title="State" isExpanded={isExpanded} />
+                    <Section title="Context" isExpanded={isExpanded} />
+                  </div>
+                ),
+            )}
+          </div>
         </div>
-      </div>
-    </>
-  );
-});
+      </>
+    );
+  },
+);
 
 const renderStateName = (key: string, componentName: string) => {
   if (Number.isNaN(Number(key))) {
@@ -185,8 +187,7 @@ const renderStateName = (key: string, componentName: string) => {
       {n}
       {getOrdinalSuffix(n)} hook{' '}
       <span style={{ color: '#666' }}>
-        called in{' '}
-        <i className="text-[#A855F7] truncate">{componentName}</i>
+        called in <i className="text-[#A855F7] truncate">{componentName}</i>
       </span>
     </span>
   );
@@ -194,13 +195,12 @@ const renderStateName = (key: string, componentName: string) => {
 
 const WhatsChangedHeader = memo<{
   refSticky?:
-  | ReturnType<typeof useMergedRefs<HTMLElement>>
-  | ((node: HTMLElement | null) => void);
-  isSticky?: boolean;
+    | ReturnType<typeof useMergedRefs<HTMLElement>>
+    | ((node: HTMLElement | null) => void);
+  isSticky: Signal<boolean>;
   calculateStickyTop: (removeSticky?: boolean) => void;
-  isExpanded: boolean;
-  shouldShowChanges: boolean;
-  setIsExpanded: Setter<boolean>;
+  isExpanded: Signal<boolean>;
+  shouldShowChanges: Signal<boolean>;
 }>(
   ({
     refSticky,
@@ -208,7 +208,6 @@ const WhatsChangedHeader = memo<{
     calculateStickyTop,
     isExpanded,
     shouldShowChanges,
-    setIsExpanded,
   }) => {
     const refProps = useRef<HTMLDivElement>(null);
     const refState = useRef<HTMLDivElement>(null);
@@ -254,7 +253,7 @@ const WhatsChangedHeader = memo<{
 
         if (!currentUpdate || currentIndex === 0) {
           return;
-        };
+        }
 
         flash();
 
@@ -281,27 +280,29 @@ const WhatsChangedHeader = memo<{
       return unsubscribe;
     }, []);
 
-    const toggleExpanded = useCallback(() => {
-      setIsExpanded(state => {
-        if (isSticky && isExpanded) {
-          return state;
+    const toggleExpanded = () => {
+      const prev = untracked(() => isExpanded.value);
+      // TODO(Alexis): probably simplified
+      isExpanded.value = isSticky.value && prev ? prev : !prev;
+    };
+
+    const onTransitionStart = useCallback(
+      (e: TransitionEvent) => {
+        if (e.propertyName === 'max-height') {
+          calculateStickyTop(true);
         }
-        return !state;
-      });
-    }, [setIsExpanded, isExpanded, isSticky]);
+      },
+      [calculateStickyTop],
+    );
 
-    const onTransitionStart = useCallback((e: TransitionEvent) => {
-      if (e.propertyName === 'max-height') {
-        calculateStickyTop(true);
-      }
-    }, [calculateStickyTop]);
-
-    const onTransitionEnd = useCallback((e: TransitionEvent) => {
-      if (e.propertyName === 'max-height') {
-        calculateStickyTop(false);
-      }
-    }, [calculateStickyTop]);
-
+    const onTransitionEnd = useCallback(
+      (e: TransitionEvent) => {
+        if (e.propertyName === 'max-height') {
+          calculateStickyTop(false);
+        }
+      },
+      [calculateStickyTop],
+    );
 
     return (
       <button
@@ -310,22 +311,23 @@ const WhatsChangedHeader = memo<{
         onClick={toggleExpanded}
         onTransitionStart={onTransitionStart}
         onTransitionEnd={onTransitionEnd}
-        className={cn(
-          'react-section-header',
-          'overflow-hidden',
-          'max-h-0',
-          'transition-[max-height]',
-          {
-            'max-h-8': shouldShowChanges,
-          },
+        className={useComputed(() =>
+          cn(
+            'react-section-header',
+            'overflow-hidden',
+            'max-h-0',
+            'transition-[max-height]',
+            {
+              'max-h-8': shouldShowChanges.value,
+            },
+          ),
         )}
       >
         <div
-          className={cn(
-            'flex-1 react-scan-expandable',
-            {
-              'react-scan-expanded': shouldShowChanges,
-            },
+          className={useComputed(() =>
+            cn('flex-1 react-scan-expandable', {
+              'react-scan-expanded': shouldShowChanges.value,
+            }),
           )}
         >
           <div className="overflow-hidden">
@@ -336,8 +338,8 @@ const WhatsChangedHeader = memo<{
                     name="icon-chevron-right"
                     size={12}
                     className={cn({
-                      'rotate-90': isExpanded,
-                      'rotate-0': isSticky && isExpanded,
+                      'rotate-90': isExpanded.value,
+                      'rotate-0': isSticky.value && isExpanded.value,
                     })}
                   />
                 </div>
@@ -345,14 +347,16 @@ const WhatsChangedHeader = memo<{
               </div>
 
               <div
-                className={cn(
-                  'ml-auto',
-                  'change-scope',
-                  'opacity-0',
-                  'transition-opacity duration-300 delay-150',
-                  {
-                    'opacity-100': !isExpanded,
-                  },
+                className={useComputed(() =>
+                  cn(
+                    'ml-auto',
+                    'change-scope',
+                    'opacity-0',
+                    'transition-opacity duration-300 delay-150',
+                    {
+                      'opacity-100': !isExpanded.value,
+                    },
+                  ),
                 )}
               >
                 <div ref={refProps}>props</div>
@@ -369,7 +373,7 @@ const WhatsChangedHeader = memo<{
 
 interface SectionProps {
   title: string;
-  isExpanded: boolean;
+  isExpanded: Signal<boolean>;
 }
 
 const Section = memo(({ title, isExpanded }: SectionProps) => {
@@ -406,9 +410,7 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
         const prevCount = prevData?.changesCounts?.get(name) ?? 0;
         const count = Math.max(currentCount, prevCount);
 
-        const prevValue = prevData?.current.find(
-          (p) => p.name === name,
-        )?.value;
+        const prevValue = prevData?.current.find((p) => p.name === name)?.value;
 
         const hasValueChange = !isEqual(value, prevValue);
 
@@ -476,92 +478,83 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
     <div className="pb-2">
       <div className="text-xs text-[#888] mb-1.5">{title}</div>
       <div className="flex flex-col gap-2">
-        {
-          changes.map((change) => {
-            const isEntryExpanded = expandedEntries.has(String(change.name));
-            const values = refChangesValues.current.get(change.name);
-            if (!values) return null;
+        {changes.map((change) => {
+          const isEntryExpanded = expandedEntries.has(String(change.name));
+          const values = refChangesValues.current.get(change.name);
+          if (!values) return null;
 
-            return (
-              <div key={change.name}>
-                <button
-                  type="button"
-                  onClick={() => handleExpandEntry(String(change.name))}
-                  className={cn(
-                    'relative',
-                    'flex items-center gap-2',
-                    'w-full p-0 cursor-pointer text-white text-xs',
-                  )}
-                >
-                  <div className="flex items-center gap-1.5 flex-1">
-                    <Icon
-                      name="icon-chevron-right"
-                      size={12}
-                      className={cn(
-                        'text-[#666] transition-transform duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
-                        {
-                          'rotate-90': isEntryExpanded,
-                        },
-                      )}
-                    />
-                    <div className="whitespace-nowrap break-words text-left font-medium flex items-center gap-x-1.5">
-                      {memoizedRenderStateName(String(change.name))}
-                      <CountBadge
-                        forceFlash={isExpanded && refLastUpdated.current.has(change.name)}
-                        count={change.count}
-                        isFunction={values.isFunction}
-                        showWarning={values.diff.changes.length === 0}
-                      />
-                    </div>
-                  </div>
-                </button>
-                <div
-                  className={cn(
-                    'react-scan-expandable',
-                    'overflow-hidden',
-                    {
-                      'react-scan-expanded': isEntryExpanded,
-                    },
-                  )}
-                >
-                  <div className="pl-3 text-xs font-mono border-l-1 border-[#333] overflow-hidden">
-                    <div className="flex flex-col gap-0.5">
+          return (
+            <div key={change.name}>
+              <button
+                type="button"
+                onClick={() => handleExpandEntry(String(change.name))}
+                className={cn(
+                  'relative',
+                  'flex items-center gap-2',
+                  'w-full p-0 cursor-pointer text-white text-xs',
+                )}
+              >
+                <div className="flex items-center gap-1.5 flex-1">
+                  <Icon
+                    name="icon-chevron-right"
+                    size={12}
+                    className={cn(
+                      'text-[#666] transition-transform duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
                       {
-                        values.prevError || values.currError
-                          ? (
-                            <AccessError
-                              currError={values.currError}
-                              prevError={values.prevError}
-                            />
-                          )
-                          : values.diff.changes.length > 0
-                            ? (
-                              <DiffChange
-                                title={title}
-                                change={change}
-                                diff={values.diff}
-                                expandedFns={expandedFns}
-                                renderName={memoizedRenderStateName}
-                                setExpandedFns={setExpandedFns}
-                              />
-                            )
-                            : (
-                              <ReferenceOnlyChange
-                                currValue={values.currValue}
-                                entryKey={change.name}
-                                expandedFns={expandedFns}
-                                prevValue={values.prevValue}
-                                setExpandedFns={setExpandedFns}
-                              />
-                            )
+                        'rotate-90': isEntryExpanded,
+                      },
+                    )}
+                  />
+                  <div className="whitespace-nowrap break-words text-left font-medium flex items-center gap-x-1.5">
+                    {memoizedRenderStateName(String(change.name))}
+                    <CountBadge
+                      forceFlash={
+                        isExpanded.value &&
+                        refLastUpdated.current.has(change.name)
                       }
-                    </div>
+                      count={change.count}
+                      isFunction={values.isFunction}
+                      showWarning={values.diff.changes.length === 0}
+                    />
+                  </div>
+                </div>
+              </button>
+              <div
+                className={cn('react-scan-expandable', 'overflow-hidden', {
+                  'react-scan-expanded': isEntryExpanded,
+                })}
+              >
+                <div className="pl-3 text-xs font-mono border-l-1 border-[#333] overflow-hidden">
+                  <div className="flex flex-col gap-0.5">
+                    {values.prevError || values.currError ? (
+                      <AccessError
+                        currError={values.currError}
+                        prevError={values.prevError}
+                      />
+                    ) : values.diff.changes.length > 0 ? (
+                      <DiffChange
+                        title={title}
+                        change={change}
+                        diff={values.diff}
+                        expandedFns={expandedFns}
+                        renderName={memoizedRenderStateName}
+                        setExpandedFns={setExpandedFns}
+                      />
+                    ) : (
+                      <ReferenceOnlyChange
+                        currValue={values.currValue}
+                        entryKey={change.name}
+                        expandedFns={expandedFns}
+                        prevValue={values.prevValue}
+                        setExpandedFns={setExpandedFns}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
-            );
-          })
-        }
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -625,7 +618,7 @@ const DiffChange = ({
   };
   title: string;
   renderName: (name: string) => ReactNode;
-    change: Change;
+  change: Change;
   expandedFns: Set<string>;
   setExpandedFns: (updater: (prev: Set<string>) => Set<string>) => void;
 }) => {
@@ -646,7 +639,7 @@ const DiffChange = ({
     if (title === 'Props') {
       path =
         diffChange.path.length > 0
-        ? `${renderName(String(change.name))}.${formatPath(diffChange.path)}`
+          ? `${renderName(String(change.name))}.${formatPath(diffChange.path)}`
           : undefined;
     }
     if (title === 'State' && diffChange.path.length > 0) {
@@ -700,7 +693,7 @@ const DiffChange = ({
             ) : isFunction ? (
               <div className="flex gap-1 items-start flex-col">
                 <div className="flex gap-1 items-start w-full">
-                    <span className="flex-1 max-h-40">
+                  <span className="flex-1 max-h-40">
                     {formatFunctionPreview(
                       prevDiffValue as (...args: unknown[]) => unknown,
                       expandedFns.has(`${formatPath(diffChange.path)}-prev`),
@@ -709,7 +702,7 @@ const DiffChange = ({
                   {typeof prevDiffValue === 'function' && (
                     <CopyToClipboard
                       text={prevDiffValue.toString()}
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                      className="opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
                     </CopyToClipboard>
@@ -788,7 +781,7 @@ const DiffChange = ({
                   {typeof currDiffValue === 'function' && (
                     <CopyToClipboard
                       text={currDiffValue.toString()}
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                      className="opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
                     </CopyToClipboard>
@@ -837,7 +830,7 @@ const ReferenceOnlyChange = ({
 }: {
   prevValue: unknown;
   currValue: unknown;
-    entryKey: string | number;
+  entryKey: string | number;
   expandedFns: Set<string>;
   setExpandedFns: (updater: (prev: Set<string>) => Set<string>) => void;
 }) => {
@@ -902,10 +895,10 @@ const CountBadge = ({
   isFunction,
   showWarning,
 }: {
-    count: number;
-    forceFlash: boolean;
-    isFunction: boolean;
-    showWarning: boolean;
+  count: number;
+  forceFlash: boolean;
+  isFunction: boolean;
+  showWarning: boolean;
 }) => {
   const refTimer = useRef<TTimer>();
   const refIsFirstRender = useRef(true);

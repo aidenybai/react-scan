@@ -5,6 +5,7 @@ import {
   ReactScanInternals,
   Store,
 } from '~core/index';
+import { Icon } from '~web/components/icon';
 import { Toggle } from '~web/components/toggle';
 import FpsMeter from '~web/components/widget/fps-meter';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
@@ -106,12 +107,12 @@ export const Toolbar = constant(() => {
 
   const inspectIcon = useComputed(() => {
     if (isInspectActive.value) {
-      return 'icon-inspect';
+      return <Icon name="icon-inspect" />;
     }
     if (isInspectFocused.value) {
-      return 'icon-focus';
+      return <Icon name="icon-focus" />;
     }
-    return 'icon-inspect';
+    return <Icon name="icon-inspect" />;
   });
   const inspectColor = useComputed(() => {
     if (isInspectActive.value || isInspectFocused.value) {
