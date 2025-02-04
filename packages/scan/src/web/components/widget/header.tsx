@@ -1,8 +1,15 @@
+import {
+  untracked,
+  useComputed,
+  useSignal,
+  useSignalEffect,
+} from '@preact/signals';
 import type { Fiber } from 'bippy';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, getExtendedDisplayName } from '~web/utils/helpers';
+import { constant } from '~web/utils/preact/constant';
 import { Icon } from '../icon';
 import { timelineState } from '../inspector/states';
 import { getOverrideMethods } from '../inspector/utils';
@@ -18,17 +25,16 @@ export const BtnReplay = () => {
   //   },
   // });
 
-  const [canEdit, setCanEdit] = useState(false);
-  const isSettingsOpen = signalIsSettingsOpen.value;
+  const canEdit = useSignal(false);
 
-  useEffect(() => {
+  useSignalEffect(() => {
     const { overrideProps } = getOverrideMethods();
-    const canEdit = !!overrideProps;
+    const currentCanEdit = !!overrideProps;
 
     requestAnimationFrame(() => {
-      setCanEdit(canEdit);
+      canEdit.value = currentCanEdit;
     });
-  }, []);
+  });
 
   // const handleReplay = (e: MouseEvent) => {
   //   e.stopPropagation();
@@ -63,20 +69,24 @@ export const BtnReplay = () => {
   //     });
   // };
 
-  if (!canEdit) return null;
-
-  return (
-    <button
-      type="button"
-      title="Replay component"
-      // onClick={handleReplay}
-      className={cn('react-scan-replay-button', {
-        'opacity-0 pointer-events-none': isSettingsOpen,
-      })}
-    >
-      <Icon name="icon-replay" />
-    </button>
-  );
+  return useComputed(() => {
+    if (canEdit.value) {
+      return (
+        <button
+          type="button"
+          title="Replay component"
+          // onClick={handleReplay}
+          // TODO(Alexis): can be granular
+          className={cn('react-scan-replay-button', {
+            'opacity-0 pointer-events-none': signalIsSettingsOpen.value,
+          })}
+        >
+          <Icon name="icon-replay" />
+        </button>
+      );
+    }
+    return null;
+  });
 };
 // const useSubscribeFocusedFiber = (onUpdate: () => void) => {
 //   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
@@ -100,121 +110,114 @@ export const BtnReplay = () => {
 const HeaderInspect = () => {
   const refReRenders = useRef<HTMLSpanElement>(null);
   const refTiming = useRef<HTMLSpanElement>(null);
-  const isSettingsOpen = signalIsSettingsOpen.value;
-  const [currentFiber, setCurrentFiber] = useState<Fiber | null>(null);
+  const currentFiber = useSignal<Fiber | null>(null);
 
-  useEffect(() => {
-    const unSubState = Store.inspectState.subscribe((state) => {
-      if (state.kind !== 'focused') return;
+  // TODO(Alexis): can be computed?
+  useSignalEffect(() => {
+    const state = Store.inspectState.value;
 
-      const fiber = state.fiber;
-      if (!fiber) return;
+    if (state.kind !== 'focused') {
+      return;
+    }
 
-      setCurrentFiber(fiber);
-    });
+    currentFiber.value = state.fiber;
+  });
 
-    return unSubState;
-  }, []);
+  useSignalEffect(() => {
+    const state = timelineState.value;
 
-  useEffect(() => {
-    const unSubTimeline = timelineState.subscribe((state) => {
-      if (Store.inspectState.value.kind !== 'focused') return;
-      if (!refReRenders.current || !refTiming.current) return;
+    if (untracked(() => Store.inspectState.value.kind !== 'focused')) {
+      return;
+    }
+    if (!refReRenders.current || !refTiming.current) return;
 
-      const { totalUpdates, currentIndex, updates, isVisible, windowOffset } =
-        state;
+    const { totalUpdates, currentIndex, updates, isVisible, windowOffset } =
+      state;
 
-      const reRenders = Math.max(0, totalUpdates - 1);
-      const headerText = isVisible
-        ? `#${windowOffset + currentIndex} Re-render`
-        : `${reRenders} Re-renders`;
+    const reRenders = Math.max(0, totalUpdates - 1);
+    const headerText = isVisible
+      ? `#${windowOffset + currentIndex} Re-render`
+      : `${reRenders} Re-renders`;
 
-      let formattedTime: string | undefined;
-      if (reRenders > 0 && currentIndex >= 0 && currentIndex < updates.length) {
-        const time = updates[currentIndex]?.fiberInfo?.selfTime;
-        formattedTime =
-          time > 0
-            ? time < 0.1 - Number.EPSILON
-              ? '< 0.1ms'
-              : `${Number(time.toFixed(1))}ms`
-            : undefined;
-      }
+    let formattedTime: string | undefined;
+    if (reRenders > 0 && currentIndex >= 0 && currentIndex < updates.length) {
+      const time = updates[currentIndex]?.fiberInfo?.selfTime;
+      formattedTime =
+        time > 0
+          ? time < 0.1 - Number.EPSILON
+            ? '< 0.1ms'
+            : `${Number(time.toFixed(1))}ms`
+          : undefined;
+    }
 
-      refReRenders.current.dataset.text = `${headerText}${reRenders > 0 && formattedTime ? ' •' : ''}`;
-      if (formattedTime) {
-        refTiming.current.dataset.text = formattedTime;
-      }
-    });
+    // TODO(Alexis): use props instead?
+    refReRenders.current.dataset.text = `${headerText}${reRenders > 0 && formattedTime ? ' •' : ''}`;
+    if (formattedTime) {
+      refTiming.current.dataset.text = formattedTime;
+    }
+  });
 
-    return unSubTimeline;
-  }, []);
-
-  const componentName = useMemo(() => {
-    if (!currentFiber) return null;
-    const { name, wrappers, wrapperTypes } = getExtendedDisplayName(currentFiber);
+  const componentName = useComputed(() => {
+    if (!currentFiber.value) {
+      return null;
+    }
+    const { name, wrappers, wrapperTypes } = getExtendedDisplayName(
+      currentFiber.value,
+    );
 
     const title = wrappers.length
       ? `${wrappers.join('(')}(${name})${')'.repeat(wrappers.length)}`
-      : name ?? '';
+      : (name ?? '');
 
     const firstWrapperType = wrapperTypes[0];
+
+    // TODO(Alexis): can be granular
     return (
-      <span
-        title={title}
-        className="flex items-center gap-x-1"
-      >
+      <span title={title} className="flex items-center gap-x-1">
         {name ?? 'Unknown'}
         <span
           title={firstWrapperType?.title}
           className="flex items-center gap-x-1 text-[10px] text-purple-400"
         >
-          {
-            !!firstWrapperType && (
-              <>
-                <span
-                  key={firstWrapperType.type}
-                  className={cn(
-                    'rounded py-[1px] px-1',
-                    'truncate',
-                    {
-                      'bg-purple-800 text-neutral-400': firstWrapperType.compiler,
-                      'bg-neutral-700 text-neutral-300': !firstWrapperType.compiler,
-                      'bg-[#5f3f9a] text-white': firstWrapperType.type === 'memo',
-                    }
-                  )}
-                >
-                  {firstWrapperType.type}
-                </span>
-                {firstWrapperType.compiler && (
-                  <span className="text-yellow-300">✨</span>
-                )}
-              </>
-            )
-          }
+          {!!firstWrapperType && (
+            <>
+              <span
+                key={firstWrapperType.type}
+                className={cn('rounded py-[1px] px-1', 'truncate', {
+                  'bg-purple-800 text-neutral-400': firstWrapperType.compiler,
+                  'bg-neutral-700 text-neutral-300': !firstWrapperType.compiler,
+                  'bg-[#5f3f9a] text-white': firstWrapperType.type === 'memo',
+                })}
+              >
+                {firstWrapperType.type}
+              </span>
+              {firstWrapperType.compiler && (
+                <span className="text-yellow-300">✨</span>
+              )}
+            </>
+          )}
         </span>
-        {
-          wrapperTypes.length > 1 && (
-            <span className="text-[10px] text-neutral-400">
-              ×{wrapperTypes.length - 1}
-            </span>
-          )
-        }
-        <samp className="text-neutral-500">
-          {' • '}
-        </samp>
+        {wrapperTypes.length > 1 && (
+          <span className="text-[10px] text-neutral-400">
+            ×{wrapperTypes.length - 1}
+          </span>
+        )}
+        <samp className="text-neutral-500">{' • '}</samp>
       </span>
     );
-  }, [currentFiber]);
+  });
 
   return (
     <div
-      className={cn(
-        'absolute inset-0 flex items-center gap-x-2',
-        'translate-y-0',
-        'transition-transform duration-300',
-        {
-          '-translate-y-[200%]': isSettingsOpen,
-        },
+      className={useComputed(() =>
+        cn(
+          'absolute inset-0 flex items-center gap-x-2',
+          'translate-y-0',
+          'transition-transform duration-300',
+          {
+            '-translate-y-[200%]': signalIsSettingsOpen.value,
+          },
+        ),
       )}
     >
       {componentName}
@@ -230,25 +233,22 @@ const HeaderInspect = () => {
   );
 };
 
-const HeaderSettings = () => {
-  const isSettingsOpen = signalIsSettingsOpen.value;
-  return (
-    <span
-      data-text="Settings"
-      className={cn(
-        'absolute inset-0 flex items-center',
-        'with-data-text',
-        '-translate-y-[200%]',
-        'transition-transform duration-300',
-        {
-          'translate-y-0': isSettingsOpen,
-        },
-      )}
-    />
+const HeaderSettings = constant(() => {
+  const className = useComputed(() =>
+    cn(
+      'absolute inset-0 flex items-center',
+      'with-data-text',
+      '-translate-y-[200%]',
+      'transition-transform duration-300',
+      {
+        'translate-y-0': signalIsSettingsOpen.value,
+      },
+    ),
   );
-};
+  return <span data-text="Settings" className={className} />;
+});
 
-export const Header = () => {
+export const Header = constant(() => {
   const handleClose = () => {
     if (signalIsSettingsOpen.value) {
       signalIsSettingsOpen.value = false;
@@ -279,4 +279,4 @@ export const Header = () => {
       </button>
     </div>
   );
-};
+});
