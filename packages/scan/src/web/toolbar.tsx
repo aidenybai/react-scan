@@ -1,6 +1,6 @@
 import { Component, render } from 'preact';
 import { Icon } from './components/icon';
-import { Widget } from './components/widget';
+import { Widget } from './widget';
 
 
 export let scriptLevelToolbar: HTMLDivElement | null = null

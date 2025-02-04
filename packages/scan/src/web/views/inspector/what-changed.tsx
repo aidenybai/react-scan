@@ -10,10 +10,10 @@ import {
 import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
+import { StickySection } from '~web/components/sticky-section';
 import type { useMergedRefs } from '~web/hooks/use-merged-refs';
 import { cn } from '~web/utils/helpers';
 import { throttle } from '~web/utils/helpers';
-import { StickySection } from '../sticky-section';
 import { DiffValueView } from './diff-value';
 import { type MinimalFiberInfo, timelineState } from './states';
 import { Timeline } from './timeline';
@@ -625,7 +625,7 @@ const DiffChange = ({
   };
   title: string;
   renderName: (name: string) => ReactNode;
-    change: Change;
+  change: Change;
   expandedFns: Set<string>;
   setExpandedFns: (updater: (prev: Set<string>) => Set<string>) => void;
 }) => {
@@ -646,7 +646,7 @@ const DiffChange = ({
     if (title === 'Props') {
       path =
         diffChange.path.length > 0
-        ? `${renderName(String(change.name))}.${formatPath(diffChange.path)}`
+          ? `${renderName(String(change.name))}.${formatPath(diffChange.path)}`
           : undefined;
     }
     if (title === 'State' && diffChange.path.length > 0) {
@@ -679,17 +679,17 @@ const DiffChange = ({
           onClick={
             isFunction
               ? () => {
-                  const fnKey = `${formatPath(diffChange.path)}-prev`;
-                  setExpandedFns((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(fnKey)) {
-                      next.delete(fnKey);
-                    } else {
-                      next.add(fnKey);
-                    }
-                    return next;
-                  });
-                }
+                const fnKey = `${formatPath(diffChange.path)}-prev`;
+                setExpandedFns((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(fnKey)) {
+                    next.delete(fnKey);
+                  } else {
+                    next.add(fnKey);
+                  }
+                  return next;
+                });
+              }
               : undefined
           }
         >
@@ -700,7 +700,7 @@ const DiffChange = ({
             ) : isFunction ? (
               <div className="flex gap-1 items-start flex-col">
                 <div className="flex gap-1 items-start w-full">
-                    <span className="flex-1 max-h-40">
+                  <span className="flex-1 max-h-40">
                     {formatFunctionPreview(
                       prevDiffValue as (...args: unknown[]) => unknown,
                       expandedFns.has(`${formatPath(diffChange.path)}-prev`),
@@ -709,7 +709,7 @@ const DiffChange = ({
                   {typeof prevDiffValue === 'function' && (
                     <CopyToClipboard
                       text={prevDiffValue.toString()}
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                      className="opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
                     </CopyToClipboard>
@@ -758,17 +758,17 @@ const DiffChange = ({
           onClick={
             isFunction
               ? () => {
-                  const fnKey = `${formatPath(diffChange.path)}-current`;
-                  setExpandedFns((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(fnKey)) {
-                      next.delete(fnKey);
-                    } else {
-                      next.add(fnKey);
-                    }
-                    return next;
-                  });
-                }
+                const fnKey = `${formatPath(diffChange.path)}-current`;
+                setExpandedFns((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(fnKey)) {
+                    next.delete(fnKey);
+                  } else {
+                    next.add(fnKey);
+                  }
+                  return next;
+                });
+              }
               : undefined
           }
         >
@@ -788,7 +788,7 @@ const DiffChange = ({
                   {typeof currDiffValue === 'function' && (
                     <CopyToClipboard
                       text={currDiffValue.toString()}
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                      className="opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       {({ ClipboardIcon }) => <>{ClipboardIcon}</>}
                     </CopyToClipboard>
@@ -837,7 +837,7 @@ const ReferenceOnlyChange = ({
 }: {
   prevValue: unknown;
   currValue: unknown;
-    entryKey: string | number;
+  entryKey: string | number;
   expandedFns: Set<string>;
   setExpandedFns: (updater: (prev: Set<string>) => Set<string>) => void;
 }) => {
@@ -902,10 +902,10 @@ const CountBadge = ({
   isFunction,
   showWarning,
 }: {
-    count: number;
-    forceFlash: boolean;
-    isFunction: boolean;
-    showWarning: boolean;
+  count: number;
+  forceFlash: boolean;
+  isFunction: boolean;
+  showWarning: boolean;
 }) => {
   const refTimer = useRef<TTimer>();
   const refIsFirstRender = useRef(true);

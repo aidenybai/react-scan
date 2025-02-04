@@ -620,3 +620,52 @@ svg {
     @apply rounded-sm mx-[1px];
   }
 }
+
+.react-scan-toolbar-notification {
+  @apply absolute inset-x-0;
+  @apply flex items-center gap-x-2;
+  @apply p-1 pl-2 text-[10px];
+  @apply text-neutral-300;
+  @apply bg-black/90;
+  @apply transition-transform;
+
+  &:before {
+    @apply content-[''];
+    @apply absolute inset-x-0;
+    @apply bg-black;
+    @apply h-2;
+  }
+
+  &.position-top {
+    @apply top-full -translate-y-full;
+    @apply rounded-b-lg;
+
+    &::before {
+      @apply top-0 -translate-y-full;
+    }
+  }
+
+  &.position-bottom {
+    @apply bottom-full translate-y-full;
+    @apply rounded-t-lg;
+
+    &::before {
+      @apply bottom-0 translate-y-full;
+    }
+
+  }
+
+  &.is-open {
+    @apply translate-y-0;
+  }
+}
+
+
+.react-scan-header-item {
+  @apply absolute inset-0 -translate-y-[200%];
+  @apply transition-transform duration-300;
+
+  &.is-visible {
+    @apply translate-y-0;
+  }
+}

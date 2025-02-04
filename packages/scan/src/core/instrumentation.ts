@@ -22,14 +22,14 @@ import {
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
 import {
-  collectContextChanges,
-  collectPropsChanges,
-  collectStateChanges,
-} from '~web/components/inspector/timeline/utils';
-import {
   RENDER_PHASE_STRING_TO_ENUM,
   type RenderPhase,
 } from '~web/utils/outline';
+import {
+  collectContextChanges,
+  collectPropsChanges,
+  collectStateChanges,
+} from '~web/views/inspector/timeline/utils';
 import {
   type Change,
   type ContextChange,
