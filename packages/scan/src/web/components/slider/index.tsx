@@ -42,14 +42,11 @@ export const Slider = ({
     [min, max],
   );
 
-  /**
-   * biome-ignore lint/correctness/useExhaustiveDependencies:
-   * we rely on min, max and value to update the thumb position
-   */
   useEffect(() => {
     updateThumbPosition(value);
-  }, [min, max, value]);
+  }, [updateThumbPosition, value]);
 
+  // TODO(Alexis) drop useCallback
   const handleChange = useCallback(
     (e: Event) => {
       const target = e.target as HTMLInputElement;
