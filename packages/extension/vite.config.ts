@@ -67,10 +67,10 @@ export default defineConfig(({ mode }): UserConfig => {
     const pkg = readJsonFile('package.json');
 
     return {
+      ...manifest,
       name: pkg.name,
       description: pkg.description,
       version: pkg.version,
-      ...manifest,
     };
   };
 
