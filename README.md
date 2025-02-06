@@ -476,35 +476,6 @@ We expect all contributors to abide by the terms of our [Code of Conduct](https:
 
 [**→ Start contributing on GitHub**](https://github.com/aidenybai/react-scan/blob/main/.github/CONTRIBUTING.md)
 
-## Roadmap
-
-- [x] Scan only for unnecessary renders ("unstable" props)
-- [x] Scan API (`withScan`, `scan`)
-- [x] Cleanup config options
-- [x] Chrome extension (h/t [@biw](https://github.com/biw))
-- [x] Mode to highlight long tasks
-- [x] Add context updates
-- [x] Expose primitives / internals for advanced use cases
-- [x] More explicit options override API (start log at certain area, stop log, etc.)
-- [x] Don't show label if no reconciliation occurred ("client renders" in DevTools)
-- [x] "global" counter using `sessionStorage`, aggregate count stats instead of immediate replacement
-- [x] Give a general report of the app's performance
-- [x] Select areas of the screen to scan
-- [x] Report should include all renders
-- [x] heatmap decay (stacked renders will be more intense)
-- [x] Investigate components (UI allowlist)
-- [ ] Offscreen canvas on worker thread
-- [ ] UI for turning on/off options
-- [ ] “PageSpeed insights” for React
-- [ ] CLI
-- [ ] React Native support
-- [ ] Cleanup API reference
-- [ ] Name / explain the actual problem, docs
-- [ ] Simple FPS counter
-- [ ] [Runtime version guarding](https://github.com/lahmatiy/react-render-tracker/blob/229ad0e9c28853615300724d5dc86c140f250f60/src/publisher/react-integration/utils/getInternalReactConstants.ts#L28)
-- [ ] React as peer dependency (lock version to range)
-- [ ] Add a funny mascot, like the ["Stop I'm Changing" dude](https://www.youtube.com/shorts/FwOZdX7bDKI?app=desktop)
-
 ## Acknowledgments
 
 React Scan takes inspiration from the following projects:
