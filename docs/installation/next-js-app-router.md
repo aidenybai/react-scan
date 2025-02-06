@@ -18,3 +18,43 @@ export default function RootLayout({ children }) {
   );
 }
 ```
+
+## As a module import
+
+Create a `<ReactScan>` client component:
+
+```jsx
+// path/to/ReactScanComponent
+"use client";
+import { JSX, useEffect } from "react";
+import { scan } from "react-scan";
+
+export function ReactScan(): JSX.Element {
+  useEffect(() => {
+    scan({
+      enabled: true,
+    });
+  }, []);
+
+  return <></>;
+}
+```
+
+Import the `<ReactScan>` component into `app/layout`:
+
+```jsx
+import { ReactScan } from "path/to/ReactScanComponent";
+
+// ...
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <ReactScan />
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        {children}
+      </body>
+    </html>
+  );
+}
+```
