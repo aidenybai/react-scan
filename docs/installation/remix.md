@@ -45,7 +45,7 @@ Add the following code to your `app/root`:
 
 ```jsx
 // app/root.jsx
-import { scan } from 'react-scan'; // Must be imported before Remix
+import { scan } from "react-scan"; // Must be imported before Remix
 import {
   Links,
   Meta,
@@ -54,13 +54,14 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
-if (typeof window !== 'undefined') {
-  scan({
-    enabled: true,
-  });
-}
+export function Layout({ children }) {
+  useEffect(() => {
+    // Make sure to run React Scan after hydration
+    scan({
+      enabled: true,
+    });
+  }, []);
 
-export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
