@@ -27,30 +27,36 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 ## Install
 
-Add this script to your app:
-
-```html
-<!-- import this BEFORE any scripts -->
-<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
+```bash
+npm i react-scan
 ```
 
-Examples:
+```bash
+pnpm add react-scan
+```
+
+```bash
+yarn add react-scan
+```
+
+## Usage
+
+### As a script tag
 
 <details>
-<summary><b>Next.js (pages)</b></summary>
+<summary><b>NextJS (Page Router)</b></summary>
 
-<br />
-
-Add the script tag to your `pages/_document.tsx`:
+Add the script tag to your `pages/_document`:
 
 ```jsx
-import { Html, Head, Main, NextScript } from 'next/document';
+// pages/_document.jsx
+import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
 
         {/* rest of your scripts go under */}
       </Head>
@@ -66,22 +72,19 @@ export default function Document() {
 </details>
 
 <details>
-<summary><b>Next.js (app)</b></summary>
+<summary><b>NextJS (App Router)</b></summary>
 
-<br />
-
-Add the script tag to your `app/layout.tsx`:
+Add the script tag to your `app/layout`:
 
 ```jsx
+// app/layout.jsx
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
 }) {
   return (
     <html lang="en">
       <head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js" async />
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
         {/* rest of your scripts go under */}
       </head>
       <body>{children}</body>
@@ -93,9 +96,7 @@ export default function RootLayout({
 </details>
 
 <details>
-<summary><b>Vite / Create React App</b></summary>
-
-<br />
+<summary><b>Vite</b></summary>
 
 Add the script tag to your `index.html`:
 
@@ -115,33 +116,174 @@ Add the script tag to your `index.html`:
 
 </details>
 
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
+<details>
+<summary><b>CRA (Create React App)</b></summary>
 
-## API Reference
+Add the script tag to your `index.html`:
 
-If you need a programmatic API to debug further, install via NPM instead:
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
 
-```bash
-npm install react-scan
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
 ```
 
-Then, in your app, import this **BEFORE** `react`. This must run in a client context (e.g. not in a server component):
+</details>
 
-```js
-import { scan } from 'react-scan'; // import this BEFORE react
-import React from 'react';
+<details>
+<summary><b>Remix</b></summary>
 
-if (typeof window !== 'undefined') {
-  scan({
-    enabled: true,
-    log: true, // logs render info to console (default: false)
-  });
+Add the script tag to your `app/root`:
+
+```jsx
+// app/root.jsx
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+} from "@remix-run/react";
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        <link
+          rel="icon"
+          href="data:image/x-icon;base64,AA"
+        />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <h1>Hello world!</h1>
+        <Outlet />
+
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 ```
 
-> Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
+</details>
 
-If you don't have a localv version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+<details>
+<summary><b>Parcel</b></summary>
+
+Add the script tag to your `index.html`:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
+
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
+```
+</details>
+
+<details>
+<summary><b>Astro</b></summary>
+
+Add the script tag to your root layout
+
+```astro
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
+```
+
+</details>
+
+<details>
+<summary><b>TanStack Start</b></summary>
+
+Add the script tag to your `<RootDocument>` component at `app/routes/__root`:
+
+```jsx
+// app/routes/__root.jsx
+import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { Meta, Scripts } from '@tanstack/start'
+import type { ReactNode } from 'react'
+
+export const Route = createRootRoute({
+  head: () => ({
+    meta: [
+      {
+        charSet: 'utf-8',
+      },
+      {
+        name: 'viewport',
+        content: 'width=device-width, initial-scale=1',
+      },
+      {
+        title: 'TanStack Start Starter',
+      },
+    ],
+  }),
+  component: RootComponent,
+})
+
+function RootComponent() {
+  return (
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
+  )
+}
+
+function RootDocument({ children }) {
+  return (
+    <html>
+      <head>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        <Meta />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  )
+}
+```
+
+</details>
+
+Add this script to your app:
+
+```html
+<!-- import this BEFORE any scripts -->
+<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
+```
+
+If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
+
+### CLI
+
+If you don't have a local version of the site or you want to test a React app remotely, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
 
 ```bash
 npx react-scan@latest http://localhost:3000
@@ -159,6 +301,36 @@ You can add it to your existing dev process as well. Here's an example for Next.
   }
 }
 ```
+
+### API
+
+### Chrome Extension
+
+### React Native
+
+## API Reference
+
+If you need a programmatic API to debug further, install via NPM instead:
+
+```bash
+npm install react-scan
+```
+
+Then, in your app, import this **BEFORE** `react`. This must run in a client context (e.g. not in a server component):
+
+```js
+import { scan } from "react-scan"; // import this BEFORE react
+import React from "react";
+
+if (typeof window !== "undefined") {
+  scan({
+    enabled: true,
+    log: true, // logs render info to console (default: false)
+  });
+}
+```
+
+> Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
 
 ## API Reference
 
@@ -248,9 +420,9 @@ export interface Options {
    *
    * @default "fast"
    */
-  animationSpeed?: 'slow' | 'fast' | 'off';
+  animationSpeed?: "slow" | "fast" | "off";
 
-    /**
+  /**
    * Smoothly animate the re-render outline when the element moves
    *
    * @default true
@@ -297,7 +469,7 @@ However, this makes it easy to accidentally cause unnecessary renders, making th
 This often comes down to props that update in reference, like callbacks or object values. For example, the `onClick` function and `style` object are re-created on every render, causing `ExpensiveComponent` to slow down the app:
 
 ```jsx
-<ExpensiveComponent onClick={() => alert('hi')} style={{ color: 'purple' }} />
+<ExpensiveComponent onClick={() => alert("hi")} style={{ color: "purple" }} />
 ```
 
 React Scan helps you identify these issues by automatically detecting and highlighting renders that cause performance issues. Now, instead of guessing, you can see exactly which components you need to fix.
