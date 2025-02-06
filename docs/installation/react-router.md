@@ -28,28 +28,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
 // ...
 ```
 
+> [!CAUTION]
+> This only works for React 19
+
 ## As an import
 
 Add the following code to your `app/root`
 
 ```jsx
 // app/root.jsx
-import { scan } from 'react-scan'; // Must be imported before React Router
-import {
-  isRouteErrorResponse,
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "react-router";
-import { useEffect } from 'react';
-
-import type { Route } from "./+types/root";
-import "./app.css";
+import { scan } from "react-scan"; // Must be imported before React Router
+import { Links, Meta, Scripts, ScrollRestoration } from "react-router";
+import { useEffect } from "react";
 
 export function Layout({ children }) {
-
   useEffect(() => {
     // Make sure to run react-scan only after hydration
     scan({
@@ -74,9 +66,7 @@ export function Layout({ children }) {
   );
 }
 
-export default function App() {
-  return <Outlet />;
-}
+// ...
 ```
 
 > [!CAUTION]
