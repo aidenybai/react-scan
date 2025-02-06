@@ -335,22 +335,17 @@ export interface Options {
    * @default true
    */
   enabled?: boolean;
-  /**
-   * Include children of a component applied with withScan
-   *
-   * @default true
-   */
-  includeChildren?: boolean;
 
   /**
-   * Enable/disable geiger sound
+   * Force React Scan to run in production (not recommended)
    *
-   * @default true
+   * @default false
    */
-  playSound?: boolean;
-
+  dangerouslyForceRunInProduction?: boolean;
   /**
    * Log renders to the console
+   *
+   * WARNING: This can add significant overhead when the app re-renders frequently
    *
    * @default false
    */
@@ -359,46 +354,11 @@ export interface Options {
   /**
    * Show toolbar bar
    *
+   * If you set this to true, and set {@link enabled} to false, the toolbar will still show, but scanning will be disabled.
+   *
    * @default true
    */
   showToolbar?: boolean;
-
-  /**
-   * Render count threshold, only show
-   * when a component renders more than this
-   *
-   * @default 0
-   */
-  renderCountThreshold?: number;
-
-  /**
-   * Clear aggregated fibers after this time in milliseconds
-   *
-   * @default 5000
-   */
-  resetCountTimeout?: number;
-
-  /**
-   * Maximum number of renders for red indicator
-   *
-   * @default 20
-   * @deprecated
-   */
-  maxRenders?: number;
-
-  /**
-   * Report data to getReport()
-   *
-   * @default false
-   */
-  report?: boolean;
-
-  /**
-   * Always show labels
-   *
-   * @default false
-   */
-  alwaysShowLabels?: boolean;
 
   /**
    * Animation speed
@@ -408,27 +368,21 @@ export interface Options {
   animationSpeed?: "slow" | "fast" | "off";
 
   /**
-   * Smoothly animate the re-render outline when the element moves
-   *
-   * @default true
-   */
-  smoothlyAnimateOutlines?: boolean;
-
-  /**
    * Track unnecessary renders, and mark their outlines gray when detected
    *
-   * An unnecessary render is defined as a component re-rendering with no change to the component's corresponding dom subtree (e.g. a component re-rendered, but nothing in the components UI did not change)
+   * An unnecessary render is defined as the component re-rendering with no change to the component's
+   * corresponding dom subtree
    *
-   *  @default true
+   *  @default false
    *  @warning tracking unnecessary renders can add meaningful overhead to react-scan
    */
   trackUnnecessaryRenders?: boolean;
 
   onCommitStart?: () => void;
-  onRender?: (fiber: Fiber, render: Render) => void;
+  onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
-  onPaintStart?: (outlines: PendingOutline[]) => void;
-  onPaintFinish?: (outlines: PendingOutline[]) => void;
+  onPaintStart?: (outlines: Array<Outline>) => void;
+  onPaintFinish?: (outlines: Array<Outline>) => void;
 }
 ```
 
@@ -436,12 +390,10 @@ export interface Options {
 
 - `scan(options: Options)`: Imperative API to start scanning
 - `useScan(options: Options)`: Hook API to start scanning
-- `withScan(Component, options: Options)`: Whitelist a specific component, do not scan other components
 - `getReport()`: Get a report of all the renders
 - `setOptions(options: Options): void`: Set options at runtime
 - `getOptions()`: Get the current options
 - `onRender(Component, onRender: (fiber: Fiber, render: Render) => void)`: Hook into a specific component's renders
-- `getRenderInfo(Component)`: Get the render info for a specific component
 
 ## Why React Scan?
 
