@@ -87,9 +87,7 @@ Add the script tag to your `app/layout`:
 
 ```jsx
 // app/layout.jsx
-export default function RootLayout({
-  children,
-}) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
@@ -98,7 +96,7 @@ export default function RootLayout({
       </head>
       <body>{children}</body>
     </html>
-  )
+  );
 }
 ```
 
@@ -153,22 +151,14 @@ Add the script tag to your `app/root`:
 
 ```jsx
 // app/root.jsx
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-} from "@remix-run/react";
+import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
 export default function App() {
   return (
     <html>
       <head>
         <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
-        <link
-          rel="icon"
-          href="data:image/x-icon;base64,AA"
-        />
+        <link rel="icon" href="data:image/x-icon;base64,AA" />
         <Meta />
         <Links />
       </head>
@@ -203,6 +193,7 @@ Add the script tag to your `index.html`:
   </body>
 </html>
 ```
+
 </details>
 
 <details>
@@ -313,13 +304,7 @@ You can add it to your existing dev process as well. Here's an example for Next.
 
 ### API
 
-### Chrome Extension
-
-### React Native
-
-### API Reference
-
-Then, in your app, import this **BEFORE** `react`, ideally in your entrypoint file. This must run in a client context (e.g. not in a server component):
+In your app, import this **BEFORE** `react`, ideally in your entrypoint file. This must run in a client context (e.g. not in a server component):
 
 ```js
 import { scan } from "react-scan"; // import this BEFORE react
@@ -332,6 +317,10 @@ if (typeof window !== "undefined") {
   });
 }
 ```
+
+### Chrome Extension
+
+### React Native
 
 > Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
 
