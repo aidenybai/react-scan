@@ -8,7 +8,7 @@ Add the script tag to your root layout
 <!doctype html>
 <html lang="en">
   <head>
-    <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+    <script is:inline src="https://unpkg.com/react-scan/dist/auto.global.js" />
 
     <!-- rest of your scripts go under -->
   </head>
