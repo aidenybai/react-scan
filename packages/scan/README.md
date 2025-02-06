@@ -27,6 +27,8 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 ## Install
 
+### Package managers
+
 ```bash
 npm i react-scan
 ```
@@ -37,6 +39,13 @@ pnpm add react-scan
 
 ```bash
 yarn add react-scan
+```
+
+### CDN
+
+```html
+<!-- Add this to the top of the head of your html file -->
+<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
 ```
 
 ## Usage
@@ -308,15 +317,9 @@ You can add it to your existing dev process as well. Here's an example for Next.
 
 ### React Native
 
-## API Reference
+### API Reference
 
-If you need a programmatic API to debug further, install via NPM instead:
-
-```bash
-npm install react-scan
-```
-
-Then, in your app, import this **BEFORE** `react`. This must run in a client context (e.g. not in a server component):
+Then, in your app, import this **BEFORE** `react`, ideally in your entrypoint file. This must run in a client context (e.g. not in a server component):
 
 ```js
 import { scan } from "react-scan"; // import this BEFORE react
@@ -493,14 +496,6 @@ Also, some personal complaints about React Devtools' highlight feature:
 - It's stuck in a chrome extension, I want to run it anywhere on the web
 - It looks subjectively ugly (lines look fuzzy, feels sluggish)
 - I'm more ambitious with react-scan (see our roadmap)
-
-**Q: React Native wen?**
-
-Soon :)
-
-**Q: Chrome Extension wen?**
-
-Soon :)
 
 ## Resources & Contributing Back
 
