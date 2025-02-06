@@ -17,3 +17,26 @@ Add the script tag to your root layout
   </body>
 </html>
 ```
+
+## As a module import
+
+Add the script to your root layout
+
+```astro
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      import { scan } from 'react-scan';
+
+      scan({
+        enabled: true,
+      });
+    </script>
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
+```
