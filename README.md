@@ -176,6 +176,37 @@ export default function App() {
 </details>
 
 <details>
+<summary><b>React Router</b></summary>
+
+Add the script tag to your `Layout` component in the `app/root`:
+
+```jsx
+// app/rootjsx
+// ...
+export function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        {children}
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+// ...
+```
+
+</details>
+
+<details>
 <summary><b>Parcel</b></summary>
 
 Add the script tag to your `index.html`:
