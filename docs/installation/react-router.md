@@ -43,16 +43,20 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { useEffect } from 'react';
+
 import type { Route } from "./+types/root";
 import "./app.css";
 
-if (typeof window !== 'undefined') {
-  scan({
-    enabled: true,
-  });
-}
+export function Layout({ children }) {
 
-export function Layout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    // Make sure to run react-scan only after hydration
+    scan({
+      enabled: true,
+    });
+  }, []);
+
   return (
     <html lang="en">
       <head>
