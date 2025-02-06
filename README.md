@@ -50,15 +50,15 @@ yarn add react-scan
 
 ## Usage
 
-- [NextJS App Router]()
-- [NextJS Page Router]()
-- [Create React App]()
-- [Vite]()
-- [Parcel]()
-- [Remix]()
-- [React Router]()
-- [Astro]()
-- [TanStack Start]()
+- [NextJS App Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-app-router.md)
+- [NextJS Page Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-page-router.md)
+- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
+- [Vite](https://github.com/aidenybai/react-scan/blob/main/docs/installation/vite.md)
+- [Parcel](https://github.com/aidenybai/react-scan/blob/main/docs/installation/parcel.md)
+- [Remix](https://github.com/aidenybai/react-scan/blob/main/docs/installation/remix.md)
+- [React Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/react-router.md)
+- [Astro](https://github.com/aidenybai/react-scan/blob/main/docs/installation/astro.md)
+- [TanStack Start](https://github.com/aidenybai/react-scan/blob/main/docs/installation/tanstack-start.md)
 
 ### CLI
 
@@ -81,9 +81,9 @@ You can add it to your existing dev process as well. Here's an example for Next.
 }
 ```
 
-### Chrome Extension
+### Browser Extension
 
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md).
+If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/BROWSER_EXTENSION_GUIDE.md).
 
 ### React Native
 
