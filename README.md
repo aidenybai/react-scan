@@ -27,30 +27,45 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 ## Install
 
-Add this script to your app:
+### Package managers
+
+```bash
+npm i react-scan
+```
+
+```bash
+pnpm add react-scan
+```
+
+```bash
+yarn add react-scan
+```
+
+### CDN
 
 ```html
 <!-- import this BEFORE any scripts -->
 <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
 ```
 
-Examples:
+## Usage
+
+### As a script tag
 
 <details>
-<summary><b>Next.js (pages)</b></summary>
+<summary><b>NextJS (Page Router)</b></summary>
 
-<br />
-
-Add the script tag to your `pages/_document.tsx`:
+Add the script tag to your `pages/_document`:
 
 ```jsx
-import { Html, Head, Main, NextScript } from 'next/document';
+// pages/_document.jsx
+import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
 
         {/* rest of your scripts go under */}
       </Head>
@@ -66,36 +81,29 @@ export default function Document() {
 </details>
 
 <details>
-<summary><b>Next.js (app)</b></summary>
+<summary><b>NextJS (App Router)</b></summary>
 
-<br />
-
-Add the script tag to your `app/layout.tsx`:
+Add the script tag to your `app/layout`:
 
 ```jsx
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+// app/layout.jsx
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js" async />
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
         {/* rest of your scripts go under */}
       </head>
       <body>{children}</body>
     </html>
-  )
+  );
 }
 ```
 
 </details>
 
 <details>
-<summary><b>Vite / Create React App</b></summary>
-
-<br />
+<summary><b>Vite</b></summary>
 
 Add the script tag to your `index.html`:
 
@@ -115,33 +123,158 @@ Add the script tag to your `index.html`:
 
 </details>
 
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/BROWSER_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
+<details>
+<summary><b>CRA (Create React App)</b></summary>
 
-## API Reference
+Add the script tag to your `index.html`:
 
-If you need a programmatic API to debug further, install via NPM instead:
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
 
-```bash
-npm install react-scan
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
 ```
 
-Then, in your app, import this **BEFORE** `react`. This must run in a client context (e.g. not in a server component):
+</details>
 
-```js
-import { scan } from 'react-scan'; // import this BEFORE react
-import React from 'react';
+<details>
+<summary><b>Remix</b></summary>
 
-if (typeof window !== 'undefined') {
-  scan({
-    enabled: true,
-    log: true, // logs render info to console (default: false)
-  });
+Add the script tag to your `app/root`:
+
+```jsx
+// app/root.jsx
+import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        <link rel="icon" href="data:image/x-icon;base64,AA" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <h1>Hello world!</h1>
+        <Outlet />
+
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 ```
 
-> Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
+</details>
 
-If you don't have a local version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+<details>
+<summary><b>Parcel</b></summary>
+
+Add the script tag to your `index.html`:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
+
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
+```
+
+</details>
+
+<details>
+<summary><b>Astro</b></summary>
+
+Add the script tag to your root layout
+
+```astro
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+
+    <!-- rest of your scripts go under -->
+  </head>
+  <body>
+    <!-- ... -->
+  </body>
+</html>
+```
+
+</details>
+
+<details>
+<summary><b>TanStack Start</b></summary>
+
+Add the script tag to your `<RootDocument>` component at `app/routes/__root`:
+
+```jsx
+// app/routes/__root.jsx
+import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { Meta, Scripts } from '@tanstack/start'
+import type { ReactNode } from 'react'
+
+export const Route = createRootRoute({
+  head: () => ({
+    meta: [
+      {
+        charSet: 'utf-8',
+      },
+      {
+        name: 'viewport',
+        content: 'width=device-width, initial-scale=1',
+      },
+      {
+        title: 'TanStack Start Starter',
+      },
+    ],
+  }),
+  component: RootComponent,
+})
+
+function RootComponent() {
+  return (
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
+  )
+}
+
+function RootDocument({ children }) {
+  return (
+    <html>
+      <head>
+        <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        <Meta />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  )
+}
+```
+
+</details>
+
+### CLI
+
+If you don't have a local version of the site or you want to test a React app remotely, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
 
 ```bash
 npx react-scan@latest http://localhost:3000
@@ -159,6 +292,30 @@ You can add it to your existing dev process as well. Here's an example for Next.
   }
 }
 ```
+
+### API
+
+In your app, import this **BEFORE** `react`, ideally in your entrypoint file. This must run in a client context (e.g. not in a server component):
+
+```js
+import { scan } from "react-scan"; // import this BEFORE react
+import React from "react";
+
+if (typeof window !== "undefined") {
+  scan({
+    enabled: true,
+    log: true, // logs render info to console (default: false)
+  });
+}
+```
+
+### Chrome Extension
+
+If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md).
+
+### React Native
+
+See [discussion](https://github.com/aidenybai/react-scan/pull/23)
 
 ## API Reference
 
@@ -178,22 +335,17 @@ export interface Options {
    * @default true
    */
   enabled?: boolean;
-  /**
-   * Include children of a component applied with withScan
-   *
-   * @default true
-   */
-  includeChildren?: boolean;
 
   /**
-   * Enable/disable geiger sound
+   * Force React Scan to run in production (not recommended)
    *
-   * @default true
+   * @default false
    */
-  playSound?: boolean;
-
+  dangerouslyForceRunInProduction?: boolean;
   /**
    * Log renders to the console
+   *
+   * WARNING: This can add significant overhead when the app re-renders frequently
    *
    * @default false
    */
@@ -202,76 +354,35 @@ export interface Options {
   /**
    * Show toolbar bar
    *
+   * If you set this to true, and set {@link enabled} to false, the toolbar will still show, but scanning will be disabled.
+   *
    * @default true
    */
   showToolbar?: boolean;
-
-  /**
-   * Render count threshold, only show
-   * when a component renders more than this
-   *
-   * @default 0
-   */
-  renderCountThreshold?: number;
-
-  /**
-   * Clear aggregated fibers after this time in milliseconds
-   *
-   * @default 5000
-   */
-  resetCountTimeout?: number;
-
-  /**
-   * Maximum number of renders for red indicator
-   *
-   * @default 20
-   * @deprecated
-   */
-  maxRenders?: number;
-
-  /**
-   * Report data to getReport()
-   *
-   * @default false
-   */
-  report?: boolean;
-
-  /**
-   * Always show labels
-   *
-   * @default false
-   */
-  alwaysShowLabels?: boolean;
 
   /**
    * Animation speed
    *
    * @default "fast"
    */
-  animationSpeed?: 'slow' | 'fast' | 'off';
-
-    /**
-   * Smoothly animate the re-render outline when the element moves
-   *
-   * @default true
-   */
-  smoothlyAnimateOutlines?: boolean;
+  animationSpeed?: "slow" | "fast" | "off";
 
   /**
    * Track unnecessary renders, and mark their outlines gray when detected
    *
-   * An unnecessary render is defined as a component re-rendering with no change to the component's corresponding dom subtree (e.g. a component re-rendered, but nothing in the components UI did not change)
+   * An unnecessary render is defined as the component re-rendering with no change to the component's
+   * corresponding dom subtree
    *
-   *  @default true
+   *  @default false
    *  @warning tracking unnecessary renders can add meaningful overhead to react-scan
    */
   trackUnnecessaryRenders?: boolean;
 
   onCommitStart?: () => void;
-  onRender?: (fiber: Fiber, render: Render) => void;
+  onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
-  onPaintStart?: (outlines: PendingOutline[]) => void;
-  onPaintFinish?: (outlines: PendingOutline[]) => void;
+  onPaintStart?: (outlines: Array<Outline>) => void;
+  onPaintFinish?: (outlines: Array<Outline>) => void;
 }
 ```
 
@@ -279,12 +390,10 @@ export interface Options {
 
 - `scan(options: Options)`: Imperative API to start scanning
 - `useScan(options: Options)`: Hook API to start scanning
-- `withScan(Component, options: Options)`: Whitelist a specific component, do not scan other components
 - `getReport()`: Get a report of all the renders
 - `setOptions(options: Options): void`: Set options at runtime
 - `getOptions()`: Get the current options
 - `onRender(Component, onRender: (fiber: Fiber, render: Render) => void)`: Hook into a specific component's renders
-- `getRenderInfo(Component)`: Get the render info for a specific component
 
 ## Why React Scan?
 
@@ -297,7 +406,7 @@ However, this makes it easy to accidentally cause unnecessary renders, making th
 This often comes down to props that update in reference, like callbacks or object values. For example, the `onClick` function and `style` object are re-created on every render, causing `ExpensiveComponent` to slow down the app:
 
 ```jsx
-<ExpensiveComponent onClick={() => alert('hi')} style={{ color: 'purple' }} />
+<ExpensiveComponent onClick={() => alert("hi")} style={{ color: "purple" }} />
 ```
 
 React Scan helps you identify these issues by automatically detecting and highlighting renders that cause performance issues. Now, instead of guessing, you can see exactly which components you need to fix.
@@ -321,16 +430,6 @@ Also, some personal complaints about React Devtools' highlight feature:
 - It's stuck in a chrome extension, I want to run it anywhere on the web
 - It looks subjectively ugly (lines look fuzzy, feels sluggish)
 - I'm more ambitious with react-scan (see our roadmap)
-
-**Q: React Native wen?**
-
-Soon :)
-
-**Q: Browser Extension wen?**
-
-The browser extension is available for Chrome, Firefox, and Brave, but it's awaiting approval from browser extension stores.
-
-In the meanwhile, you can install it manually by following the instructions in [BROWSER_EXTENSION_GUIDE.md](BROWSER_EXTENSION_GUIDE.md).
 
 ## Resources & Contributing Back
 
