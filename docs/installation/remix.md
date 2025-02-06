@@ -86,3 +86,28 @@ export default function App() {
 
 > [!CAUTION]
 > React Scan must be imported before React (and other React renderers like React DOM), as well as Remix, in your entire project, as it needs to hijack React DevTools before React gets to access it.
+
+Alternatively you can also do the following code in `app/entry.client`:
+
+```jsx
+import { RemixBrowser } from "@remix-run/react";
+import { StrictMode, startTransition } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { scan } from "react-scan";
+
+scan({
+  enabled: true,
+});
+
+startTransition(() => {
+  hydrateRoot(
+    document,
+    <StrictMode>
+      <RemixBrowser />
+    </StrictMode>
+  );
+});
+```
+
+> [!CAUTION]
+> This only works for React 19
