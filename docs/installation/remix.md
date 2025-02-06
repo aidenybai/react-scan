@@ -9,7 +9,6 @@ Add the script tag to your `<Layout>` component in `app/root`:
 import {
   Links,
   Meta,
-  Outlet,
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
@@ -34,10 +33,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
-  return <Outlet />;
-}
+// ...
 ```
+
+> [!CAUTION]
+> This only works for React 19
 
 ## As a module import
 
@@ -90,6 +90,7 @@ export default function App() {
 Alternatively you can also do the following code in `app/entry.client`:
 
 ```jsx
+// app/entry.client.jsx
 import { RemixBrowser } from "@remix-run/react";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
