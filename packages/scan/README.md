@@ -44,7 +44,7 @@ yarn add react-scan
 ### CDN
 
 ```html
-<!-- Add this to the top of the head of your html file -->
+<!-- import this BEFORE any scripts -->
 <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
 ```
 
@@ -272,15 +272,6 @@ function RootDocument({ children }) {
 
 </details>
 
-Add this script to your app:
-
-```html
-<!-- import this BEFORE any scripts -->
-<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
-```
-
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
-
 ### CLI
 
 If you don't have a local version of the site or you want to test a React app remotely, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
@@ -320,9 +311,11 @@ if (typeof window !== "undefined") {
 
 ### Chrome Extension
 
+If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md).
+
 ### React Native
 
-> Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
+See [discussion](https://github.com/aidenybai/react-scan/pull/23)
 
 ## API Reference
 
