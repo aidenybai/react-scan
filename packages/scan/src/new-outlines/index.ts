@@ -8,9 +8,9 @@ import {
 } from 'bippy';
 import { ReactScanInternals, Store, ignoredProps } from '~core/index';
 import { createInstrumentation } from '~core/instrumentation';
-import { inspectorUpdateSignal } from '~web/components/inspector/states';
 import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
 import { log, logIntro } from '~web/utils/log';
+import { inspectorUpdateSignal } from '~web/views/inspector/states';
 import {
   OUTLINE_ARRAY_SIZE,
   drawCanvas,

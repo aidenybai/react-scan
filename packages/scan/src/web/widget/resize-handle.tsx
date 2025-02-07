@@ -2,9 +2,9 @@ import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
+import { LOCALSTORAGE_KEY, MIN_CONTAINER_WIDTH, MIN_SIZE } from '~web/constants';
+import { signalRefWidget, signalSlowDowns, signalWidget, signalWidgetViews } from '~web/state';
 import { cn, saveLocalStorage } from '~web/utils/helpers';
-import { LOCALSTORAGE_KEY, MIN_CONTAINER_WIDTH, MIN_SIZE } from '../../constants';
-import { signalRefWidget, signalWidget } from '../../state';
 import {
   calculateNewSizeAndPosition,
   calculatePosition,
@@ -27,9 +27,24 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     const container = refContainer.current;
     if (!container) return;
 
-    const updateVisibility = (isFocused: boolean) => {
+    const checkForNotificationVisibility = () => {
+      container.classList.remove('pointer-events-none');
+      if (
+        signalWidgetViews.value.view !== 'slow-downs' &&
+        (position === 'top' || position === 'bottom')
+      ) {
+        const slowDowns = signalSlowDowns.value;
+        if (slowDowns.slowDowns > 0 && !slowDowns.hideNotification) {
+          container.classList.add('pointer-events-none');
+        }
+      }
+    };
+
+    const updateVisibility = () => {
+      const isFocused = Store.inspectState.value.kind === 'focused';
+      const shouldShow = signalWidgetViews.value.view !== 'none';
       const isVisible =
-        isFocused &&
+        (isFocused || shouldShow) &&
         getHandleVisibility(
           position,
           signalWidget.value.corner,
@@ -49,6 +64,8 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     };
 
     const unsubscribeSignalWidget = signalWidget.subscribe((state) => {
+      checkForNotificationVisibility();
+
       if (
         prevWidth.current !== null &&
         prevHeight.current !== null &&
@@ -60,22 +77,26 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         return;
       }
 
-      updateVisibility(Store.inspectState.value.kind === 'focused');
+      updateVisibility();
 
       prevWidth.current = state.dimensions.width;
       prevHeight.current = state.dimensions.height;
       prevCorner.current = state.corner;
     });
 
-    const unsubscribeStoreInspectState = Store.inspectState.subscribe(
-      (state) => {
-        updateVisibility(state.kind === 'focused');
-      },
-    );
+    const unsubscribeInspectState = Store.inspectState.subscribe(() => {
+      checkForNotificationVisibility();
+      updateVisibility();
+    });
+
+    const unsubscribeSignalSlowDowns = signalSlowDowns.subscribe(() => {
+      checkForNotificationVisibility();
+    });
 
     return () => {
       unsubscribeSignalWidget();
-      unsubscribeStoreInspectState();
+      unsubscribeInspectState();
+      unsubscribeSignalSlowDowns();
       prevWidth.current = null;
       prevHeight.current = null;
       prevCorner.current = null;

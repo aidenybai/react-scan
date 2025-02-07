@@ -69,8 +69,8 @@ export default defineConfig(({ mode }): UserConfig => {
     return {
       name: pkg.name,
       description: pkg.description,
-      version: pkg.version,
       ...manifest,
+      version: pkg.version,
     };
   };
 

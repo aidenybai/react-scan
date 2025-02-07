@@ -2,8 +2,8 @@ import { isInstrumentationActive } from 'bippy';
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useMemo, useRef } from 'preact/hooks';
 import { Icon } from '~web/components/icon';
+import { Slider } from '~web/components/slider';
 import type { useMergedRefs } from '~web/hooks/use-merged-refs';
-import { Slider } from '../../slider';
 import {
   timelineActions,
   timelineState,
@@ -12,8 +12,8 @@ import { calculateSliderValues } from '../utils';
 
 interface TimelineProps {
   refSticky?:
-    | ReturnType<typeof useMergedRefs<HTMLElement>>
-    | ((node: HTMLElement | null) => void);
+  | ReturnType<typeof useMergedRefs<HTMLElement>>
+  | ((node: HTMLElement | null) => void);
 }
 
 export const Timeline = memo(({

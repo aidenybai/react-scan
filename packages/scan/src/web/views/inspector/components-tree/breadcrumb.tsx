@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
-import {
-  getCompositeFiberFromElement,
-  getInspectableAncestors,
-} from '~web/components/inspector/utils';
+
 import { cn } from '~web/utils/helpers';
+import { getCompositeFiberFromElement, getInspectableAncestors } from '../utils';
 import { type TreeItem, signalSkipTreeUpdate } from './state';
 
 export const Breadcrumb = ({ selectedElement }: { selectedElement: HTMLElement | null }) => {
