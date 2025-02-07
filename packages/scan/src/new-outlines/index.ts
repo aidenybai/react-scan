@@ -440,17 +440,11 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     onActive: () => {
       if (hasStopped()) return;
 
-      requestAnimationFrame(() => {
-        const host = getCanvasEl();
-        if (host) {
-          document.documentElement.appendChild(host);
-        }
-        globalThis.__REACT_SCAN__ = {
-          ReactScanInternals,
-        };
-        startReportInterval();
-        logIntro();
-      });
+      globalThis.__REACT_SCAN__ = {
+        ReactScanInternals,
+      };
+      startReportInterval();
+      logIntro();
     },
     onError: () => {
       // todo: ingest errors without accidentally collecting data about user
@@ -485,6 +479,10 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       ReactScanInternals.options.value.onCommitFinish?.();
     },
     onPostCommitFiberRoot() {
+      const host = getCanvasEl();
+      if (host) {
+        document.documentElement.appendChild(host);
+      }
       setupToolbar();
     },
     trackChanges: false,
