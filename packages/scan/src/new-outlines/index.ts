@@ -4,27 +4,13 @@ import {
   getDisplayName,
   getFiberId,
   getNearestHostFibers,
-  getTimings,
-  getType,
-  isCompositeFiber
+  isCompositeFiber,
 } from 'bippy';
-import {
-  Change,
-  ContextChange,
-  PropsChange,
-  ReactScanInternals,
-  Store,
-  ignoredProps,
-} from '~core/index';
-import {
-  ChangeReason,
-  createInstrumentation,
-  getContextChanges,
-  getStateChanges,
-} from '~core/instrumentation';
-import { RenderData } from '~core/utils';
-import { getChangedPropsDetailed } from '~web/components/inspector/utils';
+import { ReactScanInternals, Store, ignoredProps } from '~core/index';
+import { createInstrumentation } from '~core/instrumentation';
+import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
 import { log, logIntro } from '~web/utils/log';
+import { inspectorUpdateSignal } from '~web/views/inspector/states';
 import {
   OUTLINE_ARRAY_SIZE,
   drawCanvas,
@@ -303,23 +289,28 @@ export const getCanvasEl = () => {
 
   if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED) {
     try {
-      worker = new Worker(
-        URL.createObjectURL(
-          new Blob([workerCode], { type: 'application/javascript' }),
-        ),
-      );
-      const offscreenCanvas = canvasEl.transferControlToOffscreen();
+      const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
+      removeLocalStorage('use-extension-worker');
 
-      worker?.postMessage(
-        {
-          type: 'init',
-          canvas: offscreenCanvas,
-          width: canvasEl.width,
-          height: canvasEl.height,
-          dpr,
-        },
-        [offscreenCanvas],
-      );
+      if (useExtensionWorker) {
+        worker = new Worker(
+          URL.createObjectURL(
+            new Blob([workerCode], { type: 'application/javascript' }),
+          ),
+        );
+
+        const offscreenCanvas = canvasEl.transferControlToOffscreen();
+        worker?.postMessage(
+          {
+            type: 'init',
+            canvas: offscreenCanvas,
+            width: canvasEl.width,
+            height: canvasEl.height,
+            dpr,
+          },
+          [offscreenCanvas],
+        );
+      }
     } catch (e) {
       // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.warn('Failed to initialize OffscreenCanvas worker:', e);
@@ -430,75 +421,6 @@ export const startReportInterval = () => {
   }, 50);
 };
 
-const reportRenderToListeners = (fiber: Fiber) => {
-  if (isCompositeFiber(fiber)) {
-    // report render has a non trivial cost because it calls Date.now(), so we want to avoid the computation if possible
-    if (
-      ReactScanInternals.options.value.showToolbar !== false &&
-      Store.inspectState.value.kind === 'focused'
-    ) {
-      const reportFiber = fiber;
-      const { selfTime } = getTimings(fiber);
-      const displayName = getDisplayName(fiber.type);
-      const fiberId = getFiberId(reportFiber);
-
-      const currentData = Store.reportData.get(fiberId);
-      const existingCount = currentData?.count ?? 0;
-      const existingTime = currentData?.time ?? 0;
-
-      const changes: Array<Change> = [];
-
-      // optimization, for now only track changes on inspected prop, cleanup later when changes is used in outline drawing
-      const listeners = Store.changesListeners.get(getFiberId(fiber));
-
-      if (listeners?.length) {
-        const propsChanges: Array<PropsChange> = getChangedPropsDetailed(
-          fiber,
-        ).map((change) => ({
-          type: ChangeReason.Props,
-          name: change.name,
-          value: change.value,
-          prevValue: change.prevValue,
-          unstable: false,
-        }));
-
-        const stateChanges = getStateChanges(fiber);
-
-        // context changes are incorrect, bippy needs to tell us the context dependencies that changed and provide those values every render
-        // currently, we say every context change, regardless of the render it happened, is a change. Which requires us to hack change tracking
-        // in the whats-changed toolbar component
-        const fiberContext = getContextChanges(fiber);
-        const contextChanges: Array<ContextChange> = fiberContext.map(
-          (info) => ({
-            name: info.name,
-            type: ChangeReason.Context,
-            value: info.value,
-            contextType: info.contextType,
-          }),
-        );
-
-        listeners.forEach((listener) => {
-          listener({
-            propsChanges,
-            stateChanges,
-            contextChanges,
-          });
-        });
-      }
-      const fiberData: RenderData = {
-        count: existingCount + 1,
-        time: existingTime + selfTime || 0,
-        renders: [],
-        displayName,
-        type: (getType(fiber.type) as any) || null,
-        changes,
-      };
-
-      Store.reportData.set(fiberId, fiberData);
-      needsReport = true;
-    }
-  }
-};
 export const isValidFiber = (fiber: Fiber) => {
   if (ignoredProps.has(fiber.memoizedProps)) {
     return false;
@@ -509,11 +431,11 @@ export const isValidFiber = (fiber: Fiber) => {
 export const initReactScanInstrumentation = () => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
-  const instrumentation = createInstrumentation(`react-scan-devtools-0.1.0`, {
-    onCommitStart() {
+  const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
+    onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
-    onActive() {
+    onActive: () => {
       if (hasStopped()) return;
 
       requestAnimationFrame(() => {
@@ -529,11 +451,11 @@ export const initReactScanInstrumentation = () => {
       });
 
     },
-    onError() {
+    onError: () => {
       // todo: ingest errors without accidentally collecting data about user
     },
     isValidFiber,
-    onRender(fiber, renders) {
+    onRender: (fiber, renders) => {
       const isOverlayPaused =
         ReactScanInternals.instrumentation?.isPaused.value;
       const isInspectorInactive =
@@ -547,18 +469,18 @@ export const initReactScanInstrumentation = () => {
       if (!isOverlayPaused) {
         outlineFiber(fiber);
       }
-      
       if (ReactScanInternals.options.value.log) {
         // this can be expensive given enough re-renders
         log(renders);
       }
-      // optimization, only valid if toolbar is only listener
-      if (!isInspectorInactive) {
-        reportRenderToListeners(fiber);
+
+      if (Store.inspectState.value.kind === 'focused') {
+        inspectorUpdateSignal.value = Date.now();
       }
+
       ReactScanInternals.options.value.onRender?.(fiber, renders);
     },
-    onCommitFinish() {
+    onCommitFinish: () => {
       ReactScanInternals.options.value.onCommitFinish?.();
     },
     trackChanges: false,

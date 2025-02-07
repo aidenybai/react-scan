@@ -8,19 +8,18 @@ import {
 } from 'bippy';
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
-import { type RenderData } from 'src/core/utils';
+import type { RenderData } from 'src/core/utils';
 // import { initReactScanOverlay } from '~web/overlay';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
-import type { States } from '~web/components/inspector/utils';
-// import { initReactScanOverlay } from '~web/overlay';
 import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import { type Outline } from '~web/utils/outline';
-import {
+import type { Outline } from '~web/utils/outline';
+import type { States } from '~web/views/inspector/utils';
+import type {
   ChangeReason,
-  type Render,
+  Render,
   createInstrumentation,
 } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
@@ -28,8 +27,9 @@ import type { getSession } from './monitor/utils';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
-// let toolbarContainer: HTMLElement | null = null;
-let audioContext: AudioContext | null = null;
+
+// @TODO: @pivanov - add back in when options are implemented
+// const audioContext: AudioContext | null = null;
 
 interface RootContainer {
   rootContainer: HTMLDivElement;
@@ -201,7 +201,6 @@ export interface StoreType {
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
-  changesListeners: Map<number, Array<ChangesListener>>;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -248,7 +247,7 @@ export type ContextChange = {
   value: unknown;
   prevValue?: unknown;
   count?: number | undefined;
-  contextType: any;
+  contextType: number;
 };
 
 export type Change = StateChange | PropsChange | ContextChange;
@@ -275,7 +274,6 @@ export const Store: StoreType = {
   reportData: new Map<number, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
-  changesListeners: new Map<number, Array<ChangesListener>>(),
 };
 
 export const ReactScanInternals: Internals = {
@@ -509,6 +507,7 @@ export const start = () => {
   if (!Store.monitor.value && !isUsedInBrowserExtension) {
     setTimeout(() => {
       if (isInstrumentationActive()) return;
+      // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.error(
         '[React Scan] Failed to load. Must import React Scan before React runs.',
       );

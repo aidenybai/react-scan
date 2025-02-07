@@ -58,14 +58,19 @@ export default defineConfig(({ mode }): UserConfig => {
 
   // Generate manifest with package info
   const generateManifest = () => {
-    const manifest = readJsonFile('src/manifest.json');
+    const manifestPath =
+      browser === BROWSER_TYPES.FIREFOX
+        ? 'src/manifest.firefox.json'
+        : 'src/manifest.chrome.json';
+
+    const manifest = readJsonFile(manifestPath);
     const pkg = readJsonFile('package.json');
 
     return {
       name: pkg.name,
       description: pkg.description,
-      version: pkg.version,
       ...manifest,
+      version: pkg.version,
     };
   };
 

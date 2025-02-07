@@ -6,7 +6,7 @@ import {
   ForwardRefTag,
   FunctionComponentTag,
   MemoComponentTag,
-  MemoizedState,
+  type MemoizedState,
   SimpleMemoComponentTag,
   didFiberCommit,
   getDisplayName,
@@ -21,16 +21,20 @@ import {
 } from 'bippy';
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
-import { getChangedPropsDetailed } from '~web/components/inspector/utils';
 import {
   RENDER_PHASE_STRING_TO_ENUM,
   type RenderPhase,
 } from '~web/utils/outline';
 import {
-  Change,
-  ContextChange,
+  collectContextChanges,
+  collectPropsChanges,
+  collectStateChanges,
+} from '~web/views/inspector/timeline/utils';
+import {
+  type Change,
+  type ContextChange,
   ReactScanInternals,
-  StateChange,
+  type StateChange,
   Store,
 } from './index';
 
@@ -195,7 +199,7 @@ export const getPropsChanges = (fiber: Fiber) => {
     ...Object.keys(nextProps),
   ]);
   for (const propName in allKeys) {
-    const prevValue = prevProps?.[propName];
+    // const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
     const change: Change = {
@@ -242,7 +246,9 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     }
 
     return changes;
-  } else if (fiber.tag === ClassComponentTag) {
+  }
+
+  if (fiber.tag === ClassComponentTag) {
     // when we have class component fiber, memoizedState is the component state
     const change: StateChange = {
       type: ChangeReason.ClassState,
@@ -255,6 +261,7 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     }
     return changes;
   }
+
   return changes;
 };
 interface ContextFiber {
@@ -263,7 +270,7 @@ interface ContextFiber {
 }
 
 let lastContextId = 0;
-const contextIdMap = new WeakMap<any, number>();
+const contextIdMap = new WeakMap<ContextFiber, number>();
 const getContextId = (contextFiber: ContextFiber) => {
   const existing = contextIdMap.get(contextFiber);
   if (existing) {
@@ -280,7 +287,7 @@ function getContextChangesTraversal(
   prevValue: ContextFiber | null | undefined,
 ): void {
   if (!nextValue || !prevValue) return;
-  const prevMemoizedValue = prevValue.memoizedValue;
+  // const prevMemoizedValue = prevValue.memoizedValue;
   const nextMemoizedValue = nextValue.memoizedValue;
 
   const change: ContextChange = {
@@ -289,7 +296,7 @@ function getContextChangesTraversal(
       (nextValue.context as { displayName: string | undefined }).displayName ??
       'UnnamedContext',
     value: nextMemoizedValue,
-    contextType: getContextId(nextValue.context as any),
+    contextType: getContextId(nextValue.context as ContextFiber),
 
     // unstable: false,
   };
@@ -412,6 +419,7 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
 
 const TRACK_UNNECESSARY_RENDERS = false;
 
+
 export const createInstrumentation = (
   instanceKey: string,
   config: InstrumentationConfig,
@@ -428,6 +436,7 @@ export const createInstrumentation = (
   });
   if (!inited) {
     inited = true;
+
     instrument({
       name: 'react-scan',
       onActive: config.onActive,
@@ -450,7 +459,7 @@ export const createInstrumentation = (
           root.current,
           (fiber: Fiber, phase: 'mount' | 'update' | 'unmount') => {
             const type = getType(fiber.type);
-            if (!type) return;
+            if (!type) return null;
 
             const allInstances = getAllInstances();
             const validInstancesIndicies: Array<number> = [];
@@ -459,19 +468,60 @@ export const createInstrumentation = (
               if (!instance.config.isValidFiber(fiber)) continue;
               validInstancesIndicies.push(i);
             }
-            if (!validInstancesIndicies.length) return;
+            if (!validInstancesIndicies.length) return null;
 
             const changes: Array<Change> = [];
 
             if (allInstances.some((instance) => instance.config.trackChanges)) {
-              const propsChanges = getChangedPropsDetailed(fiber);
-              const stateChanges = getStateChanges(fiber);
-              const contextChanges = getContextChanges(fiber);
+              const changesProps = collectPropsChanges(fiber).changes;
+              const changesState = collectStateChanges(fiber).changes;
+              const changesContext = collectContextChanges(fiber).changes;
 
-              changes.push.apply(changes, propsChanges);
-              changes.push.apply(changes, stateChanges);
-              changes.push.apply(changes, contextChanges);
+              // Convert props changes
+              changes.push.apply(
+                null,
+                changesProps.map(
+                  (change) =>
+                    ({
+                      type: ChangeReason.Props,
+                      name: change.name,
+                      value: change.value,
+                    }) as Change,
+                ),
+              );
+
+              // Convert state changes
+              for (const change of changesState) {
+                if (fiber.tag === ClassComponentTag) {
+                  changes.push({
+                    type: ChangeReason.ClassState,
+                    name: change.name.toString(),
+                    value: change.value,
+                  } as Change);
+                } else {
+                  changes.push({
+                    type: ChangeReason.FunctionalState,
+                    name: change.name.toString(),
+                    value: change.value,
+                  } as Change);
+                }
+              }
+
+              // Convert context changes
+              changes.push.apply(
+                null,
+                changesContext.map(
+                  (change) =>
+                    ({
+                      type: ChangeReason.Context,
+                      name: change.name,
+                      value: change.value,
+                      contextType: Number(change.contextType),
+                    }) as Change,
+                ),
+              );
             }
+
             const { selfTime } = getTimings(fiber);
 
             const fps = getFPS();
@@ -482,9 +532,12 @@ export const createInstrumentation = (
               changes,
               time: selfTime,
               forget: hasMemoCache(fiber),
+              // todo: allow this to be toggle-able through toolbar
+              // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
               unnecessary: TRACK_UNNECESSARY_RENDERS
                 ? isRenderUnnecessary(fiber)
                 : null,
+
               didCommit: didFiberCommit(fiber),
               fps,
             };

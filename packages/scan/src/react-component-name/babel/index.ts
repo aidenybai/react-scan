@@ -1,6 +1,6 @@
-import { NodePath, PluginObj } from '@babel/core';
+import type { NodePath, PluginObj } from '@babel/core';
 import * as t from '@babel/types';
-import { Options } from '../core/options';
+import type { Options } from '../core/options';
 import { isComponentishName } from './is-componentish-name';
 import { pathReferencesImport } from './path-references-import';
 import { unwrapNode, unwrapPath } from './unwrap';
@@ -235,7 +235,6 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
   visitor: {
     Program(path) {
       const assignedNames = getAssignedDisplayNames(path);
-      let count = 0;
       path.traverse({
         ClassDeclaration(path) {
           if (isReactClassComponent(path)) {
@@ -246,12 +245,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
             if (assignedNames.has(name)) {
               return;
             }
-            assignDisplayName(
-              path,
-              name,
-              options?.flags?.noTryCatchDisplayNames,
-            );
-            count++;
+            assignDisplayName(path, name, options?.flags?.noTryCatchDisplayNames);
           }
         },
         FunctionDeclaration(path) {
@@ -274,12 +268,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
             if (assignedNames.has(name)) {
               return;
             }
-            assignDisplayName(
-              path,
-              name,
-              options?.flags?.noTryCatchDisplayNames,
-            );
-            count++;
+            assignDisplayName(path, name, options?.flags?.noTryCatchDisplayNames);
           }
         },
         VariableDeclarator(path) {
@@ -303,7 +292,6 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
                 name,
                 options?.flags?.noTryCatchDisplayNames,
               );
-              count++;
             }
           }
         },
