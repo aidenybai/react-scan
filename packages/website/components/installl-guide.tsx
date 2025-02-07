@@ -37,7 +37,8 @@ const CheckIcon = ({ className }: { className: string }) => (
   </svg>
 );
 
-type Tab = 'script' | 'nextjs-app' | 'nextjs-pages' | 'vite';
+const Tabs = ['script', 'nextjs-app', 'nextjs-pages', 'vite', 'remix'] as const;
+type Tab = (typeof Tabs)[number];
 
 export default function InstallGuide() {
   const [copied, setCopied] = useState(false);
@@ -51,8 +52,6 @@ export default function InstallGuide() {
       setHeight(`${newHeight}px`);
     }
   }, [activeTab]);
-
-  const tabOrder = ['script', 'nextjs-app', 'nextjs-pages', 'vite'] as const;
 
   const handleTabChange = (tab: Tab) => {
     if (contentRef.current) {
@@ -70,7 +69,12 @@ export default function InstallGuide() {
   const getCodeForTab = (tab: Tab) => {
     switch (tab) {
       case 'script':
-        return `<!-- paste this BEFORE any scripts -->\n<script src="unpkg.com/react-scan/dist/auto.global.js"></script>`;
+        return `<!-- paste this BEFORE any scripts -->
+<script
+  crossOrigin="anonymous"
+  src="//unpkg.com/react-scan/dist/auto.global.js"
+/>
+`;
       case 'nextjs-app':
         return `export default function RootLayout({
   children,
@@ -80,7 +84,10 @@ export default function InstallGuide() {
   return (
     <html lang="en">
       <head>
-        <script src="//unpkg.com/react-scan/dist/auto.global.js"/>
+        <script
+          crossOrigin="anonymous"
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+        />
         {/* rest of your scripts go under */}
       </head>
       <body>{children}</body>
@@ -94,7 +101,10 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <script src="//unpkg.com/react-scan/dist/auto.global.js"/>
+        <script
+          crossOrigin="anonymous"
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+        />
         {/* rest of your scripts go under */}
       </Head>
       <body>
@@ -108,13 +118,42 @@ export default function Document() {
         return `<!doctype html>
 <html lang="en">
   <head>
-    <script src="//unpkg.com/react-scan/dist/auto.global.js"></script>
+    <script
+      crossOrigin="anonymous"
+      src="//unpkg.com/react-scan/dist/auto.global.js"
+    />
     <!-- rest of your scripts go under -->
   </head>
   <body>
     <!-- ... -->
   </body>
 </html>`;
+      case 'remix':
+        return `import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <link
+          rel="icon"
+          href="data:image/x-icon;base64,AA"
+        />
+        <Meta />
+        <script
+          crossOrigin="anonymous"
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+        />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+`;
     }
   };
 
@@ -139,7 +178,7 @@ export default function Document() {
 
         <div>
           <div className="flex bg-[#252526]">
-            {tabOrder.map((tab) => (
+            {Tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
@@ -150,7 +189,10 @@ export default function Document() {
               >
                 {tab === 'script' ? 'Script Tag' :
                   tab === 'nextjs-app' ? 'Next.js (App)' :
-                    tab === 'nextjs-pages' ? 'Next.js (Pages)' : 'Vite'}
+                    tab === 'nextjs-pages' ? 'Next.js (Pages)' :
+                      tab === 'vite' ? 'Vite' :
+                        tab === 'remix' ? 'Remix' :
+                          ''}
               </button>
             ))}
           </div>
@@ -161,7 +203,9 @@ export default function Document() {
                 {activeTab === 'script' ? 'index.html' :
                   activeTab === 'nextjs-app' ? 'app/layout.tsx' :
                     activeTab === 'nextjs-pages' ? 'pages/_document.tsx' :
-                      'index.html'}
+                      activeTab === 'vite' ? 'index.html' :
+                        activeTab === 'remix' ? 'app/root.tsx' :
+                          ''}
               </span>
             </div>
 

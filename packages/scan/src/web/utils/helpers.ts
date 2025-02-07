@@ -1,3 +1,12 @@
+import {
+  type Fiber,
+  ForwardRefTag,
+  MemoComponentTag,
+  SimpleMemoComponentTag,
+  SuspenseComponentTag,
+  getDisplayName,
+  hasMemoCache,
+} from 'bippy';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -34,56 +43,6 @@ export const throttle = <E>(
     return undefined;
   };
 };
-export const debounce = <T extends (enabled: boolean | null) => Promise<void>>(
-  fn: T,
-  wait: number,
-  options: { leading?: boolean; trailing?: boolean } = {},
-) => {
-  let timeoutId: number | undefined;
-  let lastArg: boolean | null | undefined;
-  let isLeadingInvoked = false;
-
-  const debounced = (enabled: boolean | null) => {
-    lastArg = enabled;
-
-    if (options.leading && !isLeadingInvoked) {
-      isLeadingInvoked = true;
-      fn(enabled);
-      return;
-    }
-
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-
-    if (options.trailing !== false) {
-      timeoutId = window.setTimeout(() => {
-        isLeadingInvoked = false;
-        timeoutId = undefined;
-        if (lastArg !== undefined) {
-          fn(lastArg);
-        }
-      }, wait);
-    }
-  };
-
-  debounced.cancel = () => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
-      isLeadingInvoked = false;
-      lastArg = undefined;
-    }
-  };
-
-  return debounced;
-};
-
-export const createElement = (htmlString: string): HTMLElement => {
-  const template = document.createElement('template');
-  template.innerHTML = htmlString.trim();
-  return template.content.firstElementChild as HTMLElement;
-};
 
 export const tryOrElse = <T>(fn: () => T, defaultValue: T): T => {
   try {
@@ -109,18 +68,14 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
 
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(state));
-  } catch {
-    // Silently fail
-  }
+  } catch {}
 };
 export const removeLocalStorage = (storageKey: string): void => {
   if (typeof window === 'undefined') return;
 
   try {
     window.localStorage.removeItem(storageKey);
-  } catch {
-    // Silently fail
-  }
+  } catch {}
 };
 
 export const toggleMultipleClasses = (
@@ -130,4 +85,107 @@ export const toggleMultipleClasses = (
   for (const cls of classes) {
     element.classList.toggle(cls);
   }
+};
+
+interface WrapperBadge {
+  type: 'memo' | 'forwardRef' | 'lazy' | 'suspense' | 'profiler' | 'strict';
+  title: string;
+  compiler?: boolean;
+}
+
+export interface ExtendedDisplayName {
+  name: string | null;
+  wrappers: Array<string>;
+  wrapperTypes: Array<WrapperBadge>;
+}
+
+// React internal tags not exported by bippy
+const LazyComponentTag = 24;
+const ProfilerTag = 12;
+
+export const getExtendedDisplayName = (fiber: Fiber): ExtendedDisplayName => {
+  if (!fiber) {
+    return {
+      name: 'Unknown',
+      wrappers: [],
+      wrapperTypes: [],
+    };
+  }
+
+  const { tag, type, elementType } = fiber;
+  let name = getDisplayName(type);
+  const wrappers: Array<string> = [];
+  const wrapperTypes: Array<WrapperBadge> = [];
+
+  if (
+    hasMemoCache(fiber) ||
+    tag === SimpleMemoComponentTag ||
+    tag === MemoComponentTag ||
+    (type as { $$typeof?: symbol })?.$$typeof === Symbol.for('react.memo') ||
+    (elementType as { $$typeof?: symbol })?.$$typeof ===
+      Symbol.for('react.memo')
+  ) {
+    const compiler = hasMemoCache(fiber);
+    wrapperTypes.push({
+      type: 'memo',
+      title: compiler
+        ? 'This component has been auto-memoized by the React Compiler.'
+        : 'Memoized component that skips re-renders if props are the same',
+      compiler,
+    });
+  }
+
+  if (
+    tag === ForwardRefTag ||
+    (type as { $$typeof?: symbol })?.$$typeof ===
+      Symbol.for('react.forward_ref')
+  ) {
+    wrapperTypes.push({
+      type: 'forwardRef',
+      title:
+        'Component that can forward refs to DOM elements or other components',
+    });
+  }
+
+  if (tag === LazyComponentTag) {
+    wrapperTypes.push({
+      type: 'lazy',
+      title: 'Lazily loaded component that supports code splitting',
+    });
+  }
+
+  if (tag === SuspenseComponentTag) {
+    wrapperTypes.push({
+      type: 'suspense',
+      title: 'Component that can suspend while content is loading',
+    });
+  }
+
+  if (tag === ProfilerTag) {
+    wrapperTypes.push({
+      type: 'profiler',
+      title: 'Component that measures rendering performance',
+    });
+  }
+
+  if (typeof name === 'string') {
+    const wrapperRegex = /^(\w+)\((.*)\)$/;
+    let currentName = name;
+    while (wrapperRegex.test(currentName)) {
+      const match = currentName.match(wrapperRegex);
+      if (match?.[1] && match?.[2]) {
+        wrappers.unshift(match[1]);
+        currentName = match[2];
+      } else {
+        break;
+      }
+    }
+    name = currentName;
+  }
+
+  return {
+    name: name || 'Unknown',
+    wrappers,
+    wrapperTypes,
+  };
 };

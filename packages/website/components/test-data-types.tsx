@@ -104,11 +104,10 @@ export const TestDataTypes = () => {
     // Special types
     setBigInt(BigInt(Math.floor(Math.random() * 1000000)));
     setSymbol(Symbol(`test${Math.random()}`));
-    setPromise(Promise.resolve(`test${Math.random()}`));
+    // setPromise(Promise.resolve(`test${Math.random()}`));
 
     // Reset Promise state when creating new Promise
     setPromiseState('pending');
-    setPromise(Promise.resolve(`test${Math.random()}`));
 
     // Create new WeakMap with a random object
     setWeakMap(new WeakMap());

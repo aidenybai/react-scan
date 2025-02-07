@@ -1,6 +1,31 @@
-import { sleep, storageGetItem, storageSetItem } from '@pivanov/utils';
+import { sleep, storageGetItem } from '@pivanov/utils';
+import * as reactScan from 'react-scan';
+import type { Options } from 'react-scan';
 import { broadcast, canLoadReactScan, hasReactFiber } from '../utils/helpers';
-import { createReactNotAvailableUI, toggleReactIsNotAvailable } from './react-is-not-available';
+import {
+  createReactNotAvailableUI,
+  toggleReactIsNotAvailable,
+} from './react-is-not-available';
+
+
+window.reactScan = reactScan.setOptions;
+
+storageGetItem<boolean>('react-scan-extension', 'isEnabled').then(
+  (isEnabled) => {
+    const options: Partial<Options> = {
+      enabled: false,
+      showToolbar: false,
+      dangerouslyForceRunInProduction: true,
+    };
+
+    if (isEnabled !== null) {
+      options.enabled = isEnabled;
+      options.showToolbar = isEnabled;
+    }
+
+    reactScan.scan(options);
+  },
+);
 
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -13,21 +38,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const isReactAvailable = hasReactFiber();
 
   if (!isReactAvailable) {
-    _reactScan.setOptions({
+    reactScan.setOptions({
       enabled: false,
       showToolbar: false,
     });
     createReactNotAvailableUI();
   }
-
-  const isDefaultEnabled = await storageGetItem<boolean>(
-    'react-scan',
-    'enabled',
-  );
-  _reactScan.setOptions({
-    enabled: !!isDefaultEnabled,
-    showToolbar: !!isDefaultEnabled,
-  });
 
   broadcast.onmessage = async (type, data) => {
     if (type === 'react-scan:toggle-state') {
@@ -36,19 +52,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       });
 
       if (isReactAvailable) {
-        const state = data?.state;
-        _reactScan.setOptions({
-          enabled: state,
-          showToolbar: state,
+        const isEnabled = data?.state;
+
+        reactScan.setOptions({
+          enabled: isEnabled,
+          showToolbar: isEnabled,
         });
-        void storageSetItem('react-scan', 'enabled', state);
+
+        reactScan.start();
       } else {
         toggleReactIsNotAvailable();
       }
     }
   };
 
-  _reactScan.ReactScanInternals.Store.inspectState.subscribe((state) => {
+  reactScan.ReactScanInternals.Store.inspectState.subscribe((state) => {
     broadcast.postMessage('react-scan:is-focused', {
       state: state.kind === 'focused',
     });

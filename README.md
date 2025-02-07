@@ -115,7 +115,7 @@ Add the script tag to your `index.html`:
 
 </details>
 
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/CHROME_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
+If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/BROWSER_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
 
 ## API Reference
 
@@ -141,7 +141,7 @@ if (typeof window !== 'undefined') {
 
 > Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
 
-If you don't have a localv version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+If you don't have a local version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
 
 ```bash
 npx react-scan@latest http://localhost:3000
@@ -326,9 +326,11 @@ Also, some personal complaints about React Devtools' highlight feature:
 
 Soon :)
 
-**Q: Chrome Extension wen?**
+**Q: Browser Extension wen?**
 
-Soon :)
+The browser extension is available for Chrome, Firefox, and Brave, but it's awaiting approval from browser extension stores.
+
+In the meanwhile, you can install it manually by following the instructions in [BROWSER_EXTENSION_GUIDE.md](BROWSER_EXTENSION_GUIDE.md).
 
 ## Resources & Contributing Back
 
