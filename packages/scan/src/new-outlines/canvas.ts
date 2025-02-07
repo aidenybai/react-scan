@@ -55,6 +55,7 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   const partsEntries = getSortedEntries(countByNames);
   let labelText = getLabelTextPart(partsEntries[0]);
   for (let i = 1, len = partsEntries.length; i < len; i++) {
+    // biome-ignore lint/style/useTemplate: Templates are slow
     labelText += ', ' + getLabelTextPart(partsEntries[i]);
   }
 
