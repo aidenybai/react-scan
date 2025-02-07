@@ -440,15 +440,17 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     onActive: () => {
       if (hasStopped()) return;
 
-      const host = getCanvasEl();
-      if (host) {
-        document.documentElement.appendChild(host);
-      }
-      globalThis.__REACT_SCAN__ = {
-        ReactScanInternals,
-      };
-      startReportInterval();
-      logIntro();
+      requestAnimationFrame(() => {
+        const host = getCanvasEl();
+        if (host) {
+          document.documentElement.appendChild(host);
+        }
+        globalThis.__REACT_SCAN__ = {
+          ReactScanInternals,
+        };
+        startReportInterval();
+        logIntro();
+      });
     },
     onError: () => {
       // todo: ingest errors without accidentally collecting data about user
