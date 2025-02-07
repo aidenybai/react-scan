@@ -296,6 +296,9 @@ const init = async () => {
 
       await page.waitForTimeout(100);
 
+      // TODO: determine why this is needed and fix root cause
+      await page.reload();
+
       await page.evaluate(() => {
         if (typeof globalThis.reactScan !== 'function') return;
         globalThis.reactScan({});
