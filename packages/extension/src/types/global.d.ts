@@ -4,6 +4,7 @@ declare global {
   type BroadcastHandler = (type: BroadcastMessage['type'], data: Extract<BroadcastMessage, { type: typeof type }>['data']) => void;
 
   interface Window {
+    __REACT_SCAN_TOOLBAR_CONTAINER__: HTMLElement | null;
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       checkDCE: (fn: unknown) => void;
       supportsFiber: boolean;

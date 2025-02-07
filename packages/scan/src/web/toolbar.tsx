@@ -1,14 +1,15 @@
 import { Component, render } from 'preact';
 import { Icon } from './components/icon';
-import { Widget } from './components/widget';
+import { Widget } from './widget';
 
 
 export let scriptLevelToolbar: HTMLDivElement | null = null
-class ToolbarErrorBoundary extends Component {
-  state: { hasError: boolean; error: any } = { hasError: false, error: null };
 
-  static getDerivedStateFromError(e: any) {
-    return { hasError: true, error: e };
+class ToolbarErrorBoundary extends Component {
+  state: { hasError: boolean; error: Error | null } = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   handleReset = () => {
@@ -28,8 +29,9 @@ class ToolbarErrorBoundary extends Component {
               {this.state.error?.message || JSON.stringify(this.state.error)}
             </div>
             <button
+              type="button"
               onClick={this.handleReset}
-              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors duration-150 flex items-center justify-center gap-1.5"
+              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
             >
               Restart
             </button>
@@ -60,6 +62,7 @@ export const createToolbar = (root: ShadowRoot): HTMLElement => {
 
   container.remove = () => {
     if (container.hasChildNodes()) {
+      scriptLevelToolbar = null;
       // Double render(null) is needed to fully unmount Preact components.
       // The first call initiates unmounting, while the second ensures
       // cleanup of internal VNode references and event listeners.

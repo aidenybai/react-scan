@@ -3,7 +3,6 @@ import fsPromise from 'node:fs/promises';
 import path from 'node:path';
 import { TsconfigPathsPlugin } from '@esbuild-plugins/tsconfig-paths';
 import { init, parse } from 'es-module-lexer';
-import { Plugin } from 'esbuild';
 import { defineConfig } from 'tsup';
 import { workerPlugin } from './worker-plugin';
 

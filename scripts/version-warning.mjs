@@ -6,6 +6,8 @@ import chalk from 'chalk';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const pEnd = 38;
+
 // Styling constants
 const styles = {
   title: '#7B65D0',
@@ -90,10 +92,10 @@ const message = pkgInfo.versions
       .map(([pkg, version], index, array) => {
         const prevPkg = index > 0 ? array[index - 1][0] : '';
         const needsSpace = prevPkg.startsWith('@') && pkg === 'react-scan';
-        return `${needsSpace ? '\n' : ''}${styles.dim(pkg.padEnd(32))}${styles.version(`v${version}`)}`;
+        return `${needsSpace ? '\n' : ''}${styles.dim(pkg.padEnd(pEnd))}${styles.version(`v${version}`)}`;
       })
       .join('\n')}`
-  : `${styles.text(MESSAGES.package.text)}\n\n${styles.dim(pkgInfo.name.padEnd(32))}${styles.version(`v${pkgInfo.version}`)}`;
+  : `${styles.text(MESSAGES.package.text)}\n\n${styles.dim(pkgInfo.name.padEnd(pEnd))}${styles.version(`v${pkgInfo.version}`)}`;
 
 // biome-ignore lint/suspicious/noConsole: Intended debug output
 console.log(

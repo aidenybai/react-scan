@@ -28,6 +28,10 @@
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, .4);
   }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @-moz-document url-prefix() {
@@ -43,8 +47,17 @@ button {
   @apply hover:bg-none;
   @apply outline-none;
   @apply border-none;
-  @apply transition-colors duration-150 ease-linear;
+  @apply transition-colors ease-linear;
   @apply cursor-pointer;
+}
+
+input {
+  @apply outline-none;
+  @apply border-none;
+  @apply bg-none bg-transparent;
+  @apply outline-none;
+  @apply placeholder:text-neutral-500 placeholder:italic placeholder:text-xs;
+  @apply placeholder-shown:truncate;
 }
 
 svg {
@@ -91,6 +104,8 @@ svg {
   @apply z-[2147483678];
   @apply animate-fade-in animation-duration-300 animation-delay-300;
   @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
+
+  @apply place-self-start;
 }
 
 .button {
@@ -112,7 +127,7 @@ svg {
   @apply absolute inset-0;
   @apply overflow-hidden;
   @apply bg-black;
-  @apply transition-all duration-150;
+  @apply transition-all;
 
   svg {
     @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
@@ -259,16 +274,25 @@ svg {
 
 @keyframes shimmer {
   100% {
-    transform: translateX(100%);
+    @apply translate-x-full;
   }
+}
+
+.react-section-header {
+  @apply sticky z-100;
+  @apply flex items-center gap-x-2;
+  @apply px-3;
+  @apply w-full h-8;
+  @apply text-[#888] truncate;
+  @apply bg-[#0a0a0a] border-b-1 border-[#222];
 }
 
 .react-scan-section {
   @apply flex flex-col;
-  @apply py-2 px-2;
+  @apply px-2;
   @apply text-[#888];
   @apply before:content-[attr(data-section)] before:text-gray-500;
-  font-size: .75rem;
+  @apply text-xs;
 
   > .react-scan-property {
     @apply -ml-3.5;
@@ -303,7 +327,8 @@ svg {
 }
 
 .react-scan-key {
-  @apply w-fit max-w-60 text-white;
+  @apply w-fit max-w-60;
+  @apply text-white whitespace-nowrap;
 }
 
 .react-scan-input {
@@ -312,8 +337,8 @@ svg {
 }
 
 @keyframes blink {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from { @apply opacity-100; }
+  to { @apply opacity-0; }
 }
 
 .react-scan-arrow {
@@ -325,101 +350,17 @@ svg {
   @apply z-10;
 
   > svg {
-    @apply transition-transform duration-150;
+    @apply transition-transform;
   }
 }
 
 .react-scan-expandable {
-  display: grid;
-  grid-template-rows: 0fr;
-  @apply overflow-hidden;
+  @apply grid grid-rows-[0fr];
   @apply transition-all duration-75;
-  transition-timing-function: ease-out;
-
-  > * {
-    min-height: 0;
-  }
 
   &.react-scan-expanded {
-    grid-template-rows: 1fr;
-    transition-duration: 100ms;
-  }
-}
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 32px;
-  height: 18px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.2);
-  -webkit-transition: .3s;
-  transition: .3s;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  -webkit-transition: .3s;
-  transition: .3s;
-}
-
-input:checked + .slider {
-  background-color: #5f3f9a
-}
-
-input:focus + .slider {
-  box-shadow: 0 0 1px #5f3f9a
-}
-
-input:checked + .slider:before {
-  -webkit-transform: translateX(14px);
-  -ms-transform: translateX(14px);
-  transform: translateX(14px);
-}
-
-.slider.round {
-  border-radius: 18px;
-}
-
-.slider.round:before {
-  border-radius: 50%;
-}
-
-
-
-.react-scan-what-changed-expandable {
-  display: grid;
-  grid-template-rows: 0fr;
-  @apply overflow-hidden;
-  @apply transition-all duration-75;
-  transition-timing-function: ease-out;
-
-  > * {
-    min-height: 0;
-  }
-
-  &.react-scan-expanded {
-    grid-template-rows: 1fr;
-    transition-duration: 100ms;
+    @apply grid-rows-[1fr];
+    @apply duration-100;
   }
 }
 
@@ -455,15 +396,17 @@ input:checked + .slider:before {
 .react-scan-flash-overlay {
   @apply absolute inset-0;
   @apply opacity-0;
-  @apply z-[999999];
+  @apply z-50;
   @apply pointer-events-none;
-  @apply transition-opacity duration-150;
+  @apply transition-opacity;
   @apply mix-blend-multiply;
   @apply bg-purple-500/90;
 }
 
 .react-scan-toggle {
   @apply relative;
+  @apply inline-block;
+  @apply w-10 h-6;
 
   input {
     @apply absolute inset-0;
@@ -473,30 +416,29 @@ input:checked + .slider:before {
 
   input:checked {
     +div {
-      @apply bg-neutral-600;
+      @apply bg-[#5f3f9a];
 
       &::before {
         @apply translate-x-full;
         @apply left-auto;
-        @apply bg-[#8e61e3];
-        @apply border-neutral-600;
+        @apply border-[#5f3f9a];
       }
     }
   }
 
   >div {
-    @apply relative;
-    @apply w-8 h-4;
+    @apply absolute inset-1;
     @apply bg-neutral-700;
     @apply rounded-full;
     @apply pointer-events-none;
     @apply transition-colors duration-300;
+
     &:before {
       @apply content-[''];
       @apply absolute top-1/2 left-0;
       @apply -translate-y-1/2;
       @apply w-4 h-4;
-      @apply bg-neutral-500;
+      @apply bg-white;
       @apply border-2 border-neutral-700;
       @apply rounded-full;
       @apply shadow-sm;
@@ -506,20 +448,21 @@ input:checked + .slider:before {
 }
 
 .react-scan-flash-active {
-  opacity: 0.4;
-  transition: opacity 300ms ease-in-out;
+  @apply opacity-40;
+  @apply transition-opacity duration-300;
 }
 
 .react-scan-inspector-overlay {
-  opacity: 0;
-  transition: opacity 300ms ease-in-out;
+  @apply flex flex-col;
+  @apply opacity-0;
+  @apply transition-opacity duration-300;
 
   &.fade-out {
-    opacity: 0;
+    @apply opacity-0;
   }
 
   &.fade-in {
-    opacity: 1;
+    @apply opacity-100;
   }
 }
 
@@ -537,22 +480,192 @@ input:checked + .slider:before {
   }
 }
 
-@keyframes countFlash {
-  0% {
-    background-color: rgba(168, 85, 247, 0.3);
-    transform: scale(1.05);
-  }
-  100% {
-    background-color: rgba(168, 85, 247, 0.1);
-    transform: scale(1);
-  }
-}
-
 .count-badge {
-  background-color: rgba(168, 85, 247, 0.1);
-  transition: all 300ms ease-out;
+  @apply flex gap-x-2 items-center;
+  @apply px-1.5 py-0.5;
+  @apply text-[#a855f7] text-xs font-medium tabular-nums rounded-[4px] origin-center;
+  @apply bg-[#a855f7]/10;
+  @apply origin-center;
+  @apply transition-all duration-300 delay-150;
 }
 
 .count-flash {
-  animation: countFlash 300ms ease-out forwards;
+  @apply animate-count-flash;
+}
+
+.count-flash-white {
+  @apply animate-count-flash-shake !delay-500;
+}
+
+.change-scope {
+  @apply flex items-center gap-x-1;
+  @apply text-[#666];
+  @apply text-xs;
+  @apply font-mono;
+
+  > div {
+    @apply px-1.5 py-0.5;
+    @apply text-xs font-medium tabular-nums rounded-[4px] origin-center;
+    @apply origin-center;
+    @apply transition-all duration-300 delay-150;
+
+    &[data-flash="true"] {
+      @apply bg-[#a855f7]/10 text-[#a855f7];
+    }
+  }
+}
+
+.react-scan-slider {
+  @apply relative;
+  @apply min-h-6;
+
+  > input {
+    @apply absolute inset-0;
+    @apply opacity-0;
+  }
+
+  &:before {
+    @apply content-[''];
+    @apply absolute inset-x-0 top-1/2 -translate-y-1/2;
+    @apply h-1.5;
+    @apply bg-[#8e61e3]/40;
+    @apply rounded-lg;
+    @apply pointer-events-none;
+  }
+
+  &:after {
+    @apply content-[''];
+    @apply absolute inset-x-0 -inset-y-2;
+    @apply -z-10;
+  }
+
+  span {
+    @apply absolute left-0 top-1/2 -translate-y-1/2;
+    @apply w-2.5 h-2.5;
+    @apply rounded-lg;
+    @apply bg-[#8e61e3];
+    @apply pointer-events-none;
+    @apply transition-transform duration-75;
+  }
+}
+
+.resize-v-line {
+  @apply flex items-center justify-center;
+  @apply min-w-5 max-w-5;
+  @apply w-full h-full;
+  @apply transition-colors;
+  @apply cursor-col-resize;
+
+  &:hover,
+  &:active {
+    > span {
+      @apply bg-white/10;
+    }
+
+    svg {
+      @apply opacity-100;
+    }
+  }
+
+  &::before {
+    @apply content-[""];
+    @apply absolute inset-0 left-1/2 -translate-x-1/2;
+    @apply w-[1px];
+    @apply bg-white/10;
+    @apply transition-colors;
+  }
+
+  > span {
+    @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+    @apply w-1.5 h-4.5;
+    @apply rounded;
+    @apply transition-colors;
+  }
+
+  svg {
+    @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+    @apply text-neutral-400 rotate-90;
+    @apply opacity-0;
+    @apply transition-opacity;
+    @apply z-50;
+  }
+}
+
+
+.tree-node-search-highlight {
+  @apply truncate;
+
+  span {
+    @apply py-[1px];
+    @apply font-medium bg-yellow-300 text-black rounded-sm;
+  }
+
+  .single {
+    @apply px-[2px] mr-[1px];
+  }
+
+  .regex {
+    @apply px-[2px];
+  }
+
+  .start {
+    @apply rounded-l-sm ml-[1px];
+  }
+
+  .end {
+    @apply rounded-r-sm mr-[1px];
+  }
+
+  .middle {
+    @apply rounded-sm mx-[1px];
+  }
+}
+
+.react-scan-toolbar-notification {
+  @apply absolute inset-x-0;
+  @apply flex items-center gap-x-2;
+  @apply p-1 pl-2 text-[10px];
+  @apply text-neutral-300;
+  @apply bg-black/90;
+  @apply transition-transform;
+
+  &:before {
+    @apply content-[''];
+    @apply absolute inset-x-0;
+    @apply bg-black;
+    @apply h-2;
+  }
+
+  &.position-top {
+    @apply top-full -translate-y-full;
+    @apply rounded-b-lg;
+
+    &::before {
+      @apply top-0 -translate-y-full;
+    }
+  }
+
+  &.position-bottom {
+    @apply bottom-full translate-y-full;
+    @apply rounded-t-lg;
+
+    &::before {
+      @apply bottom-0 translate-y-full;
+    }
+
+  }
+
+  &.is-open {
+    @apply translate-y-0;
+  }
+}
+
+
+.react-scan-header-item {
+  @apply absolute inset-0 -translate-y-[200%];
+  @apply transition-transform duration-300;
+
+  &.is-visible {
+    @apply translate-y-0;
+  }
 }
