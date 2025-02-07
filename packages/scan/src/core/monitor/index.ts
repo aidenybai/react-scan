@@ -135,6 +135,9 @@ export const startMonitoring = () => {
     onCommitFinish() {
       // ReactScanInternals.options.value.onCommitFinish?.();
     },
+    onPostCommitFiberRoot() {
+      // ...
+    },
     trackChanges: false,
     forceAlwaysTrackRenders: true,
   });

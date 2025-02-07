@@ -289,7 +289,9 @@ export const getCanvasEl = () => {
 
   if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED) {
     try {
-      const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
+      const useExtensionWorker = readLocalStorage<boolean>(
+        'use-extension-worker',
+      );
       removeLocalStorage('use-extension-worker');
 
       if (useExtensionWorker) {
@@ -428,7 +430,7 @@ export const isValidFiber = (fiber: Fiber) => {
 
   return true;
 };
-export const initReactScanInstrumentation = () => {
+export const initReactScanInstrumentation = (setupToolbar: () => void) => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
   const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
@@ -479,6 +481,9 @@ export const initReactScanInstrumentation = () => {
     },
     onCommitFinish: () => {
       ReactScanInternals.options.value.onCommitFinish?.();
+    },
+    onPostCommitFiberRoot() {
+      setupToolbar();
     },
     trackChanges: false,
   });

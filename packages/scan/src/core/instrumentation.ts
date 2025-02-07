@@ -338,6 +338,7 @@ interface InstrumentationConfig {
   onCommitFinish: OnCommitFinishHandler;
   onError: OnErrorHandler;
   onActive?: OnActiveHandler;
+  onPostCommitFiberRoot: () => void;
   // monitoring does not need to track changes, and it adds overhead to leave it on
   trackChanges: boolean;
   // allows monitoring to continue tracking renders even if react scan dev mode is disabled
@@ -418,7 +419,6 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
 // };
 
 const TRACK_UNNECESSARY_RENDERS = false;
-
 
 export const createInstrumentation = (
   instanceKey: string,
@@ -551,6 +551,12 @@ export const createInstrumentation = (
 
         for (const instance of allInstances) {
           instance.config.onCommitFinish();
+        }
+      },
+      onPostCommitFiberRoot() {
+        const allInstances = getAllInstances();
+        for (const instance of allInstances) {
+          instance.config.onPostCommitFiberRoot();
         }
       },
     });
