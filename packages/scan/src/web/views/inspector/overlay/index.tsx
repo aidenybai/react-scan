@@ -1,16 +1,17 @@
 import { type Fiber, getDisplayName } from 'bippy';
 import { useEffect, useRef } from 'preact/hooks';
 import { ReactScanInternals, Store } from '~core/index';
+
+import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
+import { cn, throttle } from '~web/utils/helpers';
+import { lerp } from '~web/utils/lerp';
 import {
   type States,
   findComponentDOMNode,
   getAssociatedFiberRect,
   getCompositeComponentFromElement,
   nonVisualTags,
-} from '~web/components/inspector/utils';
-import { signalIsSettingsOpen } from '~web/state';
-import { cn, throttle } from '~web/utils/helpers';
-import { lerp } from '~web/utils/lerp';
+} from '../utils';
 
 type DrawKind = 'locked' | 'inspecting';
 
@@ -520,6 +521,10 @@ export const ScanOverlay = () => {
       return;
     }
 
+    signalWidgetViews.value = {
+      view: 'none',
+    };
+
     if (state.kind === 'focused' || state.kind === 'inspecting') {
       e.preventDefault();
       e.stopPropagation();
@@ -582,6 +587,10 @@ export const ScanOverlay = () => {
         if (refLastHoveredElement.current !== state.focusedDomElement) {
           refLastHoveredElement.current = state.focusedDomElement;
         }
+
+        signalWidgetViews.value = {
+          view: 'inspector',
+        };
 
         drawHoverOverlay(state.focusedDomElement, canvas, ctx, 'locked');
 

@@ -13,10 +13,10 @@ import type { RenderData } from 'src/core/utils';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
-import type { States } from '~web/components/inspector/utils';
 import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { Outline } from '~web/utils/outline';
+import type { States } from '~web/views/inspector/utils';
 import type {
   ChangeReason,
   Render,

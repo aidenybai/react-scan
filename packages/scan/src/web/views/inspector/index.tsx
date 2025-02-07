@@ -2,11 +2,12 @@ import type { Fiber } from 'bippy';
 import { Component } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
+import { Icon } from '~web/components/icon';
+import { StickySection } from '~web/components/sticky-section';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
-import { Icon } from '../icon';
-import { StickySection } from '../sticky-section';
+import { ComponentsTree } from './components-tree';
 import { flashManager } from './flash-overlay';
 import { PropertySection } from './properties';
 import {
@@ -72,7 +73,7 @@ class InspectorErrorBoundary extends Component {
   }
 }
 
-export const Inspector = constant(() => {
+const Inspector = constant(() => {
   const refInspector = useRef<HTMLDivElement>(null);
   const refLastInspectedFiber = useRef<Fiber | null>(null);
   const isSettingsOpen = signalIsSettingsOpen.value;
@@ -192,6 +193,17 @@ export const Inspector = constant(() => {
           {(props) => <PropertySection section="context" {...props} />}
         </StickySection>
       </div>
+    </InspectorErrorBoundary>
+  );
+});
+
+
+export const ViewInspector = constant(() => {
+  if (Store.inspectState.value.kind !== 'focused') return null;
+  return (
+    <InspectorErrorBoundary>
+      <Inspector />
+      <ComponentsTree />
     </InspectorErrorBoundary>
   );
 });

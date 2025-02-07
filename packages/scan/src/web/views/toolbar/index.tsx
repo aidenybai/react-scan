@@ -7,10 +7,10 @@ import {
 } from '~core/index';
 import { Icon } from '~web/components/icon';
 import { Toggle } from '~web/components/toggle';
-import FpsMeter from '~web/components/widget/fps-meter';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
+import FpsMeter from '~web/widget/fps-meter';
 
 export const Toolbar = constant(() => {
   const refSettingsButton = useRef<HTMLButtonElement>(null);

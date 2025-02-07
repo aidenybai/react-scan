@@ -1,4 +1,4 @@
-import { MIN_SIZE, SAFE_AREA } from '../../constants';
+import { MIN_SIZE, SAFE_AREA } from '../constants';
 import type { Corner, Position, ResizeHandleProps, Size } from './types';
 
 class WindowDimensions {

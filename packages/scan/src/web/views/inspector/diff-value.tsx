@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'preact/hooks';
+import { CopyToClipboard } from '~web/components/copy-to-clipboard';
+import { Icon } from '~web/components/icon';
 import { cn } from '~web/utils/helpers';
-import { CopyToClipboard } from '../copy-to-clipboard';
-import { Icon } from '../icon';
 import { formatForClipboard, formatValuePreview, safeGetValue } from './utils';
 
 export const DiffValueView = ({

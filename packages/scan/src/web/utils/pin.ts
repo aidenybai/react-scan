@@ -1,6 +1,6 @@
 import type { Fiber } from 'bippy';
 import { Store } from '~core/index';
-import { findComponentDOMNode } from '~web/components/inspector/utils';
+import { findComponentDOMNode } from '~web/views/inspector/utils';
 import { readLocalStorage } from './helpers';
 
 export interface FiberMetadata {

@@ -7,11 +7,6 @@ import {
 } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
-import { inspectorUpdateSignal } from '~web/components/inspector/states';
-import {
-  type InspectableElement,
-  getInspectableElements,
-} from '~web/components/inspector/utils';
 import {
   LOCALSTORAGE_KEY,
   MIN_CONTAINER_WIDTH,
@@ -25,7 +20,12 @@ import {
   saveLocalStorage,
 } from '~web/utils/helpers';
 import { getFiberPath } from '~web/utils/pin';
-import { getCompositeComponentFromElement } from '../../inspector/utils';
+import { inspectorUpdateSignal } from '../states';
+import {
+  type InspectableElement,
+  getCompositeComponentFromElement,
+  getInspectableElements,
+} from '../utils';
 import { Breadcrumb } from './breadcrumb';
 import {
   type FlattenedNode,
@@ -78,7 +78,10 @@ const calculateIndentSize = (containerWidth: number, maxDepth: number) => {
   if (availableSpace < MIN_TOTAL_INDENT) return MIN_INDENT;
 
   // Otherwise, calculate based on available space
-  const targetTotalIndent = Math.min(availableSpace * 0.3, maxDepth * MAX_INDENT);
+  const targetTotalIndent = Math.min(
+    availableSpace * 0.3,
+    maxDepth * MAX_INDENT,
+  );
   const baseIndent = targetTotalIndent / maxDepth;
 
   return Math.max(MIN_INDENT, Math.min(MAX_INDENT, baseIndent));
@@ -125,7 +128,10 @@ const isValidTypeSearch = (typeSearches: string[]) => {
   return true;
 };
 
-const matchesTypeSearch = (typeSearches: string[], wrapperTypes: Array<{ type: string }>) => {
+const matchesTypeSearch = (
+  typeSearches: string[],
+  wrapperTypes: Array<{ type: string }>,
+) => {
   if (typeSearches.length === 0) return true;
   if (!wrapperTypes.length) return false;
 
@@ -142,7 +148,10 @@ const matchesTypeSearch = (typeSearches: string[], wrapperTypes: Array<{ type: s
   return true;
 };
 
-const useNodeHighlighting = (node: FlattenedNode, searchValue: typeof searchState.value) => {
+const useNodeHighlighting = (
+  node: FlattenedNode,
+  searchValue: typeof searchState.value,
+) => {
   return useMemo(() => {
     const { query, matches } = searchValue;
     const isMatch = matches.some((match) => match.nodeId === node.nodeId);
@@ -152,7 +161,7 @@ const useNodeHighlighting = (node: FlattenedNode, searchValue: typeof searchStat
     if (!query || !isMatch) {
       return {
         highlightedText: <span className="truncate">{node.label}</span>,
-        typeHighlight: false
+        typeHighlight: false,
       };
     }
 
@@ -217,7 +226,7 @@ const useNodeHighlighting = (node: FlattenedNode, searchValue: typeof searchStat
 
     return {
       highlightedText: textContent,
-      typeHighlight: matchesType && typeSearches.length > 0
+      typeHighlight: matchesType && typeSearches.length > 0,
     };
   }, [node.label, node.nodeId, node.fiber, searchValue]);
 };
@@ -238,13 +247,20 @@ const TreeNodeItem = ({
     }
   }, [node.element, onElementClick]);
 
-  const handleToggle = useCallback(() => {
-    if (hasChildren) {
-      onToggle(node.nodeId);
-    }
-  }, [hasChildren, node.nodeId, onToggle]);
+  const handleToggle = useCallback(
+    (e: MouseEvent) => {
+      if (hasChildren) {
+        e.stopPropagation();
+        onToggle(node.nodeId);
+      }
+    },
+    [hasChildren, node.nodeId, onToggle],
+  );
 
-  const { highlightedText, typeHighlight } = useNodeHighlighting(node, searchValue);
+  const { highlightedText, typeHighlight } = useNodeHighlighting(
+    node,
+    searchValue,
+  );
 
   const componentTypes = useMemo(() => {
     if (!node.fiber) return null;
@@ -292,7 +308,7 @@ const TreeNodeItem = ({
       title={node.title}
       className={cn(
         'flex items-center gap-x-1',
-        'px-2',
+        'pl-1 pr-2',
         'w-full h-7',
         'text-left',
         'rounded',
@@ -303,13 +319,13 @@ const TreeNodeItem = ({
       <button
         type="button"
         onClick={handleToggle}
-        className={cn('w-4 h-4 flex items-center justify-center', 'text-left')}
+        className={cn('w-6 h-6 flex items-center justify-center', 'text-left')}
       >
         {hasChildren && (
           <Icon
             name="icon-chevron-right"
             size={12}
-            className={cn('w-4 h-4', 'transition-transform', {
+            className={cn('transition-transform', {
               'rotate-90': !isCollapsed,
             })}
           />
@@ -812,19 +828,22 @@ export const ComponentsTree = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     const unsubscribe = signalWidget.subscribe((state) => {
+      refMainContainer.current?.style.setProperty(
+        'transition',
+        'width 0.1s',
+      );
       updateContainerWidths(state.componentsTree.width);
+
+      setTimeout(() => {
+        refMainContainer.current?.style.removeProperty('transition');
+      }, 500);
     });
-    return () => {
-      unsubscribe();
-    };
+    return unsubscribe;
   }, []);
 
   return (
     <>
-      <div
-        onMouseDown={handleResize}
-        className="relative resize-v-line"
-      >
+      <div onMouseDown={handleResize} className="relative resize-v-line">
         <span>
           <Icon name="icon-ellipsis" size={18} />
         </span>
@@ -854,7 +873,7 @@ export const ComponentsTree = () => {
 • Navigation:
    - Enter → Next match
    - Shift + Enter → Previous match
-   - Cmd/Ctrl + Enter → Select and focus match (keeps search active)
+   - Cmd/Ctrl + Enter → Select and focus match
 `}
               className={cn(
                 'relative',
@@ -914,65 +933,63 @@ export const ComponentsTree = () => {
                   placeholder="Component name, /regex/, or [type]"
                 />
               </div>
-              {
-                searchState.value.query
-                  ? (
+              {searchState.value.query ? (
+                <>
+                  <span className="flex items-center gap-x-0.5 text-xs text-neutral-500">
+                    {searchState.value.currentMatchIndex + 1}
+                    {'|'}
+                    {searchState.value.matches.length}
+                  </span>
+                  {!!searchState.value.matches.length && (
                     <>
-                      <span className="flex items-center gap-x-0.5 text-xs text-neutral-500">
-                        {searchState.value.currentMatchIndex + 1}
-                        {'|'}
-                        {searchState.value.matches.length}
-                      </span>
-                      {!!searchState.value.matches.length && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigateSearch('prev');
-                            }}
-                            className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
-                          >
-                            <Icon
-                              name="icon-chevron-right"
-                              className="-rotate-90"
-                              size={12}
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigateSearch('next');
-                            }}
-                            className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
-                          >
-                            <Icon
-                              name="icon-chevron-right"
-                              className="rotate-90"
-                              size={12}
-                            />
-                          </button>
-                        </>
-                      )}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOnChangeSearch('');
+                          navigateSearch('prev');
                         }}
                         className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
                       >
-                        <Icon name="icon-close" size={12} />
+                        <Icon
+                          name="icon-chevron-right"
+                          className="-rotate-90"
+                          size={12}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateSearch('next');
+                        }}
+                        className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
+                      >
+                        <Icon
+                          name="icon-chevron-right"
+                          className="rotate-90"
+                          size={12}
+                        />
                       </button>
                     </>
-                  )
-                  : !!flattenedNodes.length && (
-                    <span className="text-xs text-neutral-500">
-                      {flattenedNodes.length}
-                    </span>
-                  )
-              }
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOnChangeSearch('');
+                    }}
+                    className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
+                  >
+                    <Icon name="icon-close" size={12} />
+                  </button>
+                </>
+              ) : (
+                !!flattenedNodes.length && (
+                  <span className="text-xs text-neutral-500">
+                    {flattenedNodes.length}
+                  </span>
+                )
+              )}
             </div>
           </div>
         </div>

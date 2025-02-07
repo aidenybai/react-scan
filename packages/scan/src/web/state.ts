@@ -1,9 +1,4 @@
 import { signal } from '@preact/signals';
-import type {
-  Corner,
-  WidgetConfig,
-  WidgetSettings,
-} from './components/widget/types';
 import {
   LOCALSTORAGE_KEY,
   MIN_CONTAINER_WIDTH,
@@ -11,6 +6,7 @@ import {
   SAFE_AREA,
 } from './constants';
 import { readLocalStorage, saveLocalStorage } from './utils/helpers';
+import type { Corner, WidgetConfig, WidgetSettings } from './widget/types';
 
 export const signalIsSettingsOpen = signal(false);
 export const signalRefWidget = signal<HTMLDivElement | null>(null);
@@ -83,3 +79,37 @@ export const updateDimensions = (): void => {
     },
   };
 };
+
+export interface SlowDowns {
+  slowDowns: number;
+  hideNotification: boolean;
+}
+
+export const signalSlowDowns = signal<SlowDowns>({
+  slowDowns: 0,
+  hideNotification: false,
+});
+
+export type WidgetStates =
+  | {
+      view: 'none';
+    }
+  | {
+      view: 'inspector';
+      // extra params
+    }
+  | {
+      view: 'settings';
+      // extra params
+    }
+  | {
+      view: 'slow-downs';
+      // extra params
+    }
+  | {
+      view: 'summary';
+      // extra params
+    };
+export const signalWidgetViews = signal<WidgetStates>({
+  view: 'none',
+});

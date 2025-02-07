@@ -1,34 +1,35 @@
 import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
-import { ScanOverlay } from '~web/components/inspector/overlay';
 import {
   cn,
   saveLocalStorage,
   toggleMultipleClasses,
 } from '~web/utils/helpers';
-import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../../constants';
+import { Content } from '~web/views';
+import { ScanOverlay } from '~web/views/inspector/overlay';
+import { ToolbarNotification } from '~web/views/slow-downs/toolbar-notification';
+import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../constants';
 import {
   defaultWidgetConfig,
-  signalIsSettingsOpen,
   signalRefWidget,
+  signalSlowDowns,
   signalWidget,
+  signalWidgetViews,
   updateDimensions,
-} from '../../state';
-import { Inspector } from '../inspector';
-import { ComponentsTree } from './components-tree';
-import { Header } from './header';
+} from '../state';
 import {
   calculateBoundedSize,
   calculatePosition,
   getBestCorner,
 } from './helpers';
 import { ResizeHandle } from './resize-handle';
-import { Toolbar } from './toolbar';
 
 export const Widget = () => {
   const refWidget = useRef<HTMLDivElement | null>(null);
   const refContent = useRef<HTMLDivElement>(null);
+  const refNotificationState = useRef<boolean | null>(null);
+  const refShouldOpen = useRef<boolean>(false);
 
   const refInitialMinimizedWidth = useRef<number>(0);
   const refInitialMinimizedHeight = useRef<number>(0);
@@ -36,14 +37,11 @@ export const Widget = () => {
   const updateWidgetPosition = useCallback((shouldSave = true) => {
     if (!refWidget.current) return;
 
-    const inspectState = Store.inspectState.value;
-    const isInspectFocused = inspectState.kind === 'focused';
-
     const { corner } = signalWidget.value;
     let newWidth: number;
     let newHeight: number;
 
-    if (isInspectFocused || signalIsSettingsOpen.value) {
+    if (refShouldOpen.current) {
       const lastDims = signalWidget.value.lastDimensions;
       newWidth = calculateBoundedSize(lastDims.width, 0, true);
       newHeight = calculateBoundedSize(lastDims.height, 0, false);
@@ -105,7 +103,7 @@ export const Widget = () => {
     signalWidget.value = {
       corner,
       dimensions: newDimensions,
-      lastDimensions: isInspectFocused
+      lastDimensions: refShouldOpen
         ? signalWidget.value.lastDimensions
         : newWidth > refInitialMinimizedWidth.current
           ? newDimensions
@@ -123,140 +121,150 @@ export const Widget = () => {
     }
 
     updateDimensions();
-
   }, []);
 
   const handleDrag = useCallback((e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
-      e.preventDefault();
+    e.preventDefault();
 
-      if (!refWidget.current || (e.target as HTMLElement).closest('button'))
-        return;
+    if (!refWidget.current || (e.target as HTMLElement).closest('button'))
+      return;
 
-      const container = refWidget.current;
-      const containerStyle = container.style;
-      const { dimensions } = signalWidget.value;
+    refNotificationState.current = signalSlowDowns.value.hideNotification;
+    signalSlowDowns.value = {
+      ...signalSlowDowns.value,
+      hideNotification: true,
+    };
 
-      const initialMouseX = e.clientX;
-      const initialMouseY = e.clientY;
+    const container = refWidget.current;
+    const containerStyle = container.style;
+    const { dimensions } = signalWidget.value;
 
-      const initialX = dimensions.position.x;
-      const initialY = dimensions.position.y;
+    const initialMouseX = e.clientX;
+    const initialMouseY = e.clientY;
 
-      let currentX = initialX;
-      let currentY = initialY;
-      let rafId: number | null = null;
-      let hasMoved = false;
-      let lastMouseX = initialMouseX;
-      let lastMouseY = initialMouseY;
+    const initialX = dimensions.position.x;
+    const initialY = dimensions.position.y;
 
-      const handleMouseMove = (e: globalThis.MouseEvent) => {
-        if (rafId) return;
+    let currentX = initialX;
+    let currentY = initialY;
+    let rafId: number | null = null;
+    let hasMoved = false;
+    let lastMouseX = initialMouseX;
+    let lastMouseY = initialMouseY;
 
-        hasMoved = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
+      if (rafId) return;
 
-        rafId = requestAnimationFrame(() => {
-          const deltaX = lastMouseX - initialMouseX;
-          const deltaY = lastMouseY - initialMouseY;
+      hasMoved = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
 
-          currentX = Number(initialX) + deltaX;
-          currentY = Number(initialY) + deltaY;
+      rafId = requestAnimationFrame(() => {
+        const deltaX = lastMouseX - initialMouseX;
+        const deltaY = lastMouseY - initialMouseY;
 
-          containerStyle.transition = 'none';
-          containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-          rafId = null;
+        currentX = Number(initialX) + deltaX;
+        currentY = Number(initialY) + deltaY;
+
+        containerStyle.transition = 'none';
+        containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        rafId = null;
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (!container) return;
+
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+
+      // Calculate total movement distance
+      const totalDeltaX = Math.abs(lastMouseX - initialMouseX);
+      const totalDeltaY = Math.abs(lastMouseY - initialMouseY);
+      const totalMovement = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+
+      // Only consider it a move if we moved more than 60 pixels
+      if (!hasMoved || totalMovement < 60) return;
+
+      const newCorner = getBestCorner(
+        lastMouseX,
+        lastMouseY,
+        initialMouseX,
+        initialMouseY,
+        Store.inspectState.value.kind === 'focused' ? 80 : 40,
+      );
+
+      if (newCorner === signalWidget.value.corner) {
+        containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        const currentPosition = signalWidget.value.dimensions.position;
+        requestAnimationFrame(() => {
+          containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
         });
-      };
 
-      const handleMouseUp = () => {
-        if (!container) return;
+        if (refNotificationState.current !== null) {
+          signalSlowDowns.value = {
+            ...signalSlowDowns.value,
+            hideNotification: refNotificationState.current,
+          };
+        }
+        return;
+      }
 
+      const snappedPosition = calculatePosition(
+        newCorner,
+        dimensions.width,
+        dimensions.height,
+      );
+
+      if (currentX === initialX && currentY === initialY) return;
+
+      const onTransitionEnd = () => {
+        containerStyle.transition = 'none';
+        updateDimensions();
+        container.removeEventListener('transitionend', onTransitionEnd);
         if (rafId) {
           cancelAnimationFrame(rafId);
           rafId = null;
         }
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-
-        // Calculate total movement distance
-        const totalDeltaX = Math.abs(lastMouseX - initialMouseX);
-        const totalDeltaY = Math.abs(lastMouseY - initialMouseY);
-        const totalMovement = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
-
-        // Only consider it a move if we moved more than 60 pixels
-        if (!hasMoved || totalMovement < 60) return;
-
-        const newCorner = getBestCorner(
-          lastMouseX,
-          lastMouseY,
-          initialMouseX,
-          initialMouseY,
-          Store.inspectState.value.kind === 'focused' ? 80 : 40,
-        );
-
-        if (newCorner === signalWidget.value.corner) {
-          containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-          const currentPosition = signalWidget.value.dimensions.position;
-          requestAnimationFrame(() => {
-            containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
-          });
-          return;
-        }
-
-        const snappedPosition = calculatePosition(
-          newCorner,
-          dimensions.width,
-          dimensions.height,
-        );
-
-        if (currentX === initialX && currentY === initialY) return;
-
-        const onTransitionEnd = () => {
-          containerStyle.transition = 'none';
-          updateDimensions();
-          container.removeEventListener('transitionend', onTransitionEnd);
-          if (rafId) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-          }
-        };
-
-        container.addEventListener('transitionend', onTransitionEnd);
-        containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-
-        requestAnimationFrame(() => {
-          containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;
-        });
-
-        signalWidget.value = {
-          corner: newCorner,
-          dimensions: {
-            isFullWidth: dimensions.isFullWidth,
-            isFullHeight: dimensions.isFullHeight,
-            width: dimensions.width,
-            height: dimensions.height,
-            position: snappedPosition,
-          },
-          lastDimensions: signalWidget.value.lastDimensions,
-          componentsTree: signalWidget.value.componentsTree,
-        };
-
-        saveLocalStorage(LOCALSTORAGE_KEY, {
-          corner: newCorner,
-          dimensions: signalWidget.value.dimensions,
-          lastDimensions: signalWidget.value.lastDimensions,
-          componentsTree: signalWidget.value.componentsTree,
-        });
       };
 
-      document.addEventListener('mousemove', handleMouseMove, {
-        passive: true,
+      container.addEventListener('transitionend', onTransitionEnd);
+      containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      requestAnimationFrame(() => {
+        containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;
       });
-      document.addEventListener('mouseup', handleMouseUp);
-    },
-    [],
-  );
+
+      signalWidget.value = {
+        corner: newCorner,
+        dimensions: {
+          isFullWidth: dimensions.isFullWidth,
+          isFullHeight: dimensions.isFullHeight,
+          width: dimensions.width,
+          height: dimensions.height,
+          position: snappedPosition,
+        },
+        lastDimensions: signalWidget.value.lastDimensions,
+        componentsTree: signalWidget.value.componentsTree,
+      };
+
+      saveLocalStorage(LOCALSTORAGE_KEY, {
+        corner: newCorner,
+        dimensions: signalWidget.value.dimensions,
+        lastDimensions: signalWidget.value.lastDimensions,
+        componentsTree: signalWidget.value.componentsTree,
+      });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove, {
+      passive: true,
+    });
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
@@ -298,12 +306,15 @@ export const Widget = () => {
       });
     });
 
-    signalIsSettingsOpen.subscribe(() => {
+    const unsubscribeSignalWidgetViews = signalWidgetViews.subscribe((state) => {
+      refShouldOpen.current = state.view !== 'none';
       updateWidgetPosition();
     });
 
     const unsubscribeStoreInspectState = Store.inspectState.subscribe((state) => {
       if (!refContent.current) return;
+
+      refShouldOpen.current = state.kind === 'focused';
 
       if (state.kind === 'inspecting') {
         toggleMultipleClasses(refContent.current, [
@@ -323,6 +334,7 @@ export const Widget = () => {
 
     return () => {
       window.removeEventListener('resize', handleWindowResize);
+      unsubscribeSignalWidgetViews();
       unsubscribeStoreInspectState();
       unsubscribeSignalWidget();
 
@@ -358,56 +370,8 @@ export const Widget = () => {
         <ResizeHandle position="left" />
         <ResizeHandle position="right" />
 
-        <div
-          className={cn(
-            'flex flex-1 flex-col',
-            'overflow-hidden z-10',
-            'rounded-lg',
-            'bg-black',
-            'opacity-100',
-            'transition-[border-radius]',
-            'peer-hover/left:rounded-l-none',
-            'peer-hover/right:rounded-r-none',
-            'peer-hover/top:rounded-t-none',
-            'peer-hover/bottom:rounded-b-none',
-          )}
-        >
-          <div
-            ref={refContent}
-            className={cn(
-              'relative',
-              'flex-1',
-              'flex flex-col',
-              'rounded-t-lg',
-              'overflow-hidden',
-              'opacity-100',
-              'transition-[opacity]',
-            )}
-          >
-            <Header />
-            <div
-              className={cn(
-                'relative',
-                'flex-1 flex',
-                'text-white',
-                'bg-[#0A0A0A]',
-                'transition-opacity delay-150',
-                'overflow-hidden',
-                'border-b border-white/10',
-              )}
-            >
-              {
-                Store.inspectState.value.kind === 'focused' && (
-                  <>
-                    <Inspector />
-                    <ComponentsTree />
-                  </>
-                )
-              }
-            </div>
-          </div>
-          <Toolbar />
-        </div>
+        <ToolbarNotification />
+        <Content />
       </div>
     </>
   );
