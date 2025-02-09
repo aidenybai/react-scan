@@ -125,7 +125,7 @@ If you need a programmatic API to debug further, install via NPM instead:
 npm install react-scan
 ```
 
-Then, in your app, import this **BEFORE** `react`. This must run in a client context (e.g. not in a server component):
+Then, in your app, import this **BEFORE** `react`. This must run in a client context (i.e. not in a server component):
 
 ```js
 import { scan } from 'react-scan'; // import this BEFORE react
