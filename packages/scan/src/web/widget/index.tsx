@@ -4,7 +4,6 @@ import { Store } from '~core/index';
 import {
   cn,
   saveLocalStorage,
-  toggleMultipleClasses,
 } from '~web/utils/helpers';
 import { Content } from '~web/views';
 import { ScanOverlay } from '~web/views/inspector/overlay';
@@ -27,7 +26,6 @@ import { ResizeHandle } from './resize-handle';
 
 export const Widget = () => {
   const refWidget = useRef<HTMLDivElement | null>(null);
-  const refContent = useRef<HTMLDivElement>(null);
   const refNotificationState = useRef<boolean | null>(null);
   const refShouldOpen = useRef<boolean>(false);
 
@@ -312,17 +310,7 @@ export const Widget = () => {
     });
 
     const unsubscribeStoreInspectState = Store.inspectState.subscribe((state) => {
-      if (!refContent.current) return;
-
       refShouldOpen.current = state.kind === 'focused';
-
-      if (state.kind === 'inspecting') {
-        toggleMultipleClasses(refContent.current, [
-          'opacity-0',
-          'duration-0',
-          'delay-0',
-        ]);
-      }
       updateWidgetPosition();
     });
 

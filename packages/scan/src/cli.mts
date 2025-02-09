@@ -298,6 +298,7 @@ const init = async () => {
 
       await page.evaluate(() => {
         if (typeof globalThis.reactScan !== 'function') return;
+        // @ts-expect-error - TODO: fix this
         globalThis.reactScan({ report: true });
       });
 
