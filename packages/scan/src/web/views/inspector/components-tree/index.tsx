@@ -233,6 +233,19 @@ const useNodeHighlighting = (
   }, [node.label, node.nodeId, node.fiber, searchValue]);
 };
 
+const formatTime = (time: number) => {
+  if (time > 0) {
+    if (time < 0.1 - Number.EPSILON) {
+      return '< 0.1';
+    }
+    if (time < 1000) {
+      return Number(time.toFixed(1)).toString();
+    }
+    return `${(time / 1000).toFixed(1)}k`;
+  }
+  return '0';
+};
+
 const TreeNodeItem = ({
   node,
   nodeIndex,
@@ -272,19 +285,6 @@ const TreeNodeItem = ({
   const renderTimeInfo = useMemo(() => {
     if (!node.renderData) return null;
     const { selfTime, totalTime, renderCount } = node.renderData;
-
-    const formatTime = (time: number) => {
-      if (time > 0) {
-        if (time < 0.1 - Number.EPSILON) {
-          return '< 0.1';
-        }
-        if (time < 1000) {
-          return Number(time.toFixed(1)).toString();
-        }
-        return `${(time / 1000).toFixed(1)}k`;
-      }
-      return '0';
-    };
 
     if (!renderCount) {
       return null
