@@ -8,7 +8,8 @@
     "dev": "node scripts/workspace.mjs dev",
     "pack": "node scripts/workspace.mjs pack",
     "pack:bump": "pnpm --filter scan pack:bump",
-    "lint": "biome lint .",
+    "lint": "pnpm -r lint",
+    "lint:all": "biome lint .",
     "format": "biome format . --write",
     "check": "biome check . --write"
   },

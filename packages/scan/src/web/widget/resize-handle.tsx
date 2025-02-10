@@ -30,6 +30,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     const checkForNotificationVisibility = () => {
       container.classList.remove('pointer-events-none');
       if (
+        signalWidgetViews.value.view !== 'none' &&
         signalWidgetViews.value.view !== 'slow-downs' &&
         (position === 'top' || position === 'bottom')
       ) {
