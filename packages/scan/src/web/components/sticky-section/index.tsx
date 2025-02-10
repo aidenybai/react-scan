@@ -14,7 +14,6 @@ interface StickyProps {
 
 export const StickySection = memo(({ children }: StickyProps) => {
   const refScrollableElement = useRef<HTMLElement | null>(null);
-  const refElement = useRef<HTMLElement>(null);
   const refScrollAtTop = useRef(false);
   const [isSticky, setIsSticky] = useState(false);
   const refRafId = useRef(0);
@@ -49,7 +48,6 @@ export const StickySection = memo(({ children }: StickyProps) => {
         return;
       }
 
-      refElement.current = node;
       refScrollableElement.current = node.parentElement;
       node.dataset.sticky = 'true';
 

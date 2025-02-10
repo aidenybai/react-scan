@@ -339,7 +339,6 @@ const TreeNodeItem = ({
 
 export const ComponentsTree = () => {
   const refContainer = useRef<HTMLDivElement>(null);
-  const refBreadcrumbContainer = useRef<HTMLDivElement>(null);
   const refMainContainer = useRef<HTMLDivElement>(null);
   const refSearchInputContainer = useRef<HTMLDivElement>(null);
   const refSearchInput = useRef<HTMLInputElement>(null);
@@ -849,7 +848,7 @@ export const ComponentsTree = () => {
         </span>
       </div>
       <div ref={refMainContainer} className="flex flex-col h-full">
-        <div ref={refBreadcrumbContainer} className="overflow-hidden">
+        <div className="overflow-hidden">
           <Breadcrumb selectedElement={refSelectedElement.current} />
 
           <div className="py-2 pr-2 border-b border-[#1e1e1e]">

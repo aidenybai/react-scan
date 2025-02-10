@@ -12,8 +12,7 @@ import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
 import { StickySection } from '~web/components/sticky-section';
 import type { useMergedRefs } from '~web/hooks/use-merged-refs';
-import { cn } from '~web/utils/helpers';
-import { throttle } from '~web/utils/helpers';
+import { cn, throttle } from '~web/utils/helpers';
 import { DiffValueView } from './diff-value';
 import { type MinimalFiberInfo, timelineState } from './states';
 import { Timeline } from './timeline';
@@ -932,6 +931,7 @@ const CountBadge = ({
     }
 
     if (forceFlash) {
+      // is ref necessary
       refTimer.current = setTimeout(() => {
         refBadge.current?.classList.add('count-flash-white');
         refTimer.current = setTimeout(() => {

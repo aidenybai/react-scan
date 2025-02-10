@@ -550,7 +550,6 @@ export const PropertySection = ({
   section,
 }: PropertySectionProps) => {
   const refStickyElement = useRef<HTMLElement | null>(null);
-  const refSection = useRef<HTMLDivElement>(null);
   const { updates, currentIndex } = timelineState.value;
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -635,7 +634,7 @@ export const PropertySection = ({
           {section} {!isExpanded && propertyCount > 0 && `(${propertyCount})`}
         </span>
       </button>
-      <div ref={refSection} className="react-scan-section">
+      <div className="react-scan-section">
         <div
           className={cn(
             'react-scan-expandable',

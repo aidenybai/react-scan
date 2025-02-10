@@ -74,7 +74,6 @@ class InspectorErrorBoundary extends Component {
 }
 
 const Inspector = constant(() => {
-  const refInspector = useRef<HTMLDivElement>(null);
   const refLastInspectedFiber = useRef<Fiber | null>(null);
   const isSettingsOpen = signalIsSettingsOpen.value;
 
@@ -169,7 +168,6 @@ const Inspector = constant(() => {
   return (
     <InspectorErrorBoundary>
       <div
-        ref={refInspector}
         className={cn(
           'react-scan-inspector',
           'flex-1',

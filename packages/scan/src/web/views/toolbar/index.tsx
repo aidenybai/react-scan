@@ -13,7 +13,7 @@ import { constant } from '~web/utils/preact/constant';
 import FpsMeter from '~web/widget/fps-meter';
 
 export const Toolbar = constant(() => {
-  const refSettingsButton = useRef<HTMLButtonElement>(null);
+  // const refSettingsButton = useRef<HTMLButtonElement>(null);
   // const [isPinned, setIsPinned] = useState(false);
   // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);
 
@@ -87,13 +87,13 @@ export const Toolbar = constant(() => {
       // }
     });
 
-    const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
-      refSettingsButton.current?.classList.toggle('text-inspect', state);
-    });
+    // const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
+    //   refSettingsButton.current?.classList.toggle('text-inspect', state);
+    // });
 
     return () => {
       unSubState();
-      unSubSettings();
+      // unSubSettings();
     };
   }, []);
 
