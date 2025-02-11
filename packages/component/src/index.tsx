@@ -1,6 +1,6 @@
 'use client';
-import { JSX, useEffect } from 'react';
-import { Options, Store, scan } from 'react-scan';
+import { type Options, Store, scan } from 'react-scan';
+import { type JSX, useEffect } from 'react';
 
 export interface ReactScanProps extends Options {
   isInIFrame?: boolean;
