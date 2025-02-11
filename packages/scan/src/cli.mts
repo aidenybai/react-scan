@@ -1,9 +1,9 @@
-import { spawn } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
 import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
 import { bgMagenta, dim, red } from 'kleur';
 import mri from 'mri';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   type Browser,
   type BrowserContext,
@@ -227,7 +227,7 @@ const init = async () => {
 
   const page = await context.newPage();
 
-  const scriptContent = fs.readFileSync(
+  const scriptContent = await fs.readFile(
     path.resolve(__dirname, './auto.global.js'),
     'utf8',
   );
@@ -237,12 +237,12 @@ const init = async () => {
   const urlString = inferValidURL(inputUrl);
 
   await page.goto(urlString);
-  await page.waitForLoadState('load');
-  await page.waitForTimeout(500);
 
-  await page.addScriptTag({
+  await page.addInitScript({
     content: `${scriptContent}\n//# sourceURL=react-scan.js`,
   });
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(500);
 
   const pollReport = async () => {
     if (page.url() !== currentURL) return;
@@ -296,9 +296,12 @@ const init = async () => {
 
       await page.waitForTimeout(100);
 
+      // TODO: determine why this is needed and fix root cause
+      await page.reload();
+
       await page.evaluate(() => {
         if (typeof globalThis.reactScan !== 'function') return;
-        globalThis.reactScan({ report: true });
+        globalThis.reactScan({});
       });
 
       interval = setInterval(() => {

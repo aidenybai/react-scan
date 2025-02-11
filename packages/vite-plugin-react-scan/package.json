@@ -1,0 +1,76 @@
+{
+  "name": "@react-scan/vite-plugin-react-scan",
+  "version": "0.1.2",
+  "description": "A Vite plugin for React Scan - detects performance issues in your React app.",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "postbuild": "node ../../scripts/version-warning.mjs",
+    "lint": "biome lint src && pnpm typecheck",
+    "format": "biome format . --write",
+    "check": "biome check . --write",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "rm -rf dist && npm run build"
+  },
+  "peerDependenciesMeta": {
+    "react-scan": {
+      "optional": false
+    },
+    "vite": {
+      "optional": false
+    }
+  },
+  "keywords": [
+    "react",
+    "react-scan",
+    "react scan",
+    "render",
+    "performance",
+    "vite",
+    "vite plugin"
+  ],
+  "author": {
+    "name": "Team React Scan",
+    "url": "https://github.com/aidenybai/react-scan"
+  },
+  "maintainers": [
+    {
+      "name": "Pavel Ivanov",
+      "email": "pafelka@gmail.com",
+      "url": "https://github.com/pivanov"
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/aidenybai/react-scan",
+  "bugs": {
+    "url": "https://github.com/aidenybai/react-scan/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aidenybai/react-scan.git"
+  },
+  "dependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/plugin-transform-react-jsx": "^7.25.9",
+    "babel-plugin-add-react-displayname": "^0.0.5",
+    "cheerio": "^1.0.0"
+  },
+  "peerDependencies": {
+    "react-scan": "^0.1.0",
+    "vite": "^2 || ^3 || ^4 || ^5 || ^6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/babel__core": "^7.20.5",
+    "@types/cheerio": "^0.22.35",
+    "@types/node": "^22.10.7",
+    "typescript": "latest",
+    "vite": "^6.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

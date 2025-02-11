@@ -6,9 +6,8 @@ import {
   ForwardRefTag,
   FunctionComponentTag,
   MemoComponentTag,
-  MemoizedState,
+  type MemoizedState,
   SimpleMemoComponentTag,
-  createFiberVisitor,
   didFiberCommit,
   getDisplayName,
   getMutatedHostFibers,
@@ -18,26 +17,26 @@ import {
   instrument,
   traverseContexts,
   traverseProps,
-  traverseState,
+  traverseRenderedFibers,
 } from 'bippy';
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
-import { getChangedPropsDetailed } from '~web/components/inspector/utils';
 import {
   RENDER_PHASE_STRING_TO_ENUM,
   type RenderPhase,
 } from '~web/utils/outline';
 import {
-  Change,
-  ClassComponentStateChange,
-  ContextChange,
-  FunctionalComponentStateChange,
+  collectContextChanges,
+  collectPropsChanges,
+  collectStateChanges,
+} from '~web/views/inspector/timeline/utils';
+import {
+  type Change,
+  type ContextChange,
   ReactScanInternals,
-  StateChange,
+  type StateChange,
   Store,
-  getIsProduction,
 } from './index';
-import { outlineFiber } from 'src/new-outlines';
 
 let fps = 0;
 let lastTime = performance.now();
@@ -200,7 +199,7 @@ export const getPropsChanges = (fiber: Fiber) => {
     ...Object.keys(nextProps),
   ]);
   for (const propName in allKeys) {
-    const prevValue = prevProps?.[propName];
+    // const prevValue = prevProps?.[propName];
     const nextValue = nextProps?.[propName];
 
     const change: Change = {
@@ -247,7 +246,9 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     }
 
     return changes;
-  } else if (fiber.tag === ClassComponentTag) {
+  }
+
+  if (fiber.tag === ClassComponentTag) {
     // when we have class component fiber, memoizedState is the component state
     const change: StateChange = {
       type: ChangeReason.ClassState,
@@ -260,6 +261,7 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     }
     return changes;
   }
+
   return changes;
 };
 interface ContextFiber {
@@ -268,7 +270,7 @@ interface ContextFiber {
 }
 
 let lastContextId = 0;
-const contextIdMap = new WeakMap<any, number>();
+const contextIdMap = new WeakMap<ContextFiber, number>();
 const getContextId = (contextFiber: ContextFiber) => {
   const existing = contextIdMap.get(contextFiber);
   if (existing) {
@@ -285,7 +287,7 @@ function getContextChangesTraversal(
   prevValue: ContextFiber | null | undefined,
 ): void {
   if (!nextValue || !prevValue) return;
-  const prevMemoizedValue = prevValue.memoizedValue;
+  // const prevMemoizedValue = prevValue.memoizedValue;
   const nextMemoizedValue = nextValue.memoizedValue;
 
   const change: ContextChange = {
@@ -294,7 +296,7 @@ function getContextChangesTraversal(
       (nextValue.context as { displayName: string | undefined }).displayName ??
       'UnnamedContext',
     value: nextMemoizedValue,
-    contextType: getContextId(nextValue.context as any),
+    contextType: getContextId(nextValue.context as ContextFiber),
 
     // unstable: false,
   };
@@ -336,6 +338,7 @@ interface InstrumentationConfig {
   onCommitFinish: OnCommitFinishHandler;
   onError: OnErrorHandler;
   onActive?: OnActiveHandler;
+  onPostCommitFiberRoot: () => void;
   // monitoring does not need to track changes, and it adds overhead to leave it on
   trackChanges: boolean;
   // allows monitoring to continue tracking renders even if react scan dev mode is disabled
@@ -417,6 +420,49 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
 
 const TRACK_UNNECESSARY_RENDERS = false;
 
+export interface RenderData {
+  selfTime: number;
+  totalTime: number;
+  renderCount: number;
+  lastRenderTimestamp: number;
+}
+
+const RENDER_DEBOUNCE_MS = 16;
+
+export const renderDataMap = new WeakMap<object, RenderData>();
+
+const trackRender = (
+  type: unknown,
+  fiberSelfTime: number,
+  fiberTotalTime: number,
+  hasChanges: boolean,
+  hasDomMutations: boolean,
+) => {
+  const currentTimestamp = Date.now();
+  const existingData = renderDataMap.get(type as object);
+
+  if (
+    (hasChanges || hasDomMutations) &&
+    (!existingData ||
+      currentTimestamp - (existingData.lastRenderTimestamp || 0) >
+        RENDER_DEBOUNCE_MS)
+  ) {
+    const renderData: RenderData = existingData || {
+      selfTime: 0,
+      totalTime: 0,
+      renderCount: 0,
+      lastRenderTimestamp: currentTimestamp,
+    };
+
+    renderData.renderCount = (renderData.renderCount || 0) + 1;
+    renderData.selfTime = fiberSelfTime || 0;
+    renderData.totalTime = fiberTotalTime || 0;
+    renderData.lastRenderTimestamp = currentTimestamp;
+
+    renderDataMap.set(type as object, { ...renderData });
+  }
+};
+
 export const createInstrumentation = (
   instanceKey: string,
   config: InstrumentationConfig,
@@ -433,69 +479,11 @@ export const createInstrumentation = (
   });
   if (!inited) {
     inited = true;
-    const visitor = createFiberVisitor({
-      onRender(fiber, phase) {
-        const type = getType(fiber.type);
-        if (!type) return null;
 
-        const allInstances = getAllInstances();
-        const validInstancesIndicies: Array<number> = [];
-        for (let i = 0, len = allInstances.length; i < len; i++) {
-          const instance = allInstances[i];
-          if (!instance.config.isValidFiber(fiber)) continue;
-          validInstancesIndicies.push(i);
-        }
-        if (!validInstancesIndicies.length) return null;
-
-        const changes: Array<Change> = [];
-
-        if (allInstances.some((instance) => instance.config.trackChanges)) {
-          const propsChanges = getChangedPropsDetailed(fiber);
-
-          const stateChanges = getStateChanges(fiber);
-
-          const contextChanges = null!;
-
-          changes.push.apply(changes, propsChanges);
-          changes.push.apply(changes, stateChanges);
-          changes.push.apply(changes, contextChanges);
-        }
-        const { selfTime } = getTimings(fiber);
-
-        const fps = getFPS();
-        const render: Render = {
-          phase: RENDER_PHASE_STRING_TO_ENUM[phase],
-          componentName: getDisplayName(type),
-          count: 1,
-          changes,
-          time: selfTime,
-          forget: hasMemoCache(fiber),
-          // todo: allow this to be toggle-able through toolbar
-          // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
-          unnecessary: TRACK_UNNECESSARY_RENDERS
-            ? isRenderUnnecessary(fiber)
-            : null,
-
-          didCommit: didFiberCommit(fiber),
-          fps,
-        };
-        for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {
-          const index = validInstancesIndicies[i];
-          const instance = allInstances[index];
-          instance.config.onRender(fiber, [render]);
-        }
-      },
-      onError(error) {
-        const allInstances = getAllInstances();
-        for (const instance of allInstances) {
-          instance.config.onError(error);
-        }
-      },
-    });
     instrument({
       name: 'react-scan',
       onActive: config.onActive,
-      onCommitFiberRoot(rendererID, root) {
+      onCommitFiberRoot(_rendererID, root) {
         instrumentation.fiberRoots.add(root);
         if (
           ReactScanInternals.instrumentation?.isPaused.value &&
@@ -509,9 +497,125 @@ export const createInstrumentation = (
         for (const instance of allInstances) {
           instance.config.onCommitStart();
         }
-        visitor(rendererID, root);
+
+        traverseRenderedFibers(
+          root.current,
+          (fiber: Fiber, phase: 'mount' | 'update' | 'unmount') => {
+            const type = getType(fiber.type);
+            if (!type) return null;
+
+            const allInstances = getAllInstances();
+            const validInstancesIndicies: Array<number> = [];
+            for (let i = 0, len = allInstances.length; i < len; i++) {
+              const instance = allInstances[i];
+              if (!instance.config.isValidFiber(fiber)) continue;
+              validInstancesIndicies.push(i);
+            }
+            if (!validInstancesIndicies.length) return null;
+
+            const changes: Array<Change> = [];
+
+            if (allInstances.some((instance) => instance.config.trackChanges)) {
+              const changesProps = collectPropsChanges(fiber).changes;
+              const changesState = collectStateChanges(fiber).changes;
+              const changesContext = collectContextChanges(fiber).changes;
+
+              // Convert props changes
+              changes.push.apply(
+                null,
+                changesProps.map(
+                  (change) =>
+                    ({
+                      type: ChangeReason.Props,
+                      name: change.name,
+                      value: change.value,
+                    }) as Change,
+                ),
+              );
+
+              // Convert state changes
+              for (const change of changesState) {
+                if (fiber.tag === ClassComponentTag) {
+                  changes.push({
+                    type: ChangeReason.ClassState,
+                    name: change.name.toString(),
+                    value: change.value,
+                  } as Change);
+                } else {
+                  changes.push({
+                    type: ChangeReason.FunctionalState,
+                    name: change.name.toString(),
+                    value: change.value,
+                  } as Change);
+                }
+              }
+
+              // Convert context changes
+              changes.push.apply(
+                null,
+                changesContext.map(
+                  (change) =>
+                    ({
+                      type: ChangeReason.Context,
+                      name: change.name,
+                      value: change.value,
+                      contextType: Number(change.contextType),
+                    }) as Change,
+                ),
+              );
+            }
+
+            // Get timing information for this render
+            const { selfTime: fiberSelfTime, totalTime: fiberTotalTime } =
+              getTimings(fiber);
+
+            const fps = getFPS();
+            const render: Render = {
+              phase: RENDER_PHASE_STRING_TO_ENUM[phase],
+              componentName: getDisplayName(type),
+              count: 1,
+              changes,
+              time: fiberSelfTime,
+              forget: hasMemoCache(fiber),
+              // todo: allow this to be toggle-able through toolbar
+              // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
+              unnecessary: TRACK_UNNECESSARY_RENDERS
+                ? isRenderUnnecessary(fiber)
+                : null,
+              didCommit: didFiberCommit(fiber),
+              fps,
+            };
+
+            // First, determine if this is a real render we should track
+            const hasChanges = changes.length > 0;
+            const hasDomMutations = getMutatedHostFibers(fiber).length > 0;
+
+            if (phase === 'update') {
+              trackRender(
+                type,
+                fiberSelfTime,
+                fiberTotalTime,
+                hasChanges,
+                hasDomMutations,
+              );
+            }
+
+            for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {
+              const index = validInstancesIndicies[i];
+              const instance = allInstances[index];
+              instance.config.onRender(fiber, [render]);
+            }
+          },
+        );
+
         for (const instance of allInstances) {
           instance.config.onCommitFinish();
+        }
+      },
+      onPostCommitFiberRoot() {
+        const allInstances = getAllInstances();
+        for (const instance of allInstances) {
+          instance.config.onPostCommitFiberRoot();
         }
       },
     });

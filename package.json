@@ -8,12 +8,17 @@
     "dev": "node scripts/workspace.mjs dev",
     "pack": "node scripts/workspace.mjs pack",
     "pack:bump": "pnpm --filter scan pack:bump",
-    "lint": "biome lint .",
+    "lint": "pnpm -r lint",
+    "lint:all": "biome lint .",
     "format": "biome format . --write",
-    "check": "biome check . --write"
+    "check": "biome check . --write",
+    "changeset:add": "changeset add",
+    "bump": "changset add",
+    "changeset:publish": "changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@changesets/cli": "^2.27.12",
     "@types/node": "^22.10.2",
     "@vercel/style-guide": "^6.0.0",
     "autoprefixer": "^10.4.20",

@@ -1,11 +1,12 @@
 import { signal } from '@preact/signals';
-import type {
-  Corner,
-  WidgetConfig,
-  WidgetSettings,
-} from './components/widget/types';
-import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from './constants';
+import {
+  LOCALSTORAGE_KEY,
+  MIN_CONTAINER_WIDTH,
+  MIN_SIZE,
+  SAFE_AREA,
+} from './constants';
 import { readLocalStorage, saveLocalStorage } from './utils/helpers';
+import type { Corner, WidgetConfig, WidgetSettings } from './widget/types';
 
 export const signalIsSettingsOpen = signal(false);
 export const signalRefWidget = signal<HTMLDivElement | null>(null);
@@ -26,6 +27,9 @@ export const defaultWidgetConfig = {
     height: MIN_SIZE.height,
     position: { x: SAFE_AREA, y: SAFE_AREA },
   },
+  componentsTree: {
+    width: MIN_CONTAINER_WIDTH,
+  },
 } as WidgetConfig;
 
 export const getInitialWidgetConfig = (): WidgetConfig => {
@@ -35,21 +39,24 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
       corner: defaultWidgetConfig.corner,
       dimensions: defaultWidgetConfig.dimensions,
       lastDimensions: defaultWidgetConfig.lastDimensions,
+      componentsTree: defaultWidgetConfig.componentsTree,
     });
 
     return defaultWidgetConfig;
   }
 
   return {
-    corner: stored.corner,
+    corner: stored.corner ?? defaultWidgetConfig.corner,
     dimensions: {
       isFullWidth: false,
       isFullHeight: false,
       width: MIN_SIZE.width,
       height: MIN_SIZE.height,
-      position: stored.dimensions.position,
+      position:
+        stored.dimensions.position ?? defaultWidgetConfig.dimensions.position,
     },
-    lastDimensions: stored.dimensions,
+    lastDimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+    componentsTree: stored.componentsTree ?? defaultWidgetConfig.componentsTree,
   };
 };
 
@@ -72,3 +79,37 @@ export const updateDimensions = (): void => {
     },
   };
 };
+
+export interface SlowDowns {
+  slowDowns: number;
+  hideNotification: boolean;
+}
+
+export const signalSlowDowns = signal<SlowDowns>({
+  slowDowns: 0,
+  hideNotification: false,
+});
+
+export type WidgetStates =
+  | {
+      view: 'none';
+    }
+  | {
+      view: 'inspector';
+      // extra params
+    }
+  | {
+      view: 'settings';
+      // extra params
+    }
+  | {
+      view: 'slow-downs';
+      // extra params
+    }
+  | {
+      view: 'summary';
+      // extra params
+    };
+export const signalWidgetViews = signal<WidgetStates>({
+  view: 'none',
+});

@@ -1,13 +1,8 @@
-import * as reactScan from 'react-scan';
+import { installRDTHook } from 'bippy';
 import { canLoadReactScan, saveLocalStorage } from '../utils/helpers';
 
-saveLocalStorage('useExtensionWorker', true);
-window.reactScan = reactScan.setOptions;
-globalThis._reactScan = reactScan;
+saveLocalStorage('use-extension-worker', true);
 
 if (canLoadReactScan) {
-  reactScan.scan({
-    enabled: true,
-    showToolbar: false,
-  });
+  installRDTHook();
 }

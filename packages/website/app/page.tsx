@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import Companies from '@/components/companies';
-import CLI from '@/components/cli';
 import TodoDemo from '@/components/todo-demo';
+import InstallGuide from '@/components/installl-guide';
 
 export default function Home() {
   const [showDemo, setShowDemo] = useState(false);
@@ -45,11 +45,13 @@ export default function Home() {
           <ul className="list-inside list-disc space-y-2 pl-2 pt-2">
             <li>Requires no code changes – just drop it in</li>
             <li>Highlights exactly the components you need to optimize</li>
-            <li>Available via script tag, npm, CLI, you name it!</li>
+            <li>Available via script tag, npm, you name it!</li>
           </ul>
         </div>
 
-        <CLI command="npx react-scan@latest <URL>" />
+        <div className="space-y-4">
+          <InstallGuide />
+        </div>
 
         {/*
           for testing purposes only
@@ -58,7 +60,7 @@ export default function Home() {
         {/*
           for testing purposes only
           <CounterExample />
-        */}
+          */}
 
         <div className="!mb-8 mt-4 flex gap-2">
           <Link
