@@ -201,7 +201,7 @@ Also, some personal complaints about React Devtools' highlight feature:
 - No programmatic API
 - It's stuck in a chrome extension, I want to run it anywhere on the web
 - It looks subjectively ugly (lines look fuzzy, feels sluggish)
-- I'm more ambitious with react-scan (see our roadmap)
+- I'm more ambitious with react-scan
 
 ## Resources & Contributing Back
 
