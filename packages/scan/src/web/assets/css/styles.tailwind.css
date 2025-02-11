@@ -224,7 +224,7 @@ svg {
   @apply flex items-center gap-x-2;
   @apply pl-3 pr-2;
   @apply min-h-9;
-  @apply border-b-1 border-white/10;
+  @apply border-b-1 border-[#222];
   @apply whitespace-nowrap overflow-hidden;
 }
 
@@ -554,12 +554,11 @@ svg {
   @apply min-w-5 max-w-5;
   @apply w-full h-full;
   @apply transition-colors;
-  @apply cursor-col-resize;
 
   &:hover,
   &:active {
     > span {
-      @apply bg-white/10;
+      @apply bg-[#222];
     }
 
     svg {
@@ -571,7 +570,7 @@ svg {
     @apply content-[""];
     @apply absolute inset-0 left-1/2 -translate-x-1/2;
     @apply w-[1px];
-    @apply bg-white/10;
+    @apply bg-[#222];
     @apply transition-colors;
   }
 

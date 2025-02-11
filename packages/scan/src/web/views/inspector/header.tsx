@@ -35,7 +35,7 @@ export const HeaderInspect = () => {
       const reRenders = Math.max(0, totalUpdates - 1);
       const headerText = isVisible
         ? `#${windowOffset + currentIndex} Re-render`
-        : `${reRenders} Re-renders`;
+        : reRenders > 0 ? `×${reRenders}` : '';
 
       let formattedTime: string | undefined;
       if (reRenders > 0 && currentIndex >= 0 && currentIndex < updates.length) {
@@ -48,10 +48,8 @@ export const HeaderInspect = () => {
             : undefined;
       }
 
-      refReRenders.current.dataset.text = `${headerText}${reRenders > 0 && formattedTime ? ' •' : ''}`;
-      if (formattedTime) {
-        refTiming.current.dataset.text = formattedTime;
-      }
+      refReRenders.current.dataset.text = headerText ? ` • ${headerText}` : '';
+      refTiming.current.dataset.text = formattedTime ? ` • ${formattedTime}` : '';
     });
 
     return unSubTimeline;
@@ -97,7 +95,6 @@ export const HeaderInspect = () => {
             ×{wrapperTypes.length - 1}
           </span>
         )}
-        <samp className="text-neutral-500">{' • '}</samp>
       </span>
     );
   }, [currentFiber]);

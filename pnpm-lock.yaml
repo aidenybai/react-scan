@@ -284,16 +284,22 @@ importers:
 
   packages/vite-plugin-react-scan:
     dependencies:
-      react-scan:
-        specifier: ^0.1.0
-        version: 0.1.3(@remix-run/react@2.15.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react-router-dom@6.28.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-router@6.28.0(react@19.0.0))(react@19.0.0)(rollup@4.28.0)
-    devDependencies:
       '@babel/core':
         specifier: ^7.26.0
         version: 7.26.0
       '@babel/plugin-transform-react-jsx':
         specifier: ^7.25.9
         version: 7.25.9(@babel/core@7.26.0)
+      babel-plugin-add-react-displayname:
+        specifier: ^0.0.5
+        version: 0.0.5
+      cheerio:
+        specifier: ^1.0.0
+        version: 1.0.0
+      react-scan:
+        specifier: ^0.1.0
+        version: 0.1.3(@remix-run/react@2.15.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.7.3))(next@15.0.3(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react-router-dom@6.28.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-router@6.28.0(react@19.0.0))(react@19.0.0)(rollup@4.28.0)
+    devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
         version: 1.9.4
@@ -306,12 +312,6 @@ importers:
       '@types/node':
         specifier: ^22.10.7
         version: 22.13.1
-      babel-plugin-add-react-displayname:
-        specifier: ^0.0.5
-        version: 0.0.5
-      cheerio:
-        specifier: ^1.0.0
-        version: 1.0.0
       typescript:
         specifier: latest
         version: 5.7.3
