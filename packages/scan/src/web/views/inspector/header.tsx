@@ -1,5 +1,6 @@
+import { untracked, useComputed, useSignalEffect } from '@preact/signals';
 import type { Fiber } from 'bippy';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useMemo, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, getExtendedDisplayName } from '~web/utils/helpers';
@@ -8,24 +9,19 @@ import { timelineState } from './states';
 export const HeaderInspect = () => {
   const refReRenders = useRef<HTMLSpanElement>(null);
   const refTiming = useRef<HTMLSpanElement>(null);
-  const isSettingsOpen = signalIsSettingsOpen.value;
   const [currentFiber, setCurrentFiber] = useState<Fiber | null>(null);
 
-  useEffect(() => {
-    const unSubState = Store.inspectState.subscribe((state) => {
-      if (state.kind !== 'focused') return;
+  useSignalEffect(() => {
+    const state = Store.inspectState.value;
 
-      const fiber = state.fiber;
-      if (!fiber) return;
+    if (state.kind === 'focused') {
+      setCurrentFiber(state.fiber);
+    }
+  });
 
-      setCurrentFiber(fiber);
-    });
-
-    return unSubState;
-  }, []);
-
-  useEffect(() => {
-    const unSubTimeline = timelineState.subscribe((state) => {
+  useSignalEffect(() => {
+    const state = timelineState.value;
+    untracked(() => {
       if (Store.inspectState.value.kind !== 'focused') return;
       if (!refReRenders.current || !refTiming.current) return;
 
@@ -35,7 +31,9 @@ export const HeaderInspect = () => {
       const reRenders = Math.max(0, totalUpdates - 1);
       const headerText = isVisible
         ? `#${windowOffset + currentIndex} Re-render`
-        : reRenders > 0 ? `×${reRenders}` : '';
+        : reRenders > 0
+          ? `×${reRenders}`
+          : '';
 
       let formattedTime: string | undefined;
       if (reRenders > 0 && currentIndex >= 0 && currentIndex < updates.length) {
@@ -48,12 +46,13 @@ export const HeaderInspect = () => {
             : undefined;
       }
 
+      // TODO(Alexis): can be computed signal
       refReRenders.current.dataset.text = headerText ? ` • ${headerText}` : '';
-      refTiming.current.dataset.text = formattedTime ? ` • ${formattedTime}` : '';
+      refTiming.current.dataset.text = formattedTime
+        ? ` • ${formattedTime}`
+        : '';
     });
-
-    return unSubTimeline;
-  }, []);
+  });
 
   const componentName = useMemo(() => {
     if (!currentFiber) return null;
@@ -101,13 +100,15 @@ export const HeaderInspect = () => {
 
   return (
     <div
-      className={cn(
-        'absolute inset-0 flex items-center gap-x-2',
-        'translate-y-0',
-        'transition-transform duration-300',
-        {
-          '-translate-y-[200%]': isSettingsOpen,
-        },
+      className={useComputed(() =>
+        cn(
+          'absolute inset-0 flex items-center gap-x-2',
+          'translate-y-0',
+          'transition-transform duration-300',
+          {
+            '-translate-y-[200%]': signalIsSettingsOpen.value,
+          },
+        ),
       )}
     >
       {componentName}
