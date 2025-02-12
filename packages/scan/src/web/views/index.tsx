@@ -1,32 +1,17 @@
+import { type ReadonlySignal, useComputed } from '@preact/signals';
 import type { ReactNode } from 'preact/compat';
-import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalWidgetViews } from '~web/state';
-import { cn, toggleMultipleClasses } from '~web/utils/helpers';
+import { cn } from '~web/utils/helpers';
 import { Header } from '~web/widget/header';
 import { ViewInspector } from './inspector';
 import { ViewSlowDowns } from './slow-downs';
 import { Toolbar } from './toolbar';
 
 export const Content = () => {
-  const refContainer = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const unsubscribeStoreInspectState = Store.inspectState.subscribe(
-      (state) => {
-        if (!refContainer.current) return;
-        if (state.kind === 'inspecting') {
-          toggleMultipleClasses(refContainer.current, [
-            'opacity-0',
-            'duration-0',
-            'delay-0',
-          ]);
-        }
-      },
-    );
-
-    return unsubscribeStoreInspectState;
-  }, []);
+  const isInspecting = useComputed(
+    () => Store.inspectState.value.kind === 'inspecting',
+  );
 
   return (
     <div
@@ -44,15 +29,17 @@ export const Content = () => {
       )}
     >
       <div
-        ref={refContainer}
-        className={cn(
-          'relative',
-          'flex-1',
-          'flex flex-col',
-          'rounded-t-lg',
-          'overflow-hidden',
-          'opacity-100',
-          'transition-[opacity]',
+        className={useComputed(() =>
+          cn(
+            'relative',
+            'flex-1',
+            'flex flex-col',
+            'rounded-t-lg',
+            'overflow-hidden',
+            'opacity-100',
+            'transition-[opacity]',
+            isInspecting.value && 'opacity-0 duration-0 delay-0',
+          ),
         )}
       >
         <Header />
@@ -67,12 +54,19 @@ export const Content = () => {
             'border-b border-[#222]',
           )}
         >
-
-          <ContentView isOpen={signalWidgetViews.value.view === 'inspector'}>
+          <ContentView
+            isOpen={useComputed(
+              () => signalWidgetViews.value.view === 'inspector',
+            )}
+          >
             <ViewInspector />
           </ContentView>
 
-          <ContentView isOpen={signalWidgetViews.value.view === 'slow-downs'}>
+          <ContentView
+            isOpen={useComputed(
+              () => signalWidgetViews.value.view === 'slow-downs',
+            )}
+          >
             <ViewSlowDowns />
           </ContentView>
         </div>
@@ -83,27 +77,27 @@ export const Content = () => {
 };
 
 interface ContentViewProps {
-  isOpen: boolean;
+  isOpen: ReadonlySignal<boolean>;
   children: ReactNode;
 }
 
 const ContentView = ({ isOpen, children }: ContentViewProps) => {
   return (
     <div
-      className={cn(
-        'flex-1',
-        'opacity-0',
-        'overflow-y-auto overflow-x-hidden',
-        'transition-opacity delay-0',
-        'pointer-events-none',
-        {
-          'opacity-100 delay-150 pointer-events-auto': isOpen,
-        },
+      className={useComputed(() =>
+        cn(
+          'flex-1',
+          'opacity-0',
+          'overflow-y-auto overflow-x-hidden',
+          'transition-opacity delay-0',
+          'pointer-events-none',
+          {
+            'opacity-100 delay-150 pointer-events-auto': isOpen.value,
+          },
+        ),
       )}
     >
-      <div className="absolute inset-0 flex">
-        {children}
-      </div>
+      <div className="absolute inset-0 flex">{children}</div>
     </div>
   );
 };
