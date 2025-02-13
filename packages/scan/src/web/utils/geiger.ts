@@ -1,5 +1,5 @@
 // MIT License
-// Copyright (c) 2024 Kristian Dupont
+// Copyright (c) 2025 Kristian Dupont
 
 import { isFirefox, readLocalStorage } from './helpers';
 

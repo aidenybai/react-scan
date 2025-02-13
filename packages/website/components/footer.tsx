@@ -6,7 +6,7 @@ export default function Footer() {
           <div>© {new Date().getFullYear()} Million Software, Inc.</div>
         </div>
         <div>
-          {' '}
+          {" "}
           <a
             className="underline"
             href="https://github.com/aidenybai/react-scan"
