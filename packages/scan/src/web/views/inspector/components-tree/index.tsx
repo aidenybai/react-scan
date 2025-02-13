@@ -6,6 +6,7 @@ import {
   useState,
 } from 'preact/hooks';
 import { Store } from '~core/index';
+import { renderDataMap } from '~core/instrumentation';
 import { Icon } from '~web/components/icon';
 import {
   LOCALSTORAGE_KEY,
@@ -26,7 +27,6 @@ import {
   getCompositeComponentFromElement,
   getInspectableElements,
 } from '../utils';
-import { Breadcrumb } from './breadcrumb';
 import {
   type FlattenedNode,
   type TreeNode,
@@ -44,12 +44,15 @@ const flattenTree = (
       ? getFiberPath(node.fiber)
       : `${parentPath}-${index}`;
 
+    const renderData = node.fiber?.type ? renderDataMap.get(node.fiber.type) : undefined;
+
     const flatNode: FlattenedNode = {
       ...node,
       depth,
       nodeId: nodePath,
       parentId: parentPath,
       fiber: node.fiber,
+      renderData
     };
     acc.push(flatNode);
 
@@ -68,16 +71,14 @@ const getMaxDepth = (nodes: FlattenedNode[]): number => {
 const calculateIndentSize = (containerWidth: number, maxDepth: number) => {
   const MIN_INDENT = 0;
   const MAX_INDENT = 24;
-  const MIN_TOTAL_INDENT = 24; // Minimum total indentation we want to preserve
+  const MIN_TOTAL_INDENT = 24;
 
   if (maxDepth <= 0) return MAX_INDENT;
 
   const availableSpace = Math.max(0, containerWidth - MIN_CONTAINER_WIDTH);
 
-  // If we have very little space, use minimal indentation
   if (availableSpace < MIN_TOTAL_INDENT) return MIN_INDENT;
 
-  // Otherwise, calculate based on available space
   const targetTotalIndent = Math.min(
     availableSpace * 0.3,
     maxDepth * MAX_INDENT,
@@ -89,13 +90,14 @@ const calculateIndentSize = (containerWidth: number, maxDepth: number) => {
 
 interface TreeNodeItemProps {
   node: FlattenedNode;
-  onElementClick?: (element: HTMLElement) => void;
-  collapsedNodes: Set<string>;
-  onToggle: (nodeId: string) => void;
+  nodeIndex: number;
+  hasChildren: boolean;
+  isCollapsed: boolean;
+  handleTreeNodeClick: (e: Event) => void;
+  handleTreeNodeToggle: (e: Event) => void;
   searchValue: typeof searchState.value;
 }
 
-// Available wrapper types
 const VALID_TYPES = ['memo', 'forwardRef', 'lazy', 'suspense'];
 
 const parseTypeSearch = (query: string) => {
@@ -231,36 +233,80 @@ const useNodeHighlighting = (
   }, [node.label, node.nodeId, node.fiber, searchValue]);
 };
 
+const formatTime = (time: number) => {
+  if (time > 0) {
+    if (time < 0.1 - Number.EPSILON) {
+      return '< 0.1';
+    }
+    if (time < 1000) {
+      return Number(time.toFixed(1)).toString();
+    }
+    return `${(time / 1000).toFixed(1)}k`;
+  }
+  return '0';
+};
+
 const TreeNodeItem = ({
   node,
-  onElementClick,
-  collapsedNodes,
-  onToggle,
+  nodeIndex,
+  hasChildren,
+  isCollapsed,
+  handleTreeNodeClick,
+  handleTreeNodeToggle,
   searchValue,
 }: TreeNodeItemProps) => {
-  const hasChildren = node.children && node.children.length > 0;
-  const isCollapsed = collapsedNodes.has(node.nodeId);
-
-  const handleClick = useCallback(() => {
-    if (node.element) {
-      onElementClick?.(node.element);
-    }
-  }, [node.element, onElementClick]);
-
-  const handleToggle = useCallback(
-    (e: MouseEvent) => {
-      if (hasChildren) {
-        e.stopPropagation();
-        onToggle(node.nodeId);
-      }
-    },
-    [hasChildren, node.nodeId, onToggle],
-  );
+  const refRenderCount = useRef<HTMLSpanElement>(null);
+  const refPrevRenderCount = useRef(node.renderData?.renderCount ?? 0);
 
   const { highlightedText, typeHighlight } = useNodeHighlighting(
     node,
     searchValue,
   );
+
+  useEffect(() => {
+    const currentRenderCount = node.renderData?.renderCount;
+    const element = refRenderCount.current;
+    if (
+      !element ||
+      !refPrevRenderCount.current ||
+      !currentRenderCount ||
+      refPrevRenderCount.current === currentRenderCount) {
+      return;
+    }
+
+    element.classList.remove('count-flash');
+    void element.offsetWidth;
+    element.classList.add('count-flash');
+
+    refPrevRenderCount.current = currentRenderCount;
+
+  }, [node.renderData?.renderCount]);
+
+  const renderTimeInfo = useMemo(() => {
+    if (!node.renderData) return null;
+    const { selfTime, totalTime, renderCount } = node.renderData;
+
+    if (!renderCount) {
+      return null
+    };
+
+    return (
+      <span
+        className={cn(
+        'flex items-center gap-x-0.5 ml-1.5',
+        'text-[10px] text-neutral-400',
+        )}
+      >
+        <span
+          ref={refRenderCount}
+          title={`Self time: ${formatTime(selfTime)}ms\nTotal time: ${formatTime(totalTime)}ms`}
+          className="count-badge"
+        >
+          ×{renderCount}
+        </span>
+      </span>
+    );
+  }, [node.renderData]);
 
   const componentTypes = useMemo(() => {
     if (!node.fiber) return null;
@@ -298,14 +344,16 @@ const TreeNodeItem = ({
           </>
         )}
         {wrapperTypes.length > 1 && `×${wrapperTypes.length}`}
+        {renderTimeInfo}
       </span>
     );
-  }, [node.fiber, typeHighlight]);
+  }, [node.fiber, typeHighlight, renderTimeInfo]);
 
   return (
     <button
       type="button"
       title={node.title}
+      data-index={nodeIndex}
       className={cn(
         'flex items-center gap-x-1',
         'pl-1 pr-2',
@@ -314,11 +362,12 @@ const TreeNodeItem = ({
         'rounded',
         'cursor-pointer select-none',
       )}
-      onClick={handleClick}
+      onClick={handleTreeNodeClick}
     >
       <button
         type="button"
-        onClick={handleToggle}
+        data-index={nodeIndex}
+        onClick={handleTreeNodeToggle}
         className={cn('w-6 h-6 flex items-center justify-center', 'text-left')}
       >
         {hasChildren && (
@@ -339,7 +388,6 @@ const TreeNodeItem = ({
 
 export const ComponentsTree = () => {
   const refContainer = useRef<HTMLDivElement>(null);
-  const refBreadcrumbContainer = useRef<HTMLDivElement>(null);
   const refMainContainer = useRef<HTMLDivElement>(null);
   const refSearchInputContainer = useRef<HTMLDivElement>(null);
   const refSearchInput = useRef<HTMLInputElement>(null);
@@ -347,10 +395,11 @@ export const ComponentsTree = () => {
   const refMaxTreeDepth = useRef(0);
   const refIsHovering = useRef(false);
   const refIsResizing = useRef(false);
+  const refResizeHandle = useRef<HTMLDivElement>(null);
 
   const [flattenedNodes, setFlattenedNodes] = useState<FlattenedNode[]>([]);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [selectedIndex, setSelectedIndex] = useState<number | undefined>(undefined);
   const [searchValue, setSearchValue] = useState(searchState.value);
 
   const visibleNodes = useMemo(() => {
@@ -390,51 +439,57 @@ export const ComponentsTree = () => {
     overscan: 5,
   });
 
-  const handleElementClick = useCallback(
-    (element: HTMLElement) => {
-      refIsHovering.current = true;
-      refSearchInput.current?.blur();
-      signalSkipTreeUpdate.value = true;
+  const handleElementClick = useCallback((element: HTMLElement) => {
+    refIsHovering.current = true;
+    refSearchInput.current?.blur();
+    signalSkipTreeUpdate.value = true;
 
-      const { parentCompositeFiber } =
-        getCompositeComponentFromElement(element);
-      if (!parentCompositeFiber) return;
+    const { parentCompositeFiber } =
+      getCompositeComponentFromElement(element);
+    if (!parentCompositeFiber) return;
 
-      Store.inspectState.value = {
-        kind: 'focused',
-        focusedDomElement: element,
-        fiber: parentCompositeFiber,
-      };
+    Store.inspectState.value = {
+      kind: 'focused',
+      focusedDomElement: element,
+      fiber: parentCompositeFiber,
+    };
 
-      const nodeIndex = visibleNodes.findIndex(
-        (node) => node.element === element,
-      );
-      if (nodeIndex !== -1) {
-        setSelectedIndex(nodeIndex);
-        const itemTop = nodeIndex * ITEM_HEIGHT;
-        const container = refContainer.current;
-        if (container) {
-          const containerHeight = container.clientHeight;
-          const scrollTop = container.scrollTop;
-          const breadcrumbHeight = 32;
+    const nodeIndex = visibleNodes.findIndex(
+      (node) => node.element === element,
+    );
+    if (nodeIndex !== -1) {
+      setSelectedIndex(nodeIndex);
+      const itemTop = nodeIndex * ITEM_HEIGHT;
+      const container = refContainer.current;
+      if (container) {
+        const containerHeight = container.clientHeight;
+        const scrollTop = container.scrollTop;
 
-          if (
-            itemTop < scrollTop ||
-            itemTop + ITEM_HEIGHT > scrollTop + containerHeight
-          ) {
-            container.scrollTo({
-              top: Math.max(
-                0,
-                itemTop - (containerHeight - breadcrumbHeight) / 2,
-              ),
-              behavior: 'instant',
-            });
-          }
+        if (
+          itemTop < scrollTop ||
+          itemTop + ITEM_HEIGHT > scrollTop + containerHeight
+        ) {
+          container.scrollTo({
+            top: Math.max(
+              0,
+              itemTop - containerHeight / 2,
+            ),
+            behavior: 'instant',
+          });
         }
       }
-    },
-    [visibleNodes],
-  );
+    }
+  }, [visibleNodes]);
+
+  const handleTreeNodeClick = useCallback((e: Event) => {
+    const target = e.currentTarget as HTMLElement;
+    const index = Number(target.dataset.index);
+    if (Number.isNaN(index)) return;
+    const element = visibleNodes[index].element;
+    if (!element) return;
+    handleElementClick(element);
+  }, [visibleNodes, handleElementClick]);
+
 
   const handleToggle = useCallback((nodeId: string) => {
     setCollapsedNodes((prev) => {
@@ -447,6 +502,15 @@ export const ComponentsTree = () => {
       return next;
     });
   }, []);
+
+  const handleTreeNodeToggle = useCallback((e: Event) => {
+    e.stopPropagation();
+    const target = e.target as HTMLElement;
+    const index = Number(target.dataset.index);
+    if (Number.isNaN(index)) return;
+    const nodeId = visibleNodes[index].nodeId;
+    handleToggle(nodeId);
+  }, [visibleNodes, handleToggle]);
 
   const handleOnChangeSearch = useCallback(
     (query: string) => {
@@ -605,7 +669,23 @@ export const ComponentsTree = () => {
     }
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  const updateResizeDirection = useCallback((width: number) => {
+    if (!refResizeHandle.current) return;
+
+    const parentWidth = signalWidget.value.dimensions.width;
+    const maxWidth = Math.floor(parentWidth - MIN_SIZE.width / 2);
+
+    refResizeHandle.current.classList.remove('cursor-ew-resize', 'cursor-w-resize', 'cursor-e-resize');
+
+    if (width <= MIN_CONTAINER_WIDTH) {
+      refResizeHandle.current.classList.add('cursor-w-resize');
+    } else if (width >= maxWidth) {
+      refResizeHandle.current.classList.add('cursor-e-resize');
+    } else {
+      refResizeHandle.current.classList.add('cursor-ew-resize');
+    }
+  }, []);
+
   const handleResize = useCallback((e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -620,13 +700,18 @@ export const ComponentsTree = () => {
     const parentWidth = signalWidget.value.dimensions.width;
     const maxWidth = Math.floor(parentWidth - MIN_SIZE.width / 2);
 
+    updateResizeDirection(startWidth);
+
     const handleMouseMove = (e: MouseEvent) => {
       const delta = startX - e.clientX;
-      const newWidth = Math.min(
+      const newWidth = startWidth + delta;
+      updateResizeDirection(newWidth);
+
+      const clampedWidth = Math.min(
         maxWidth,
-        Math.max(MIN_CONTAINER_WIDTH, startWidth + delta),
+        Math.max(MIN_CONTAINER_WIDTH, newWidth),
       );
-      updateContainerWidths(newWidth);
+      updateContainerWidths(clampedWidth);
     };
 
     const handleMouseUp = () => {
@@ -644,13 +729,23 @@ export const ComponentsTree = () => {
       };
 
       saveLocalStorage(LOCALSTORAGE_KEY, signalWidget.value);
-
       refIsResizing.current = false;
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, []);
+  }, [updateContainerWidths, updateResizeDirection]);
+
+  useEffect(() => {
+    if (!refContainer.current) return;
+    const currentWidth = refContainer.current.offsetWidth;
+    updateResizeDirection(currentWidth);
+
+    return signalWidget.subscribe(() => {
+      if (!refContainer.current) return;
+      updateResizeDirection(refContainer.current.offsetWidth);
+    });
+  }, [updateResizeDirection]);
 
   const onMouseLeave = useCallback(() => {
     refIsHovering.current = false;
@@ -658,6 +753,7 @@ export const ComponentsTree = () => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
+    let isInitialTreeBuild = true;
     const buildTreeFromElements = (elements: Array<InspectableElement>) => {
       const nodeMap = new Map<HTMLElement, TreeNode>();
       const rootNodes: TreeNode[] = [];
@@ -712,7 +808,7 @@ export const ComponentsTree = () => {
       const element = refSelectedElement.current;
       if (!element) return;
 
-      const inspectableElements = getInspectableElements(element);
+      const inspectableElements = getInspectableElements();
       const tree = buildTreeFromElements(inspectableElements);
 
       if (tree.length > 0) {
@@ -722,6 +818,25 @@ export const ComponentsTree = () => {
 
         updateContainerWidths(signalWidget.value.componentsTree.width);
         setFlattenedNodes(flattened);
+
+        if (isInitialTreeBuild) {
+          isInitialTreeBuild = false;
+          const focusedIndex = flattened.findIndex(
+            (node) => node.element === element
+          );
+          if (focusedIndex !== -1) {
+            const itemTop = focusedIndex * ITEM_HEIGHT;
+            const container = refContainer.current;
+            if (container) {
+              setTimeout(() => {
+                container.scrollTo({
+                  top: itemTop,
+                  behavior: 'instant',
+                });
+              }, 96);
+            }
+          }
+        }
       }
     };
 
@@ -732,7 +847,6 @@ export const ComponentsTree = () => {
         }
 
         handleOnChangeSearch('');
-        setSelectedIndex(0);
         refSelectedElement.current = state.focusedDomElement as HTMLElement;
         updateTree();
       }
@@ -766,6 +880,8 @@ export const ComponentsTree = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!refIsHovering.current) return;
+
+      if (!selectedIndex) return;
 
       switch (e.key) {
         case 'ArrowUp': {
@@ -843,19 +959,20 @@ export const ComponentsTree = () => {
 
   return (
     <>
-      <div onMouseDown={handleResize} className="relative resize-v-line">
+      <div
+        ref={refResizeHandle}
+        onMouseDown={handleResize}
+        className="relative resize-v-line"
+      >
         <span>
           <Icon name="icon-ellipsis" size={18} />
         </span>
       </div>
       <div ref={refMainContainer} className="flex flex-col h-full">
-        <div ref={refBreadcrumbContainer} className="overflow-hidden">
-          <Breadcrumb selectedElement={refSelectedElement.current} />
-
-          <div className="py-2 pr-2 border-b border-[#1e1e1e]">
-            <div
-              ref={refSearchInputContainer}
-              title={`Search components by:
+        <div className="py-2 pr-2 border-b border-[#1e1e1e]">
+          <div
+            ref={refSearchInputContainer}
+            title={`Search components by:
 
 • Name (e.g., "Button") — Case insensitive, matches any part
 
@@ -875,122 +992,121 @@ export const ComponentsTree = () => {
    - Shift + Enter → Previous match
    - Cmd/Ctrl + Enter → Select and focus match
 `}
-              className={cn(
-                'relative',
-                'flex items-center gap-x-1 px-2',
-                'rounded',
-                'border border-transparent',
-                'focus-within:border-[#454545]',
-                'bg-[#1e1e1e] text-neutral-300',
-                'transition-colors',
-                'whitespace-nowrap',
-                'overflow-hidden',
-              )}
-            >
-              <Icon
-                name="icon-search"
-                size={12}
-                className=" text-neutral-500"
-              />
-              <div className="relative flex-1 h-7 overflow-hidden">
-                <input
-                  ref={refSearchInput}
-                  type="text"
-                  value={searchState.value.query}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.currentTarget.focus();
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      e.currentTarget.blur();
-                    }
-                    if (searchState.value.matches.length) {
-                      if (e.key === 'Enter' && e.shiftKey) {
-                        navigateSearch('prev');
-                      } else if (e.key === 'Enter') {
-                        if (e.metaKey || e.ctrlKey) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleElementClick(
-                            searchState.value.matches[
-                              searchState.value.currentMatchIndex
-                            ].element as HTMLElement,
-                          );
+            className={cn(
+              'relative',
+              'flex items-center gap-x-1 px-2',
+              'rounded',
+              'border border-transparent',
+              'focus-within:border-[#454545]',
+              'bg-[#1e1e1e] text-neutral-300',
+              'transition-colors',
+              'whitespace-nowrap',
+              'overflow-hidden',
+            )}
+          >
+            <Icon
+              name="icon-search"
+              size={12}
+              className=" text-neutral-500"
+            />
+            <div className="relative flex-1 h-7 overflow-hidden">
+              <input
+                ref={refSearchInput}
+                type="text"
+                value={searchState.value.query}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.currentTarget.focus();
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.currentTarget.blur();
+                  }
+                  if (searchState.value.matches.length) {
+                    if (e.key === 'Enter' && e.shiftKey) {
+                      navigateSearch('prev');
+                    } else if (e.key === 'Enter') {
+                      if (e.metaKey || e.ctrlKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleElementClick(
+                          searchState.value.matches[
+                            searchState.value.currentMatchIndex
+                          ].element as HTMLElement,
+                        );
 
-                          e.currentTarget.focus();
-                        } else {
-                          navigateSearch('next');
-                        }
+                        e.currentTarget.focus();
+                      } else {
+                        navigateSearch('next');
                       }
                     }
-                  }}
-                  onChange={handleInputChange}
-                  className="absolute inset-y-0 inset-x-1"
-                  placeholder="Component name, /regex/, or [type]"
-                />
-              </div>
-              {searchState.value.query ? (
-                <>
-                  <span className="flex items-center gap-x-0.5 text-xs text-neutral-500">
-                    {searchState.value.currentMatchIndex + 1}
-                    {'|'}
-                    {searchState.value.matches.length}
-                  </span>
-                  {!!searchState.value.matches.length && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigateSearch('prev');
-                        }}
-                        className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
-                      >
-                        <Icon
-                          name="icon-chevron-right"
-                          className="-rotate-90"
-                          size={12}
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigateSearch('next');
-                        }}
-                        className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
-                      >
-                        <Icon
-                          name="icon-chevron-right"
-                          className="rotate-90"
-                          size={12}
-                        />
-                      </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOnChangeSearch('');
-                    }}
-                    className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
-                  >
-                    <Icon name="icon-close" size={12} />
-                  </button>
-                </>
-              ) : (
-                !!flattenedNodes.length && (
-                  <span className="text-xs text-neutral-500">
-                    {flattenedNodes.length}
-                  </span>
-                )
-              )}
+                  }
+                }}
+                onChange={handleInputChange}
+                className="absolute inset-y-0 inset-x-1"
+                placeholder="Component name, /regex/, or [type]"
+              />
             </div>
+            {searchState.value.query ? (
+              <>
+                <span className="flex items-center gap-x-0.5 text-xs text-neutral-500">
+                  {searchState.value.currentMatchIndex + 1}
+                  {'|'}
+                  {searchState.value.matches.length}
+                </span>
+                {!!searchState.value.matches.length && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateSearch('prev');
+                      }}
+                      className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
+                    >
+                      <Icon
+                        name="icon-chevron-right"
+                        className="-rotate-90"
+                        size={12}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateSearch('next');
+                      }}
+                      className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
+                    >
+                      <Icon
+                        name="icon-chevron-right"
+                        className="rotate-90"
+                        size={12}
+                      />
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOnChangeSearch('');
+                  }}
+                  className="button rounded w-4 h-4 flex items-center justify-center text-neutral-400 hover:text-neutral-300"
+                >
+                  <Icon name="icon-close" size={12} />
+                </button>
+              </>
+            ) : (
+              !!flattenedNodes.length && (
+                <span className="text-xs text-neutral-500">
+                  {flattenedNodes.length}
+                </span>
+              )
+            )}
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
@@ -1039,9 +1155,11 @@ export const ComponentsTree = () => {
                     >
                       <TreeNodeItem
                         node={node}
-                        onElementClick={handleElementClick}
-                        collapsedNodes={collapsedNodes}
-                        onToggle={handleToggle}
+                        nodeIndex={virtualItem.index}
+                        hasChildren={!!node.children?.length}
+                        isCollapsed={collapsedNodes.has(node.nodeId)}
+                        handleTreeNodeClick={handleTreeNodeClick}
+                        handleTreeNodeToggle={handleTreeNodeToggle}
                         searchValue={searchValue}
                       />
                     </div>

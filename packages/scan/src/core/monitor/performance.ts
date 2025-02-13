@@ -65,10 +65,6 @@ const minifiedPatterns = [
 ];
 
 const isMinified = (name: string): boolean => {
-  if (!name || typeof name !== 'string') {
-    return true;
-  }
-
   for (let i = 0; i < minifiedPatterns.length; i++) {
     if (minifiedPatterns[i].test(name)) return true;
   }
@@ -149,8 +145,7 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   while (!parentCompositeFiber && curr.parentElement) {
     curr = curr.parentElement;
 
-    const { parentCompositeFiber: fiber } =
-      getCompositeComponentFromElement(curr);
+    const fiber = getCompositeComponentFromElement(curr).parentCompositeFiber;
 
     if (!fiber) {
       continue;
@@ -162,22 +157,18 @@ const getFirstNamedAncestorCompositeFiber = (element: Element) => {
   return parentCompositeFiber;
 };
 
-let unsubscribeTrackVisibilityChange: (() => void) | undefined;
 // fixme: compress me if this stays here for bad interaction time checks
 let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
 
-const trackVisibilityChange = () => {
-  unsubscribeTrackVisibilityChange?.();
-  const onVisibilityChange = () => {
-    if (document.hidden) {
-      lastVisibilityHiddenAt = Date.now();
-    }
-  };
-  document.addEventListener('visibilitychange', onVisibilityChange);
+const onVisibilityChange = () => {
+  if (document.hidden) {
+    lastVisibilityHiddenAt = Date.now();
+  }
+};
 
-  unsubscribeTrackVisibilityChange = () => {
-    document.removeEventListener('visibilitychange', onVisibilityChange);
-  };
+const trackVisibilityChange = () => {
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  document.addEventListener('visibilitychange', onVisibilityChange);
 };
 
 // todo: update monitoring api to expose filters for component names
@@ -226,13 +217,16 @@ export function initPerformanceMonitoring(options?: Partial<PathFilters>) {
   };
 }
 
+const POINTER_EVENTS = new Set(['pointerdown', 'pointerup', 'click']);
+const KEYBOARD_EVENTS = new Set(['keydown', 'keyup']);
+
 const getInteractionType = (
   eventName: string,
 ): 'pointer' | 'keyboard' | null => {
-  if (['pointerdown', 'pointerup', 'click'].includes(eventName)) {
+  if (POINTER_EVENTS.has(eventName)) {
     return 'pointer';
   }
-  if (['keydown', 'keyup'].includes(eventName)) {
+  if (KEYBOARD_EVENTS.has(eventName)) {
     return 'keyboard';
   }
   return null;
@@ -323,5 +317,5 @@ const setupPerformanceListener = (
     /* Should collect error logs*/
   }
 
-  return () => po.disconnect();
+  return po.disconnect.bind(po);
 };

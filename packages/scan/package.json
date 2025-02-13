@@ -238,7 +238,11 @@
     "pack:bump": "bun scripts/bump-version.js && nr pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
     "prettier": "prettier --config .prettierrc.mjs -w src",
     "publint": "publint",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "biome lint src && pnpm typecheck",
+    "format": "biome format . --write",
+    "check": "biome check . --write",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@babel/core": "^7.26.0",

@@ -56,7 +56,6 @@ const initRootContainer = (): RootContainer => {
     'image/svg+xml',
   ).documentElement;
 
-
   fragment.appendChild(iconSprite);
   fragment.appendChild(cssStyles);
   shadowRoot.appendChild(fragment);
@@ -497,8 +496,9 @@ export const start = () => {
 
   const options = getOptions();
 
-  idempotent_createToolbar(!!options.value.showToolbar);
-  initReactScanInstrumentation();
+  initReactScanInstrumentation(() =>
+    idempotent_createToolbar(!!options.value.showToolbar),
+  );
 
   const isUsedInBrowserExtension = typeof window !== 'undefined';
   if (!Store.monitor.value && !isUsedInBrowserExtension) {
