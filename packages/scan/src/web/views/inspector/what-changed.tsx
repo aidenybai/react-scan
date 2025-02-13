@@ -906,7 +906,6 @@ const CountBadge = ({
   isFunction: boolean;
   showWarning: boolean;
 }) => {
-  const refTimer = useRef<TTimer>();
   const refIsFirstRender = useRef(true);
   const refBadge = useRef<HTMLDivElement>(null);
   const refPrevCount = useRef(count);
@@ -931,17 +930,16 @@ const CountBadge = ({
     }
 
     if (forceFlash) {
-      // is ref necessary
-      refTimer.current = setTimeout(() => {
+      let timer = setTimeout(() => {
         refBadge.current?.classList.add('count-flash-white');
-        refTimer.current = setTimeout(() => {
+        timer = setTimeout(() => {
           refBadge.current?.classList.remove('count-flash-white');
         }, 300);
       }, 500);
+      return () => {
+        clearTimeout(timer);
+      };
     }
-    return () => {
-      clearTimeout(refTimer.current);
-    };
   }, [forceFlash]);
 
   return (
