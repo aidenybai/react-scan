@@ -91,9 +91,7 @@ const ContentView = ({ isOpen, children }: ContentViewProps) => {
           'overflow-y-auto overflow-x-hidden',
           'transition-opacity delay-0',
           'pointer-events-none',
-          {
-            'opacity-100 delay-150 pointer-events-auto': isOpen.value,
-          },
+          isOpen.value && 'opacity-100 delay-150 pointer-events-auto',
         ),
       )}
     >

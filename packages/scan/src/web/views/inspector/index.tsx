@@ -188,10 +188,8 @@ const Inspector = constant(() => {
             'overflow-y-auto overflow-x-hidden',
             'transition-opacity delay-0',
             'pointer-events-none',
-            {
-              'opacity-100 delay-300 pointer-events-auto':
-                !signalIsSettingsOpen.value,
-            },
+            !signalIsSettingsOpen.value &&
+              'opacity-100 delay-300 pointer-events-auto',
           ),
         )}
       >

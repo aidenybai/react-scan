@@ -134,9 +134,10 @@ export const WhatChanged = memo(
           setIsExpanded={setIsExpanded}
         />
         <div
-          className={cn('react-scan-expandable', {
-            'react-scan-expanded': isExpanded,
-          })}
+          className={cn(
+            'react-scan-expandable',
+            isExpanded && 'react-scan-expanded',
+          )}
         >
           <div className="overflow-hidden">
             {shouldShowChanges && (
@@ -322,15 +323,14 @@ const WhatsChangedHeader = memo<{
           'overflow-hidden',
           'max-h-0',
           'transition-[max-height]',
-          {
-            'max-h-8': shouldShowChanges,
-          },
+          shouldShowChanges && 'max-h-8',
         )}
       >
         <div
-          className={cn('flex-1 react-scan-expandable', {
-            'react-scan-expanded': shouldShowChanges,
-          })}
+          className={cn(
+            'flex-1 react-scan-expandable',
+            shouldShowChanges && 'react-scan-expanded',
+          )}
         >
           <div className="overflow-hidden">
             <div className="flex items-center whitespace-nowrap">
@@ -339,10 +339,10 @@ const WhatsChangedHeader = memo<{
                   <Icon
                     name="icon-chevron-right"
                     size={12}
-                    className={cn({
-                      'rotate-90': isExpanded,
-                      'rotate-0': isSticky && isExpanded,
-                    })}
+                    className={cn(
+                      isExpanded && 'rotate-90',
+                      isSticky && isExpanded && 'rotate-0',
+                    )}
                   />
                 </div>
                 What changed?
@@ -354,9 +354,7 @@ const WhatsChangedHeader = memo<{
                   'change-scope',
                   'opacity-0',
                   'transition-opacity duration-300 delay-150',
-                  {
-                    'opacity-100': !isExpanded,
-                  },
+                  isExpanded ? 'opacity-0' : 'opacity-100',
                 )}
               >
                 <div ref={refProps}>props</div>
@@ -500,9 +498,7 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
                     size={12}
                     className={cn(
                       'text-[#666] transition-transform duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
-                      {
-                        'rotate-90': isEntryExpanded,
-                      },
+                      isEntryExpanded && 'rotate-90',
                     )}
                   />
                   <div className="whitespace-nowrap break-words text-left font-medium flex items-center gap-x-1.5">
@@ -519,9 +515,11 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
                 </div>
               </button>
               <div
-                className={cn('react-scan-expandable', 'overflow-hidden', {
-                  'react-scan-expanded': isEntryExpanded,
-                })}
+                className={cn(
+                  'react-scan-expandable',
+                  'overflow-hidden',
+                  isEntryExpanded && 'react-scan-expanded',
+                )}
               >
                 <div className="pl-3 text-xs font-mono border-l-1 border-[#333] overflow-hidden">
                   <div className="flex flex-col gap-0.5">
@@ -652,9 +650,10 @@ const DiffChange = ({
     return (
       <div
         key={`${path}-${change.name}-${i}`}
-        className={cn('flex flex-col gap-y-1', {
-          'mb-4': i < diff.changes.length - 1,
-        })}
+        className={cn(
+          'flex flex-col gap-y-1',
+          i < diff.changes.length - 1 && 'mb-4',
+        )}
       >
         {path && <div className="text-[#666] text-[10px]">{path}</div>}
         <button

@@ -69,9 +69,7 @@ export const CopyToClipboard = memo(
         <Icon
           name={`icon-${isCopied ? 'check' : 'copy'}`}
           size={[iconSize]}
-          className={cn({
-            'text-green-500': isCopied,
-          })}
+          className={cn(isCopied && 'text-green-500')}
         />
       </button>
     );

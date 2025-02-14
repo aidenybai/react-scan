@@ -44,7 +44,9 @@ const flattenTree = (
       ? getFiberPath(node.fiber)
       : `${parentPath}-${index}`;
 
-    const renderData = node.fiber?.type ? renderDataMap.get(node.fiber.type) : undefined;
+    const renderData = node.fiber?.type
+      ? renderDataMap.get(node.fiber.type)
+      : undefined;
 
     const flatNode: FlattenedNode = {
       ...node,
@@ -52,7 +54,7 @@ const flattenTree = (
       nodeId: nodePath,
       parentId: parentPath,
       fiber: node.fiber,
-      renderData
+      renderData,
     };
     acc.push(flatNode);
 
@@ -270,7 +272,8 @@ const TreeNodeItem = ({
       !element ||
       !refPrevRenderCount.current ||
       !currentRenderCount ||
-      refPrevRenderCount.current === currentRenderCount) {
+      refPrevRenderCount.current === currentRenderCount
+    ) {
       return;
     }
 
@@ -279,7 +282,6 @@ const TreeNodeItem = ({
     element.classList.add('count-flash');
 
     refPrevRenderCount.current = currentRenderCount;
-
   }, [node.renderData?.renderCount]);
 
   const renderTimeInfo = useMemo(() => {
@@ -287,14 +289,14 @@ const TreeNodeItem = ({
     const { selfTime, totalTime, renderCount } = node.renderData;
 
     if (!renderCount) {
-      return null
-    };
+      return null;
+    }
 
     return (
       <span
         className={cn(
-        'flex items-center gap-x-0.5 ml-1.5',
-        'text-[10px] text-neutral-400',
+          'flex items-center gap-x-0.5 ml-1.5',
+          'text-[10px] text-neutral-400',
         )}
       >
         <span
@@ -330,10 +332,8 @@ const TreeNodeItem = ({
                 'rounded py-[1px] px-1',
                 'bg-neutral-700 text-neutral-300',
                 'truncate',
-                {
-                  'bg-[#8e61e3] text-white': firstWrapperType.type === 'memo',
-                  'bg-yellow-300 text-black': typeHighlight,
-                },
+                firstWrapperType.type === 'memo' && 'bg-[#8e61e3] text-white',
+                typeHighlight && 'bg-yellow-300 text-black',
               )}
             >
               {firstWrapperType.type}
@@ -374,9 +374,7 @@ const TreeNodeItem = ({
           <Icon
             name="icon-chevron-right"
             size={12}
-            className={cn('transition-transform', {
-              'rotate-90': !isCollapsed,
-            })}
+            className={cn('transition-transform', !isCollapsed && 'rotate-90')}
           />
         )}
       </button>
@@ -399,7 +397,9 @@ export const ComponentsTree = () => {
 
   const [flattenedNodes, setFlattenedNodes] = useState<FlattenedNode[]>([]);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
-  const [selectedIndex, setSelectedIndex] = useState<number | undefined>(undefined);
+  const [selectedIndex, setSelectedIndex] = useState<number | undefined>(
+    undefined,
+  );
   const [searchValue, setSearchValue] = useState(searchState.value);
 
   const visibleNodes = useMemo(() => {
@@ -439,57 +439,59 @@ export const ComponentsTree = () => {
     overscan: 5,
   });
 
-  const handleElementClick = useCallback((element: HTMLElement) => {
-    refIsHovering.current = true;
-    refSearchInput.current?.blur();
-    signalSkipTreeUpdate.value = true;
+  const handleElementClick = useCallback(
+    (element: HTMLElement) => {
+      refIsHovering.current = true;
+      refSearchInput.current?.blur();
+      signalSkipTreeUpdate.value = true;
 
-    const { parentCompositeFiber } =
-      getCompositeComponentFromElement(element);
-    if (!parentCompositeFiber) return;
+      const { parentCompositeFiber } =
+        getCompositeComponentFromElement(element);
+      if (!parentCompositeFiber) return;
 
-    Store.inspectState.value = {
-      kind: 'focused',
-      focusedDomElement: element,
-      fiber: parentCompositeFiber,
-    };
+      Store.inspectState.value = {
+        kind: 'focused',
+        focusedDomElement: element,
+        fiber: parentCompositeFiber,
+      };
 
-    const nodeIndex = visibleNodes.findIndex(
-      (node) => node.element === element,
-    );
-    if (nodeIndex !== -1) {
-      setSelectedIndex(nodeIndex);
-      const itemTop = nodeIndex * ITEM_HEIGHT;
-      const container = refContainer.current;
-      if (container) {
-        const containerHeight = container.clientHeight;
-        const scrollTop = container.scrollTop;
+      const nodeIndex = visibleNodes.findIndex(
+        (node) => node.element === element,
+      );
+      if (nodeIndex !== -1) {
+        setSelectedIndex(nodeIndex);
+        const itemTop = nodeIndex * ITEM_HEIGHT;
+        const container = refContainer.current;
+        if (container) {
+          const containerHeight = container.clientHeight;
+          const scrollTop = container.scrollTop;
 
-        if (
-          itemTop < scrollTop ||
-          itemTop + ITEM_HEIGHT > scrollTop + containerHeight
-        ) {
-          container.scrollTo({
-            top: Math.max(
-              0,
-              itemTop - containerHeight / 2,
-            ),
-            behavior: 'instant',
-          });
+          if (
+            itemTop < scrollTop ||
+            itemTop + ITEM_HEIGHT > scrollTop + containerHeight
+          ) {
+            container.scrollTo({
+              top: Math.max(0, itemTop - containerHeight / 2),
+              behavior: 'instant',
+            });
+          }
         }
       }
-    }
-  }, [visibleNodes]);
+    },
+    [visibleNodes],
+  );
 
-  const handleTreeNodeClick = useCallback((e: Event) => {
-    const target = e.currentTarget as HTMLElement;
-    const index = Number(target.dataset.index);
-    if (Number.isNaN(index)) return;
-    const element = visibleNodes[index].element;
-    if (!element) return;
-    handleElementClick(element);
-  }, [visibleNodes, handleElementClick]);
-
+  const handleTreeNodeClick = useCallback(
+    (e: Event) => {
+      const target = e.currentTarget as HTMLElement;
+      const index = Number(target.dataset.index);
+      if (Number.isNaN(index)) return;
+      const element = visibleNodes[index].element;
+      if (!element) return;
+      handleElementClick(element);
+    },
+    [visibleNodes, handleElementClick],
+  );
 
   const handleToggle = useCallback((nodeId: string) => {
     setCollapsedNodes((prev) => {
@@ -503,14 +505,17 @@ export const ComponentsTree = () => {
     });
   }, []);
 
-  const handleTreeNodeToggle = useCallback((e: Event) => {
-    e.stopPropagation();
-    const target = e.target as HTMLElement;
-    const index = Number(target.dataset.index);
-    if (Number.isNaN(index)) return;
-    const nodeId = visibleNodes[index].nodeId;
-    handleToggle(nodeId);
-  }, [visibleNodes, handleToggle]);
+  const handleTreeNodeToggle = useCallback(
+    (e: Event) => {
+      e.stopPropagation();
+      const target = e.target as HTMLElement;
+      const index = Number(target.dataset.index);
+      if (Number.isNaN(index)) return;
+      const nodeId = visibleNodes[index].nodeId;
+      handleToggle(nodeId);
+    },
+    [visibleNodes, handleToggle],
+  );
 
   const handleOnChangeSearch = useCallback(
     (query: string) => {
@@ -675,7 +680,11 @@ export const ComponentsTree = () => {
     const parentWidth = signalWidget.value.dimensions.width;
     const maxWidth = Math.floor(parentWidth - MIN_SIZE.width / 2);
 
-    refResizeHandle.current.classList.remove('cursor-ew-resize', 'cursor-w-resize', 'cursor-e-resize');
+    refResizeHandle.current.classList.remove(
+      'cursor-ew-resize',
+      'cursor-w-resize',
+      'cursor-e-resize',
+    );
 
     if (width <= MIN_CONTAINER_WIDTH) {
       refResizeHandle.current.classList.add('cursor-w-resize');
@@ -686,55 +695,58 @@ export const ComponentsTree = () => {
     }
   }, []);
 
-  const handleResize = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleResize = useCallback(
+    (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    if (!refContainer.current) return;
-    refContainer.current.style.setProperty('pointer-events', 'none');
-
-    refIsResizing.current = true;
-
-    const startX = e.clientX;
-    const startWidth = refContainer.current.offsetWidth;
-    const parentWidth = signalWidget.value.dimensions.width;
-    const maxWidth = Math.floor(parentWidth - MIN_SIZE.width / 2);
-
-    updateResizeDirection(startWidth);
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const delta = startX - e.clientX;
-      const newWidth = startWidth + delta;
-      updateResizeDirection(newWidth);
-
-      const clampedWidth = Math.min(
-        maxWidth,
-        Math.max(MIN_CONTAINER_WIDTH, newWidth),
-      );
-      updateContainerWidths(clampedWidth);
-    };
-
-    const handleMouseUp = () => {
       if (!refContainer.current) return;
-      refContainer.current.style.removeProperty('pointer-events');
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      refContainer.current.style.setProperty('pointer-events', 'none');
 
-      signalWidget.value = {
-        ...signalWidget.value,
-        componentsTree: {
-          ...signalWidget.value.componentsTree,
-          width: refContainer.current.offsetWidth,
-        },
+      refIsResizing.current = true;
+
+      const startX = e.clientX;
+      const startWidth = refContainer.current.offsetWidth;
+      const parentWidth = signalWidget.value.dimensions.width;
+      const maxWidth = Math.floor(parentWidth - MIN_SIZE.width / 2);
+
+      updateResizeDirection(startWidth);
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const delta = startX - e.clientX;
+        const newWidth = startWidth + delta;
+        updateResizeDirection(newWidth);
+
+        const clampedWidth = Math.min(
+          maxWidth,
+          Math.max(MIN_CONTAINER_WIDTH, newWidth),
+        );
+        updateContainerWidths(clampedWidth);
       };
 
-      saveLocalStorage(LOCALSTORAGE_KEY, signalWidget.value);
-      refIsResizing.current = false;
-    };
+      const handleMouseUp = () => {
+        if (!refContainer.current) return;
+        refContainer.current.style.removeProperty('pointer-events');
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [updateContainerWidths, updateResizeDirection]);
+        signalWidget.value = {
+          ...signalWidget.value,
+          componentsTree: {
+            ...signalWidget.value.componentsTree,
+            width: refContainer.current.offsetWidth,
+          },
+        };
+
+        saveLocalStorage(LOCALSTORAGE_KEY, signalWidget.value);
+        refIsResizing.current = false;
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [updateContainerWidths, updateResizeDirection],
+  );
 
   useEffect(() => {
     if (!refContainer.current) return;
@@ -822,7 +834,7 @@ export const ComponentsTree = () => {
         if (isInitialTreeBuild) {
           isInitialTreeBuild = false;
           const focusedIndex = flattened.findIndex(
-            (node) => node.element === element
+            (node) => node.element === element,
           );
           if (focusedIndex !== -1) {
             const itemTop = focusedIndex * ITEM_HEIGHT;
@@ -944,10 +956,7 @@ export const ComponentsTree = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     const unsubscribe = signalWidget.subscribe((state) => {
-      refMainContainer.current?.style.setProperty(
-        'transition',
-        'width 0.1s',
-      );
+      refMainContainer.current?.style.setProperty('transition', 'width 0.1s');
       updateContainerWidths(state.componentsTree.width);
 
       setTimeout(() => {
@@ -1004,11 +1013,7 @@ export const ComponentsTree = () => {
               'overflow-hidden',
             )}
           >
-            <Icon
-              name="icon-search"
-              size={12}
-              className=" text-neutral-500"
-            />
+            <Icon name="icon-search" size={12} className=" text-neutral-500" />
             <div className="relative flex-1 h-7 overflow-hidden">
               <input
                 ref={refSearchInput}
@@ -1137,10 +1142,8 @@ export const ComponentsTree = () => {
                       'absolute left-0 w-full overflow-hidden',
                       'text-neutral-400 hover:text-neutral-300',
                       'bg-transparent hover:bg-[#5f3f9a]/20',
-                      {
-                        'text-neutral-300 bg-[#5f3f9a]/40 hover:bg-[#5f3f9a]/40':
-                          isSelected || isKeyboardSelected,
-                      },
+                      (isSelected || isKeyboardSelected) &&
+                        'text-neutral-300 bg-[#5f3f9a]/40 hover:bg-[#5f3f9a]/40',
                     )}
                     style={{
                       top: virtualItem.start,

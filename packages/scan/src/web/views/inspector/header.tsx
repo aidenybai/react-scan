@@ -75,11 +75,14 @@ export const HeaderInspect = () => {
             <>
               <span
                 key={firstWrapperType.type}
-                className={cn('rounded py-[1px] px-1', 'truncate', {
-                  'bg-purple-800 text-neutral-400': firstWrapperType.compiler,
-                  'bg-neutral-700 text-neutral-300': !firstWrapperType.compiler,
-                  'bg-[#5f3f9a] text-white': firstWrapperType.type === 'memo',
-                })}
+                className={cn(
+                  'rounded py-[1px] px-1',
+                  'truncate',
+                  firstWrapperType.compiler && 'bg-purple-800 text-neutral-400',
+                  !firstWrapperType.compiler &&
+                    'bg-neutral-700 text-neutral-300',
+                  firstWrapperType.type === 'memo' && 'bg-[#5f3f9a] text-white',
+                )}
               >
                 {firstWrapperType.type}
               </span>
@@ -105,9 +108,7 @@ export const HeaderInspect = () => {
           'absolute inset-0 flex items-center gap-x-2',
           'translate-y-0',
           'transition-transform duration-300',
-          {
-            '-translate-y-[200%]': signalIsSettingsOpen.value,
-          },
+          signalIsSettingsOpen.value && '-translate-y-[200%]',
         ),
       )}
     >
