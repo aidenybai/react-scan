@@ -1,5 +1,5 @@
 // @TODO: @pivanov - finish the pin functionality
-import { useCallback, useEffect, useRef } from 'preact/hooks';
+import { useCallback, useEffect } from 'preact/hooks';
 import {
   type LocalStorageOptions,
   ReactScanInternals,
@@ -7,13 +7,11 @@ import {
 } from '~core/index';
 import { Icon } from '~web/components/icon';
 import { Toggle } from '~web/components/toggle';
-import { signalIsSettingsOpen } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import FpsMeter from '~web/widget/fps-meter';
 
 export const Toolbar = constant(() => {
-  // const refSettingsButton = useRef<HTMLButtonElement>(null);
   // const [isPinned, setIsPinned] = useState(false);
   // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);
 
@@ -87,10 +85,6 @@ export const Toolbar = constant(() => {
       // }
     });
 
-    // const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
-    //   refSettingsButton.current?.classList.toggle('text-inspect', state);
-    // });
-
     return () => {
       unSubState();
       // unSubSettings();
@@ -122,9 +116,7 @@ export const Toolbar = constant(() => {
   }
 
   return (
-    <div
-      className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden gap-x-[6px]"
-    >
+    <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden gap-x-[6px]">
       <div className="h-full flex items-center min-w-fit gap-x-[6px]">
         <button
           type="button"
@@ -167,16 +159,6 @@ export const Toolbar = constant(() => {
             </button>
           )
         } */}
-
-        {/* <button
-        ref={refSettingsButton}
-        type="button"
-        title="Settings"
-        onClick={onToggleSettings}
-        className="button flex items-center justify-center px-3"
-      >
-        <Icon name="icon-settings" />
-      </button> */}
 
         {/* todo, only render arrows when inspecting element */}
 
