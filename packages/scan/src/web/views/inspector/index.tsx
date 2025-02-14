@@ -79,7 +79,6 @@ class InspectorErrorBoundary extends Component {
 }
 
 const Inspector = constant(() => {
-  const refInspector = useRef<HTMLDivElement>(null);
   const refLastInspectedFiber = useRef<Fiber | null>(null);
 
   // NOTE(Alexis): no need for useCallback
@@ -179,7 +178,6 @@ const Inspector = constant(() => {
   return (
     <InspectorErrorBoundary>
       <div
-        ref={refInspector}
         className={useComputed(() =>
           cn(
             'react-scan-inspector',

@@ -40,7 +40,7 @@ export default defineConfig({
 |--------|------|---------|-------------|
 | `enable` | `boolean` | `process.env.NODE_ENV === 'development'` | Enable/disable scanning |
 | `scanOptions` | `object` | `{ ... }` | Custom React Scan options |
-| `autoDisplayNames` | `boolean` | `true` | Automatically add display names to React components |
+| `autoDisplayNames` | `boolean` | `false` | Automatically add display names to React components |
 | `debug` | `boolean` | `false` | Enable debug logging |
 
 ## Example Configuration

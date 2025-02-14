@@ -1,0 +1,12 @@
+# Source
+src/
+
+# Config files
+tsconfig.json
+.biome*
+biome.json
+
+# Development files
+node_modules/
+*.log
+.DS_Store

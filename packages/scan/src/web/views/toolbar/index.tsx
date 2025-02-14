@@ -87,17 +87,6 @@ export const Toolbar = constant(() => {
     // }
   });
 
-  // useEffect(() => {
-
-  //   const unSubSettings = signalIsSettingsOpen.subscribe((state) => {
-  //     refSettingsButton.current?.classList.toggle('text-inspect', state);
-  //   });
-
-  //   return () => {
-  //     unSubSettings();
-  //   };
-  // }, []);
-
   // const onTogglePin = useCallback(() => {
   //   if (isPinned) {
   //     removeLocalStorage('react-scann-pinned');
@@ -166,16 +155,6 @@ export const Toolbar = constant(() => {
             </button>
           )
         } */}
-
-        {/* <button
-        ref={refSettingsButton}
-        type="button"
-        title="Settings"
-        onClick={onToggleSettings}
-        className="button flex items-center justify-center px-3"
-      >
-        <Icon name="icon-settings" />
-      </button> */}
 
         {/* todo, only render arrows when inspecting element */}
 

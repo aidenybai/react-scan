@@ -37,7 +37,6 @@ export const useDelayedValue = (
   onDelay: number,
   offDelay: number = onDelay,
 ): boolean => {
-  const refTimeout = useRef<TTimer>();
   const [delayedValue, setDelayedValue] = useState(value);
 
   /*
@@ -49,9 +48,9 @@ export const useDelayedValue = (
     if (value === delayedValue) return;
 
     const delay = value ? onDelay : offDelay;
-    refTimeout.current = setTimeout(() => setDelayedValue(value), delay);
+    const timeout = setTimeout(() => setDelayedValue(value), delay);
 
-    return () => clearTimeout(refTimeout.current);
+    return () => clearTimeout(timeout);
   }, [value, onDelay, offDelay]);
 
   return delayedValue;
