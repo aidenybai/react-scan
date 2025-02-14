@@ -83,6 +83,10 @@ export const log = (renders: Array<Render>) => {
 };
 
 export const logIntro = () => {
+  if (window.hideIntro) {
+    window.hideIntro = undefined;
+    return;
+  }
   // biome-ignore lint/suspicious/noConsole: Intended debug output
   console.log(
     '%c[·] %cReact Scan',

@@ -225,12 +225,17 @@ const init = async () => {
     })();`,
   });
 
-  const page = await context.newPage();
-
   const scriptContent = await fs.readFile(
     path.resolve(__dirname, './auto.global.js'),
     'utf8',
   );
+
+  // Add React Scan script at context level so it's available for all pages
+  await context.addInitScript({
+    content: `window.hideIntro = true;${scriptContent}\n//# sourceURL=react-scan.js`,
+  });
+
+  const page = await context.newPage();
 
   const inputUrl = args._[0] || 'about:blank';
 
@@ -286,11 +291,7 @@ const init = async () => {
       });
 
       if (!hasReactScan) {
-        await context.addInitScript({
-          content: `${scriptContent}\n//# sourceURL=react-scan.js`,
-        });
-
-        // Reload the page to ensure React Scan hooks are initialized before React
+        // Script is already registered at context level, just reload
         await page.reload();
         return;
       }
