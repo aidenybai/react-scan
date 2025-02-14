@@ -1,9 +1,9 @@
-import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
-import { bgMagenta, dim, red } from 'kleur';
-import mri from 'mri';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
+import { bgMagenta, dim, red } from 'kleur';
+import mri from 'mri';
 import {
   type Browser,
   type BrowserContext,
@@ -238,9 +238,6 @@ const init = async () => {
 
   await page.goto(urlString);
 
-  await page.addInitScript({
-    content: `${scriptContent}\n//# sourceURL=react-scan.js`,
-  });
   await page.waitForLoadState('load');
   await page.waitForTimeout(500);
 
@@ -289,20 +286,16 @@ const init = async () => {
       });
 
       if (!hasReactScan) {
-        await page.addScriptTag({
-          content: scriptContent,
+        await context.addInitScript({
+          content: `${scriptContent}\n//# sourceURL=react-scan.js`,
         });
+
+        // Reload the page to ensure React Scan hooks are initialized before React
+        await page.reload();
+        return;
       }
 
       await page.waitForTimeout(100);
-
-      // TODO: determine why this is needed and fix root cause
-      await page.reload();
-
-      await page.evaluate(() => {
-        if (typeof globalThis.reactScan !== 'function') return;
-        globalThis.reactScan({});
-      });
 
       interval = setInterval(() => {
         pollReport().catch(() => {});
