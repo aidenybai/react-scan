@@ -24,10 +24,11 @@ const ArrayHeader = ({
       <Icon
         name="icon-chevron-right"
         size={12}
-        className={cn('transition-transform text-[#4ade80]', {
-          'rotate-90': expanded,
-          'text-[#f87171]': isNegative,
-        })}
+        className={cn(
+          'transition-[color,transform]',
+          isNegative ? 'text-[#f87171]' : 'text-[#4ade80]',
+          expanded && 'rotate-90',
+        )}
       />
     </button>
     <span>Array({length})</span>
@@ -70,10 +71,11 @@ const TreeNode = ({
           <Icon
             name="icon-chevron-right"
             size={12}
-            className={cn('transition-transform text-[#4ade80]', {
-              'rotate-90': isExpanded,
-              'text-[#f87171]': isNegative,
-            })}
+            className={cn(
+              'transition-[color,transform]',
+              isNegative ? 'text-[#f87171]' : 'text-[#4ade80]',
+              isExpanded && 'rotate-90',
+            )}
           />
         </button>
         <span className="text-gray-500">{path}:</span>
@@ -168,10 +170,9 @@ export const DiffValueView = ({
           name="icon-chevron-right"
           size={12}
           className={cn(
-            'transition-[transform,color]',
-            'text-[#4ade80]',
-            expanded && 'transform rotate-90',
-            isNegative && 'text-[#f87171]',
+            'transition-[color,transform]',
+            isNegative ? 'text-[#f87171]' : 'text-[#4ade80]',
+            expanded && 'rotate-90',
           )}
         />
       </button>
