@@ -22,14 +22,13 @@ export const CopyToClipboard = memo(
     className,
     iconSize = 14,
   }: CopyToClipboardProps): JSX.Element => {
-    const refTimeout = useRef<TTimer>();
     const [isCopied, setIsCopied] = useState(false);
 
     useEffect(() => {
       if (isCopied) {
-        refTimeout.current = setTimeout(() => setIsCopied(false), 600);
+        const timeout = setTimeout(() => setIsCopied(false), 600);
         return () => {
-          clearTimeout(refTimeout.current);
+          clearTimeout(timeout);
         };
       }
     }, [isCopied]);
@@ -69,9 +68,7 @@ export const CopyToClipboard = memo(
         <Icon
           name={`icon-${isCopied ? 'check' : 'copy'}`}
           size={[iconSize]}
-          className={cn({
-            'text-green-500': isCopied,
-          })}
+          className={cn(isCopied && 'text-green-500')}
         />
       </button>
     );

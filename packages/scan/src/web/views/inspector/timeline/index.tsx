@@ -20,7 +20,6 @@ export const Timeline = memo(({
   refSticky,
 }: TimelineProps) => {
   const refPlayInterval = useRef<number | null>(null);
-  const refChangeInterval = useRef<number | null>(null);
 
   const {
     currentIndex,
@@ -51,9 +50,6 @@ export const Timeline = memo(({
     return () => {
       if (refPlayInterval.current) {
         clearInterval(refPlayInterval.current);
-      }
-      if (refChangeInterval.current) {
-        cancelAnimationFrame(refChangeInterval.current);
       }
     };
   }, []);

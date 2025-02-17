@@ -708,10 +708,11 @@ export const ScanOverlay = () => {
     <>
       <div
         ref={refEventCatcher}
-        className={cn('fixed inset-0 w-screen h-screen', 'z-[214748365]')}
-        style={{
-          pointerEvents: 'none',
-        }}
+        className={cn(
+          'fixed inset-0 w-screen h-screen',
+          'z-[214748365]',
+          'pointer-events-none',
+        )}
       />
       <canvas
         ref={refCanvas}

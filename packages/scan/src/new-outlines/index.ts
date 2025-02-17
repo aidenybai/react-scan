@@ -433,6 +433,26 @@ export const isValidFiber = (fiber: Fiber) => {
 export const initReactScanInstrumentation = (setupToolbar: () => void) => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
+  let schedule: ReturnType<typeof setTimeout>;
+  let mounted = false;
+
+  const scheduleSetup = () => {
+    if (mounted) {
+      return;
+    }
+    if (schedule) {
+      clearTimeout(schedule);
+    }
+    schedule = setTimeout(() => {
+      mounted = true;
+      const host = getCanvasEl();
+      if (host) {
+        document.documentElement.appendChild(host);
+      }
+      setupToolbar();
+    }, 1000); // TODO(Alexis): perhaps a better timing
+  };
+
   const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
     onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
@@ -440,6 +460,7 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     onActive: () => {
       if (hasStopped()) return;
 
+      scheduleSetup();
       globalThis.__REACT_SCAN__ = {
         ReactScanInternals,
       };
@@ -476,14 +497,11 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       ReactScanInternals.options.value.onRender?.(fiber, renders);
     },
     onCommitFinish: () => {
+      scheduleSetup();
       ReactScanInternals.options.value.onCommitFinish?.();
     },
     onPostCommitFiberRoot() {
-      const host = getCanvasEl();
-      if (host) {
-        document.documentElement.appendChild(host);
-      }
-      setupToolbar();
+      scheduleSetup();
     },
     trackChanges: false,
   });

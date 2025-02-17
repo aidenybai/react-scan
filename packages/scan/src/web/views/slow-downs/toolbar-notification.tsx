@@ -1,9 +1,9 @@
-import { useCallback } from "preact/hooks";
-import { Store } from "~core/index";
-import { Icon } from "~web/components/icon";
-import { useDelayedValue } from "~web/hooks/use-mount-delay";
-import { signalSlowDowns, signalWidget, signalWidgetViews } from "~web/state";
-import { cn } from "~web/utils/helpers";
+import { useCallback } from 'preact/hooks';
+import { Store } from '~core/index';
+import { Icon } from '~web/components/icon';
+import { useDelayedValue } from '~web/hooks/use-mount-delay';
+import { signalSlowDowns, signalWidget, signalWidgetViews } from '~web/state';
+import { cn } from '~web/utils/helpers';
 
 export const ToolbarNotification = () => {
   const slowDowns = signalSlowDowns.value.slowDowns;
@@ -19,7 +19,7 @@ export const ToolbarNotification = () => {
       kind: 'inspect-off',
     };
     signalWidgetViews.value = {
-      view: 'slow-downs'
+      view: 'slow-downs',
     };
   }, []);
 
@@ -43,11 +43,8 @@ export const ToolbarNotification = () => {
       onClick={handleOpen}
       className={cn(
         'react-scan-toolbar-notification',
-        {
-          'position-top': isWidgetTopOfTheScreen,
-          'position-bottom': !isWidgetTopOfTheScreen,
-          'is-open': isOpen && signalWidgetViews.value.view !== 'slow-downs',
-        }
+        isWidgetTopOfTheScreen ? 'position-top' : 'position-bottom',
+        isOpen && signalWidgetViews.value.view !== 'slow-downs' && 'is-open',
       )}
     >
       <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse animation-duration-200" />

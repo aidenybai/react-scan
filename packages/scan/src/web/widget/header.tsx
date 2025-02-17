@@ -105,7 +105,7 @@ export const Header = () => {
   );
   const handleClose = () => {
     signalWidgetViews.value = {
-      view: 'none'
+      view: 'none',
     };
     Store.inspectState.value = {
       kind: 'inspect-off',
@@ -122,10 +122,8 @@ export const Header = () => {
         <div
           className={cn(
             'react-scan-header-item',
-            {
-              'is-visible': isHeaderInspect,
-              '!duration-0': !isInitialView,
-            }
+            isHeaderInspect && 'is-visible',
+            !isInitialView && '!duration-0',
           )}
         >
           <HeaderInspect />
@@ -133,10 +131,8 @@ export const Header = () => {
         <div
           className={cn(
             'react-scan-header-item',
-            {
-              'is-visible': isHeaderSlowDowns,
-              '!duration-0': !isInitialView,
-            }
+            isHeaderSlowDowns && 'is-visible',
+            !isInitialView && '!duration-0',
           )}
         >
           <HeaderSlowDowns />
@@ -144,10 +140,8 @@ export const Header = () => {
         <div
           className={cn(
             'react-scan-header-item',
-            {
-              'is-visible': isHeaderSettings,
-              '!duration-0': !isInitialView,
-            }
+            isHeaderSettings && 'is-visible',
+            !isInitialView && '!duration-0',
           )}
         >
           <HeaderSettings />

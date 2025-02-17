@@ -51,7 +51,9 @@ interface PropertyElementProps {
 }
 
 interface PropertySectionProps {
-  refSticky?: ReturnType<typeof useMergedRefs<HTMLElement>> | ((node: HTMLElement | null) => void);
+  refSticky?:
+    | ReturnType<typeof useMergedRefs<HTMLElement>>
+    | ((node: HTMLElement | null) => void);
   isSticky?: boolean;
   section: 'props' | 'state' | 'context';
 }
@@ -297,12 +299,16 @@ export const PropertyElement = ({
         if (parentPath) {
           const parts = parentPath.split('.');
           path = parts.filter(
-            (part) => part !== 'props' && part !== getDisplayName(latestFiber.type),
+            (part) =>
+              part !== 'props' && part !== getDisplayName(latestFiber.type),
           );
           path.push(name);
-          currentValue = path.reduce((obj: Record<string, unknown>, key) =>
-            obj && typeof obj === 'object' ? (obj[key] as Record<string, unknown>) : {},
-            currentProps as Record<string, unknown>
+          currentValue = path.reduce(
+            (obj: Record<string, unknown>, key) =>
+              obj && typeof obj === 'object'
+                ? (obj[key] as Record<string, unknown>)
+                : {},
+            currentProps as Record<string, unknown>,
           );
         } else {
           path = [name];
@@ -323,7 +329,8 @@ export const PropertyElement = ({
         if (!parentPath) {
           const stateNames = currentUpdate.stateNames;
           const namedStateIndex = stateNames.indexOf(name);
-          const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : name;
+          const hookId =
+            namedStateIndex !== -1 ? namedStateIndex.toString() : name;
           overrideHookState(latestFiber, hookId, [], value);
         } else {
           const fullPathParts = parentPath.split('.');
@@ -334,15 +341,20 @@ export const PropertyElement = ({
           const baseStateKey = statePath[0];
           const stateNames = currentUpdate.stateNames;
           const namedStateIndex = stateNames.indexOf(baseStateKey);
-          const hookId = namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
+          const hookId =
+            namedStateIndex !== -1 ? namedStateIndex.toString() : '0';
 
           const currentState = currentUpdate.state.current;
-          if (!currentState || !currentState.find(item => item.name === Number(baseStateKey))) {
+          if (
+            !currentState ||
+            !currentState.find((item) => item.name === Number(baseStateKey))
+          ) {
             return;
           }
 
           const updatedState = updateNestedValue(
-            currentState.find(item => item.name === Number(baseStateKey))?.value,
+            currentState.find((item) => item.name === Number(baseStateKey))
+              ?.value,
             statePath.slice(1).concat(name),
             value,
           );
@@ -497,17 +509,17 @@ export const PropertyElement = ({
             <Icon
               name="icon-chevron-right"
               size={12}
-              className={cn({
-                'rotate-90': isExpanded,
-              })}
+              className={cn(isExpanded && 'rotate-90')}
             />
           </button>
         )}
 
         <div
-          className={cn('group', 'react-scan-preview-line', {
-            'react-scan-highlight': isChanged,
-          })}
+          className={cn(
+            'group',
+            'react-scan-preview-line',
+            isChanged && 'react-scan-highlight',
+          )}
         >
           <div className="react-scan-key">{name}:</div>
           {isEditing && isEditableValue(value, parentPath) ? (
@@ -529,9 +541,10 @@ export const PropertyElement = ({
           </CopyToClipboard>
         </div>
         <div
-          className={cn('react-scan-expandable', {
-            'react-scan-expanded': isExpanded,
-          })}
+          className={cn(
+            'react-scan-expandable',
+            isExpanded && 'react-scan-expanded',
+          )}
         >
           {isExpandableValue && isExpanded && (
             <div className="react-scan-nested">
@@ -550,7 +563,6 @@ export const PropertySection = ({
   section,
 }: PropertySectionProps) => {
   const refStickyElement = useRef<HTMLElement | null>(null);
-  const refSection = useRef<HTMLDivElement>(null);
   const { updates, currentIndex } = timelineState.value;
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -589,7 +601,7 @@ export const PropertySection = ({
   }, [section, currentIndex, updates]);
 
   const toggleExpanded = useCallback(() => {
-    setIsExpanded(state => {
+    setIsExpanded((state) => {
       if (isSticky && isExpanded) {
         return state;
       }
@@ -624,10 +636,8 @@ export const PropertySection = ({
             name="icon-chevron-right"
             size={12}
             className={cn(
-              {
-                'rotate-90': isExpanded,
-                'rotate-0': isSticky && isExpanded,
-              },
+              isExpanded && 'rotate-90',
+              isSticky && isExpanded && 'rotate-0',
             )}
           />
         </div>
@@ -635,39 +645,37 @@ export const PropertySection = ({
           {section} {!isExpanded && propertyCount > 0 && `(${propertyCount})`}
         </span>
       </button>
-      <div ref={refSection} className="react-scan-section">
+      <div className="react-scan-section">
         <div
           className={cn(
             'react-scan-expandable',
-            {
-              'react-scan-expanded py-0.5': isExpanded,
-            },
+            isExpanded && 'react-scan-expanded py-0.5',
           )}
         >
           <div className="overflow-hidden">
             {Array.isArray(currentData)
               ? currentData.map(({ name, value }) => (
-                <PropertyElement
-                  key={name}
-                  name={name}
-                  value={value}
-                  section={section}
-                  level={0}
-                  objectPathMap={pathMap}
-                  changedKeys={changedKeys}
-                />
-              ))
+                  <PropertyElement
+                    key={name}
+                    name={name}
+                    value={value}
+                    section={section}
+                    level={0}
+                    objectPathMap={pathMap}
+                    changedKeys={changedKeys}
+                  />
+                ))
               : Object.entries(currentData).map(([key, value]) => (
-                <PropertyElement
-                  key={key}
-                  name={key}
-                  value={value}
-                  section={section}
-                  level={0}
-                  objectPathMap={pathMap}
-                  changedKeys={changedKeys}
-                />
-              ))}
+                  <PropertyElement
+                    key={key}
+                    name={key}
+                    value={value}
+                    section={section}
+                    level={0}
+                    objectPathMap={pathMap}
+                    changedKeys={changedKeys}
+                  />
+                ))}
           </div>
         </div>
       </div>
