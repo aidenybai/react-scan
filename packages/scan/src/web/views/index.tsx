@@ -84,15 +84,13 @@ interface ContentViewProps {
 const ContentView = ({ isOpen, children }: ContentViewProps) => {
   return (
     <div
-      className={useComputed(() =>
-        cn(
-          'flex-1',
-          'opacity-0',
-          'overflow-y-auto overflow-x-hidden',
-          'transition-opacity delay-0',
-          'pointer-events-none',
-          isOpen.value && 'opacity-100 delay-150 pointer-events-auto',
-        ),
+      className={cn(
+        'flex-1',
+        'opacity-0',
+        'overflow-y-auto overflow-x-hidden',
+        'transition-opacity delay-0',
+        'pointer-events-none',
+        isOpen.value && 'opacity-100 delay-150 pointer-events-auto',
       )}
     >
       <div className="absolute inset-0 flex">{children}</div>
