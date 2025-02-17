@@ -3,6 +3,7 @@ import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
 import { cn } from '~web/utils/helpers';
 import { formatForClipboard, formatValuePreview, safeGetValue } from './utils';
+import { createSet } from './factories';
 
 export const DiffValueView = ({
   value,
@@ -17,7 +18,7 @@ export const DiffValueView = ({
 }) => {
   const { value: safeValue, error } = safeGetValue(value);
   const pathPrefix = useMemo(() => Math.random().toString(36).slice(2), []);
-  const [expandedPaths, setExpandedPaths] = useState(new Set<string>());
+  const [expandedPaths, setExpandedPaths] = useState(createSet<string>);
 
   if (error) {
     return <span className="text-gray-500 font-italic">{error}</span>;
