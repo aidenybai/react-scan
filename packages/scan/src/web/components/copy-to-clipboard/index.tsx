@@ -1,5 +1,6 @@
+import { useSignal, useSignalEffect } from '@preact/signals';
 import { memo } from 'preact/compat';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 
@@ -22,16 +23,18 @@ export const CopyToClipboard = memo(
     className,
     iconSize = 14,
   }: CopyToClipboardProps): JSX.Element => {
-    const [isCopied, setIsCopied] = useState(false);
+    const isCopied = useSignal(false);
 
-    useEffect(() => {
-      if (isCopied) {
-        const timeout = setTimeout(() => setIsCopied(false), 600);
+    useSignalEffect(() => {
+      if (isCopied.value) {
+        const timeout = setTimeout(() => {
+          isCopied.value = false;
+        }, 600);
         return () => {
           clearTimeout(timeout);
         };
       }
-    }, [isCopied]);
+    });
 
     const copyToClipboard = useCallback(
       (e: MouseEvent) => {
@@ -40,7 +43,7 @@ export const CopyToClipboard = memo(
 
         navigator.clipboard.writeText(text).then(
           () => {
-            setIsCopied(true);
+            isCopied.value = true;
             onCopy?.(true, text);
           },
           () => {
@@ -48,7 +51,7 @@ export const CopyToClipboard = memo(
           },
         );
       },
-      [text, onCopy],
+      [text, onCopy, isCopied],
     );
 
     const ClipboardIcon = (
@@ -66,9 +69,9 @@ export const CopyToClipboard = memo(
         )}
       >
         <Icon
-          name={`icon-${isCopied ? 'check' : 'copy'}`}
+          name={`icon-${isCopied.value ? 'check' : 'copy'}`}
           size={[iconSize]}
-          className={cn(isCopied && 'text-green-500')}
+          className={cn(isCopied.value && 'text-green-500')}
         />
       </button>
     );
