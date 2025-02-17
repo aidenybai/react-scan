@@ -56,33 +56,32 @@ export const Timeline = memo(({ refSticky }: TimelineProps) => {
     }
   }, []);
 
-  if (!isInstrumentationActive()) {
-    return null;
-  }
+  return useComputed(() => {
+    if (!isInstrumentationActive()) {
+      return null;
+    }
 
-  if (timelineState.value.totalUpdates <= 1) {
-    return null;
-  }
+    if (timelineState.value.totalUpdates <= 1) {
+      return null;
+    }
 
-  return (
-    <button
-      ref={refSticky}
-      type="button"
-      onClick={handleShowTimeline}
-      className="react-section-header"
-      data-disable-scroll="true"
-    >
+    return (
       <button
+        ref={refSticky}
         type="button"
-        onClick={handleHideTimeline}
-        title={buttonTitle}
-        className="w-4 h-4 flex items-center justify-center"
+        onClick={handleShowTimeline}
+        className="react-section-header"
+        data-disable-scroll="true"
       >
-        <Icon name="icon-gallery-horizontal-end" size={12} />
-      </button>
-      {useComputed(() =>
-        timelineState.value.isVisible ? (
-          // TODO granular pls
+        <button
+          type="button"
+          onClick={handleHideTimeline}
+          title={buttonTitle}
+          className="w-4 h-4 flex items-center justify-center"
+        >
+          <Icon name="icon-gallery-horizontal-end" size={12} />
+        </button>
+        {timelineState.value.isVisible ? (
           <>
             <div className="text-xs text-gray-500">
               {sliderValues.value.leftValue}
@@ -101,8 +100,8 @@ export const Timeline = memo(({ refSticky }: TimelineProps) => {
           </>
         ) : (
           'View Re-renders History'
-        ),
-      )}
-    </button>
-  );
+        )}
+      </button>
+    );
+  });
 });
