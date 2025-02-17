@@ -433,7 +433,7 @@ export const isValidFiber = (fiber: Fiber) => {
 export const initReactScanInstrumentation = (setupToolbar: () => void) => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
-  let schedule: ReturnType<typeof setTimeout>;
+  let schedule: ReturnType<typeof requestAnimationFrame>;
   let mounted = false;
 
   const scheduleSetup = () => {
@@ -443,14 +443,14 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     if (schedule) {
       clearTimeout(schedule);
     }
-    schedule = setTimeout(() => {
+    schedule = requestAnimationFrame(() => {
       mounted = true;
       const host = getCanvasEl();
       if (host) {
         document.documentElement.appendChild(host);
       }
       setupToolbar();
-    }, 1000); // TODO(Alexis): perhaps a better timing
+    }); // TODO(Alexis): perhaps a better timing
   };
 
   const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
