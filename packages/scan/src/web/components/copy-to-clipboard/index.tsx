@@ -51,7 +51,7 @@ export const CopyToClipboard = memo(
           },
         );
       },
-      [text, onCopy, isCopied],
+      [text, onCopy],
     );
 
     const ClipboardIcon = (
