@@ -9,7 +9,6 @@ import {
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
 import type { RenderData } from 'src/core/utils';
-// import { initReactScanOverlay } from '~web/overlay';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
@@ -496,9 +495,11 @@ export const start = () => {
 
   const options = getOptions();
 
-  initReactScanInstrumentation(() =>
-    idempotent_createToolbar(!!options.value.showToolbar),
-  );
+  initReactScanInstrumentation(() => {
+    if (process.env.BUNDLE_MODE === 'full') {
+      idempotent_createToolbar(!!options.value.showToolbar);
+    }
+  });
 
   const isUsedInBrowserExtension = typeof window !== 'undefined';
   if (!Store.monitor.value && !isUsedInBrowserExtension) {

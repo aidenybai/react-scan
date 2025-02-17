@@ -8,8 +8,10 @@ import {
 import { readLocalStorage, saveLocalStorage } from './utils/helpers';
 import type { Corner, WidgetConfig, WidgetSettings } from './widget/types';
 
-export const signalIsSettingsOpen = signal(false);
-export const signalRefWidget = signal<HTMLDivElement | null>(null);
+export const signalIsSettingsOpen = /* @__PURE__ */ signal(false);
+export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(
+  null,
+);
 
 export const defaultWidgetConfig = {
   corner: 'top-left' as Corner,
@@ -60,7 +62,9 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
   };
 };
 
-export const signalWidget = signal<WidgetConfig>(getInitialWidgetConfig());
+export const signalWidget = /* @__PURE__ */ signal<WidgetConfig>(
+  getInitialWidgetConfig(),
+);
 
 export const updateDimensions = (): void => {
   if (typeof window === 'undefined') return;
@@ -85,7 +89,7 @@ export interface SlowDowns {
   hideNotification: boolean;
 }
 
-export const signalSlowDowns = signal<SlowDowns>({
+export const signalSlowDowns = /* @__PURE__ */ signal<SlowDowns>({
   slowDowns: 0,
   hideNotification: false,
 });
@@ -110,6 +114,6 @@ export type WidgetStates =
       view: 'summary';
       // extra params
     };
-export const signalWidgetViews = signal<WidgetStates>({
+export const signalWidgetViews = /* @__PURE__ */ signal<WidgetStates>({
   view: 'none',
 });

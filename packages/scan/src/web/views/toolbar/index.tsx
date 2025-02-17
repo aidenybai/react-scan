@@ -12,7 +12,7 @@ import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import FpsMeter from '~web/widget/fps-meter';
 
-export const Toolbar = constant(() => {
+export const Toolbar = /* @__PURE__ */ constant(() => {
   // const refSettingsButton = useRef<HTMLButtonElement>(null);
   // const [isPinned, setIsPinned] = useState(false);
   // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);

@@ -1,5 +1,5 @@
 import { memo } from 'preact/compat';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 
@@ -14,7 +14,7 @@ interface CopyToClipboardProps {
   iconSize?: number;
 }
 
-export const CopyToClipboard = memo(
+export const CopyToClipboard = /* @__PURE__ */ memo(
   ({
     text,
     children,

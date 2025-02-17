@@ -5,60 +5,6 @@ import { ReactScanInternals } from '~core/index';
 import type { AggregatedRender } from '~web/utils/outline';
 import type { AggregatedChange, Render } from './instrumentation';
 
-export const aggregateChanges = (
-  changes: Array<Change>,
-  prevAggregatedChange?: AggregatedChange,
-) => {
-  const newChange = {
-    type: prevAggregatedChange?.type ?? 0,
-    unstable: prevAggregatedChange?.unstable ?? false,
-  };
-  for (const change of changes) {
-    newChange.type |= change.type;
-    newChange.unstable = newChange.unstable || (change.unstable ?? false);
-  }
-
-  return newChange;
-};
-
-export const joinAggregations = ({
-  from,
-  to,
-}: {
-  from: AggregatedRender;
-  to: AggregatedRender;
-}) => {
-  to.changes.type |= from.changes.type;
-  to.changes.unstable = to.changes.unstable || from.changes.unstable;
-  to.aggregatedCount += 1;
-  to.didCommit = to.didCommit || from.didCommit;
-  to.forget = to.forget || from.forget;
-  to.fps = to.fps + from.fps;
-  to.phase |= from.phase;
-  to.time = (to.time ?? 0) + (from.time ?? 0);
-
-  to.unnecessary = to.unnecessary || from.unnecessary;
-};
-
-export const aggregateRender = (
-  newRender: Render,
-  prevAggregated: AggregatedRender,
-) => {
-  prevAggregated.changes = aggregateChanges(
-    newRender.changes,
-    prevAggregated.changes,
-  );
-  prevAggregated.aggregatedCount += 1;
-  prevAggregated.didCommit = prevAggregated.didCommit || newRender.didCommit;
-  prevAggregated.forget = prevAggregated.forget || newRender.forget;
-  prevAggregated.fps = prevAggregated.fps + newRender.fps;
-  prevAggregated.phase |= newRender.phase;
-  prevAggregated.time = (prevAggregated.time ?? 0) + (newRender.time ?? 0);
-
-  prevAggregated.unnecessary =
-    prevAggregated.unnecessary || newRender.unnecessary;
-};
-
 function descending(a: number, b: number): number {
   return b - a;
 }

@@ -68,7 +68,7 @@ interface WhatChangedProps {
   shouldShowChanges: boolean;
 }
 
-export const WhatChangedSection = memo(() => {
+export const WhatChangedSection = /* @__PURE__ */ memo(() => {
   const showTimeline = useSignal(false);
   const shouldShowChanges = useSignal(true);
 
@@ -114,7 +114,7 @@ export const WhatChangedSection = memo(() => {
   );
 });
 
-export const WhatChanged = memo(
+export const WhatChanged = /* @__PURE__ */ memo(
   ({
     isSticky,
     refSticky,
@@ -195,7 +195,7 @@ const renderStateName = (key: string, componentName: string) => {
   );
 };
 
-const WhatsChangedHeader = memo<{
+const WhatsChangedHeader = /* @__PURE__ */ memo<{
   refSticky?:
     | ReturnType<typeof useMergedRefs<HTMLElement>>
     | ((node: HTMLElement | null) => void);
@@ -374,7 +374,7 @@ interface SectionProps {
   isExpanded: boolean;
 }
 
-const Section = memo(({ title, isExpanded }: SectionProps) => {
+const Section = /* @__PURE__ */ memo(({ title, isExpanded }: SectionProps) => {
   const refFiberInfo = useRef<MinimalFiberInfo | null>(null);
   const refLastUpdated = useRef(new Set<string | number>());
   const refChangesValues = useRef(new Map<string | number, ChangeValues>());
