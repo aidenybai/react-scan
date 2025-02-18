@@ -58,8 +58,6 @@ window.addEventListener('DOMContentLoaded', async () => {
           enabled: isEnabled,
           showToolbar: isEnabled,
         });
-
-        reactScan.start();
       } else {
         toggleReactIsNotAvailable();
       }

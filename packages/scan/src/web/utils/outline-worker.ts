@@ -121,7 +121,6 @@ function setupOutlineWorker(): (action: OutlineWorkerAction) => Promise<void> {
 
 const createWorker = () => {
   const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
-  removeLocalStorage('use-extension-worker');
 
   if (useExtensionWorker) {
     return new SmolWorkerExtension(setupOutlineWorker);

@@ -287,32 +287,28 @@ export const getCanvasEl = () => {
   canvasEl.width = width;
   canvasEl.height = height;
 
-  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED) {
+  const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
+  removeLocalStorage('use-extension-worker');
+
+  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !useExtensionWorker) {
     try {
-      const useExtensionWorker = readLocalStorage<boolean>(
-        'use-extension-worker',
+      worker = new Worker(
+        URL.createObjectURL(
+          new Blob([workerCode], { type: 'application/javascript' }),
+        ),
       );
-      removeLocalStorage('use-extension-worker');
 
-      if (useExtensionWorker) {
-        worker = new Worker(
-          URL.createObjectURL(
-            new Blob([workerCode], { type: 'application/javascript' }),
-          ),
-        );
-
-        const offscreenCanvas = canvasEl.transferControlToOffscreen();
-        worker?.postMessage(
-          {
-            type: 'init',
-            canvas: offscreenCanvas,
-            width: canvasEl.width,
-            height: canvasEl.height,
-            dpr,
-          },
-          [offscreenCanvas],
-        );
-      }
+      const offscreenCanvas = canvasEl.transferControlToOffscreen();
+      worker?.postMessage(
+        {
+          type: 'init',
+          canvas: offscreenCanvas,
+          width: canvasEl.width,
+          height: canvasEl.height,
+          dpr,
+        },
+        [offscreenCanvas],
+      );
     } catch (e) {
       // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.warn('Failed to initialize OffscreenCanvas worker:', e);
