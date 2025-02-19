@@ -1,6 +1,6 @@
 import { SmolWorker } from '~core/worker/smol';
 import { SmolWorkerExtension } from '~core/worker/smol-extension';
-import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
+import { readLocalStorage } from '~web/utils/helpers';
 
 export interface DrawingQueue {
   rect: DOMRect;
