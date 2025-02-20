@@ -374,7 +374,7 @@ export const ScanOverlay = () => {
     startFadeOut();
   };
 
-  const handleMouseMove = throttle((e?: MouseEvent) => {
+  const handlePointerMove = throttle((e?: PointerEvent) => {
     const state = Store.inspectState.peek();
     if (state.kind !== 'inspecting' || !refEventCatcher.current) return;
 
@@ -675,7 +675,7 @@ export const ScanOverlay = () => {
 
     window.addEventListener('scroll', handleResizeOrScroll, { passive: true });
     window.addEventListener('resize', handleResizeOrScroll, { passive: true });
-    document.addEventListener('mousemove', handleMouseMove, {
+    document.addEventListener('pointermove', handlePointerMove, {
       passive: true,
       capture: true,
     });
@@ -690,7 +690,7 @@ export const ScanOverlay = () => {
       unSubState();
       window.removeEventListener('scroll', handleResizeOrScroll);
       window.removeEventListener('resize', handleResizeOrScroll);
-      document.removeEventListener('mousemove', handleMouseMove, {
+      document.removeEventListener('pointermove', handlePointerMove, {
         capture: true,
       });
       document.removeEventListener('click', handleClick, { capture: true });

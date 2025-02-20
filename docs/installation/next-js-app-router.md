@@ -26,8 +26,9 @@ Create a `<ReactScan>` client component:
 ```jsx
 // path/to/ReactScanComponent
 "use client";
-import { JSX, useEffect } from "react";
+// react-scan must be imported before react
 import { scan } from "react-scan";
+import { JSX, useEffect } from "react";
 
 export function ReactScan(): JSX.Element {
   useEffect(() => {
@@ -43,6 +44,9 @@ export function ReactScan(): JSX.Element {
 Import the `<ReactScan>` component into `app/layout`:
 
 ```jsx
+// app/layout
+
+// This component must be the top-most import in this file!
 import { ReactScan } from "path/to/ReactScanComponent";
 
 // ...
@@ -51,7 +55,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <ReactScan />
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
         {children}
       </body>
     </html>

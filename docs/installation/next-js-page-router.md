@@ -30,10 +30,11 @@ export default function Document() {
 Add the following code to your `App` component in `pages/_app`:
 
 ```jsx
+// react-scan must be the top-most import
+import { scan } from "react-scan";
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { useEffect } from "react";
-import { scan } from "react-scan";
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {

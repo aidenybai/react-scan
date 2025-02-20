@@ -38,6 +38,10 @@ pnpm add react-scan
 ```
 
 ```bash
+bun add react-scan
+```
+
+```bash
 yarn add react-scan
 ```
 

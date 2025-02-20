@@ -12,7 +12,7 @@ import type { RenderData } from 'src/core/utils';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
-import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
+import { createToolbar } from '~web/toolbar';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { Outline } from '~web/utils/outline';
 import type { States } from '~web/views/inspector/utils';
@@ -276,17 +276,17 @@ export const ReactScanInternals: Internals = {
   componentAllowList: null,
   options: signal({
     enabled: true,
-    includeChildren: true,
-    playSound: false,
+    // includeChildren: true,
+    // playSound: false,
     log: false,
     showToolbar: true,
-    renderCountThreshold: 0,
-    report: undefined,
-    alwaysShowLabels: false,
+    // renderCountThreshold: 0,
+    // report: undefined,
+    // alwaysShowLabels: false,
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
-    smoothlyAnimateOutlines: true,
-    trackUnnecessaryRenders: false,
+    // smoothlyAnimateOutlines: true,
+    // trackUnnecessaryRenders: false,
   }),
   onRender: null,
   scheduledOutlines: new Map(),
@@ -420,6 +420,9 @@ export const setOptions = (userOptions: Partial<Options>) => {
     return;
   }
 
+  const shouldInitToolbar =
+    'showToolbar' in validOptions && validOptions.showToolbar !== undefined;
+
   const newOptions = {
     ...ReactScanInternals.options.value,
     ...validOptions,
@@ -432,17 +435,11 @@ export const setOptions = (userOptions: Partial<Options>) => {
 
   ReactScanInternals.options.value = newOptions;
 
-  const existingLocalStorageOptions =
-    readLocalStorage<LocalStorageOptions>('react-scan-options');
-  // we always want to persist the local storage option specifically for enabled to avoid annoying the user
-  // if the user doesn't have a toolbar we fallback to the true options because there wouldn't be a way to
-  // revert the local storage value
-  saveLocalStorage('react-scan-options', {
-    ...newOptions,
-    enabled: newOptions.showToolbar
-      ? (existingLocalStorageOptions?.enabled ?? newOptions.enabled ?? true)
-      : newOptions.enabled,
-  });
+  saveLocalStorage('react-scan-options', newOptions);
+
+  if (shouldInitToolbar) {
+    initToolbar(!!newOptions.showToolbar);
+  }
 
   return newOptions;
 };
@@ -482,8 +479,7 @@ export const start = () => {
     readLocalStorage<LocalStorageOptions>('react-scan-options');
 
   if (localStorageOptions) {
-    const { enabled } = localStorageOptions;
-    const validLocalOptions = validateOptions({ enabled });
+    const validLocalOptions = validateOptions(localStorageOptions);
 
     if (Object.keys(validLocalOptions).length > 0) {
       ReactScanInternals.options.value = {
@@ -497,7 +493,7 @@ export const start = () => {
 
   initReactScanInstrumentation(() => {
     if (process.env.BUNDLE_MODE === 'full') {
-      idempotent_createToolbar(!!options.value.showToolbar);
+      initToolbar(!!options.value.showToolbar);
     }
   });
 
@@ -513,7 +509,7 @@ export const start = () => {
   }
 };
 
-const idempotent_createToolbar = (showToolbar: boolean) => {
+const initToolbar = (showToolbar: boolean) => {
   const windowToolbarContainer = window.__REACT_SCAN_TOOLBAR_CONTAINER__;
 
   if (!showToolbar) {
@@ -521,20 +517,7 @@ const idempotent_createToolbar = (showToolbar: boolean) => {
     return;
   }
 
-  // allows us to override toolbar by pasting a new script in console
-  if (!scriptLevelToolbar && windowToolbarContainer) {
-    windowToolbarContainer.remove();
-    const { shadowRoot } = initRootContainer();
-    createToolbar(shadowRoot);
-    return;
-  }
-
-  if (scriptLevelToolbar && windowToolbarContainer) {
-    // then a toolbar already exists and is subscribed to the correct instrumentation
-    return;
-  }
-
-  // then we are creating a toolbar for the first time
+  windowToolbarContainer?.remove();
   const { shadowRoot } = initRootContainer();
   createToolbar(shadowRoot);
 };
