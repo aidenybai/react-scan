@@ -56,7 +56,7 @@ export const Slider = ({
 
   return (
     <div
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         e.stopPropagation();
       }}
       className={cn(

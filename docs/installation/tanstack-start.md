@@ -36,6 +36,7 @@ Add the following code to your `<RootDocument>` component at `app/routes/__root`
 
 ```jsx
 // app/routes/__root.jsx
+// react-scan must be imported before React and TanStack Start
 import { scan } from "react-scan";
 import { Meta, Scripts } from "@tanstack/start";
 import { useEffect } from "react";

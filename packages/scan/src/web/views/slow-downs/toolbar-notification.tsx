@@ -1,7 +1,7 @@
 import { useCallback } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
-import { useDelayedValue } from '~web/hooks/use-mount-delay';
+import { useDelayedValue } from '~web/hooks/use-delayed-value';
 import { signalSlowDowns, signalWidget, signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 

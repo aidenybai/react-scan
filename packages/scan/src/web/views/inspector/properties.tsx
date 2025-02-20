@@ -649,7 +649,7 @@ export const PropertySection = ({
         <div
           className={cn(
             'react-scan-expandable',
-            isExpanded && 'react-scan-expanded py-0.5',
+            isExpanded && 'react-scan-expanded',
           )}
         >
           <div className="overflow-hidden">

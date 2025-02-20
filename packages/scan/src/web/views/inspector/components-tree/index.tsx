@@ -713,7 +713,7 @@ export const ComponentsTree = () => {
 
       updateResizeDirection(startWidth);
 
-      const handleMouseMove = (e: MouseEvent) => {
+      const handlePointerMove = (e: PointerEvent) => {
         const delta = startX - e.clientX;
         const newWidth = startWidth + delta;
         updateResizeDirection(newWidth);
@@ -725,11 +725,11 @@ export const ComponentsTree = () => {
         updateContainerWidths(clampedWidth);
       };
 
-      const handleMouseUp = () => {
+      const handlePointerUp = () => {
         if (!refContainer.current) return;
         refContainer.current.style.removeProperty('pointer-events');
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('pointermove', handlePointerMove);
+        document.removeEventListener('pointerup', handlePointerUp);
 
         signalWidget.value = {
           ...signalWidget.value,
@@ -743,8 +743,8 @@ export const ComponentsTree = () => {
         refIsResizing.current = false;
       };
 
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
     },
     [updateContainerWidths, updateResizeDirection],
   );
@@ -760,7 +760,7 @@ export const ComponentsTree = () => {
     });
   }, [updateResizeDirection]);
 
-  const onMouseLeave = useCallback(() => {
+  const onPointerLeave = useCallback(() => {
     refIsHovering.current = false;
   }, []);
 
@@ -968,10 +968,10 @@ export const ComponentsTree = () => {
   }, []);
 
   return (
-    <>
+    <div className="react-scan-components-tree flex">
       <div
         ref={refResizeHandle}
-        onMouseDown={handleResize}
+        onPointerDown={handleResize}
         className="relative resize-v-line"
       >
         <span>
@@ -979,7 +979,7 @@ export const ComponentsTree = () => {
         </span>
       </div>
       <div ref={refMainContainer} className="flex flex-col h-full">
-        <div className="py-2 pr-2 border-b border-[#1e1e1e]">
+        <div className="p-2 border-b border-[#1e1e1e]">
           <div
             ref={refSearchInputContainer}
             title={`Search components by:
@@ -1024,7 +1024,7 @@ export const ComponentsTree = () => {
                   e.stopPropagation();
                   e.currentTarget.focus();
                 }}
-                onMouseDown={(e) => {
+                onPointerDown={(e) => {
                   e.stopPropagation();
                 }}
                 onKeyDown={(e) => {
@@ -1118,8 +1118,8 @@ export const ComponentsTree = () => {
         <div className="flex-1 overflow-hidden">
           <div
             ref={refContainer}
-            onMouseLeave={onMouseLeave}
-            className="h-full overflow-auto will-change-transform"
+            onPointerLeave={onPointerLeave}
+            className="tree h-full overflow-auto will-change-transform"
           >
             <div
               className="relative w-full"
@@ -1174,6 +1174,6 @@ export const ComponentsTree = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
