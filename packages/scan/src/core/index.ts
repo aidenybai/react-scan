@@ -33,6 +33,7 @@ import { getSession } from "./monitor/utils";
 // import type { InternalInteraction } from "./monitor/types";
 // import type { getSession } from "./monitor/utils";
 import { startTimingTracking } from "./notifications/event-tracking";
+import { createHighlightCanvas } from "./heatmap-overlay";
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -529,7 +530,6 @@ export const start = () => {
 
   const options = getOptions();
 
-
   initReactScanInstrumentation({
     onActive: () => {
       const rdtHook = getRDTHook();
@@ -608,6 +608,9 @@ const idempotent_createToolbar = (showToolbar: boolean) => {
   // then we are creating a toolbar for the first time
   const { shadowRoot } = initRootContainer();
   createToolbar(shadowRoot);
+  try {
+    createHighlightCanvas(document.body);
+  } catch {}
 };
 
 export const scan = (options: Options = {}) => {

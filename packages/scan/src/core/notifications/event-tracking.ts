@@ -353,7 +353,7 @@ export const startTimingTracking = () => {
   const unSubPerformance = setupPerformancePublisher();
   startDirtyTaskTracking();
   startLongPipelineTracking();
-  createHighlightCanvas(document.body);
+
 
   const onComplete = async (
     _: string,
