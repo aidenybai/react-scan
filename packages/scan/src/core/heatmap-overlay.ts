@@ -189,7 +189,7 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   highlightCanvas.style.left = "0";
   highlightCanvas.style.top = "0";
   highlightCanvas.style.pointerEvents = "none";
-  highlightCanvas.style.zIndex = "999999999999";
+  highlightCanvas.style.zIndex = "2147483600";
 
   highlightCtx.scale(dpr, dpr);
 

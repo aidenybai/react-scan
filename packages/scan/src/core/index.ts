@@ -609,7 +609,8 @@ const idempotent_createToolbar = (showToolbar: boolean) => {
   const { shadowRoot } = initRootContainer();
   createToolbar(shadowRoot);
   try {
-    createHighlightCanvas(document.body);
+    const highlightRoot = document.documentElement;
+    createHighlightCanvas(highlightRoot);
   } catch {}
 };
 
