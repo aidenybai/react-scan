@@ -179,12 +179,12 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   if (!highlightCtx) return null;
 
   const dpr = window.devicePixelRatio || 1;
-  const rect = root.getBoundingClientRect();
+  const { innerWidth, innerHeight } = window;
 
-  highlightCanvas.style.width = `${rect.width}px`;
-  highlightCanvas.style.height = `${rect.height}px`;
-  highlightCanvas.width = rect.width * dpr;
-  highlightCanvas.height = rect.height * dpr;
+  highlightCanvas.style.width = `${innerWidth}px`;
+  highlightCanvas.style.height = `${innerHeight}px`;
+  highlightCanvas.width = innerWidth * dpr;
+  highlightCanvas.height = innerHeight * dpr;
   highlightCanvas.style.position = "fixed";
   highlightCanvas.style.left = "0";
   highlightCanvas.style.top = "0";
@@ -202,12 +202,12 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   const handleResize = () => {
     if (!highlightCanvas || !highlightCtx) return;
     const dpr = window.devicePixelRatio || 1;
-    const rect = root.getBoundingClientRect();
+    const { innerWidth, innerHeight } = window;
 
-    highlightCanvas.style.width = `${rect.width}px`;
-    highlightCanvas.style.height = `${rect.height}px`;
-    highlightCanvas.width = rect.width * dpr;
-    highlightCanvas.height = rect.height * dpr;
+    highlightCanvas.style.width = `${innerWidth}px`;
+    highlightCanvas.style.height = `${innerHeight}px`;
+    highlightCanvas.width = innerWidth * dpr;
+    highlightCanvas.height = innerHeight * dpr;
     highlightCtx.scale(dpr, dpr);
 
     drawHighlights();
