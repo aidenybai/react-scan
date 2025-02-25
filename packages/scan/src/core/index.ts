@@ -497,90 +497,94 @@ export const getIsProduction = () => {
 };
 
 export const start = () => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  Store.monitor.value = {
-    pendingRequests: 0,
-    interactions: [],
-    session: new Promise((res) => res(null)),
-    url: null,
-    route: null,
-    apiKey: null,
-    commit: null,
-    branch: null,
-    interactionListeningForRenders: null,
-  };
-
-  const localStorageOptions =
-    readLocalStorage<LocalStorageOptions>("react-scan-options");
-
-  if (localStorageOptions) {
-    const { enabled } = localStorageOptions;
-    const validLocalOptions = validateOptions({ enabled });
-
-    if (Object.keys(validLocalOptions).length > 0) {
-      ReactScanInternals.options.value = {
-        ...ReactScanInternals.options.value,
-        ...validLocalOptions,
-      };
+  try {
+    if (typeof window === "undefined") {
+      return;
     }
-  }
 
-  const options = getOptions();
+    Store.monitor.value = {
+      pendingRequests: 0,
+      interactions: [],
+      session: new Promise((res) => res(null)),
+      url: null,
+      route: null,
+      apiKey: null,
+      commit: null,
+      branch: null,
+      interactionListeningForRenders: null,
+    };
 
-  initReactScanInstrumentation({
-    onActive: () => {
-      const rdtHook = getRDTHook();
+    const localStorageOptions =
+      readLocalStorage<LocalStorageOptions>("react-scan-options");
 
-      if (hasStopped()) return;
+    if (localStorageOptions) {
+      const { enabled } = localStorageOptions;
+      const validLocalOptions = validateOptions({ enabled });
 
-      for (const renderer of rdtHook.renderers.values()) {
-        const buildType = detectReactBuildType(renderer);
-        if (buildType === "production") {
-          isProduction = true;
+      if (Object.keys(validLocalOptions).length > 0) {
+        ReactScanInternals.options.value = {
+          ...ReactScanInternals.options.value,
+          ...validLocalOptions,
+        };
+      }
+    }
+
+    const options = getOptions();
+
+    initReactScanInstrumentation({
+      onActive: () => {
+        const rdtHook = getRDTHook();
+
+        if (hasStopped()) return;
+
+        for (const renderer of rdtHook.renderers.values()) {
+          const buildType = detectReactBuildType(renderer);
+          if (buildType === "production") {
+            isProduction = true;
+          }
         }
-      }
 
-      if (
-        isProduction &&
-        !ReactScanInternals.options.value.dangerouslyForceRunInProduction
-      ) {
-        setOptions({ enabled: false, showToolbar: false });
+        if (
+          isProduction &&
+          !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+        ) {
+          setOptions({ enabled: false, showToolbar: false });
+          // biome-ignore lint/suspicious/noConsole: Intended debug output
+          console.warn(
+            "[React Scan] Running in production mode is not recommended.\n" +
+              "If you really need this, set dangerouslyForceRunInProduction: true in options."
+          );
+          return;
+        }
+
+        startTimingTracking();
+
+        idempotent_createToolbar(!!options.value.showToolbar);
+
+        const host = getCanvasEl();
+        if (host) {
+          document.documentElement.appendChild(host);
+        }
+        globalThis.__REACT_SCAN__ = {
+          ReactScanInternals,
+        };
+        startReportInterval();
+        logIntro();
+      },
+    });
+
+    const isUsedInBrowserExtension = typeof window !== "undefined";
+    if (!Store.monitor.value && !isUsedInBrowserExtension) {
+      setTimeout(() => {
+        if (isInstrumentationActive()) return;
         // biome-ignore lint/suspicious/noConsole: Intended debug output
-        console.warn(
-          "[React Scan] Running in production mode is not recommended.\n" +
-            "If you really need this, set dangerouslyForceRunInProduction: true in options."
+        console.error(
+          "[React Scan] Failed to load. Must import React Scan before React runs."
         );
-        return;
-      }
-
-      startTimingTracking();
-
-      idempotent_createToolbar(!!options.value.showToolbar);
-
-      const host = getCanvasEl();
-      if (host) {
-        document.documentElement.appendChild(host);
-      }
-      globalThis.__REACT_SCAN__ = {
-        ReactScanInternals,
-      };
-      startReportInterval();
-      logIntro();
-    },
-  });
-
-  const isUsedInBrowserExtension = typeof window !== "undefined";
-  if (!Store.monitor.value && !isUsedInBrowserExtension) {
-    setTimeout(() => {
-      if (isInstrumentationActive()) return;
-      // biome-ignore lint/suspicious/noConsole: Intended debug output
-      console.error(
-        "[React Scan] Failed to load. Must import React Scan before React runs."
-      );
-    }, 5000);
+      }, 5000);
+    }
+  } catch {
+    /** */
   }
 };
 

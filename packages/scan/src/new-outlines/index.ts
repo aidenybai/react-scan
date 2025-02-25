@@ -146,6 +146,8 @@ export const getBatchedRectMap = async function* (
 const SupportedArrayBuffer =
   typeof SharedArrayBuffer !== "undefined" ? SharedArrayBuffer : ArrayBuffer;
 
+let currentTimeout: ReturnType<typeof setTimeout>;
+
 export const flushOutlines = async () => {
   const elements: Element[] = [];
 
@@ -163,90 +165,114 @@ export const flushOutlines = async () => {
 
   const rectsMap = new Map<Element, DOMRect>();
 
-  for await (const entries of getBatchedRectMap(elements)) {
-    for (const entry of entries) {
-      const element = entry.target;
-      const rect = entry.intersectionRect;
-      if (entry.isIntersecting && rect.width && rect.height) {
-        rectsMap.set(element, rect);
-      }
-    }
+  if (currentTimeout) {
+    clearTimeout(currentTimeout);
+  }
 
-    const blueprints: BlueprintOutline[] = [];
-    const blueprintRects: DOMRect[] = [];
-    const blueprintIds: number[] = [];
+  // adds ~1ms overhead
+  const timeout = new Promise((_, reject) => {
+    currentTimeout = setTimeout(
+      () => reject(new Error("Timed out getting rects")),
+      2500
+    );
+  });
 
-    for (const fiber of blueprintMapKeys) {
-      const blueprint = blueprintMap.get(fiber);
-      if (!blueprint) continue;
+  try {
+    // this happens extremely infrequently in chrome, and in firefox more frequently (but still infrequently)
+    // it may be an edge case wer'e not accounting for in getBatchedRectMap
+    // https://github.com/aidenybai/react-scan/issues/274
+    await Promise.race([
+      (async () => {
+        for await (const entries of getBatchedRectMap(elements)) {
+          for (const entry of entries) {
+            const element = entry.target;
+            const rect = entry.intersectionRect;
+            if (entry.isIntersecting && rect.width && rect.height) {
+              rectsMap.set(element, rect);
+            }
+          }
 
-      const rects: DOMRect[] = [];
-      for (let i = 0; i < blueprint.elements.length; i++) {
-        const element = blueprint.elements[i];
-        const rect = rectsMap.get(element);
-        if (!rect) continue;
-        rects.push(rect);
-      }
+          const blueprints: BlueprintOutline[] = [];
+          const blueprintRects: DOMRect[] = [];
+          const blueprintIds: number[] = [];
 
-      if (!rects.length) continue;
+          for (const fiber of blueprintMapKeys) {
+            const blueprint = blueprintMap.get(fiber);
+            if (!blueprint) continue;
 
-      blueprints.push(blueprint);
-      blueprintRects.push(mergeRects(rects));
-      blueprintIds.push(getFiberId(fiber));
-    }
+            const rects: DOMRect[] = [];
+            for (let i = 0; i < blueprint.elements.length; i++) {
+              const element = blueprint.elements[i];
+              const rect = rectsMap.get(element);
+              if (!rect) continue;
+              rects.push(rect);
+            }
 
-    if (blueprints.length > 0) {
-      const arrayBuffer = new SupportedArrayBuffer(
-        blueprints.length * OUTLINE_ARRAY_SIZE * 4
-      );
-      const sharedView = new Float32Array(arrayBuffer);
-      const blueprintNames = new Array(blueprints.length);
-      let outlineData: OutlineData[] | undefined;
+            if (!rects.length) continue;
 
-      for (let i = 0, len = blueprints.length; i < len; i++) {
-        const blueprint = blueprints[i];
-        const id = blueprintIds[i];
-        const { x, y, width, height } = blueprintRects[i];
-        const { count, name, didCommit } = blueprint;
+            blueprints.push(blueprint);
+            blueprintRects.push(mergeRects(rects));
+            blueprintIds.push(getFiberId(fiber));
+          }
 
-        if (worker) {
-          const scaledIndex = i * OUTLINE_ARRAY_SIZE;
-          sharedView[scaledIndex] = id;
-          sharedView[scaledIndex + 1] = count;
-          sharedView[scaledIndex + 2] = x;
-          sharedView[scaledIndex + 3] = y;
-          sharedView[scaledIndex + 4] = width;
-          sharedView[scaledIndex + 5] = height;
-          sharedView[scaledIndex + 6] = didCommit;
-          blueprintNames[i] = name;
-        } else {
-          outlineData ||= new Array(blueprints.length);
-          outlineData[i] = {
-            id,
-            name,
-            count,
-            x,
-            y,
-            width,
-            height,
-            didCommit: didCommit as 0 | 1,
-          };
+          if (blueprints.length > 0) {
+            const arrayBuffer = new SupportedArrayBuffer(
+              blueprints.length * OUTLINE_ARRAY_SIZE * 4
+            );
+            const sharedView = new Float32Array(arrayBuffer);
+            const blueprintNames = new Array(blueprints.length);
+            let outlineData: OutlineData[] | undefined;
+
+            for (let i = 0, len = blueprints.length; i < len; i++) {
+              const blueprint = blueprints[i];
+              const id = blueprintIds[i];
+              const { x, y, width, height } = blueprintRects[i];
+              const { count, name, didCommit } = blueprint;
+
+              if (worker) {
+                const scaledIndex = i * OUTLINE_ARRAY_SIZE;
+                sharedView[scaledIndex] = id;
+                sharedView[scaledIndex + 1] = count;
+                sharedView[scaledIndex + 2] = x;
+                sharedView[scaledIndex + 3] = y;
+                sharedView[scaledIndex + 4] = width;
+                sharedView[scaledIndex + 5] = height;
+                sharedView[scaledIndex + 6] = didCommit;
+                blueprintNames[i] = name;
+              } else {
+                outlineData ||= new Array(blueprints.length);
+                outlineData[i] = {
+                  id,
+                  name,
+                  count,
+                  x,
+                  y,
+                  width,
+                  height,
+                  didCommit: didCommit as 0 | 1,
+                };
+              }
+            }
+
+            if (worker) {
+              worker.postMessage({
+                type: "draw-outlines",
+                data: arrayBuffer,
+                names: blueprintNames,
+              });
+            } else if (canvas && ctx && outlineData) {
+              updateOutlines(activeOutlines, outlineData);
+              if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(draw);
+              }
+            }
+          }
         }
-      }
-
-      if (worker) {
-        worker.postMessage({
-          type: "draw-outlines",
-          data: arrayBuffer,
-          names: blueprintNames,
-        });
-      } else if (canvas && ctx && outlineData) {
-        updateOutlines(activeOutlines, outlineData);
-        if (!animationFrameId) {
-          animationFrameId = requestAnimationFrame(draw);
-        }
-      }
-    }
+      })(),
+      timeout,
+    ]);
+  } catch {
+    /* */
   }
 
   for (const fiber of blueprintMapKeys) {
@@ -394,10 +420,14 @@ export const getCanvasEl = () => {
   });
 
   setInterval(() => {
-    if (blueprintMapKeys.size) {
-      requestAnimationFrame(() => {
-        flushOutlines();
-      });
+    try {
+      if (blueprintMapKeys.size) {
+        requestAnimationFrame(() => {
+          flushOutlines();
+        });
+      }
+    } catch {
+      /** */
     }
   }, 16 * 2);
 
