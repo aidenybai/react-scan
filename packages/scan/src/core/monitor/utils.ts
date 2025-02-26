@@ -47,7 +47,7 @@ export const not_globally_unique_generateId = () => {
     window.reactScanIdCounter = 0;
   }
   // @ts-expect-error
-  return `${window.reactScanIdCounter++}`;
+  return `${++window.reactScanIdCounter}`;
 };
 
 export const generateUniqueId = () => {

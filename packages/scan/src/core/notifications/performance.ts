@@ -376,6 +376,18 @@ const setupPerformanceListener = (
     ) {
       interactionTargetMap.set(entry.interactionId, entry.target);
     }
+    if (entry.target) {
+      let current: Element | null = entry.target;
+      while (current) {
+        if (
+          current.id === "react-scan-toolbar-root" ||
+          current.id === "react-scan-root"
+        ) {
+          return;
+        }
+        current = current.parentElement;
+      }
+    }
 
     const existingInteraction = interactionMap.get(entry.interactionId);
 
