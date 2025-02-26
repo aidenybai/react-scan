@@ -565,6 +565,8 @@ export const start = () => {
         logIntro();
       },
       setupToolbar() {
+        if (!isProduction) return;
+
         idempotent_createToolbar(!!options.value.showToolbar);
 
         const host = getCanvasEl();
