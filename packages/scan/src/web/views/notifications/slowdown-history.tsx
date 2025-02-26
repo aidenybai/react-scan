@@ -535,7 +535,7 @@ const CollapsedKeyboard = ({
                 severity === 'high' && 'bg-[#b94040]',
               ])}
             >
-              {collapsedKeyboardInput.events.length}
+              x{collapsedKeyboardInput.events.length}
             </div>
           </div>
         </button>
