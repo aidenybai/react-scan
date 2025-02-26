@@ -275,7 +275,6 @@ export const collectContextChanges = (
     }
   }
 
-  // console.log({current,prev,changes});
   
   return { current, prev, changes };
 };

@@ -874,11 +874,10 @@ export const setupDetailedPointerTimingListener = (
           stageStart: now,
           interactionType: kind,
         };
-        let timeoutRace: ReturnType<typeof setTimeout> | null = null;
+        let completed = false;
         const completeInteraction = (event: PerformanceEntryChannelEvent) => {
-          if (timeoutRace) {
-            clearTimeout(timeoutRace);
-          }
+          completed = true;
+
           const latency =
             event.kind === "auto-complete-race"
               ? event.detailedTiming.commitEnd -
@@ -896,6 +895,10 @@ export const setupDetailedPointerTimingListener = (
             finalInteraction,
             event
           );
+          const newTasks = tasks.filter(
+            (task) => task.interactionUUID !== timeoutStage.interactionUUID
+          );
+          tasks = BoundedArray.fromArray(newTasks, MAX_INTERACTION_TASKS);
 
           return finalInteraction;
         };
@@ -921,7 +924,10 @@ export const setupDetailedPointerTimingListener = (
             interactionUUID: timeoutStage.interactionUUID,
           });
         } else {
-          timeoutRace = setTimeout(() => {
+          setTimeout(() => {
+            if (completed) {
+              return;
+            }
             completeInteraction({
               kind: "auto-complete-race",
               // redundant
@@ -933,7 +939,7 @@ export const setupDetailedPointerTimingListener = (
             );
             tasks = BoundedArray.fromArray(newTasks, MAX_INTERACTION_TASKS);
             // this means the max frame presentation delta we can observe is 300ms, but this should catch >99% of cases, the trade off is to not accidentally miss slowdowns if the user quickly clicked something else while this race was happening
-          }, 300);
+          }, 1000);
         }
       },
     });
