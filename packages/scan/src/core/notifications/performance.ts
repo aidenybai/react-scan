@@ -862,8 +862,11 @@ export const setupDetailedPointerTimingListener = (
           stageStart: now,
           interactionType: kind,
         };
-
+        let timeoutRace: ReturnType<typeof setTimeout> | null = null;
         const completeInteraction = (event: PerformanceEntryChannelEvent) => {
+          if (timeoutRace) {
+            clearTimeout(timeoutRace);
+          }
           const latency =
             event.kind === "auto-complete-race"
               ? event.detailedTiming.commitEnd -
@@ -875,6 +878,7 @@ export const setupDetailedPointerTimingListener = (
             completedAt: Date.now(),
             flushNeeded: true,
           };
+
           options?.onComplete?.(
             timeoutStage.interactionUUID,
             finalInteraction,
@@ -883,15 +887,21 @@ export const setupDetailedPointerTimingListener = (
 
           return finalInteraction;
         };
-        tasks.push({
+
+        const task = {
           completeInteraction,
           endDateTime: Date.now(),
           startDateTime: timeoutStage.blockingTimeStart,
           type: kind,
           interactionUUID: timeoutStage.interactionUUID,
-        });
+        };
+        tasks.push(task);
 
         if (!isPerformanceEventAvailable()) {
+          const newTasks = tasks.filter(
+            (task) => task.interactionUUID !== timeoutStage.interactionUUID
+          );
+          tasks = BoundedArray.fromArray(newTasks, MAX_INTERACTION_TASKS);
           completeInteraction({
             kind: "auto-complete-race",
             // redundant
@@ -899,7 +909,7 @@ export const setupDetailedPointerTimingListener = (
             interactionUUID: timeoutStage.interactionUUID,
           });
         } else {
-          setTimeout(() => {
+          timeoutRace = setTimeout(() => {
             completeInteraction({
               kind: "auto-complete-race",
               // redundant
