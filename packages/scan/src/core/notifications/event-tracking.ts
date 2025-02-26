@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "preact/compat";
+import { not_globally_unique_generateId } from "~core/monitor/utils";
 import { createStore } from "../create-store";
 import { createHighlightCanvas } from "../heatmap-overlay";
 import { MAX_INTERACTION_BATCH, interactionStore } from "./interaction-store";
@@ -16,7 +17,6 @@ import {
   performanceEntryChannels,
 } from "./performance-store";
 import { BoundedArray } from "./performance-utils";
-import { generateId } from "~core/monitor/utils";
 
 let profileListeners: Array<(interaction: FinalInteraction) => void> = [];
 
@@ -321,7 +321,7 @@ export function startLongPipelineTracking() {
 
           toolbarEventStore.getState().actions.addEvent({
             kind: "long-render",
-            id: generateId(),
+            id: not_globally_unique_generateId(),
             data: {
               endAt: endAt,
               startAt: startAt,
@@ -353,7 +353,6 @@ export const startTimingTracking = () => {
   const unSubPerformance = setupPerformancePublisher();
   startDirtyTaskTracking();
   startLongPipelineTracking();
-
 
   const onComplete = async (
     _: string,

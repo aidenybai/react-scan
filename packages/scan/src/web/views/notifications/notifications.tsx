@@ -1,6 +1,7 @@
 import { forwardRef } from 'preact/compat';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
+import { not_globally_unique_generateId } from '~core/monitor/utils';
 import { useToolbarEventLog } from '~core/notifications/event-tracking';
 import { FiberRenders } from '~core/notifications/performance';
 import { iife, invariantError } from '~core/notifications/performance-utils';
@@ -18,11 +19,10 @@ import { DetailsRoutes } from './details-routes';
 import { NotificationHeader } from './notification-header';
 import { fadeOutHighlights } from './render-bar-chart';
 import { SlowdownHistory, useLaggedEvents } from './slowdown-history';
-import { generateId } from '~core/monitor/utils';
 
 const getGroupedFiberRenders = (fiberRenders: FiberRenders) => {
   const res = Object.values(fiberRenders).map((render) => ({
-    id: generateId(),
+    id: not_globally_unique_generateId(),
     totalTime: render.nodeInfo.reduce((prev, curr) => prev + curr.selfTime, 0),
     count: render.nodeInfo.length,
     name: render.nodeInfo[0].name, // invariant, at least one exists,

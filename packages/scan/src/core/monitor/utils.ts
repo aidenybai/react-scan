@@ -36,7 +36,21 @@ export const doubleRAF = (callback: (...args: unknown[]) => void) => {
   return requestAnimationFrame(requestAnimationFrame.bind(window, callback));
 };
 
-export const generateId = () => {
+export const not_globally_unique_generateId = () => {
+  if (typeof window === 'undefined') {
+    return '0';
+  }
+
+  // @ts-expect-error
+  if (window.reactScanIdCounter === undefined) {
+    // @ts-expect-error
+    window.reactScanIdCounter = 0;
+  }
+  // @ts-expect-error
+  return `${window.reactScanIdCounter++}`;
+};
+
+export const generateUniqueId = () => {
   const alphabet =
     'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
   let id = '';
@@ -82,7 +96,7 @@ export const getSession = async ({
   if (cachedSession) {
     return cachedSession;
   }
-  const id = generateId();
+  const id = generateUniqueId();
   const url = window.location.toString();
   /**
    * WiFi connection strength
