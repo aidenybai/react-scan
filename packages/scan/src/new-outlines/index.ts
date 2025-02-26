@@ -472,16 +472,39 @@ export const isValidFiber = (fiber: Fiber) => {
 };
 export const initReactScanInstrumentation = ({
   onActive,
+  setupToolbar,
 }: {
-  onActive?: () => void;
+  onActive: () => void;
+  setupToolbar: () => void;
 }) => {
   if (hasStopped()) return;
+  let schedule: ReturnType<typeof requestAnimationFrame>;
+  let mounted = false;
+  const scheduleSetup = () => {
+    if (mounted) {
+      return;
+    }
+    if (schedule) {
+      clearTimeout(schedule);
+    }
+    schedule = requestAnimationFrame(() => {
+      mounted = true;
+      const host = getCanvasEl();
+      if (host) {
+        document.documentElement.appendChild(host);
+      }
+      setupToolbar();
+    }); // TODO(Alexis): perhaps a better timing
+  };
   // todo: don't hardcode string getting weird ref error in iife when using process.env
   const instrumentation = createInstrumentation("react-scan-devtools-0.1.0", {
     onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
-    onActive,
+    onActive() {
+      onActive();
+      scheduleSetup();
+    },
     onError() {
       // todo: ingest errors without accidentally collecting data about user
     },
@@ -516,7 +539,11 @@ export const initReactScanInstrumentation = ({
       ReactScanInternals.options.value.onRender?.(fiber, renders);
     },
     onCommitFinish: () => {
+      scheduleSetup();
       ReactScanInternals.options.value.onCommitFinish?.();
+    },
+    onPostCommitFiberRoot() {
+      scheduleSetup();
     },
     trackChanges: false,
   });

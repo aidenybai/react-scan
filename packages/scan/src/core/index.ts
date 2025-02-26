@@ -558,18 +558,19 @@ export const start = () => {
         }
 
         startTimingTracking();
-
+        globalThis.__REACT_SCAN__ = {
+          ReactScanInternals,
+        };
+        startReportInterval();
+        logIntro();
+      },
+      setupToolbar() {
         idempotent_createToolbar(!!options.value.showToolbar);
 
         const host = getCanvasEl();
         if (host) {
           document.documentElement.appendChild(host);
         }
-        globalThis.__REACT_SCAN__ = {
-          ReactScanInternals,
-        };
-        startReportInterval();
-        logIntro();
       },
     });
 

@@ -34,8 +34,7 @@ import {
   type Change,
   type ContextChange,
   ReactScanInternals,
-  type StateChange,
-  Store,
+  type StateChange
 } from "./index";
 
 let fps = 0;
@@ -364,6 +363,7 @@ interface InstrumentationConfig {
   onCommitFinish: OnCommitFinishHandler;
   onError: OnErrorHandler;
   onActive?: OnActiveHandler;
+  onPostCommitFiberRoot: () => void;
   // monitoring does not need to track changes, and it adds overhead to leave it on
   trackChanges: boolean;
   // allows monitoring to continue tracking renders even if react scan dev mode is disabled
@@ -575,6 +575,12 @@ export const createInstrumentation = (
 
         for (const instance of allInstances) {
           instance.config.onCommitFinish();
+        }
+      },
+      onPostCommitFiberRoot() {
+        const allInstances = getAllInstances();
+        for (const instance of allInstances) {
+          instance.config.onPostCommitFiberRoot();
         }
       },
     });
