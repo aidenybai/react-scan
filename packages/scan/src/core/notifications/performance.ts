@@ -26,6 +26,7 @@ import type {
   PerformanceInteraction,
   PerformanceInteractionEntry,
 } from "./types";
+import { not_globally_unique_generateId } from "~core/monitor/utils";
 
 interface PathFilters {
   skipProviders: boolean;
@@ -290,6 +291,7 @@ export type CompletedInteraction = {
 
 type UnInitializedStage = {
   kind: "uninitialized-stage";
+  // todo: no longer a uuid
   interactionUUID: string;
   interactionType: "pointer" | "keyboard";
 };
@@ -699,7 +701,7 @@ export const setupDetailedPointerTimingListener = (
   const lastInteractionRef: LastInteractionRef = {
     current: {
       kind: "uninitialized-stage",
-      interactionUUID: crypto.randomUUID(), // the first interaction uses this
+      interactionUUID: not_globally_unique_generateId(), // the first interaction uses this
       stageStart: Date.now(),
       interactionType: kind,
     },
@@ -717,7 +719,7 @@ export const setupDetailedPointerTimingListener = (
     if (Date.now() - lastInteractionRef.current.stageStart > 2000) {
       lastInteractionRef.current = {
         kind: "uninitialized-stage",
-        interactionUUID: crypto.randomUUID(),
+        interactionUUID: not_globally_unique_generateId(),
         stageStart: Date.now(),
         interactionType: kind,
       };
@@ -790,7 +792,7 @@ export const setupDetailedPointerTimingListener = (
       if (kind === "pointer" && e.target instanceof HTMLSelectElement) {
         lastInteractionRef.current = {
           kind: "uninitialized-stage",
-          interactionUUID: crypto.randomUUID(),
+          interactionUUID: not_globally_unique_generateId(),
           stageStart: Date.now(),
           interactionType: kind,
         };
@@ -800,7 +802,7 @@ export const setupDetailedPointerTimingListener = (
       options?.onError?.(lastInteractionRef.current.interactionUUID);
       lastInteractionRef.current = {
         kind: "uninitialized-stage",
-        interactionUUID: crypto.randomUUID(),
+        interactionUUID: not_globally_unique_generateId(),
         stageStart: Date.now(),
         interactionType: kind,
       };
@@ -833,7 +835,7 @@ export const setupDetailedPointerTimingListener = (
           invariantError("bad transition to raf");
           lastInteractionRef.current = {
             kind: "uninitialized-stage",
-            interactionUUID: crypto.randomUUID(),
+            interactionUUID: not_globally_unique_generateId(),
             stageStart: Date.now(),
             interactionType: kind,
           };
@@ -853,7 +855,7 @@ export const setupDetailedPointerTimingListener = (
           options?.onError?.(lastInteractionRef.current.interactionUUID);
           lastInteractionRef.current = {
             kind: "uninitialized-stage",
-            interactionUUID: crypto.randomUUID(),
+            interactionUUID: not_globally_unique_generateId(),
             stageStart: Date.now(),
             interactionType: kind,
           };
@@ -870,7 +872,7 @@ export const setupDetailedPointerTimingListener = (
 
         lastInteractionRef.current = {
           kind: "uninitialized-stage",
-          interactionUUID: crypto.randomUUID(),
+          interactionUUID: not_globally_unique_generateId(),
           stageStart: now,
           interactionType: kind,
         };
@@ -946,7 +948,7 @@ export const setupDetailedPointerTimingListener = (
   };
 
   const onKeyPress = (e: { target: Element }) => {
-    const id = crypto.randomUUID();
+    const id = not_globally_unique_generateId();
     onLastJS(e, id, () => id !== instrumentationIdInControl);
   };
 

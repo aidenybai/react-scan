@@ -361,7 +361,7 @@ export const startTimingTracking = () => {
   ) => {
     toolbarEventStore.getState().actions.addEvent({
       kind: "interaction",
-      id: crypto.randomUUID(),
+      id: not_globally_unique_generateId(),
       data: {
         startAt: finalInteraction.detailedTiming.blockingTimeStart,
         endAt: performance.now() + performance.timeOrigin,
