@@ -565,7 +565,7 @@ export const start = () => {
         logIntro();
       },
       setupToolbar() {
-        if (!isProduction) return;
+        if (isProduction) return;
 
         idempotent_createToolbar(!!options.value.showToolbar);
 
