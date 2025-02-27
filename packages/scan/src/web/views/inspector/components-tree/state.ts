@@ -18,7 +18,7 @@ export interface FlattenedNode extends TreeNode {
   fiber: Fiber;
 }
 
-export const searchState = signal<{
+export const searchState = /* @__PURE__ */ signal<{
   query: string;
   matches: FlattenedNode[];
   currentMatchIndex: number;
@@ -35,4 +35,4 @@ export interface TreeItem {
   fiber: Fiber;
 }
 
-export const signalSkipTreeUpdate = signal(false);
+export const signalSkipTreeUpdate = /* @__PURE__ */ signal(false);

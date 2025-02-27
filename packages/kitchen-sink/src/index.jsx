@@ -1,6 +1,6 @@
 import React, { createContext, useState } from 'react';
 import ReactDOMClient from 'react-dom/client';
-import { scan } from 'react-scan'; // force production build
+import { scan } from 'react-scan/lite'; // force production build
 
 import './styles.css';
 

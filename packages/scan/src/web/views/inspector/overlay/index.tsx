@@ -39,7 +39,9 @@ const ANIMATION_CONFIG = {
 } as const;
 
 export const OVERLAY_DPR =
-  typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  /* @__PURE__ */ typeof window !== 'undefined'
+    ? window.devicePixelRatio || 1
+    : 1;
 
 export const currentLockIconRect: LockIconRect | null = null;
 
