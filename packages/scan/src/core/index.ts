@@ -183,6 +183,15 @@ export interface Options {
    */
   showFPS?: boolean;
 
+  /**
+   * Should react scan log internal errors to the console.
+   *
+   * Useful if react scan is not behaving expected and you want to provide information to maintainers when submitting an issue https://github.com/aidenybai/react-scan/issues
+   *
+   *  @default false
+   */
+  _debug?: 'verbose' | false;
+
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
@@ -309,6 +318,7 @@ export const ReactScanInternals: Internals = {
     playSound: false,
     log: false,
     showToolbar: true,
+    _debug: false,
     renderCountThreshold: 0,
     report: undefined,
     alwaysShowLabels: false,
@@ -583,7 +593,10 @@ export const start = () => {
         );
       }, 5000);
     }
-  } catch {
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
+      console.error('[React Scan Internal Error]', e);
+    }
     /** */
   }
 };
@@ -615,7 +628,15 @@ const idempotent_createToolbar = (showToolbar: boolean) => {
   try {
     const highlightRoot = document.documentElement;
     createHighlightCanvas(highlightRoot);
-  } catch {}
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
+      console.error(
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
+      );
+    }
+  }
 };
 
 export const scan = (options: Options = {}) => {
