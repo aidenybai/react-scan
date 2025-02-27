@@ -43,6 +43,43 @@ export const OVERLAY_DPR =
 
 export const currentLockIconRect: LockIconRect | null = null;
 
+
+const drawLockIcon = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+) => {
+  ctx.save();
+  ctx.strokeStyle = 'white';
+  ctx.fillStyle = 'white';
+  ctx.lineWidth = 1.5;
+
+  const shackleWidth = size * 0.6;
+  const shackleHeight = size * 0.5;
+  const shackleX = x + (size - shackleWidth) / 2;
+  const shackleY = y;
+
+  ctx.beginPath();
+  ctx.arc(
+    shackleX + shackleWidth / 2,
+    shackleY + shackleHeight / 2,
+    shackleWidth / 2,
+    Math.PI,
+    0,
+    false,
+  );
+  ctx.stroke();
+
+  const bodyWidth = size * 0.8;
+  const bodyHeight = size * 0.5;
+  const bodyX = x + (size - bodyWidth) / 2;
+  const bodyY = y + shackleHeight / 2;
+
+  ctx.fillRect(bodyX, bodyY, bodyWidth, bodyHeight);
+  ctx.restore();
+};
+
 export const ScanOverlay = () => {
   const refCanvas = useRef<HTMLCanvasElement>(null);
   const refEventCatcher = useRef<HTMLDivElement>(null);
@@ -56,42 +93,6 @@ export const ScanOverlay = () => {
   );
   const refIsFadingOut = useRef(false);
   const refLastFrameTime = useRef<number>(0);
-
-  const drawLockIcon = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    size: number,
-  ) => {
-    ctx.save();
-    ctx.strokeStyle = 'white';
-    ctx.fillStyle = 'white';
-    ctx.lineWidth = 1.5;
-
-    const shackleWidth = size * 0.6;
-    const shackleHeight = size * 0.5;
-    const shackleX = x + (size - shackleWidth) / 2;
-    const shackleY = y;
-
-    ctx.beginPath();
-    ctx.arc(
-      shackleX + shackleWidth / 2,
-      shackleY + shackleHeight / 2,
-      shackleWidth / 2,
-      Math.PI,
-      0,
-      false,
-    );
-    ctx.stroke();
-
-    const bodyWidth = size * 0.8;
-    const bodyHeight = size * 0.5;
-    const bodyX = x + (size - bodyWidth) / 2;
-    const bodyY = y + shackleHeight / 2;
-
-    ctx.fillRect(bodyX, bodyY, bodyWidth, bodyHeight);
-    ctx.restore();
-  };
 
   const drawStatsPill = (
     ctx: CanvasRenderingContext2D,

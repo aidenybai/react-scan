@@ -19,7 +19,9 @@ import { Icon } from '~web/components/icon';
 import { StickySection } from '~web/components/sticky-section';
 import type { useMergedRefs } from '~web/hooks/use-merged-refs';
 import { cn, throttle } from '~web/utils/helpers';
+import { useLazyRef } from '~web/utils/preact/use-lazy-ref';
 import { DiffValueView } from './diff-value';
+import { createMap, createSet } from './factories';
 import { type MinimalFiberInfo, timelineState } from './states';
 import { Timeline } from './timeline';
 import {
@@ -379,13 +381,13 @@ interface SectionProps {
 
 const Section = memo(({ title, isExpanded }: SectionProps) => {
   const refFiberInfo = useRef<MinimalFiberInfo | null>(null);
-  const refLastUpdated = useRef(new Set<string | number>());
-  const refChangesValues = useRef(new Map<string | number, ChangeValues>());
+  const refLastUpdated = useLazyRef(createSet<string | number>);
+  const refChangesValues = useLazyRef(createMap<string | number, ChangeValues>);
   const refLatestChanges = useRef<Change[]>([]);
   const [changes, setChanges] = useState<Change[]>([]);
 
-  const [expandedFns, setExpandedFns] = useState(new Set<string>());
-  const [expandedEntries, setExpandedEntries] = useState(new Set<string>());
+  const [expandedFns, setExpandedFns] = useState(createSet<string>);
+  const [expandedEntries, setExpandedEntries] = useState(createSet<string>);
 
   useEffect(() => {
     const unsubscribe = timelineState.subscribe((state) => {

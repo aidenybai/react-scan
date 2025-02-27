@@ -46,6 +46,16 @@
         "noUnusedVariables": {
           "level": "warn",
           "fix": "unsafe"
+        },
+        "useExhaustiveDependencies": {
+          "level": "error",
+          "options": {
+            "hooks": [
+              { "name": "useLazyRef", "stableResult": true },
+              { "name": "useSignal", "stableResult": true },
+              { "name": "useComputed", "stableResult": true }
+            ]
+          }
         }
       },
       "suspicious": {
