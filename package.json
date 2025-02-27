@@ -4,7 +4,6 @@
   "scripts": {
     "build": "WORKSPACE_BUILD=true node scripts/workspace.mjs build",
     "postbuild": "node scripts/version-warning.mjs",
-    "postinstall": "pnpm build",
     "dev": "node scripts/workspace.mjs dev",
     "pack": "node scripts/workspace.mjs pack",
     "pack:bump": "pnpm --filter scan pack:bump",
