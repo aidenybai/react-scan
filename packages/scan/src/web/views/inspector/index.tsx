@@ -1,4 +1,4 @@
-import { untracked, useComputed, useSignalEffect } from '@preact/signals';
+import { computed, untracked, useSignalEffect } from '@preact/signals';
 import type { Fiber } from 'bippy';
 import { Component } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
@@ -77,6 +77,18 @@ class InspectorErrorBoundary extends Component {
     return this.props.children;
   }
 }
+
+const inspectorContainerClassName = computed(() =>
+  cn(
+    'react-scan-inspector',
+    'flex-1',
+    'opacity-0',
+    'overflow-y-auto overflow-x-hidden',
+    'transition-opacity delay-0',
+    'pointer-events-none',
+    !signalIsSettingsOpen.value && 'opacity-100 delay-300 pointer-events-auto',
+  ),
+);
 
 const Inspector = /* @__PURE__ */ constant(() => {
   const refLastInspectedFiber = useRef<Fiber | null>(null);
@@ -188,20 +200,7 @@ const Inspector = /* @__PURE__ */ constant(() => {
 
   return (
     <InspectorErrorBoundary>
-      <div
-        className={useComputed(() =>
-          cn(
-            'react-scan-inspector',
-            'flex-1',
-            'opacity-0',
-            'overflow-y-auto overflow-x-hidden',
-            'transition-opacity delay-0',
-            'pointer-events-none',
-            !signalIsSettingsOpen.value &&
-              'opacity-100 delay-300 pointer-events-auto',
-          ),
-        )}
-      >
+      <div className={inspectorContainerClassName}>
         <WhatChangedSection />
         <StickySection>
           {(props) => <PropertySection section="props" {...props} />}

@@ -92,26 +92,18 @@ export const WhatChangedSection = /* @__PURE__ */ memo(() => {
     }
   });
 
-  return (
+  return useComputed(() => (
     <>
-      {useComputed(
-        () =>
-          showTimeline.value && (
-            <StickySection>{(props) => <Timeline {...props} />}</StickySection>
-          ),
+      {showTimeline.value && (
+        <StickySection>{(props) => <Timeline {...props} />}</StickySection>
       )}
-      {useComputed(() => (
-        <StickySection>
-          {(props) => (
-            <WhatChanged
-              {...props}
-              shouldShowChanges={shouldShowChanges.value}
-            />
-          )}
-        </StickySection>
-      ))}
+      <StickySection>
+        {(props) => (
+          <WhatChanged {...props} shouldShowChanges={shouldShowChanges.value} />
+        )}
+      </StickySection>
     </>
-  );
+  ));
 });
 
 export const WhatChanged = /* @__PURE__ */ memo(
