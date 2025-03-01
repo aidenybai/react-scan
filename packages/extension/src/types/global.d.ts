@@ -1,9 +1,11 @@
 import type * as reactScan from 'react-scan';
 
 declare global {
-  type BroadcastHandler = (type: BroadcastMessage['type'], data: Extract<BroadcastMessage, { type: typeof type }>['data']) => void;
+  var __REACT_SCAN__: unknown;
+  var __REACT_SCAN_TOOLBAR_CONTAINER__: HTMLElement | null;
 
   interface Window {
+    __REACT_SCAN__: unknown;
     __REACT_SCAN_TOOLBAR_CONTAINER__: HTMLElement | null;
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       checkDCE: (fn: unknown) => void;
@@ -23,16 +25,11 @@ declare global {
       _instrumentationSource?: string;
       _instrumentationIsActive?: boolean;
     };
-    reactScan: typeof reactScan.setOptions;
+    hideIntro: boolean;
+    reactScan: typeof reactScan.setOptions | undefined;
   }
 
   interface globalThis {
-    __REACT_DEVTOOLS_GLOBAL_HOOK__?: Window['__REACT_DEVTOOLS_GLOBAL_HOOK__'];
     _reactScan: typeof reactScan;
   }
-
-  var __REACT_DEVTOOLS_GLOBAL_HOOK__: Window['__REACT_DEVTOOLS_GLOBAL_HOOK__'];
-  type TTimer = NodeJS.Timeout;
-
-  var _reactScan: typeof reactScan;
 }

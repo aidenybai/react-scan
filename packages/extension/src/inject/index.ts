@@ -1,72 +1,154 @@
-import { sleep, storageGetItem } from '@pivanov/utils';
-import * as reactScan from 'react-scan';
-import type { Options } from 'react-scan';
-import { broadcast, canLoadReactScan, hasReactFiber } from '../utils/helpers';
 import {
-  createReactNotAvailableUI,
-  toggleReactIsNotAvailable,
-} from './react-is-not-available';
+  busDispatch,
+  busSubscribe,
+  sleep,
+  storageGetItem,
+  storageSetItem,
+} from '@pivanov/utils';
+import * as reactScan from 'react-scan';
+import type { IEvents } from '~types/messages';
+import { EXTENSION_STORAGE_KEY, STORAGE_KEY } from '~utils/constants';
+import {
+  canLoadReactScan,
+  hasReactFiber,
+  readLocalStorage,
+  saveLocalStorage,
+} from '~utils/helpers';
+import { createNotificationUI, toggleNotification } from './notification';
 
+const getInitialOptions = async (): Promise<reactScan.Options> => {
+  const storedOptions = readLocalStorage<reactScan.Options>(STORAGE_KEY);
+  let isEnabled = false;
 
-window.reactScan = reactScan.setOptions;
+  try {
+    const storedEnabled = await storageGetItem<boolean>(
+      EXTENSION_STORAGE_KEY,
+      'isEnabled',
+    );
+    isEnabled = storedEnabled ?? false;
+  } catch {}
 
-storageGetItem<boolean>('react-scan-extension', 'isEnabled').then(
-  (isEnabled) => {
-    const options: Partial<Options> = {
-      enabled: false,
-      showToolbar: false,
-      dangerouslyForceRunInProduction: true,
-    };
+  return {
+    enabled: isEnabled,
+    showToolbar: isEnabled,
+    dangerouslyForceRunInProduction: true,
+    ...storedOptions,
+  };
+};
 
-    if (isEnabled !== null) {
-      options.enabled = isEnabled;
-      options.showToolbar = isEnabled;
-    }
+const initializeReactScan = async () => {
+  const options = await getInitialOptions();
 
-    reactScan.scan(options);
-  },
-);
+  window.hideIntro = true;
+  reactScan.scan(options);
+  window.reactScan = undefined;
 
+  busDispatch<IEvents['react-scan:send-to-background']>(
+    'react-scan:send-to-background',
+    {
+      type: 'react-scan:is-enabled',
+      data: {
+        state: options.showToolbar,
+      },
+    },
+  );
+};
+
+const updateReactScanState = async (isEnabled: boolean | null) => {
+  const toggledState = isEnabled === null ? true : !isEnabled;
+
+  try {
+    await storageSetItem(EXTENSION_STORAGE_KEY, 'isEnabled', toggledState);
+  } catch {}
+
+  const storedOptions = readLocalStorage<reactScan.Options>(STORAGE_KEY) ?? {};
+  const updatedOptions = {
+    ...storedOptions,
+    enabled: toggledState,
+    showToolbar: toggledState,
+    dangerouslyForceRunInProduction: true,
+  };
+
+  saveLocalStorage(STORAGE_KEY, updatedOptions);
+  reactScan.setOptions(updatedOptions);
+
+  busDispatch<IEvents['react-scan:send-to-background']>(
+    'react-scan:send-to-background',
+    {
+      type: 'react-scan:is-enabled',
+      data: {
+        state: toggledState,
+      },
+    },
+  );
+};
+
+void initializeReactScan();
 
 window.addEventListener('DOMContentLoaded', async () => {
   if (!canLoadReactScan) {
     return;
   }
 
-  // Wait for React to load
-  await sleep(1000);
-  const isReactAvailable = hasReactFiber();
+  let isReactAvailable = false;
 
-  if (!isReactAvailable) {
-    reactScan.setOptions({
-      enabled: false,
-      showToolbar: false,
-    });
-    createReactNotAvailableUI();
+  void (async () => {
+    await sleep(1000);
+    isReactAvailable = await hasReactFiber();
+
+    if (!isReactAvailable) {
+      reactScan.setOptions({
+        enabled: false,
+        showToolbar: false,
+      });
+      createNotificationUI();
+
+      busDispatch<IEvents['react-scan:send-to-background']>(
+        'react-scan:send-to-background',
+        {
+          type: 'react-scan:is-enabled',
+          data: {
+            state: false,
+          },
+        },
+      );
+    }
+  })();
+
+  const isReactScanExist = window.reactScan;
+  if (isReactScanExist) {
+    createNotificationUI('React Scan is already initialized!');
+
+    busDispatch<IEvents['react-scan:send-to-background']>(
+      'react-scan:send-to-background',
+      {
+        type: 'react-scan:is-enabled',
+        data: {
+          state: false,
+        },
+      },
+    );
   }
 
-  broadcast.onmessage = async (type, data) => {
-    if (type === 'react-scan:toggle-state') {
-      broadcast.postMessage('react-scan:react-version', {
-        version: isReactAvailable,
-      });
+  window.reactScan = reactScan.setOptions;
 
-      if (isReactAvailable) {
-        const isEnabled = data?.state;
-
-        reactScan.setOptions({
-          enabled: isEnabled,
-          showToolbar: isEnabled,
-        });
-      } else {
-        toggleReactIsNotAvailable();
+  busSubscribe<IEvents['react-scan:toggle-state']>(
+    'react-scan:toggle-state',
+    async () => {
+      if (!isReactAvailable || isReactScanExist) {
+        toggleNotification();
+        return;
       }
-    }
-  };
 
-  reactScan.ReactScanInternals.Store.inspectState.subscribe((state) => {
-    broadcast.postMessage('react-scan:is-focused', {
-      state: state.kind === 'focused',
-    });
-  });
+      try {
+        const isEnabled = await storageGetItem<boolean>(
+          EXTENSION_STORAGE_KEY,
+          'isEnabled',
+        );
+        await updateReactScanState(isEnabled);
+      } catch {
+        await updateReactScanState(null);
+      }
+    },
+  );
 });

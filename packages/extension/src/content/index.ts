@@ -1,12 +1,11 @@
-import { storageGetItem, storageSetItem } from '@pivanov/utils';
-import type { Options } from 'react-scan';
+import { busDispatch, busSubscribe } from '@pivanov/utils';
 import browser from 'webextension-polyfill';
-import { BroadcastSchema } from '../types/messages';
 import {
-  broadcast,
-  readLocalStorage,
-  saveLocalStorage,
-} from '../utils/helpers';
+  type BroadcastMessage,
+  BroadcastSchema,
+  type IEvents,
+} from '~types/messages';
+
 
 chrome.runtime.onMessage.addListener(
   async (message: unknown, _sender, sendResponse) => {
@@ -22,60 +21,31 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
-    if (data.type === 'react-scan:is-running') {
-      const options = readLocalStorage<{
-        enabled: boolean;
-        showToolbar: boolean;
-      }>('react-scan-options');
-      const response = { isRunning: options?.enabled && options?.showToolbar };
-      sendResponse(response);
-      return false;
-    }
-
     if (data.type === 'react-scan:toggle-state') {
-      const isEnabled = await storageGetItem<boolean>(
-        'react-scan-extension',
-        'isEnabled',
+      busDispatch<IEvents['react-scan:toggle-state']>(
+        'react-scan:toggle-state',
+        undefined,
       );
-
-      let toggledState = true;
-
-      if (isEnabled !== null) {
-        toggledState = !isEnabled;
-      }
-
-      void storageSetItem('react-scan-extension', 'isEnabled', toggledState);
-
-      const options = readLocalStorage<Options>('react-scan-options');
-      saveLocalStorage('react-scan-options', {
-        ...options,
-        enabled: isEnabled,
-        showToolbar: isEnabled,
-      });
-
-      broadcast.onmessage = (type, data) => {
-        if (type === 'react-scan:react-version' && data.version) {
-          sendResponse({ hasReact: toggledState });
-        }
-      };
-
-      broadcast.postMessage('react-scan:toggle-state', { state: toggledState });
-      return true;
+      return false;
     }
 
     return false;
   },
 );
 
-window.addEventListener('DOMContentLoaded', () => {
-  broadcast.onmessage = (type, data) => {
-    if (type === 'react-scan:is-focused') {
-      browser.runtime.sendMessage({
-        type: 'react-scan:is-focused',
-        data: {
-          state: data.state,
-        },
-      });
-    }
-  };
-});
+
+
+const sendMessageToBackground = ({ type, data }: BroadcastMessage) => {
+  try {
+    return browser.runtime.sendMessage({ type, data });
+  } catch {
+    return Promise.resolve();
+  }
+};
+
+busSubscribe<IEvents['react-scan:send-to-background']>(
+  'react-scan:send-to-background',
+  (message) => {
+    sendMessageToBackground(message);
+  },
+);

@@ -1,12 +1,6 @@
-import { broadcastChannel } from "./constants";
-
 export const isIframe = window !== window.top;
 export const isPopup = window.opener !== null;
 export const canLoadReactScan = !isIframe && !isPopup;
-
-export const NO_OP = () => {
-  /**/
-};
 
 export const isInternalUrl = (url: string): boolean => {
   if (!url) return false;
@@ -31,7 +25,6 @@ interface ReactRootContainer {
   };
 }
 
-// Constants for React detection
 const ReactDetection = {
   limits: {
     MAX_DEPTH: 10,
@@ -83,17 +76,14 @@ export const hasReactFiber = (): boolean => {
     if (elementsChecked >= ReactDetection.limits.MAX_ELEMENTS) return false;
     elementsChecked++;
 
-    // Debug: Log element properties with getOwnPropertyNames
     const props = Object.getOwnPropertyNames(element);
 
-    // Check for React root first
     if (ReactDetection.reactMarkers.root in element) {
       const elementWithRoot = element as unknown as ReactRootContainer;
       const rootContainer = elementWithRoot._reactRootContainer;
       return rootContainer?._internalRoot?.current?.child != null;
     }
 
-    // Check for React fiber properties using getOwnPropertyNames
     for (const key of props) {
       if (
         key.startsWith(ReactDetection.reactMarkers.fiber) ||
@@ -103,7 +93,6 @@ export const hasReactFiber = (): boolean => {
       }
     }
 
-    // Check children with cached array
     if (depth < ReactDetection.limits.MAX_DEPTH) {
       const children = getChildren(element);
       const maxCheck = Math.min(children.length, ReactDetection.limits.ELEMENTS_PER_LEVEL);
@@ -119,17 +108,6 @@ export const hasReactFiber = (): boolean => {
   };
 
   return checkElement(rootElement, 0);
-};
-
-export const broadcast = {
-  postMessage: (type: string, data?: unknown) => {
-    broadcastChannel.postMessage({ type, data });
-  },
-  set onmessage(handler: BroadcastHandler | null) {
-    broadcastChannel.onmessage = handler
-      ? (event) => handler(event.data.type, event.data.data)
-      : null;
-  }
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
