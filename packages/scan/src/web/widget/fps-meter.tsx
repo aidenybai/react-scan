@@ -1,47 +1,63 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { getFPS } from '~core/instrumentation';
 import { cn } from '~web/utils/helpers';
 
-export const FpsMeter = () => {
-  const refFps = useRef<HTMLSpanElement>(null);
+export const FpsMeterInner = ({fps}:{fps: number}) => {
+
+
+  const getColor = (fps: number) => {
+    if (fps < 30) return '#EF4444';
+    if (fps < 50) return '#F59E0B';
+    return 'rgb(214,132,245)';
+  };
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-x-1 px-2 w-full',
+        'h-6',
+        'rounded-md',
+        'font-mono leading-none',
+        'bg-[#141414]',
+        'ring-1 ring-white/[0.08]',
+      )}
+    >
+      <div
+        style={{ color: getColor(fps) }}
+        className="text-sm font-semibold tracking-wide transition-colors ease-in-out w-full flex justify-center items-center"
+      >
+        {fps}
+      </div>
+      <span className="text-white/30 text-[11px] font-medium tracking-wide ml-auto min-w-fit">
+        FPS
+      </span>
+    </div>
+  );
+};
+
+
+export const FPSMeter = () => {
+  const [fps, setFps] = useState<null | number>(null);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      const fps = getFPS();
-      let color = '#fff';
-      if (fps) {
-        if (fps < 30) color = '#f87171';
-        if (fps < 50) color = '#fbbf24';
-      }
-      if (refFps.current) {
-        refFps.current.setAttribute('data-text', fps.toString());
-        refFps.current.style.color = color;
-      }
-    }, 100);
+      setFps(getFPS());
+    }, 200);
 
     return () => clearInterval(intervalId);
   }, []);
 
   return (
-    <span
+    <div
       className={cn(
-        'flex items-center gap-x-1 px-1.5',
-        'h-full',
-        'rounded-xl',
-        'font-mono text-xs font-medium',
-        'bg-neutral-600',
+        'flex items-center justify-end gap-x-2 px-1 ml-1 w-[72px]',
+        'whitespace-nowrap text-sm text-white',
       )}
     >
-      <span
-        ref={refFps}
-        data-text="120"
-        className="transition-color ease-in-out with-data-text"
-      />
-      <span className="tracking-wide font-mono text-xxs mt-[1px]">
-        FPS
-      </span>
-    </span>
+      {/* fixme: default fps state*/}
+      {fps === null ? <>️</> : <FpsMeterInner fps={fps} />}
+    </div>
   );
 };
 
-export default FpsMeter;
+

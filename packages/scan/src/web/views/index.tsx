@@ -7,6 +7,7 @@ import { Header } from '~web/widget/header';
 import { ViewInspector } from './inspector';
 import { ViewSlowDowns } from './slow-downs';
 import { Toolbar } from './toolbar';
+import { NotificationWrapper } from './notifications/notifications';
 
 export const Content = () => {
   const isInspecting = useComputed(
@@ -64,10 +65,10 @@ export const Content = () => {
 
           <ContentView
             isOpen={useComputed(
-              () => signalWidgetViews.value.view === 'slow-downs',
+              () => signalWidgetViews.value.view === 'notifications',
             )}
           >
-            <ViewSlowDowns />
+            <NotificationWrapper/>
           </ContentView>
         </div>
       </div>

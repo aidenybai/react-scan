@@ -403,7 +403,8 @@ export const getAllFiberContexts = (
     const dependencies = currentFiber.dependencies;
 
     if (dependencies?.firstContext) {
-      let contextItem: ContextDependency<unknown> | null = dependencies.firstContext;
+      let contextItem: ContextDependency<unknown> | null =
+        dependencies.firstContext;
 
       while (contextItem) {
         const memoizedValue = contextItem.memoizedValue;
@@ -429,4 +430,94 @@ export const getAllFiberContexts = (
   }
 
   return contexts;
+};
+
+export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
+  const emptySection = (): SectionData => ({
+    current: [],
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
+  });
+
+  if (!fiber) {
+    return {
+      fiberProps: emptySection(),
+      fiberState: emptySection(),
+      fiberContext: emptySection(),
+    };
+  }
+
+  let hasNewChanges = false;
+
+  const propsData = emptySection();
+  if (fiber.memoizedProps) {
+    const { current, changes } = collectPropsChanges(fiber);
+
+    for (const [key, value] of Object.entries(current)) {
+      propsData.current.push({
+        name: key,
+        value: isPromise(value)
+          ? { type: 'promise', displayValue: 'Promise' }
+          : value,
+      });
+    }
+
+    for (const change of changes) {
+      hasNewChanges = true;
+      propsData.changes.add(change.name);
+      propsData.changesCounts.set(change.name, 1);
+    }
+  }
+
+  const stateData = emptySection();
+  if (fiber.memoizedState) {
+    const { current, changes } = collectStateChanges(fiber);
+
+    for (const [key, value] of Object.entries(current)) {
+      stateData.current.push({
+        name: key,
+        value: isPromise(value)
+          ? { type: 'promise', displayValue: 'Promise' }
+          : value,
+      });
+    }
+
+    for (const change of changes) {
+      hasNewChanges = true;
+      stateData.changes.add(change.name);
+      stateData.changesCounts.set(change.name, 1);
+    }
+  }
+
+  const contextData = emptySection();
+  const { current, changes } = collectContextChanges(fiber);
+
+  for (const [key, value] of Object.entries(current)) {
+    contextData.current.push({
+      name: key,
+      value: isPromise(value)
+        ? { type: 'promise', displayValue: 'Promise' }
+        : value,
+    });
+  }
+
+  for (const change of changes) {
+    hasNewChanges = true;
+    contextData.changes.add(change.name);
+    contextData.changesCounts.set(change.name, 1);
+  }
+  // todo: is isInitialUpdate correct? Is this necessary:
+  // if (!hasNewChanges && !isInitialUpdate) {
+  //   propsData.changes.clear();
+  //   stateData.changes.clear();
+  //   contextData.changes.clear();
+  // }
+
+  return {
+    // data: {
+    fiberProps: propsData,
+    fiberState: stateData,
+    fiberContext: contextData,
+    // },
+  };
 };
