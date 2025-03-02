@@ -1,5 +1,6 @@
 import type { Ref, RefCallback } from 'preact';
-import { type MutableRefObject, useCallback } from 'preact/compat';
+import type { MutableRefObject } from 'preact/compat';
+import { useMemo } from 'react';
 
 type PossibleRef<T> = Ref<T> | undefined;
 
@@ -11,16 +12,20 @@ const assignRef = <T>(ref: PossibleRef<T>, value: T) => {
   }
 };
 
-const mergeRefs = <T>(...refs: PossibleRef<T>[]) => {
-  return (node: T) => {
-    for (const ref of refs) {
+function assignRefs<T>(this: PossibleRef<T>[], node: T | null) {
+  if (node) {
+    for (const ref of this) {
       if (ref) {
         assignRef(ref, node);
       }
     }
-  };
-};
+  }
+}
 
-export const useMergedRefs = <T>(...refs: PossibleRef<T>[]) => {
-  return useCallback(mergeRefs(...refs), [...refs]) as RefCallback<T>;
+function mergeRefs<T>(this: PossibleRef<T>[]): RefCallback<T> {
+  return (assignRefs<T>).bind(this);
+}
+
+export const useMergedRefs = <T>(...refs: PossibleRef<T>[]): RefCallback<T> => {
+  return useMemo((mergeRefs<T>).bind(refs), refs);
 };

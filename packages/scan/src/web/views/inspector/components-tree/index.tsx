@@ -21,6 +21,7 @@ import {
   saveLocalStorage,
 } from '~web/utils/helpers';
 import { getFiberPath } from '~web/utils/pin';
+import { createSet } from '../factories';
 import { inspectorUpdateSignal } from '../states';
 import {
   type InspectableElement,
@@ -396,7 +397,7 @@ export const ComponentsTree = () => {
   const refResizeHandle = useRef<HTMLDivElement>(null);
 
   const [flattenedNodes, setFlattenedNodes] = useState<FlattenedNode[]>([]);
-  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+  const [collapsedNodes, setCollapsedNodes] = useState(createSet<string>);
   const [selectedIndex, setSelectedIndex] = useState<number | undefined>(
     undefined,
   );
