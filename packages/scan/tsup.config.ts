@@ -1,8 +1,8 @@
+import { TsconfigPathsPlugin } from '@esbuild-plugins/tsconfig-paths';
+import { init, parse } from 'es-module-lexer';
 import * as fs from 'node:fs';
 import fsPromise from 'node:fs/promises';
 import path from 'node:path';
-import { TsconfigPathsPlugin } from '@esbuild-plugins/tsconfig-paths';
-import { init, parse } from 'es-module-lexer';
 import { defineConfig } from 'tsup';
 import { workerPlugin } from './worker-plugin';
 
@@ -114,6 +114,53 @@ export default defineConfig([
     },
   },
   {
+    entry: ['./src/lite.ts'],
+    banner: {
+      js: banner,
+    },
+    outDir: DIST_PATH,
+    splitting: false,
+    clean: false,
+    sourcemap: false,
+    format: ['cjs', 'esm'],
+    target: 'esnext',
+    platform: 'browser',
+    treeshake: true,
+    dts: true,
+    minify: false,
+    watch: process.env.NODE_ENV === 'development',
+    env: {
+      NODE_ENV: process.env.NODE_ENV ?? 'development',
+      BUNDLE_MODE: 'lite',
+      NPM_PACKAGE_VERSION: JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, '../scan', 'package.json'),
+          'utf8',
+        ),
+      ).version,
+    },
+    external: [
+      'react',
+      'react-dom',
+      'next',
+      'next/navigation',
+      'react-router',
+      'react-router-dom',
+      '@remix-run/react',
+      'preact',
+      '@preact/signals',
+    ],
+    loader: {
+      '.css': 'text',
+    },
+    esbuildPlugins: [
+      workerPlugin,
+      TsconfigPathsPlugin({
+        tsconfig: path.resolve(__dirname, './tsconfig.json'),
+      }),
+    ],
+  },
+  {
     entry: [
       './src/index.ts',
       './src/install-hook.ts',
@@ -148,6 +195,7 @@ export default defineConfig([
     },
     minify: false,
     env: {
+      BUNDLE_MODE: 'full',
       NODE_ENV: process.env.NODE_ENV ?? 'development',
       NPM_PACKAGE_VERSION: JSON.parse(
         fs.readFileSync(

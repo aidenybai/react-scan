@@ -48,9 +48,10 @@ export const timelineStateDefault: TimelineState = {
   playbackSpeed: 1,
 };
 
-export const timelineState = signal<TimelineState>(timelineStateDefault);
+export const timelineState =
+  /* @__PURE__ */ signal<TimelineState>(timelineStateDefault);
 
-export const inspectorUpdateSignal = signal<number>(0);
+export const inspectorUpdateSignal = /* @__PURE__ */ signal<number>(0);
 
 let pendingUpdates: Array<{ update: TimelineUpdate; fiber: Fiber | null }> = [];
 let batchTimeout: ReturnType<typeof setTimeout> | null = null;

@@ -206,7 +206,7 @@ const Inspector = constant(() => {
   );
 });
 
-export const ViewInspector = constant(() => {
+export const ViewInspector = /* @__PURE__ */ constant(() => {
   if (Store.inspectState.value.kind !== 'focused') return null;
   return (
     <InspectorErrorBoundary>

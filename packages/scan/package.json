@@ -2,13 +2,7 @@
   "name": "react-scan",
   "version": "0.1.3",
   "description": "Scan your React app for renders",
-  "keywords": [
-    "react",
-    "react-scan",
-    "react scan",
-    "render",
-    "performance"
-  ],
+  "keywords": ["react", "react-scan", "react scan", "render", "performance"],
   "homepage": "https://react-scan.million.dev",
   "bugs": {
     "url": "https://github.com/aidenybai/react-scan/issues"
@@ -96,6 +90,44 @@
       "import": "./dist/install-hook.mjs",
       "require": "./dist/install-hook.js"
     },
+    "./lite": {
+      "production": {
+        "import": {
+          "types": "./dist/rsc-shim.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/rsc-shim.mjs"
+        },
+        "require": {
+          "types": "./dist/rsc-shim.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/rsc-shim.js"
+        }
+      },
+      "development": {
+        "import": {
+          "types": "./dist/lite.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/lite.mjs"
+        },
+        "require": {
+          "types": "./dist/lite.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/lite.js"
+        }
+      },
+      "default": {
+        "import": {
+          "types": "./dist/lite.d.mts",
+          "react-server": "./dist/rsc-shim.mjs",
+          "default": "./dist/lite.mjs"
+        },
+        "require": {
+          "types": "./dist/lite.d.ts",
+          "react-server": "./dist/rsc-shim.js",
+          "default": "./dist/lite.js"
+        }
+      }
+    },
     "./auto": {
       "production": {
         "import": {
@@ -172,27 +204,17 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "monitoring": [
-        "./dist/core/monitor/index.d.ts"
-      ],
-      "monitoring/next": [
-        "./dist/core/monitor/params/next.d.ts"
-      ],
+      "monitoring": ["./dist/core/monitor/index.d.ts"],
+      "monitoring/next": ["./dist/core/monitor/params/next.d.ts"],
       "monitoring/react-router-legacy": [
         "./dist/core/monitor/params/react-router-v5.d.ts"
       ],
       "monitoring/react-router": [
         "./dist/core/monitor/params/react-router-v6.d.ts"
       ],
-      "monitoring/remix": [
-        "./dist/core/monitor/params/remix.d.ts"
-      ],
-      "monitoring/astro": [
-        "./dist/core/monitor/params/astro/index.ts"
-      ],
-      "react-component-name/vite": [
-        "./dist/react-component-name/vite.d.ts"
-      ],
+      "monitoring/remix": ["./dist/core/monitor/params/remix.d.ts"],
+      "monitoring/astro": ["./dist/core/monitor/params/astro/index.ts"],
+      "react-component-name/vite": ["./dist/react-component-name/vite.d.ts"],
       "react-component-name/webpack": [
         "./dist/react-component-name/webpack.d.ts"
       ],
@@ -208,23 +230,12 @@
       "react-component-name/rollup": [
         "./dist/react-component-name/rollup.d.ts"
       ],
-      "react-component-name/astro": [
-        "./dist/react-component-name/astro.d.ts"
-      ],
-      "react-component-name/loader": [
-        "./dist/react-component-name/loader.d.ts"
-      ]
+      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"],
+      "react-component-name/loader": ["./dist/react-component-name/loader.d.ts"]
     }
   },
   "bin": "bin/cli.js",
-  "files": [
-    "dist",
-    "bin",
-    "package.json",
-    "README.md",
-    "LICENSE",
-    "auto.d.ts"
-  ],
+  "files": ["dist", "bin", "package.json", "README.md", "LICENSE", "auto.d.ts"],
   "scripts": {
     "dev:kitchen": "node dist/cli.js http://localhost:5173",
     "build": "npm run build:css && NODE_ENV=production tsup",
