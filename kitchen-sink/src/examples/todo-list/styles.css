@@ -1,0 +1,115 @@
+* {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+button {
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  outline: none;
+  color: white;
+  border-style: none;
+  cursor: pointer;
+  transition: background-color 200ms;
+}
+
+button:disabled {
+  background-color: rgba(156, 163, 175, 255);
+  color: rgba(229, 231, 235, 255);
+}
+
+.app {
+  margin: 5%;
+}
+
+.todo-list-form {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.todo-list-form input {
+  width: 100%;
+  margin: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  outline: none;
+  border-width: 1px;
+  border-color: black;
+  border-style: solid;
+}
+
+.todo-list-form button:not(:disabled) {
+  background-color: rgba(99, 102, 241, 255);
+}
+
+.todo-list-form button:not(:disabled):hover {
+  background-color: rgba(67, 56, 202, 255);
+}
+
+.todo-list-form button:not(:disabled):active {
+  background-color: rgba(79, 70, 229, 255);
+}
+
+.todo-item-toggle.pending {
+  background-color: rgba(245, 158, 11, 255);
+}
+
+.todo-item-toggle.pending:hover {
+  background-color: rgba(180, 83, 9, 255);
+}
+
+.todo-item-toggle.pending:active {
+  background-color: rgba(217, 119, 6, 255);
+}
+
+.todo-item-toggle.complete {
+  background-color: rgba(16, 185, 129, 255);
+}
+
+.todo-item-toggle.complete:hover {
+  background-color: rgba(4, 120, 87, 255);
+}
+
+.todo-item-toggle.complete:active {
+  background-color: rgba(5, 150, 105, 255);
+}
+
+.todo-item-delete:not(:disabled) {
+  background-color: rgba(239, 68, 68, 255);
+}
+
+.todo-item-delete:not(:disabled):hover {
+  background-color: rgba(185, 28, 28, 255);
+}
+
+.todo-item-delete:not(:disabled):active {
+  background-color: rgba(220, 38, 38, 255);
+}
+
+.todo-item {
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 200ms;
+}
+
+.todo-item.loading {
+  background-color: rgba(17, 24, 39, 255);
+  color: white;
+}
+
+
+.todo-item.complete {
+  background-color: rgba(209, 250, 229, 255);
+}
+
+.todo-item.pending {
+  background-color: rgba(254, 243, 199, 255);
+}

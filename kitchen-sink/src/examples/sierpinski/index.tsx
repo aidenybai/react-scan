@@ -1,22 +1,17 @@
 /**
  *  Modified version of https://github.com/ryansolid/solid-sierpinski-triangle-demo
  **/
-import { Analytics } from '@vercel/analytics/react';
+// import { Analytics } from '@vercel/analytics/react';
 import { useEffect, useMemo, useState } from 'react';
-import ReactDOMClient from 'react-dom/client';
-import { scan } from 'react-scan';
+import { scan, Store } from 'react-scan';
 
 import './styles.css';
 
+
+Store.isInIframe.value = false;
 scan({
   enabled: true,
-  // report: true,
-  // log: true,
-  // clearLog: true,
-  // playSound: true,
-  // renderCountThreshold: 100,
-  alwaysShowLabels: true,
-  runInProduction: true,
+  dangerouslyForceRunInProduction: true,
 });
 
 const TARGET = 50;
@@ -32,7 +27,7 @@ const TriangleDemo = () => {
   useEffect(() => {
     const t = setInterval(() => setSeconds((s) => (s % 10) + 1), 1000);
 
-    let f;
+    let f: number;
     const start = Date.now();
     const update = () => {
       setElapsed(Date.now() - start);
@@ -58,7 +53,14 @@ const TriangleDemo = () => {
   );
 };
 
-const SlowTriangle = ({ x, y, s, seconds }) => {
+interface SlowTriangleProps {
+  x: number;
+  y: number;
+  s: number;
+  seconds: number;
+}
+
+const SlowTriangle = ({ x, y, s, seconds }: SlowTriangleProps) => {
   s = s / 2;
 
   const slow = useMemo(() => {
@@ -77,7 +79,15 @@ const SlowTriangle = ({ x, y, s, seconds }) => {
   );
 };
 
-const Triangle = ({ x, y, s, seconds }) => {
+interface TriangleProps {
+
+  x: number;
+  y: number;
+  s: number;
+  seconds: number;
+}
+
+const Triangle = ({ x, y, s, seconds }: TriangleProps) => {
   if (s <= TARGET) {
     return (
       <Dot x={x - TARGET / 2} y={y - TARGET / 2} s={TARGET} text={seconds} />
@@ -86,7 +96,14 @@ const Triangle = ({ x, y, s, seconds }) => {
   return <SlowTriangle x={x} y={y} s={s} seconds={seconds} />;
 };
 
-const Dot = ({ x, y, s, text }) => {
+interface DotProps {
+  x: number;
+  y: number;
+  s: number;
+  text: number;
+}
+
+const Dot = ({ x, y, s, text }: DotProps) => {
   const [hover, setHover] = useState(false);
   const onEnter = () => setHover(true);
   const onExit = () => setHover(false);
@@ -111,9 +128,11 @@ const Dot = ({ x, y, s, text }) => {
   );
 };
 
-ReactDOMClient.createRoot(document.getElementById('root')).render(
-  <>
-    <Analytics />
-    <TriangleDemo />
-  </>,
-);
+export default function App(): JSX.Element {
+  return (
+    <>
+      {/* <Analytics /> */}
+      <TriangleDemo />
+    </>
+  );
+}
