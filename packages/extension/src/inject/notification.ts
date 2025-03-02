@@ -1,10 +1,25 @@
-import noReactStyles from '../assets/css/no-react.css?inline';
-import { loadCss } from '../utils/helpers';
+import { busDispatch } from '@pivanov/utils';
+import noReactStyles from '~assets/css/no-react.css?inline';
+import type { IEvents } from '~types/messages';
+import { loadCss } from '~utils/helpers';
 
 let backdrop: HTMLDivElement | null = null;
 let isAnimating = false;
 
-export const createReactNotAvailableUI = () => {
+const defaultMessage =
+  "React is not detected on this page. <br />Please ensure you're visiting a React application!";
+
+export const createNotificationUI = (message = defaultMessage) => {
+  busDispatch<IEvents['react-scan:send-to-background']>(
+    'react-scan:send-to-background',
+    {
+      type: 'react-scan:is-enabled',
+      data: {
+        state: false,
+      },
+    },
+  );
+
   if (backdrop) return;
 
   backdrop = document.createElement('div');
@@ -18,22 +33,23 @@ export const createReactNotAvailableUI = () => {
     e.stopPropagation();
   };
 
-  const message = document.createElement('span');
-  message.id = 'react-scan-toast-message';
-  message.innerHTML = "<span class='icon'>⚛️</span> React is not detected on this page. <br />Please ensure you're visiting a React application!";
-  toast.appendChild(message);
+  const messageElement = document.createElement('span');
+  messageElement.id = 'react-scan-toast-message';
+  messageElement.innerHTML = `<span class='icon'>⚛️</span> ${message}`;
+  toast.appendChild(messageElement);
 
   const button = document.createElement('button');
   button.id = 'react-scan-toast-close-button';
-  button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+  button.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
   button.onclick = (e) => {
     e.stopPropagation();
-    toggleReactIsNotAvailable();
+    toggleNotification();
   };
   toast.appendChild(button);
 
   backdrop.appendChild(toast);
-  backdrop.onclick = toggleReactIsNotAvailable;
+  backdrop.onclick = toggleNotification;
 
   const style = document.createElement('style');
   style.id = 'react-scan-no-react-styles';
@@ -47,7 +63,7 @@ export const createReactNotAvailableUI = () => {
   void loadCss(noReactStyles);
 };
 
-export const toggleReactIsNotAvailable = () => {
+export const toggleNotification = () => {
   if (!backdrop || isAnimating) return;
   isAnimating = true;
 
@@ -61,5 +77,5 @@ export const toggleReactIsNotAvailable = () => {
   const isVisible = backdrop.style.opacity === '1';
   backdrop.style.opacity = isVisible ? '0' : '1';
   backdrop.style.pointerEvents = isVisible ? 'none' : 'auto';
-  document.documentElement.classList.toggle('freeze', isVisible);
+  document.documentElement.classList.toggle('freeze', !isVisible);
 };
