@@ -1,10 +1,19 @@
-import { untracked, useComputed, useSignalEffect } from '@preact/signals';
+import { computed, untracked, useSignalEffect } from '@preact/signals';
 import type { Fiber } from 'bippy';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
 import { cn, getExtendedDisplayName } from '~web/utils/helpers';
 import { timelineState } from './states';
+
+const headerInspectClassName = computed(() =>
+  cn(
+    'absolute inset-0 flex items-center gap-x-2',
+    'translate-y-0',
+    'transition-transform duration-300',
+    signalIsSettingsOpen.value && '-translate-y-[200%]',
+  ),
+);
 
 export const HeaderInspect = () => {
   const refReRenders = useRef<HTMLSpanElement>(null);
@@ -102,16 +111,7 @@ export const HeaderInspect = () => {
   }, [currentFiber]);
 
   return (
-    <div
-      className={useComputed(() =>
-        cn(
-          'absolute inset-0 flex items-center gap-x-2',
-          'translate-y-0',
-          'transition-transform duration-300',
-          signalIsSettingsOpen.value && '-translate-y-[200%]',
-        ),
-      )}
-    >
+    <div className={headerInspectClassName}>
       {componentName}
       <div className="flex items-center gap-x-2 mr-auto text-xs text-[#888]">
         <span
