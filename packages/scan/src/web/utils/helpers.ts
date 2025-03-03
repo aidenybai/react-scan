@@ -1,6 +1,5 @@
 import {
   type Fiber,
-  ForwardRefTag,
   MemoComponentTag,
   SimpleMemoComponentTag,
   SuspenseComponentTag,
@@ -8,11 +7,10 @@ import {
   hasMemoCache,
 } from 'bippy';
 import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { IS_CLIENT } from './constants';
 
 export const cn = (...inputs: Array<ClassValue>): string => {
-  return twMerge(clsx(inputs));
+  return clsx(inputs); // no twMerge for now
 };
 
 export const isFirefox =
