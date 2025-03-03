@@ -1,0 +1,305 @@
+# Changelog
+
+## Bug Fixes
+- Initial add support for nextjs and vite etc
+- Diff?
+- Test readme
+- Index
+- Not actually filtering
+- Select button better
+- Better styling for component filters
+- Move custom element definition
+- Avoid profiling 'Million(Profiler)' in reportRender
+- Also handle memod composite components
+- Incorrect class component traversal
+- Cli
+- Maigc
+- Resolve TypeScript issue with interval type
+- --filter=!extension bug
+- Scripts
+- Tgz
+- Cleanup observer in initPerofmranceMonitoring
+- Update apiKey to be required and make url optional with a default value
+- Return observer instead of disconnecting it in Monitor component
+- Update 'pack' script in package.json to include version bump before building
+- Change timestamp from performance.now() to Date.now() for accurate event timing
+- Old version
+- Holy packgess
+- Waitlist
+- Types
+- Cleanup network
+- Extra set
+- Build issues
+- Package managers pnpm to 9.1.0
+- Type issues with extension
+- Eslint issues
+- Types
+- Default url
+- Simplify script injection and caching
+- Remove mistakenly committed dist.zip file
+- Issues
+- Uncaught excetions hotfix
+- Skip React detection in iframes and popups
+- Wrap monitoring in suspense boundary for async search params
+- Add back on render
+- Allow monitoring and scan to run in the same project
+- Unbreak toolbar inspect element temporarily
+- Never read promsies in prop viewer
+- SDK irregularities and commits / branch addition (#106)
+- Prevent use client directive from getting removed
+- Astro Monitoring component props (#116)
+- Improve render count and timing tracking accuracy (#123)
+- Eslint (#126)
+- Dont import from preact in monitoring
+- Widget d&d, resizing, snapping and improve widget UI and overall UX (#132)
+- Geiger sound adjustments (#134)
+- Wrong loacl path (#140)
+- Improver widget (#144)
+- Edge cases for persistent scan options (#146)
+- Cleant build errors (#139)
+- Missing extension build dir because of github action (#147)
+- Temporarily disable replay render btton
+- Label position
+- Dont run setTimeout on every render
+- Cancel animation of moved outline
+- Unsub not self recurssion
+- Deduplicate render outlines
+- Monitoring Correctness (#157)
+- Fix component names, fix browser layerize computation
+- Early return isProd check when cached
+- Less aggressive bubble
+- Extension build (#159)
+- Extension build (#160)
+- Sym link for readme into scan
+- Sym link no work
+- Remove target from meta
+- Retry avoid mem leak
+- Remote scan-rewrite from packages was added by mistake (#165)
+
+
+## Build
+- Upgrade react-scan version to 0.0.3
+- Update esbuild settings and version bump
+- Update react-scan version to ^0.0.28
+- Update react-scan version to 0.0.29
+- Configure terser options in vite config
+- Update react-scan version to 0.0.34
+- Update binary contents in dist.zip
+- Update binary content of dist.zip
+- Update TypeScript configuration for cli.mts
+
+
+## Chores
+- Update package details and build config
+- Update package.json version and author url
+- Adjust logo dimensions and font family
+- Bump version to 0.0.4
+- Bump version to 0.0.6
+- Bump version to 0.0.7
+- Update package version to 0.0.16
+- Scaffold
+- Remove unused code
+- Fix custom element definition
+- Spacing
+- Hide toolbar
+- Prop visualizer
+- Update package version and modify description
+- Update react-scan to version ^0.0.27
+- Bump version and refactor core index
+- Update react-scan to version 0.0.33
+- Update react-scan version, cleanup test/src/index.jsx
+- Add script to auto copy scan script to clipboard
+- Remove console.log statement
+- Update file permissions for cli.js
+- Update binary contents of dist.zip
+- Bump version from 0.0.37 to 0.0.38
+- Add z-index to react-scan-toolbar style
+- Bump version to 0.0.39
+- Adjust zIndex in toolbar style
+- Update extension builds [skip ci]
+- Update extension builds [skip ci]
+- [ci] - remove cache steps to prevent dependency conflicts
+- Point extensions zip files to build dir
+- Trigger github workflow
+- Update extension builds [skip ci]
+- Bump version to 0.0.41
+- Update extension builds [skip ci]
+- Update extension builds [skip ci]
+- Decouple scan and monitor (#100)
+- Cautious try catch
+- Add astro build config plugin
+- Only minify iife (#103)
+- Make unplugin an optional dependency
+- Focused -> inspecting on toggle
+- Bump version to 0.0.43
+- Bump version to 0.0.44
+- React-router-7 support
+- Bump version to 0.0.45
+- Update package version and enhance file handling
+- Bump up package version to 0.0.48
+- Bump version to 0.0.49
+- Update scripts, dependencies, and core functionality
+- Optimize perf of core scan (#138)
+- Update extension builds [skip ci]
+- Header.tsx from 'perf: improve header perf and css styles'
+- Bump version to 0.0.51
+- Add debug meta for long interaction times
+- Dead comment
+- Update comment
+- Update readme
+- Update extension builds [skip ci]
+- Update version and truncate float values
+- Bump to 0.0.53
+- Bump to 0.0.54
+- Better doucment activate outline
+
+
+## Code Refactoring
+- Improve handling of seenFibers
+- Update version and improve fiber tracking
+- Use null comparison for startTime check
+- Update logic for handling and traversing fibers
+- Change toolbar display text
+- Optimize fiber data processing
+- Remove emojis from toolbar status text
+- Replace activeOutlines array with Map
+- Optimize color calculation and outline rendering
+- Remove unused code and optimize conditions
+- Change minify option to 'terser'
+- Update variable name from prev to report
+- Improve rect caching and frame throttle
+- Update code logic and improve performance
+- Remove transferControlToOffscreen call
+- Comment out appendChild methods, add CSS rules
+- Improve outlines rendering flow
+- Improve handling of active outlines
+- Remove color property from PendingOutline
+- Update package.json, modify log and index.jsx
+- Fix duplicate creation
+- Change report to undefined in index.ts
+- Uncomment conditional statements
+- Append elements to documentElement instead of body
+- Simplify 'scan' method in ReactScanInternals
+- Simplify getDisplayName and its usage
+- Update component import and function usage
+- Improve navigation between elements
+- Update view-state and toolbar for better rendering
+- Swap and refactor state and context handling
+- Enable ignoreHTTPSErrors and update imports
+- Rename getOverrideProps to getOverrideMethods
+- Simplify toolbar bounds checking logic
+- Update NodeJS.Timeout to Timer and optimize toolbar positioning
+- Exclude 'children' prop from comparison check
+- Move isCompositeComponent to fiber.ts
+- Check for focused DOM element in toolbar
+- Improve network monitoring logic
+- Replace batch with components in monitor
+- Update index.ts and tsup.config.ts files
+- Enhance performance monitoring by filtering interactions and updating entry types
+- Update performance monitoring logic
+- Improve performance monitoring and debounce logic
+- Update tsup config with new monitor paths
+- Rename Monitor to Monitoring, adjust styles
+- Update import statements in page.tsx
+- Update UI and remove unused demo button code
+- Replace button with Link component
+- Replace showDemo with isMobile in className
+- Update visibility condition for mobile view
+- Modified animationInterval type and drawBadgeIcon function parameters
+- Improve toolbar positioning logic
+- Use window object check instead of localStorage
+- Replace button with Link in page.tsx
+- Remove embedded toggle functionality
+- Update scan package to improve report generation
+- Move LICENSE and update banner in tsup.config.ts
+- Streamline outline computations
+- Preact v1 (#95)
+- Remove unused getFPS import
+- Improve audio configuration and volume control (#133)
+- Improve production check condition
+- Enhance option validation in scan package
+
+
+## Documentation
+- Add task list to project description
+- Update README and bump package version
+- Update README.md with improved description
+- Align logo to center in README.md
+- Update installation guide and roadmap
+- Update README, Code of Conduct, Contributing Guide, License
+- Add npm installation instructions
+- Update installation instruction and roadmap
+- Add manual approach usage to README.md
+- Update task list in README.md
+- Update task list in documentation
+- Refactor instructions into list format
+- Enhance formatting for better readability
+- Add npm installation option
+- Update FAQ in README.md
+- Update README with improved API documentation
+- Update environment check for scan enablement
+- Update README and uncomment appendChild code
+- Update company logos alignment in README
+- Update README.md and perplexity logo files
+- Update logo size in README.md
+- Update logos in README.md
+- Update company logo links in README
+- Update companies using React Scan in README
+- Update documentation for API and usage
+- Update installation guide in TooltipContext
+- Update installation instructions
+- Update company logos in README.md
+- Update company logos in README.md
+- Update Chrome Extension Installation Guide
+- Update Chrome extension download link
+- Update product links and descriptions
+- Update installation instructions in README
+- Update installation instructions
+
+
+## Features
+- Add production option to ScanOptions
+- Add copy to clipboard functionality
+- Add @vercel/analytics to project dependencies
+- Add react scan internals and monitor
+- Add geiger sound effect option
+- Context support
+- Update options, add context updates, improve performance
+- Add performance analytics features
+- Update report feature and bump version
+- Switch from longTaskThreshold to renderCountThreshold
+- Add performance observer and label display option
+- Update test cases and bump up version
+- Add animation speed option to config
+- Add editable props feature to inspector UI
+- Monorepo
+- Add apiKey to Monitor component
+- Add 'pack' script to package.json and scan package, and enable client-side rendering in index.ts
+- Adjust conditions and improve monitoring
+- Added monitoring waitlist api
+- Add Script import and usage in layout.tsx
+- Load scan-dist or any other script unpkg or from specific domains, and UI changes ;)
+- Update version and enhance signup section
+- Add Waitlist component import
+- Brave, Chrome and Firefox, add browser extension build automation
+- Add Astro monitoring component (#99)
+- Allow users to have enabled as false but still have the toolbar mounted (#101)
+- Add cumulative changes tracking and visualisation
+- Check active first
+- Add check for active instrumentation
+- Add 'part' attribute and create overlay element
+- Add persistent options with localStorage (#145)
+- Interpolation to rects
+- Extension refactoring to embed react-scan and no use CSP tricks (#158)
+- Add npm publish workflow
+
+
+## Performance
+- Improve rectCache getRect performance
+- Switch to `biome` for formatting (#94)
+- Improve header perf and css styles (#141)
+- Optimize widget header updates and debounce (#150)
+- Optimize performance and fix memory leaks (#154)
+- Cleanup (#129)
+- Offscreen canvas for outlines (#115)
+
