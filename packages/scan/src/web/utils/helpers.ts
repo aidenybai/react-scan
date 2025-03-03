@@ -16,7 +16,8 @@ export const cn = (...inputs: Array<ClassValue>): string => {
 };
 
 export const isFirefox =
-  typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
+  /* @__PURE__ */ typeof navigator !== 'undefined' &&
+  navigator.userAgent.includes('Firefox');
 
 export const onIdle = (callback: () => void) => {
   if ('scheduler' in globalThis) {
