@@ -13,21 +13,22 @@
  * From empirical ad-hoc testing, this breaks in certain scenarios.
  */
 import * as React from 'react';
+import { IS_CLIENT } from '~web/utils/constants';
 
 /**
  * useRef will be undefined in "use server"
  *
  * @see https://nextjs.org/docs/messages/react-client-hook-in-server-component
  */
-export const isRSC = () => !React.useRef;
-export const isSSR = () => typeof window === 'undefined' || isRSC();
+const isRSC = () => !React.useRef;
+export const isSSR = () => !IS_CLIENT || isRSC();
 
 interface WindowWithCypress extends Window {
   Cypress?: unknown;
 }
 
 export const isTest =
-  (typeof window !== 'undefined' &&
+  (IS_CLIENT &&
     /**
      * @see https://docs.cypress.io/faq/questions/using-cypress-faq#Is-there-any-way-to-detect-if-my-app-is-running-under-Cypress
      */

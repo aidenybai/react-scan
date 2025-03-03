@@ -1,9 +1,10 @@
+import { IS_CLIENT } from '~web/utils/constants';
 import { scan } from './index';
 import { init } from './install-hook';
 
 init();
 
-if (typeof window !== 'undefined') {
+if (IS_CLIENT) {
   scan();
   window.reactScan = scan;
 }

@@ -13,6 +13,7 @@ import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { ICONS } from '~web/assets/svgs/svgs';
 import { createToolbar } from '~web/toolbar';
+import { IS_CLIENT } from '~web/utils/constants';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { Outline } from '~web/utils/outline';
 import type { States } from '~web/views/inspector/utils';
@@ -279,9 +280,7 @@ export type ChangesListener = (changes: ChangesPayload) => void;
 
 export const Store: StoreType = {
   wasDetailsOpen: signal(true),
-  isInIframe: signal(
-    typeof window !== 'undefined' && window.self !== window.top,
-  ),
+  isInIframe: signal(IS_CLIENT && window.self !== window.top),
   inspectState: signal<States>({
     kind: 'uninitialized',
   }),
@@ -488,7 +487,7 @@ export const getIsProduction = () => {
 
 export const start = () => {
   try {
-    if (typeof window === 'undefined') {
+    if (!IS_CLIENT) {
       return;
     }
 
@@ -519,7 +518,7 @@ export const start = () => {
       initToolbar(!!options.value.showToolbar);
     });
 
-    const isUsedInBrowserExtension = typeof window !== 'undefined';
+    const isUsedInBrowserExtension = IS_CLIENT;
     if (!Store.monitor.value && !isUsedInBrowserExtension) {
       setTimeout(() => {
         if (isInstrumentationActive()) return;
