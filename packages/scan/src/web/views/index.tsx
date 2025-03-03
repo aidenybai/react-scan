@@ -6,12 +6,13 @@ import { cn } from '~web/utils/helpers';
 import { Header } from '~web/widget/header';
 import { ViewInspector } from './inspector';
 import { Toolbar } from './toolbar';
+import { NotificationWrapper } from './notifications/notifications';
 
 const isInspecting = computed(
   () => Store.inspectState.value.kind === 'inspecting',
 );
 
-const contentClassName = computed(() =>
+const headerClassName = computed(() =>
   cn(
     'relative',
     'flex-1',
@@ -26,6 +27,9 @@ const contentClassName = computed(() =>
 
 const isInspectorViewOpen = computed(
   () => signalWidgetViews.value.view === 'inspector',
+);
+const isNotificationsViewOpen = computed(
+  () => signalWidgetViews.value.view === 'notifications',
 );
 
 export const Content = () => {
@@ -44,7 +48,7 @@ export const Content = () => {
         'peer-hover/bottom:rounded-b-none',
       )}
     >
-      <div className={contentClassName}>
+      <div className={headerClassName}>
         <Header />
         <div
           className={cn(
@@ -61,6 +65,9 @@ export const Content = () => {
             <ViewInspector />
           </ContentView>
 
+          <ContentView isOpen={isNotificationsViewOpen}>
+            <NotificationWrapper />
+          </ContentView>
         </div>
       </div>
       <Toolbar />
