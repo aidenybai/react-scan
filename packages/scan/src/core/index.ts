@@ -9,7 +9,6 @@ import {
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
 import type { RenderData } from 'src/core/utils';
-// import { initReactScanOverlay } from '~web/overlay';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { createToolbar } from '~web/toolbar';
