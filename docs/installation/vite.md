@@ -37,7 +37,26 @@ scan({
 
 ## Vite plugin
 
-TODO
+In your project's vite.config.ts, add the vite plugin
+
+```ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import reactScan from '@react-scan/vite-plugin-react-scan';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    reactScan({
+      enable: true,
+      autoDisplayNames: true,
+      scanOptions: {} // React Scan specific options
+    }),
+  ],
+});
+```
+
+> Read more about [@react-scan/vite-plugin-react-scan](https://github.com/aidenybai/react-scan/blob/main/packages/vite-plugin-react-scan/README.md)
 
 ## Preserving component names
 
