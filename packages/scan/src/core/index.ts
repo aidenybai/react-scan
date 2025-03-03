@@ -24,6 +24,8 @@ import type {
 } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
 import type { getSession } from './monitor/utils';
+import { startTimingTracking } from './notifications/event-tracking';
+import { createHighlightCanvas } from './notifications/outline-overlay';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -160,6 +162,22 @@ export interface Options {
    */
   trackUnnecessaryRenders?: boolean;
 
+  /**
+   * Should the FPS meter show in the toolbar
+   *
+   *  @default true
+   */
+  showFPS?: boolean;
+
+  /**
+   * Should react scan log internal errors to the console.
+   *
+   * Useful if react scan is not behaving expected and you want to provide information to maintainers when submitting an issue https://github.com/aidenybai/react-scan/issues
+   *
+   *  @default false
+   */
+  _debug?: 'verbose' | false;
+
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
@@ -197,6 +215,9 @@ export interface StoreType {
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
+  interactionListeningForRenders:
+    | ((fiber: Fiber, renders: Array<Render>) => void)
+    | null;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -270,6 +291,7 @@ export const Store: StoreType = {
   reportData: new Map<number, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
+  interactionListeningForRenders: null,
 };
 
 export const ReactScanInternals: Internals = {
@@ -286,6 +308,7 @@ export const ReactScanInternals: Internals = {
     // alwaysShowLabels: false,
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
+    showFPS: true,
     // smoothlyAnimateOutlines: true,
     // trackUnnecessaryRenders: false,
   }),
@@ -465,50 +488,62 @@ export const getIsProduction = () => {
 };
 
 export const start = () => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  if (
-    getIsProduction() &&
-    !ReactScanInternals.options.value.dangerouslyForceRunInProduction
-  ) {
-    return;
-  }
-
-  const localStorageOptions =
-    readLocalStorage<LocalStorageOptions>('react-scan-options');
-
-  if (localStorageOptions) {
-    const validLocalOptions = validateOptions(localStorageOptions);
-
-    if (Object.keys(validLocalOptions).length > 0) {
-      ReactScanInternals.options.value = {
-        ...ReactScanInternals.options.value,
-        ...validLocalOptions,
-      };
+  try {
+    if (typeof window === 'undefined') {
+      return;
     }
-  }
 
-  const options = getOptions();
+    if (
+      getIsProduction() &&
+      !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+    ) {
+      return;
+    }
 
-  initReactScanInstrumentation(() => {
-    initToolbar(!!options.value.showToolbar);
-  });
+    const localStorageOptions =
+      readLocalStorage<LocalStorageOptions>('react-scan-options');
 
-  const isUsedInBrowserExtension = typeof window !== 'undefined';
-  if (!Store.monitor.value && !isUsedInBrowserExtension) {
-    setTimeout(() => {
-      if (isInstrumentationActive()) return;
-      // biome-ignore lint/suspicious/noConsole: Intended debug output
+    if (localStorageOptions) {
+      const validLocalOptions = validateOptions(localStorageOptions);
+
+      if (Object.keys(validLocalOptions).length > 0) {
+        ReactScanInternals.options.value = {
+          ...ReactScanInternals.options.value,
+          ...validLocalOptions,
+        };
+      }
+    }
+
+    const options = getOptions();
+
+    initReactScanInstrumentation(() => {
+      initToolbar(!!options.value.showToolbar);
+    });
+
+    const isUsedInBrowserExtension = typeof window !== 'undefined';
+    if (!Store.monitor.value && !isUsedInBrowserExtension) {
+      setTimeout(() => {
+        if (isInstrumentationActive()) return;
+        // biome-ignore lint/suspicious/noConsole: Intended debug output
+        console.error(
+          '[React Scan] Failed to load. Must import React Scan before React runs.',
+        );
+      }, 5000);
+    }
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
       console.error(
-        '[React Scan] Failed to load. Must import React Scan before React runs.',
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
       );
-    }, 5000);
+    }
   }
 };
 
 const initToolbar = (showToolbar: boolean) => {
+  startTimingTracking();
+  createNotificationsOutlineCanvas();
   const windowToolbarContainer = window.__REACT_SCAN_TOOLBAR_CONTAINER__;
 
   if (!showToolbar) {
@@ -519,6 +554,21 @@ const initToolbar = (showToolbar: boolean) => {
   windowToolbarContainer?.remove();
   const { shadowRoot } = initRootContainer();
   createToolbar(shadowRoot);
+};
+
+const createNotificationsOutlineCanvas = () => {
+  try {
+    const highlightRoot = document.documentElement;
+    createHighlightCanvas(highlightRoot);
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
+      console.error(
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
+      );
+    }
+  }
 };
 
 export const scan = (options: Options = {}) => {

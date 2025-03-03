@@ -196,3 +196,45 @@ export function isEqual(a: unknown, b: unknown): boolean {
   // biome-ignore lint/suspicious/noSelfCompare: reliable way to detect NaN values in JavaScript
   return a === b || (a !== a && b !== b);
 }
+
+export const playNotificationSound = (audioContext: AudioContext) => {
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  const options = {
+    type: 'sine' as OscillatorType,
+    freq: [
+      392,
+      //  523.25,
+      600,
+      //  659.25
+    ],
+    duration: 0.3,
+    gain: 0.12,
+  };
+
+  const frequencies = options.freq;
+  const timePerNote = options.duration / frequencies.length;
+
+  frequencies.forEach((freq, i) => {
+    oscillator.frequency.setValueAtTime(
+      freq,
+      audioContext.currentTime + i * timePerNote,
+    );
+  });
+
+  oscillator.type = options.type;
+  gainNode.gain.setValueAtTime(options.gain, audioContext.currentTime);
+
+  gainNode.gain.setTargetAtTime(
+    0,
+    audioContext.currentTime + options.duration * 0.7,
+    0.05,
+  );
+
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + options.duration);
+};

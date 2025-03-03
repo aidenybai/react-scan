@@ -7,6 +7,7 @@ import { Header } from '~web/widget/header';
 import { ViewInspector } from './inspector';
 import { ViewSlowDowns } from './slow-downs';
 import { Toolbar } from './toolbar';
+import { NotificationWrapper } from './notifications/notifications';
 
 const isInspecting = computed(
   () => Store.inspectState.value.kind === 'inspecting',
@@ -29,8 +30,8 @@ const isInspectorViewOpen = computed(
   () => signalWidgetViews.value.view === 'inspector',
 );
 
-const isSlowdownsViewOpen = computed(
-  () => signalWidgetViews.value.view === 'slow-downs',
+const isNotificationsViewOpen = computed(
+  () => signalWidgetViews.value.view === 'notifications',
 );
 
 export const Content = () => {
@@ -66,8 +67,10 @@ export const Content = () => {
             <ViewInspector />
           </ContentView>
 
-          <ContentView isOpen={isSlowdownsViewOpen}>
-            <ViewSlowDowns />
+          <ContentView
+            isOpen={isNotificationsViewOpen}
+          >
+            <NotificationWrapper/>
           </ContentView>
         </div>
       </div>

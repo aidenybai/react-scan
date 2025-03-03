@@ -468,6 +468,9 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     },
     isValidFiber,
     onRender: (fiber, renders) => {
+      if (isCompositeFiber(fiber)) {
+        Store.interactionListeningForRenders?.(fiber, renders);
+      }
       const isOverlayPaused =
         ReactScanInternals.instrumentation?.isPaused.value;
       const isInspectorInactive =

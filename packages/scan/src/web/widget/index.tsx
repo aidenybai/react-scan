@@ -1,10 +1,9 @@
-import type { JSX } from 'preact';
-import { useCallback, useEffect, useRef } from 'preact/hooks';
+import { createContext, type JSX } from 'preact';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { cn, saveLocalStorage } from '~web/utils/helpers';
 import { Content } from '~web/views';
 import { ScanOverlay } from '~web/views/inspector/overlay';
-import { ToolbarNotification } from '~web/views/slow-downs/toolbar-notification';
 import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../constants';
 import {
   defaultWidgetConfig,
@@ -265,7 +264,6 @@ export const Widget = () => {
     [],
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     if (!refWidget.current) return;
 
@@ -338,35 +336,45 @@ export const Widget = () => {
     };
   }, []);
 
+  // i don't want to put the ref in state, so this is the solution to force context to propagate it
+  const [_, setTriggerRender] = useState(false);
+  useEffect(() => {
+    setTriggerRender(true);
+  }, []);
+
   return (
     <>
       <ScanOverlay />
-      <div
-        id="react-scan-toolbar"
-        dir="ltr"
-        ref={refWidget}
-        onPointerDown={handleDrag}
-        className={cn(
-          'fixed inset-0 rounded-lg shadow-lg',
-          'flex flex-col',
-          'font-mono text-[13px]',
-          'user-select-none',
-          'opacity-0',
-          'cursor-move',
-          'z-[124124124124]',
-          'animate-fade-in animation-duration-300 animation-delay-300',
-          'will-change-transform',
-          '[touch-action:none]',
-        )}
-      >
-        <ResizeHandle position="top" />
-        <ResizeHandle position="bottom" />
-        <ResizeHandle position="left" />
-        <ResizeHandle position="right" />
+      <ToolbarElementContext.Provider value={refWidget.current}>
+        <div
+          id="react-scan-toolbar"
+          dir="ltr"
+          ref={refWidget}
+          onPointerDown={handleDrag}
+          className={cn(
+            'fixed inset-0 rounded-lg shadow-lg',
+            'flex flex-col',
+            'font-mono text-[13px]',
+            'user-select-none',
+            'opacity-0',
+            'cursor-move',
+            'z-[124124124124]',
+            'animate-fade-in animation-duration-300 animation-delay-300',
+            'will-change-transform',
+            '[touch-action:none]',
+          )}
+        >
+          <ResizeHandle position="top" />
+          <ResizeHandle position="bottom" />
+          <ResizeHandle position="left" />
+          <ResizeHandle position="right" />
 
-        <ToolbarNotification />
-        <Content />
-      </div>
+          {/* <ToolbarNotification /> */}
+          <Content />
+        </div>
+      </ToolbarElementContext.Provider>
     </>
   );
 };
+
+export const ToolbarElementContext = createContext<HTMLElement | null>(null);
