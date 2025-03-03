@@ -5,11 +5,14 @@ import {
   MIN_SIZE,
   SAFE_AREA,
 } from './constants';
+import { IS_CLIENT } from './utils/constants';
 import { readLocalStorage, saveLocalStorage } from './utils/helpers';
 import type { Corner, WidgetConfig, WidgetSettings } from './widget/types';
 
-export const signalIsSettingsOpen = signal(false);
-export const signalRefWidget = signal<HTMLDivElement | null>(null);
+export const signalIsSettingsOpen = /* @__PURE__ */ signal(false);
+export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(
+  null,
+);
 
 export const defaultWidgetConfig = {
   corner: 'bottom-right' as Corner,
@@ -63,7 +66,7 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
 export const signalWidget = signal<WidgetConfig>(getInitialWidgetConfig());
 
 export const updateDimensions = (): void => {
-  if (typeof window === 'undefined') return;
+  if (!IS_CLIENT) return;
 
   const { dimensions } = signalWidget.value;
   const { width, height, position } = dimensions;
@@ -100,11 +103,11 @@ export type WidgetStates =
   | {
       view: 'notifications';
       // extra params
-    }
-  // | {
-  //     view: 'summary';
-  //     // extra params
-  //   };
+    };
+// | {
+//     view: 'summary';
+//     // extra params
+//   };
 export const signalWidgetViews = signal<WidgetStates>({
   view: 'none',
 });

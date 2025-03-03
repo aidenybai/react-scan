@@ -14,7 +14,7 @@ interface CopyToClipboardProps {
   iconSize?: number;
 }
 
-export const CopyToClipboard = memo(
+export const CopyToClipboard = /* @__PURE__ */ memo(
   ({
     text,
     children,

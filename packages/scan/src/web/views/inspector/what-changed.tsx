@@ -68,7 +68,7 @@ interface WhatChangedProps {
   shouldShowChanges: boolean;
 }
 
-export const WhatChangedSection = memo(() => {
+export const WhatChangedSection = /* @__PURE__ */ memo(() => {
   const showTimeline = useSignal(false);
   const shouldShowChanges = useSignal(true);
 
@@ -114,7 +114,7 @@ export const WhatChangedSection = memo(() => {
   );
 });
 
-export const WhatChanged = memo(
+export const WhatChanged = /* @__PURE__ */ memo(
   ({
     isSticky,
     refSticky,
@@ -377,7 +377,7 @@ interface SectionProps {
   isExpanded: boolean;
 }
 
-const Section = memo(({ title, isExpanded }: SectionProps) => {
+const Section = /* @__PURE__ */ memo(({ title, isExpanded }: SectionProps) => {
   const refFiberInfo = useRef<MinimalFiberInfo | null>(null);
   const refLastUpdated = useRef(new Set<string | number>());
   const refChangesValues = useRef(new Map<string | number, ChangeValues>());
@@ -507,7 +507,9 @@ const Section = memo(({ title, isExpanded }: SectionProps) => {
                   <div className="overflow-hidden whitespace-nowrap break-words text-left font-medium flex items-center gap-x-1.5">
                     {memoizedRenderStateName(String(change.name))}
                     <CountBadge
-                      forceFlash={isExpanded && refLastUpdated.current.has(change.name)}
+                      forceFlash={
+                        isExpanded && refLastUpdated.current.has(change.name)
+                      }
                       count={change.count}
                       isFunction={values.isFunction}
                       showWarning={values.diff.changes.length === 0}
@@ -686,7 +688,9 @@ const DiffChange = ({
               : undefined
           }
         >
-          <span className="w-3 flex items-center justify-center opacity-50">-</span>
+          <span className="w-3 flex items-center justify-center opacity-50">
+            -
+          </span>
           <span className="flex-1 whitespace-nowrap font-mono">
             {prevDiffError ? (
               <span className="italic text-[#f87171]">{prevDiffError}</span>
@@ -765,7 +769,9 @@ const DiffChange = ({
               : undefined
           }
         >
-          <span className="w-3 flex items-center justify-center opacity-50">+</span>
+          <span className="w-3 flex items-center justify-center opacity-50">
+            +
+          </span>
           <span className="flex-1 whitespace-pre-wrap font-mono">
             {currDiffError ? (
               <span className="italic text-[#4ade80]">{currDiffError}</span>
@@ -837,7 +843,9 @@ const ReferenceOnlyChange = ({
   return (
     <>
       <div className="group flex gap-0.5 items-start text-[#f87171] bg-[#2a1515] py-[3px] px-1.5 rounded">
-        <span className="w-3 flex items-center justify-center opacity-50">-</span>
+        <span className="w-3 flex items-center justify-center opacity-50">
+          -
+        </span>
         <span className="flex-1 overflow-hidden whitespace-pre-wrap font-mono">
           <DiffValueView
             value={prevValue}
@@ -859,7 +867,9 @@ const ReferenceOnlyChange = ({
         </span>
       </div>
       <div className="group flex gap-0.5 items-start text-[#4ade80] bg-[#1a2a1a] py-[3px] px-1.5 rounded mt-0.5">
-        <span className="w-3 flex items-center justify-center opacity-50">+</span>
+        <span className="w-3 flex items-center justify-center opacity-50">
+          +
+        </span>
         <span className="flex-1 overflow-hidden whitespace-pre-wrap font-mono">
           <DiffValueView
             value={currValue}

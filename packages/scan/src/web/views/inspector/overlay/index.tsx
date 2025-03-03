@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { ReactScanInternals, Store } from '~core/index';
 
 import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
+import { IS_CLIENT } from '~web/utils/constants';
 import { cn, throttle } from '~web/utils/helpers';
 import { lerp } from '~web/utils/lerp';
 import {
@@ -38,8 +39,9 @@ const ANIMATION_CONFIG = {
   },
 } as const;
 
-export const OVERLAY_DPR =
-  typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+export const OVERLAY_DPR = IS_CLIENT
+  ? /* @__PURE__ */ window.devicePixelRatio || 1
+  : 1;
 
 export const currentLockIconRect: LockIconRect | null = null;
 

@@ -9,6 +9,7 @@ import {
 } from 'bippy';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { IS_CLIENT } from './constants';
 
 export const cn = (...inputs: Array<ClassValue>): string => {
   return twMerge(clsx(inputs));
@@ -53,7 +54,7 @@ export const tryOrElse = <T>(fn: () => T, defaultValue: T): T => {
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
-  if (typeof window === 'undefined') return null;
+  if (!IS_CLIENT) return null;
 
   try {
     const stored = localStorage.getItem(storageKey);
@@ -64,14 +65,14 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
 };
 
 export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
-  if (typeof window === 'undefined') return;
+  if (!IS_CLIENT) return;
 
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {}
 };
 export const removeLocalStorage = (storageKey: string): void => {
-  if (typeof window === 'undefined') return;
+  if (!IS_CLIENT) return;
 
   try {
     window.localStorage.removeItem(storageKey);

@@ -6,6 +6,7 @@ import {
   isCompositeFiber,
 } from 'bippy';
 import { type FC, useEffect } from 'react';
+import { IS_CLIENT } from '~web/utils/constants';
 import {
   type MonitoringOptions,
   ReactScanInternals,
@@ -76,7 +77,7 @@ export const Monitoring: FC<MonitoringProps> = ({
   // When using Monitoring without framework, we need to compute the route from the path and params
   if (!route && path && params) {
     Store.monitor.value.route = computeRoute(path, params);
-  } else if (typeof window !== 'undefined') {
+  } else if (IS_CLIENT) {
     Store.monitor.value.route =
       route ?? path ?? new URL(window.location.toString()).pathname; // this is inaccurate on vanilla react if the path is not provided but used for session route
   }

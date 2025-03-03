@@ -1,3 +1,4 @@
+import { IS_CLIENT } from '~web/utils/constants';
 import { onIdle } from '~web/utils/helpers';
 import { isSSR } from './constants';
 import { Device, type Session } from './types';
@@ -132,10 +133,8 @@ export const getSession = async ({
   return session;
 };
 
-
-
 export const not_globally_unique_generateId = () => {
-  if (typeof window === 'undefined') {
+  if (!IS_CLIENT) {
     return '0';
   }
 

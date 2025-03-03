@@ -78,7 +78,7 @@ class InspectorErrorBoundary extends Component {
   }
 }
 
-const Inspector = constant(() => {
+const Inspector = /* @__PURE__ */ constant(() => {
   const refLastInspectedFiber = useRef<Fiber | null>(null);
 
   // NOTE(Alexis): no need for useCallback
@@ -217,7 +217,7 @@ const Inspector = constant(() => {
   );
 });
 
-export const ViewInspector = constant(() => {
+export const ViewInspector = /* @__PURE__ */ constant(() => {
   if (Store.inspectState.value.kind !== 'focused') return null;
   return (
     <InspectorErrorBoundary>
