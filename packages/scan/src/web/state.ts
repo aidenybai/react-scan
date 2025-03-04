@@ -12,7 +12,7 @@ export const signalIsSettingsOpen = signal(false);
 export const signalRefWidget = signal<HTMLDivElement | null>(null);
 
 export const defaultWidgetConfig = {
-  corner: 'top-left' as Corner,
+  corner: 'bottom-right' as Corner,
   dimensions: {
     isFullWidth: false,
     isFullHeight: false,
@@ -84,11 +84,6 @@ export interface SlowDowns {
   slowDowns: number;
   hideNotification: boolean;
 }
-
-export const signalSlowDowns = signal<SlowDowns>({
-  slowDowns: 0,
-  hideNotification: false,
-});
 
 export type WidgetStates =
   | {

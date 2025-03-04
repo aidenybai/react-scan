@@ -1,23 +1,20 @@
 import type { JSX } from 'preact';
 import { cn } from '~web/utils/helpers';
 
-type ToggleProps = Omit<JSX.HTMLAttributes<HTMLInputElement>, 'className' | 'onChange'> & {
+interface ToggleProps extends JSX.HTMLAttributes<HTMLInputElement> {
   checked: boolean;
   onChange: ((e: Event) => void);
+  className?: string;
 };
 
 export const Toggle = ({
-  checked,
-  onChange,
-  class: className,
+  className,
   ...props
 }: ToggleProps) => {
   return (
     <div className={cn('react-scan-toggle', className)}>
       <input
         type="checkbox"
-        checked={checked}
-        onChange={onChange}
         {...props}
       />
       <div />

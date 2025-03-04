@@ -1,4 +1,3 @@
-// @TODO: @pivanov - finish the pin functionality
 import { useSignalEffect } from '@preact/signals';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import {
@@ -17,12 +16,10 @@ import { useAppNotifications } from '../notifications/notifications';
 import { signalWidgetViews } from '~web/state';
 
 export const Toolbar = constant(() => {
-  // const refSettingsButton = useRef<HTMLButtonElement>(null);
-  // const [isPinned, setIsPinned] = useState(false);
-  // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);
   const events = useAppNotifications();
   const [laggedEvents, setLaggedEvents] = useState(events);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally not exhaustive
   useEffect(() => {
     const timeout = setTimeout(() => {
       setLaggedEvents(events);
@@ -53,6 +50,9 @@ export const Toolbar = constant(() => {
       }
 
       case 'focused': {
+        signalWidgetViews.value = {
+          view: 'inspector',
+        };
         Store.inspectState.value = {
           kind: 'inspecting',
           hoveredDomElement: null,
@@ -61,7 +61,7 @@ export const Toolbar = constant(() => {
       }
       case 'inspect-off': {
         signalWidgetViews.value = {
-          view: 'inspector',
+          view: 'none',
         };
         Store.inspectState.value = {
           kind: 'inspecting',
@@ -73,7 +73,37 @@ export const Toolbar = constant(() => {
         return;
       }
     }
-    currentState satisfies never;
+  }, []);
+
+  const onToggleNotifications = useCallback(() => {
+    if (Store.inspectState.value.kind !== 'inspect-off') {
+      Store.inspectState.value = {
+        kind: 'inspect-off',
+      };
+    }
+    switch (signalWidgetViews.value.view) {
+      case 'inspector': {
+        Store.inspectState.value = {
+          kind: 'inspect-off',
+        };
+        signalWidgetViews.value = {
+          view: 'notifications',
+        };
+        return;
+      }
+      case 'notifications': {
+        signalWidgetViews.value = {
+          view: 'none',
+        };
+        return;
+      }
+      case 'none': {
+        signalWidgetViews.value = {
+          view: 'notifications',
+        };
+        return;
+      }
+    }
   }, []);
 
   const onToggleActive = useCallback((e: Event) => {
@@ -94,10 +124,6 @@ export const Toolbar = constant(() => {
     });
   }, []);
 
-  // const onToggleSettings = useCallback(() => {
-  //   signalIsSettingsOpen.value = !signalIsSettingsOpen.value;
-  // }, []);
-
   useSignalEffect(() => {
     const state = Store.inspectState.value;
     if (state.kind === 'uninitialized') {
@@ -105,27 +131,7 @@ export const Toolbar = constant(() => {
         kind: 'inspect-off',
       };
     }
-
-    // if (state.kind === 'focused' && state.fiber) {
-    //   const pinned = readLocalStorage<FiberMetadata>('react-scann-pinned');
-    //   setIsPinned(!!pinned);
-
-    //   const m = getFiberMetadata(state.fiber);
-    //   if (m !== null) {
-    //     setMetadata(m);
-    //   }
-    // }
   });
-
-  // const onTogglePin = useCallback(() => {
-  //   if (isPinned) {
-  //     removeLocalStorage('react-scann-pinned');
-  //     setIsPinned(false);
-  //   } else {
-  //     saveLocalStorage('react-scann-pinned', metadata);
-  //     setIsPinned(true);
-  //   }
-  // }, [isPinned, metadata]);
 
   let inspectIcon = null;
   let inspectColor = '#999';
@@ -154,70 +160,13 @@ export const Toolbar = constant(() => {
         >
           {inspectIcon}
         </button>
-
-        {/* <Toggle
-          checked={!ReactScanInternals.instrumentation?.isPaused.value}
-          onChange={onToggleActive}
-          title={
-            ReactScanInternals.instrumentation?.isPaused.value
-              ? 'Start'
-              : 'Stop'
-          }
-        /> */}
-
-        {/* {
-          isInspectFocused && (
-            <button
-              type="button"
-              title={isPinned ? 'Unpin component' : 'Pin component'}
-              onClick={onTogglePin}
-              className="button flex items-center justify-center px-3 h-full"
-            >
-              <Icon
-                name={isPinned ? 'icon-lock-open' : 'icon-lock'}
-                className={cn(
-                  'text-neutral-400',
-                  {
-                    'text-white': isPinned,
-                  }
-                )}
-              />
-            </button>
-          )
-        } */}
       </div>
 
       <div className="h-full flex items-center justify-center">
         <button
           type="button"
           id="react-scan-notifications"
-          onClick={() => {
-            switch (signalWidgetViews.value.view) {
-              case 'inspector': {
-                Store.inspectState.value = {
-                  kind: 'inspect-off',
-                };
-                signalWidgetViews.value = {
-                  view: 'notifications',
-                };
-                return;
-              }
-              case 'notifications': {
-                signalWidgetViews.value = {
-                  view: 'none',
-                };
-                return;
-              }
-              case 'none': {
-                signalWidgetViews.value = {
-                  view: 'notifications',
-                };
-                return;
-              }
-            }
-            // exhaustive check
-            signalWidgetViews.value satisfies never;
-          }}
+          onClick={onToggleNotifications}
           className="button flex items-center justify-center h-full pl-2.5 pr-2.5"
           style={{ color: inspectColor }}
         >
@@ -234,15 +183,12 @@ export const Toolbar = constant(() => {
           />
         </button>
       </div>
-      {/* todo: cleanup css */}
-      <div className={cn(['min-w-fit flex flex-col items-center'])}>
-        <div className="h-full flex items-center justify-center">
-          <Toggle
-            checked={!ReactScanInternals.instrumentation?.isPaused.value}
-            onChange={onToggleActive}
-          />
-        </div>
-      </div>
+
+      <Toggle
+        checked={!ReactScanInternals.instrumentation?.isPaused.value}
+        onChange={onToggleActive}
+        className="place-self-center"
+      />
 
       {/* todo add back showFPS*/}
       {ReactScanInternals.options.value.showFPS && <FPSMeter />}

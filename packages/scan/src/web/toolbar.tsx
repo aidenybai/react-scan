@@ -1,6 +1,7 @@
 import { Component, render } from 'preact';
 import { Icon } from './components/icon';
 import { Widget } from './widget';
+import { SvgSprite } from './components/svg-sprite';
 
 
 class ToolbarErrorBoundary extends Component {
@@ -50,7 +51,10 @@ export const createToolbar = (root: ShadowRoot): HTMLElement => {
 
   render(
     <ToolbarErrorBoundary>
-      <Widget />
+      <>
+        <SvgSprite />
+        <Widget />
+      </>
     </ToolbarErrorBoundary>,
     container,
   );

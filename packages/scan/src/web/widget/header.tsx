@@ -6,8 +6,6 @@ import { signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { HeaderInspect } from '~web/views/inspector/header';
 import { getOverrideMethods } from '~web/views/inspector/utils';
-import { HeaderSettings } from '~web/views/settings/header';
-import { HeaderSlowDowns } from '~web/views/slow-downs/header';
 
 // const REPLAY_DELAY_MS = 300;
 
@@ -112,7 +110,6 @@ export const Header = () => {
     };
   };
 
-  // const isHeaderInspect = signalWidgetViews.value.view === 'inspector';
   const isHeaderIsNotifications =
     signalWidgetViews.value.view === 'notifications';
 
@@ -131,16 +128,6 @@ export const Header = () => {
         >
           <HeaderInspect />
         </div>
-
-        {/* <div
-          className={cn(
-            'react-scan-header-item',
-            isHeaderIsNotifications && 'is-visible',
-            !isInitialView && '!duration-0',
-          )}
-        >
-          <HeaderSettings />
-        </div> */}
       </div>
 
       {/* {Store.inspectState.value.kind !== 'inspect-off' && <BtnReplay />} */}

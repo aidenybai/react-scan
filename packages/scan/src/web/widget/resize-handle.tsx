@@ -9,7 +9,6 @@ import {
 } from '~web/constants';
 import {
   signalRefWidget,
-  signalSlowDowns,
   signalWidget,
   signalWidgetViews,
 } from '~web/state';
@@ -36,21 +35,9 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     const container = refContainer.current;
     if (!container) return;
 
-    const checkForNotificationVisibility = () => {
-      container.classList.remove('pointer-events-none');
-      if (
-        signalWidgetViews.value.view !== 'none' &&
-        signalWidgetViews.value.view !== 'slow-downs' &&
-        (position === 'top' || position === 'bottom')
-      ) {
-        const slowDowns = signalSlowDowns.value;
-        if (slowDowns.slowDowns > 0 && !slowDowns.hideNotification) {
-          container.classList.add('pointer-events-none');
-        }
-      }
-    };
-
     const updateVisibility = () => {
+      container.classList.remove('pointer-events-none');
+
       const isFocused = Store.inspectState.value.kind === 'focused';
       const shouldShow = signalWidgetViews.value.view !== 'none';
       const isVisible =
@@ -74,8 +61,6 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     };
 
     const unsubscribeSignalWidget = signalWidget.subscribe((state) => {
-      checkForNotificationVisibility();
-
       if (
         prevWidth.current !== null &&
         prevHeight.current !== null &&
@@ -95,18 +80,12 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     });
 
     const unsubscribeInspectState = Store.inspectState.subscribe(() => {
-      checkForNotificationVisibility();
       updateVisibility();
-    });
-
-    const unsubscribeSignalSlowDowns = signalSlowDowns.subscribe(() => {
-      checkForNotificationVisibility();
     });
 
     return () => {
       unsubscribeSignalWidget();
       unsubscribeInspectState();
-      unsubscribeSignalSlowDowns();
       prevWidth.current = null;
       prevHeight.current = null;
       prevCorner.current = null;
