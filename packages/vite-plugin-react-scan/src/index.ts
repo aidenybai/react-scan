@@ -121,7 +121,6 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
     const base = config.base || '/';
     return `
     <script type="module">
-      console.log('base', '${base}');
       import { scan } from '${base}@id/react-scan';
       (async () => {
         try {
