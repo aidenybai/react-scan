@@ -360,6 +360,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       // case 'includeChildren':
       case 'log':
       case 'showToolbar':
+      case 'showFPS':
       // case 'report':
       // case 'alwaysShowLabels':
       case 'dangerouslyForceRunInProduction':

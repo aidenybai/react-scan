@@ -6,7 +6,9 @@ import { playNotificationSound } from '~core/utils';
 
 export const NotificationTabs = ({
   selectedEvent: _,
-}: { selectedEvent: NotificationEvent }) => {
+}: {
+  selectedEvent: NotificationEvent;
+}) => {
   const { notificationState, setNotificationState, setRoute } =
     useNotificationsContext();
   return (
@@ -81,15 +83,22 @@ export const NotificationTabs = ({
                 ) {
                   prev.audioNotificationsOptions.audioContext.close();
                 }
+                const prevEnabledState = prev.audioNotificationsOptions.enabled;
+                localStorage.setItem(
+                  'react-scan-notifications-audio',
+                  String(!prevEnabledState),
+                );
 
                 const audioContext = new AudioContext();
                 if (!prev.audioNotificationsOptions.enabled) {
                   playNotificationSound(audioContext);
                 }
+                if (prevEnabledState) {
+                  audioContext.close();
+                }
                 return {
                   ...prev,
-                  audioNotificationsOptions: prev.audioNotificationsOptions
-                    .enabled
+                  audioNotificationsOptions: prevEnabledState
                     ? {
                         audioContext: null,
                         enabled: false,
