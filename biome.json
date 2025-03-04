@@ -8,15 +8,13 @@
   "files": {
     "ignoreUnknown": false,
     "ignore": [
-      "examples/**",
       "**/dist/**",
       "**/build/**",
       "node_modules",
       "**/node_modules/**",
       "**/*.css",
       "**/*.astro",
-      "packages/website",
-      "kitchen-sink"
+      "packages/website"
     ]
   },
   "organizeImports": {
