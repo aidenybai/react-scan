@@ -8,15 +8,15 @@ import {
 } from '~core/index';
 import { Icon } from '~web/components/icon';
 import { Toggle } from '~web/components/toggle';
+import { signalWidgetViews } from '~web/state';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { FPSMeter } from '~web/widget/fps-meter';
-import { Notification } from '../notifications/icons';
 import { getEventSeverity } from '../notifications/data';
+import { Notification } from '../notifications/icons';
 import { useAppNotifications } from '../notifications/notifications';
-import { signalWidgetViews } from '~web/state';
 
-export const Toolbar = constant(() => {
+export const Toolbar = /* @__PURE__ */ constant(() => {
   // const refSettingsButton = useRef<HTMLButtonElement>(null);
   // const [isPinned, setIsPinned] = useState(false);
   // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);

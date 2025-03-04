@@ -1,5 +1,4 @@
-import { init } from './install-hook'; // Initialize RDT hook
-
-init();
+// Bippy has a side-effect that installs the hook.
+import 'bippy';
 
 export * from './core/index';
