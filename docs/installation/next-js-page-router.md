@@ -5,7 +5,7 @@
 Add the script tag to your `pages/_document`:
 
 ```jsx
-// pages/_document.jsx
+// pages/_document
 import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
@@ -30,12 +30,13 @@ export default function Document() {
 Add the following code to your `App` component in `pages/_app`:
 
 ```jsx
-import "@/styles/globals.css";
-import type { AppProps } from "next/app";
-import { useEffect } from "react";
-import { scan } from "react-scan";
+// pages/_app
 
-export default function App({ Component, pageProps }: AppProps) {
+// react-scan must be the top-most import
+import { scan } from "react-scan";
+import { useEffect } from "react";
+
+export default function App({ Component, pageProps }) {
   useEffect(() => {
     // Make sure to run React Scan after hydration
     scan({

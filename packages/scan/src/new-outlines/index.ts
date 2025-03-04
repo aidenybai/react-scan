@@ -287,32 +287,28 @@ export const getCanvasEl = () => {
   canvasEl.width = width;
   canvasEl.height = height;
 
-  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED) {
+  const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
+  removeLocalStorage('use-extension-worker');
+
+  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !useExtensionWorker) {
     try {
-      const useExtensionWorker = readLocalStorage<boolean>(
-        'use-extension-worker',
+      worker = new Worker(
+        URL.createObjectURL(
+          new Blob([workerCode], { type: 'application/javascript' }),
+        ),
       );
-      removeLocalStorage('use-extension-worker');
 
-      if (useExtensionWorker) {
-        worker = new Worker(
-          URL.createObjectURL(
-            new Blob([workerCode], { type: 'application/javascript' }),
-          ),
-        );
-
-        const offscreenCanvas = canvasEl.transferControlToOffscreen();
-        worker?.postMessage(
-          {
-            type: 'init',
-            canvas: offscreenCanvas,
-            width: canvasEl.width,
-            height: canvasEl.height,
-            dpr,
-          },
-          [offscreenCanvas],
-        );
-      }
+      const offscreenCanvas = canvasEl.transferControlToOffscreen();
+      worker?.postMessage(
+        {
+          type: 'init',
+          canvas: offscreenCanvas,
+          width: canvasEl.width,
+          height: canvasEl.height,
+          dpr,
+        },
+        [offscreenCanvas],
+      );
     } catch (e) {
       // biome-ignore lint/suspicious/noConsole: Intended debug output
       console.warn('Failed to initialize OffscreenCanvas worker:', e);
@@ -433,7 +429,7 @@ export const isValidFiber = (fiber: Fiber) => {
 export const initReactScanInstrumentation = (setupToolbar: () => void) => {
   if (hasStopped()) return;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
-  let schedule: ReturnType<typeof setTimeout>;
+  let schedule: ReturnType<typeof requestAnimationFrame>;
   let mounted = false;
 
   const scheduleSetup = () => {
@@ -441,16 +437,16 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       return;
     }
     if (schedule) {
-      clearTimeout(schedule);
+      cancelAnimationFrame(schedule);
     }
-    schedule = setTimeout(() => {
+    schedule = requestAnimationFrame(() => {
       mounted = true;
       const host = getCanvasEl();
       if (host) {
         document.documentElement.appendChild(host);
       }
       setupToolbar();
-    }, 1000); // TODO(Alexis): perhaps a better timing
+    }); // TODO(Alexis): perhaps a better timing
   };
 
   const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
@@ -472,6 +468,9 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     },
     isValidFiber,
     onRender: (fiber, renders) => {
+      if (isCompositeFiber(fiber)) {
+        Store.interactionListeningForRenders?.(fiber, renders);
+      }
       const isOverlayPaused =
         ReactScanInternals.instrumentation?.isPaused.value;
       const isInspectorInactive =

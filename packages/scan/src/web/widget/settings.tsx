@@ -1,7 +1,7 @@
 // import { useCallback } from 'preact/hooks';
 // import { ReactScanInternals, setOptions } from '~core/index';
 // import { Toggle } from '~web/components/toggle';
-// import { useDelayedValue } from '~web/hooks/use-mount-delay';
+// import { useDelayedValue } from '~web/hooks/use-delayed-value';
 // import { signalIsSettingsOpen } from '~web/state';
 // import { cn } from '~web/utils/helpers';
 

@@ -3,8 +3,6 @@ import { Icon } from './components/icon';
 import { Widget } from './widget';
 
 
-export let scriptLevelToolbar: HTMLDivElement | null = null
-
 class ToolbarErrorBoundary extends Component {
   state: { hasError: boolean; error: Error | null } = { hasError: false, error: null };
 
@@ -48,7 +46,6 @@ export const createToolbar = (root: ShadowRoot): HTMLElement => {
   const container = document.createElement('div');
   container.id = 'react-scan-toolbar-root';
   window.__REACT_SCAN_TOOLBAR_CONTAINER__ = container;
-  scriptLevelToolbar = container
   root.appendChild(container);
 
   render(
@@ -61,8 +58,9 @@ export const createToolbar = (root: ShadowRoot): HTMLElement => {
   const originalRemove = container.remove.bind(container);
 
   container.remove = () => {
+    window.__REACT_SCAN_TOOLBAR_CONTAINER__ = undefined;
+
     if (container.hasChildNodes()) {
-      scriptLevelToolbar = null;
       // Double render(null) is needed to fully unmount Preact components.
       // The first call initiates unmounting, while the second ensures
       // cleanup of internal VNode references and event listeners.

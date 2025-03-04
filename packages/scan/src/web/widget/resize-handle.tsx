@@ -115,7 +115,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   const handleResize = useCallback(
-    (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+    (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
 
@@ -145,7 +145,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
 
       let rafId: number | null = null;
 
-      const handleMouseMove = (e: MouseEvent) => {
+      const handlePointerMove = (e: PointerEvent) => {
         if (rafId) return;
 
         containerStyle.transition = 'none';
@@ -190,13 +190,13 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         });
       };
 
-      const handleMouseUp = () => {
+      const handlePointerUp = () => {
         if (rafId) {
           cancelAnimationFrame(rafId);
           rafId = null;
         }
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('pointermove', handlePointerMove);
+        document.removeEventListener('pointerup', handlePointerUp);
 
         const { dimensions, corner } = signalWidget.value;
         const windowDims = getWindowDimensions();
@@ -249,10 +249,10 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
         });
       };
 
-      document.addEventListener('mousemove', handleMouseMove, {
+      document.addEventListener('pointermove', handlePointerMove, {
         passive: true,
       });
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointerup', handlePointerUp);
     },
     [],
   );
@@ -366,7 +366,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
   return (
     <div
       ref={refContainer}
-      onMouseDown={handleResize}
+      onPointerDown={handleResize}
       onDblClick={handleDoubleClick}
       className={cn(
         'absolute z-50',

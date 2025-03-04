@@ -1,6 +1,6 @@
 // @TODO: @pivanov - finish the pin functionality
 import { useSignalEffect } from '@preact/signals';
-import { useCallback } from 'preact/hooks';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 import {
   type LocalStorageOptions,
   ReactScanInternals,
@@ -10,12 +10,29 @@ import { Icon } from '~web/components/icon';
 import { Toggle } from '~web/components/toggle';
 import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
-import FpsMeter from '~web/widget/fps-meter';
+import { FPSMeter } from '~web/widget/fps-meter';
+import { Notification } from '../notifications/icons';
+import { getEventSeverity } from '../notifications/data';
+import { useAppNotifications } from '../notifications/notifications';
+import { signalWidgetViews } from '~web/state';
 
 export const Toolbar = constant(() => {
   // const refSettingsButton = useRef<HTMLButtonElement>(null);
   // const [isPinned, setIsPinned] = useState(false);
   // const [metadata, setMetadata] = useState<FiberMetadata | null>(null);
+  const events = useAppNotifications();
+  const [laggedEvents, setLaggedEvents] = useState(events);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setLaggedEvents(events);
+      // 500 + buffer to never see intermediary state
+      // todo: check if we still need this large of buffer
+    }, 500 + 100);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [events.length]);
 
   const inspectState = Store.inspectState;
   const isInspectActive = inspectState.value.kind === 'inspecting';
@@ -25,25 +42,38 @@ export const Toolbar = constant(() => {
     const currentState = Store.inspectState.value;
 
     switch (currentState.kind) {
-      case 'inspecting':
+      case 'inspecting': {
+        signalWidgetViews.value = {
+          view: 'none',
+        };
         Store.inspectState.value = {
           kind: 'inspect-off',
         };
-        break;
-      case 'focused':
-        Store.inspectState.value = {
-          kind: 'inspect-off',
-        };
-        break;
-      case 'inspect-off':
+        return;
+      }
+
+      case 'focused': {
         Store.inspectState.value = {
           kind: 'inspecting',
           hoveredDomElement: null,
         };
-        break;
-      case 'uninitialized':
-        break;
+        return;
+      }
+      case 'inspect-off': {
+        signalWidgetViews.value = {
+          view: 'inspector',
+        };
+        Store.inspectState.value = {
+          kind: 'inspecting',
+          hoveredDomElement: null,
+        };
+        return;
+      }
+      case 'uninitialized': {
+        return;
+      }
     }
+    currentState satisfies never;
   }, []);
 
   const onToggleActive = useCallback((e: Event) => {
@@ -112,20 +142,20 @@ export const Toolbar = constant(() => {
   }
 
   return (
-    <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden gap-x-[6px]">
-      <div className="h-full flex items-center min-w-fit gap-x-[6px]">
+    <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
+      <div className="h-full flex items-center min-w-fit">
         <button
           type="button"
           id="react-scan-inspect-element"
           title="Inspect element"
           onClick={onToggleInspect}
-          className="button flex items-center justify-center px-3 h-full"
+          className="button flex items-center justify-center h-full w-full pl-3 pr-2.5"
           style={{ color: inspectColor }}
         >
           {inspectIcon}
         </button>
 
-        <Toggle
+        {/* <Toggle
           checked={!ReactScanInternals.instrumentation?.isPaused.value}
           onChange={onToggleActive}
           title={
@@ -133,7 +163,7 @@ export const Toolbar = constant(() => {
               ? 'Start'
               : 'Stop'
           }
-        />
+        /> */}
 
         {/* {
           isInspectFocused && (
@@ -155,22 +185,67 @@ export const Toolbar = constant(() => {
             </button>
           )
         } */}
-
-        {/* todo, only render arrows when inspecting element */}
-
-        {/* i think i want to put wrap this with config if user doesn't want to see it (specifically robinhood) */}
       </div>
-      <div
-        className={cn(
-          'flex items-center justify-end w-full gap-x-2',
-          'pl-2 p-1.5',
-          'whitespace-nowrap text-sm text-white',
-        )}
-      >
-        react-scan
-        {/* this fps meter is bad we can improve it */}
-        <FpsMeter />
+
+      <div className="h-full flex items-center justify-center">
+        <button
+          type="button"
+          id="react-scan-notifications"
+          onClick={() => {
+            switch (signalWidgetViews.value.view) {
+              case 'inspector': {
+                Store.inspectState.value = {
+                  kind: 'inspect-off',
+                };
+                signalWidgetViews.value = {
+                  view: 'notifications',
+                };
+                return;
+              }
+              case 'notifications': {
+                signalWidgetViews.value = {
+                  view: 'none',
+                };
+                return;
+              }
+              case 'none': {
+                signalWidgetViews.value = {
+                  view: 'notifications',
+                };
+                return;
+              }
+            }
+            // exhaustive check
+            signalWidgetViews.value satisfies never;
+          }}
+          className="button flex items-center justify-center h-full pl-2.5 pr-2.5"
+          style={{ color: inspectColor }}
+        >
+          <Notification
+            events={laggedEvents.map(
+              (event) => getEventSeverity(event) === 'high',
+            )}
+            size={16}
+            className={cn([
+              'text-[#999]',
+              signalWidgetViews.value.view === 'notifications' &&
+                'text-[#8E61E3]',
+            ])}
+          />
+        </button>
       </div>
+      {/* todo: cleanup css */}
+      <div className={cn(['min-w-fit flex flex-col items-center'])}>
+        <div className="h-full flex items-center justify-center">
+          <Toggle
+            checked={!ReactScanInternals.instrumentation?.isPaused.value}
+            onChange={onToggleActive}
+          />
+        </div>
+      </div>
+
+      {/* todo add back showFPS*/}
+      {ReactScanInternals.options.value.showFPS && <FPSMeter />}
     </div>
   );
 });

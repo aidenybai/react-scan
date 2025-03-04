@@ -5,7 +5,7 @@
 Add the script tag to your `<RootDocument>` component at `app/routes/__root`:
 
 ```jsx
-// app/routes/__root.jsx
+// app/routes/__root
 import { Meta, Scripts } from "@tanstack/start";
 // ...
 
@@ -35,7 +35,9 @@ function RootDocument({ children }) {
 Add the following code to your `<RootDocument>` component at `app/routes/__root`:
 
 ```jsx
-// app/routes/__root.jsx
+// app/routes/__root
+
+// react-scan must be imported before React and TanStack Start
 import { scan } from "react-scan";
 import { Meta, Scripts } from "@tanstack/start";
 import { useEffect } from "react";
@@ -69,7 +71,7 @@ function RootDocument({ children }) {
 Alternatively you can also do the following code in `app/client`:
 
 ```jsx
-// app/client.jsx
+// app/client
 import { scan } from "react-scan"; // must be imported before React and React DOM
 import { hydrateRoot } from "react-dom/client";
 import { StartClient } from "@tanstack/start";

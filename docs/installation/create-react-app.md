@@ -24,7 +24,9 @@ In your project entrypoint (e.g. `src/index`, `src/main`):
 
 ```jsx
 // src/index.jsx
-import { scan } from "react-scan"; // must be imported before React and React DOM
+
+// must be imported before React and React DOM
+import { scan } from "react-scan"; 
 import React from "react";
 
 scan({

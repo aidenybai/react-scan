@@ -117,10 +117,11 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
       `;
     }
 
-    // Development version remains the same
+    // Development version - use the base path from config
+    const base = config.base || '/';
     return `
     <script type="module">
-      import { scan } from '/@id/react-scan';
+      import { scan } from '${base}@id/react-scan';
       (async () => {
         try {
           scan(${hasOptions ? JSON.stringify(options) : ''});

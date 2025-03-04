@@ -5,7 +5,7 @@
 Add the script tag to your `Layout` component in the `app/root`:
 
 ```jsx
-// app/root.jsx
+// app/root
 // ...
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -36,8 +36,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 Add the following code to your `app/root`
 
 ```jsx
-// app/root.jsx
-import { scan } from "react-scan"; // Must be imported before React Router
+// app/root
+
+// Must be imported before React Router
+import { scan } from "react-scan"; 
 import { Links, Meta, Scripts, ScrollRestoration } from "react-router";
 import { useEffect } from "react";
 

@@ -98,18 +98,18 @@ export type WidgetStates =
       view: 'inspector';
       // extra params
     }
+  // | {
+  //     view: 'settings';
+  //     // extra params
+  //   }
   | {
-      view: 'settings';
+      view: 'notifications';
       // extra params
     }
-  | {
-      view: 'slow-downs';
-      // extra params
-    }
-  | {
-      view: 'summary';
-      // extra params
-    };
+  // | {
+  //     view: 'summary';
+  //     // extra params
+  //   };
 export const signalWidgetViews = signal<WidgetStates>({
   view: 'none',
 });

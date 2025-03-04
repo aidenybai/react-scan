@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
-import { useDelayedValue } from '~web/hooks/use-mount-delay';
+import { useDelayedValue } from '~web/hooks/use-delayed-value';
 import { signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { HeaderInspect } from '~web/views/inspector/header';
@@ -112,40 +112,35 @@ export const Header = () => {
     };
   };
 
-  const isHeaderInspect = signalWidgetViews.value.view === 'inspector';
-  const isHeaderSlowDowns = signalWidgetViews.value.view === 'slow-downs';
-  const isHeaderSettings = signalWidgetViews.value.view === 'settings';
+  // const isHeaderInspect = signalWidgetViews.value.view === 'inspector';
+  const isHeaderIsNotifications =
+    signalWidgetViews.value.view === 'notifications';
+
+  if (isHeaderIsNotifications) {
+    return;
+  }
 
   return (
     <div className="react-scan-header">
       <div className="relative flex-1 h-full">
         <div
           className={cn(
-            'react-scan-header-item',
-            isHeaderInspect && 'is-visible',
+            'react-scan-header-item is-visible',
             !isInitialView && '!duration-0',
           )}
         >
           <HeaderInspect />
         </div>
-        <div
+
+        {/* <div
           className={cn(
             'react-scan-header-item',
-            isHeaderSlowDowns && 'is-visible',
-            !isInitialView && '!duration-0',
-          )}
-        >
-          <HeaderSlowDowns />
-        </div>
-        <div
-          className={cn(
-            'react-scan-header-item',
-            isHeaderSettings && 'is-visible',
+            isHeaderIsNotifications && 'is-visible',
             !isInitialView && '!duration-0',
           )}
         >
           <HeaderSettings />
-        </div>
+        </div> */}
       </div>
 
       {/* {Store.inspectState.value.kind !== 'inspect-off' && <BtnReplay />} */}

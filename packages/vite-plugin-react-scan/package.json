@@ -1,6 +1,6 @@
 {
   "name": "@react-scan/vite-plugin-react-scan",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "A Vite plugin for React Scan - detects performance issues in your React app.",
   "type": "module",
   "main": "dist/index.js",

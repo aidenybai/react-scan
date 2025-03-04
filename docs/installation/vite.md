@@ -23,7 +23,7 @@ Add the script tag to your `index.html`:
 In your project entrypoint (e.g. `src/index`, `src/main`):
 
 ```jsx
-// src/index.jsx
+// src/index
 import { scan } from "react-scan"; // must be imported before React and React DOM
 import React from "react";
 

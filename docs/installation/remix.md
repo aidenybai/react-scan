@@ -100,14 +100,15 @@ scan({
   enabled: true,
 });
 
-startTransition(() => {
+// Hydration must happen in sync!
+// startTransition(() => {
   hydrateRoot(
     document,
     <StrictMode>
       <RemixBrowser />
     </StrictMode>
   );
-});
+// });
 ```
 
 > [!CAUTION]

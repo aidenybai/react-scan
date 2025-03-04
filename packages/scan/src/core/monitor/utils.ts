@@ -131,3 +131,19 @@ export const getSession = async ({
   cachedSession = session;
   return session;
 };
+
+
+
+export const not_globally_unique_generateId = () => {
+  if (typeof window === 'undefined') {
+    return '0';
+  }
+
+  // @ts-expect-error
+  if (window.reactScanIdCounter === undefined) {
+    // @ts-expect-error
+    window.reactScanIdCounter = 0;
+  }
+  // @ts-expect-error
+  return `${++window.reactScanIdCounter}`;
+};
