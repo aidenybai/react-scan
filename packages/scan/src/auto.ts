@@ -1,8 +1,8 @@
+// Prioritize bippy side-effect
+import 'bippy';
+
 import { IS_CLIENT } from '~web/utils/constants';
 import { scan } from './index';
-import { init } from './install-hook';
-
-init();
 
 if (IS_CLIENT) {
   scan();
