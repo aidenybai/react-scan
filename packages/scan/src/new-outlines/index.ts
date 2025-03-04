@@ -257,8 +257,6 @@ const draw = () => {
   }
 };
 
-const CANVAS_HTML_STR = `<canvas style="position:fixed;top:0;left:0;pointer-events:none;z-index:2147483646" aria-hidden="true"></canvas>`;
-
 const IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED =
   typeof OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined';
 
@@ -272,8 +270,15 @@ export const getCanvasEl = () => {
   host.setAttribute('data-react-scan', 'true');
   const shadowRoot = host.attachShadow({ mode: 'open' });
 
-  shadowRoot.innerHTML = CANVAS_HTML_STR;
-  const canvasEl = shadowRoot.firstChild as HTMLCanvasElement;
+  const canvasEl = document.createElement('canvas');
+  canvasEl.style.position = 'fixed';
+  canvasEl.style.top = '0';
+  canvasEl.style.left = '0';
+  canvasEl.style.pointerEvents = 'none';
+  canvasEl.style.zIndex = '2147483646';
+  canvasEl.setAttribute('aria-hidden', 'true');
+  shadowRoot.appendChild(canvasEl);
+
   if (!canvasEl) return null;
 
   dpr = getDpr();

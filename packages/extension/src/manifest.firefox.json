@@ -1,14 +1,13 @@
 {
   "manifest_version": 2,
   "name": "React Scan",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Scan React apps for performance problems",
   "icons": {
-    "16": "icon/16.png",
-    "32": "icon/32.png",
-    "48": "icon/48.png",
-    "96": "icon/96.png",
-    "128": "icon/128.png"
+    "16": "icons/disabled/16.png",
+    "32": "icons/disabled/32.png",
+    "48": "icons/disabled/48.png",
+    "128": "icons/disabled/128.png"
   },
   "browser_specific_settings": {
     "gecko": {
@@ -18,38 +17,27 @@
   },
   "browser_action": {
     "default_icon": {
-      "16": "icon/16.png",
-      "32": "icon/32.png",
-      "48": "icon/48.png",
-      "96": "icon/96.png",
-      "128": "icon/128.png"
+      "16": "icons/disabled/16.png",
+      "32": "icons/disabled/32.png",
+      "48": "icons/disabled/48.png",
+      "128": "icons/disabled/128.png"
     }
   },
   "background": {
     "scripts": ["src/background/index.ts"]
   },
-  "permissions": [
-    "activeTab",
-    "tabs",
-    "scripting",
-    "storage",
-    "webRequest",
-    "webRequestBlocking",
-    "<all_urls>"
-  ],
+  "permissions": ["activeTab", "tabs", "scripting", "<all_urls>"],
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["src/inject/react-scan.ts"],
-      "run_at": "document_start",
-      "world": "MAIN"
+      "run_at": "document_start"
     },
     {
       "matches": ["<all_urls>"],
       "js": ["src/inject/index.ts"],
-      "run_at": "document_start",
-      "world": "MAIN"
+      "run_at": "document_start"
     },
     {
       "matches": ["<all_urls>"],
@@ -57,5 +45,5 @@
       "run_at": "document_start"
     }
   ],
-  "web_accessible_resources": ["icon/*", "workers/*"]
+  "web_accessible_resources": ["icons/*"]
 }
