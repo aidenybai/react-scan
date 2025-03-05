@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/compat';
 import { cn } from '~web/utils/helpers';
 import {
-  InteractionEvent,
-  NotificationEvent,
+  type InteractionEvent,
+  type NotificationEvent,
   getComponentName,
   getEventSeverity,
   getTotalTime,
@@ -17,7 +17,7 @@ import {
 import { Popover } from './popover';
 import { iife } from '~core/notifications/performance-utils';
 import { toolbarEventStore } from '~core/notifications/event-tracking';
-import { CollapsedDroppedFrame, CollapsedItem } from './collapsed-event';
+import { type CollapsedDroppedFrame, CollapsedItem } from './collapsed-event';
 
 const useFlashManager = (events: NotificationEvent[]) => {
   const prevEventsRef = useRef<NotificationEvent[]>([]);
@@ -35,11 +35,11 @@ const useFlashManager = (events: NotificationEvent[]) => {
     const prevIds = new Set(prevEventsRef.current.map((e) => e.id));
 
     const newIds = new Set<string>();
-    currentIds.forEach((id) => {
+    for (const id of currentIds) {
       if (!prevIds.has(id)) {
         newIds.add(id);
       }
-    });
+    }
 
     if (newIds.size > 0) {
       setNewEventIds(newIds);
@@ -86,6 +86,7 @@ export const SlowdownHistoryItem = ({
     case 'interaction': {
       return (
         <button
+          type="button"
           onClick={() => {
             setNotificationState((prev) => ({
               ...prev,
@@ -157,6 +158,7 @@ export const SlowdownHistoryItem = ({
     case 'dropped-frames': {
       return (
         <button
+          type="button"
           onClick={() => {
             setNotificationState((prev) => ({
               ...prev,
@@ -244,27 +246,22 @@ const collapseEvents = (events: Array<NotificationEvent>) => {
             lastEvent.events[0].componentPath.join('-')
         ) {
           const eventsWithoutLast = prev.filter((e) => e !== lastEvent);
-
-          return [
-            ...eventsWithoutLast,
-            {
-              kind: 'collapsed-keyboard',
-              events: [...lastEvent.events, curr],
-              timestamp: Math.max(
-                ...[...lastEvent.events, curr].map((e) => e.timestamp),
-              ),
-            },
-          ];
+          eventsWithoutLast.push({
+            kind: 'collapsed-keyboard',
+            events: [...lastEvent.events, curr],
+            timestamp: Math.max(
+              ...[...lastEvent.events, curr].map((e) => e.timestamp),
+            ),
+          });
+          return eventsWithoutLast;
         }
 
-        return [
-          ...prev,
-          {
-            kind: 'single',
-            event: curr,
-            timestamp: curr.timestamp,
-          },
-        ];
+        prev.push({
+          kind: 'single',
+          event: curr,
+          timestamp: curr.timestamp,
+        });
+        return prev;
       }
       case 'single': {
         // if its a keyboard input on the same element
@@ -277,61 +274,50 @@ const collapseEvents = (events: Array<NotificationEvent>) => {
             curr.componentPath.join('-')
         ) {
           const eventsWithoutLast = prev.filter((e) => e !== lastEvent);
-          return [
-            ...eventsWithoutLast,
-            {
-              kind: 'collapsed-keyboard',
-              events: [lastEvent.event, curr],
-              timestamp: Math.max(lastEvent.event.timestamp, curr.timestamp),
-            },
-          ];
+          eventsWithoutLast.push({
+            kind: 'collapsed-keyboard',
+            events: [lastEvent.event, curr],
+            timestamp: Math.max(lastEvent.event.timestamp, curr.timestamp),
+          });
+          return eventsWithoutLast;
         }
         if (
           lastEvent.event.kind === 'dropped-frames' &&
           curr.kind === 'dropped-frames'
         ) {
           const eventsWithoutLast = prev.filter((e) => e !== lastEvent);
-
-          return [
-            ...eventsWithoutLast,
-            {
-              kind: 'collapsed-frame-drops',
-              events: [lastEvent.event, curr],
-              timestamp: Math.max(lastEvent.event.timestamp, curr.timestamp),
-            },
-          ];
+          eventsWithoutLast.push({
+            kind: 'collapsed-frame-drops',
+            events: [lastEvent.event, curr],
+            timestamp: Math.max(lastEvent.event.timestamp, curr.timestamp),
+          });
+          return eventsWithoutLast;
         }
-        return [
-          ...prev,
-          {
-            kind: 'single',
-            event: curr,
-            timestamp: curr.timestamp,
-          },
-        ];
+        prev.push({
+          kind: 'single',
+          event: curr,
+          timestamp: curr.timestamp,
+        });
+        return prev;
       }
       case 'collapsed-frame-drops': {
         if (curr.kind === 'dropped-frames') {
           const eventsWithoutLast = prev.filter((e) => e !== lastEvent);
-          return [
-            ...eventsWithoutLast,
-            {
-              kind: 'collapsed-frame-drops',
-              events: [...lastEvent.events, curr],
-              timestamp: Math.max(
-                ...[...lastEvent.events, curr].map((e) => e.timestamp),
-              ),
-            },
-          ];
+          eventsWithoutLast.push({
+            kind: 'collapsed-frame-drops',
+            events: [...lastEvent.events, curr],
+            timestamp: Math.max(
+              ...[...lastEvent.events, curr].map((e) => e.timestamp),
+            ),
+          });
+          return eventsWithoutLast;
         }
-        return [
-          ...prev,
-          {
-            kind: 'single',
-            event: curr,
-            timestamp: curr.timestamp,
-          },
-        ];
+        prev.push({
+          kind: 'single',
+          event: curr,
+          timestamp: curr.timestamp,
+        });
+        return prev;
       }
     }
   }, []);
@@ -342,11 +328,13 @@ export const useLaggedEvents = (lagMs = 150) => {
   const { notificationState } = useNotificationsContext();
   const [laggedEvents, setLaggedEvents] = useState(notificationState.events);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intended
   useEffect(() => {
     setTimeout(() => {
       setLaggedEvents(notificationState.events);
     }, lagMs);
   }, [notificationState.events]);
+
   return [laggedEvents, setLaggedEvents] as const;
 };
 
@@ -361,14 +349,21 @@ export const SlowdownHistory = () => {
 
   return (
     <div
-      className={cn([
-        `w-full h-full gap-y-2 flex flex-col border-r border-[#27272A] pt-2 overflow-y-auto`,
-      ])}
+      className={cn(
+        'flex flex-col gap-y-2',
+        'pt-2',
+        'w-full h-full',
+        'border-r border-[#27272A]',
+        'overflow-y-auto',
+      )}
     >
       <div
-        className={cn([
-          'text-sm text-[#65656D] pl-3 pr-1 w-full flex items-center justify-between',
-        ])}
+        className={cn(
+          'flex items-center justify-between',
+          'pl-3 pr-1',
+          'w-full',
+          'text-sm text-[#65656D]',
+        )}
       >
         <span>History</span>
         <Popover
@@ -377,6 +372,7 @@ export const SlowdownHistory = () => {
           }}
           triggerContent={
             <button
+              type="button"
               className={cn(['hover:bg-[#18181B] rounded-full p-2'])}
               onClick={() => {
                 toolbarEventStore.getState().actions.clear();

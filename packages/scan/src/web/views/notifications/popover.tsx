@@ -1,6 +1,6 @@
 import {
-  ComponentProps,
-  ReactNode,
+  type ComponentProps,
+  type ReactNode,
   createPortal,
   useContext,
   useEffect,
@@ -36,19 +36,6 @@ export const Popover = ({
   const portalEl = useContext(ToolbarElementContext);
   const isHoveredRef = useRef(false);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setViewportSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-      updateRect();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const updateRect = () => {
     if (triggerRef.current && portalEl) {
       const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -67,15 +54,32 @@ export const Popover = ({
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      updateRect();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     updateRect();
-  }, [triggerRef.current]);
+  }, []);
 
   useEffect(() => {
     if (popoverState === 'opening') {
       const timer = setTimeout(() => setPopoverState('open'), 120);
       return () => clearTimeout(timer);
-    } else if (popoverState === 'closing') {
+    }
+
+    if (popoverState === 'closing') {
       const timer = setTimeout(() => setPopoverState('closed'), 120);
       return () => clearTimeout(timer);
     }
@@ -157,8 +161,8 @@ export const Popover = ({
                 : 'opacity-100 translate-y-0',
             ])}
             style={{
-              top: getPopoverPosition().top + 'px',
-              left: getPopoverPosition().left + 'px',
+              top: `${getPopoverPosition().top}px`,
+              left: `${getPopoverPosition().left}px`,
               transform: 'translate(-50%, -100%)',
               minWidth: '175px',
             }}

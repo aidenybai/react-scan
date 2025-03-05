@@ -46,8 +46,8 @@ export type StateCreator<
   store: Mutate<StoreApi<T>, Mis>,
 ) => U) & { $$storeMutators?: Mos };
 
-export interface StoreMutators<S, A> {}
-export type StoreMutatorIdentifier = keyof StoreMutators<unknown, unknown>;
+export type StoreMutators<_S = unknown, _A = unknown> = Record<never, never>;
+export type StoreMutatorIdentifier = keyof StoreMutators;
 
 type CreateStore = {
   <T, Mos extends [StoreMutatorIdentifier, unknown][] = []>(
@@ -59,14 +59,12 @@ type CreateStore = {
   ) => Mutate<StoreApi<T>, Mos>;
 };
 
-type CreateStoreImpl = <
+const createStoreImpl = <
   T,
   Mos extends [StoreMutatorIdentifier, unknown][] = [],
 >(
-  initializer: StateCreator<T, [], Mos>,
-) => Mutate<StoreApi<T>, Mos>;
-
-const createStoreImpl: CreateStoreImpl = (createState) => {
+  createState: StateCreator<T, [], Mos>,
+): Mutate<StoreApi<T>, Mos> => {
   type TState = ReturnType<typeof createState>;
   type Listener = (state: TState, prevState: TState) => void;
   let state: TState;
@@ -83,7 +81,9 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
         (replace ?? (typeof nextState !== 'object' || nextState === null))
           ? (nextState as TState)
           : Object.assign({}, state, nextState);
-      listeners.forEach((listener) => listener(state, previousState));
+      for (const listener of listeners) {
+        listener(state, previousState);
+      }
     }
   };
 
@@ -95,16 +95,21 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
   const subscribe: StoreApi<TState>['subscribe'] = (
     selectorOrListener:
       | ((state: TState, prevState: TState) => void)
-      | ((state: TState) => any),
-    listener?: (selectedState: any, prevSelectedState: any) => void,
+      | ((state: TState) => unknown),
+    listener?: (selectedState: unknown, prevSelectedState: unknown) => void,
   ) => {
-    let selector: ((state: TState) => any) | undefined;
-    let actualListener: (state: any, prevState: any) => void;
+    let selector: ((state: TState) => unknown) | undefined;
+    let actualListener: (state: TState, prevState: TState) => void;
 
-    if (listener) {
+    if (listener && selectorOrListener) {
       // Selector subscription case
-      selector = selectorOrListener as (state: TState) => any;
-      actualListener = listener;
+      const typedSelector = selectorOrListener as (state: TState) => unknown;
+      selector = typedSelector;
+      actualListener = (state: TState, prevState: TState) => {
+        const nextSlice = typedSelector(state);
+        const prevSlice = typedSelector(prevState);
+        listener(nextSlice, prevSlice);
+      };
     } else {
       // Regular subscription case
       actualListener = selectorOrListener as (
@@ -118,10 +123,9 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
     const wrappedListener = (newState: TState, previousState: TState) => {
       if (selector) {
         const nextSlice = selector(newState);
-        const prevSlice = selector(previousState);
         if (!Object.is(currentSlice, nextSlice)) {
           currentSlice = nextSlice;
-          actualListener(nextSlice, prevSlice);
+          actualListener(newState, previousState);
         }
       } else {
         actualListener(newState, previousState);
@@ -134,8 +138,9 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
   };
 
   const api = { setState, getState, getInitialState, subscribe };
-  const initialState = (state = createState(setState, getState, api));
-  return api as any;
+  const initialState = createState(setState, getState, api);
+  state = initialState;
+  return api as Mutate<StoreApi<T>, Mos>;
 };
 
 export const createStore = ((createState) =>

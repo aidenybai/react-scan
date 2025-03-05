@@ -1,5 +1,5 @@
 import {
-  Fiber,
+  type Fiber,
   getDisplayName,
   getTimings,
   isHostFiber,
@@ -13,7 +13,7 @@ import {
   invariantError,
 } from '~core/notifications/performance-utils';
 import {
-  SectionData,
+  type SectionData,
   collectInspectorDataWithoutCounts,
 } from '~web/views/inspector/timeline/utils';
 import {
@@ -265,46 +265,6 @@ type UnInitializedStage = {
   interactionType: 'pointer' | 'keyboard';
 };
 
-type CurrentInteraction = {
-  kind: 'pointer' | 'keyboard';
-  interactionUUID: string;
-  pointerUpStart: number;
-  // needed for when inputs that can be clicked and trigger on change (like checkboxes)
-  clickChangeStart: number | null;
-  clickHandlerMicroTaskEnd: number | null;
-  rafStart: number | null;
-  commmitEnd: number | null;
-  timeorigin: number;
-
-  // for now i don't trust performance now timing for UTC time...
-  blockingTimeStart: number;
-  blockingTimeEnd: number | null;
-  fiberRenders: Map<
-    string,
-    {
-      renderCount: number;
-      parents: Set<string>;
-      selfTime: number;
-    }
-  >;
-  componentPath: Array<string>;
-  componentName: string;
-  childrenTree: Record<
-    string,
-    { children: Array<string>; firstNamedAncestor: string; isRoot: boolean }
-  >;
-};
-
-export let currentInteractions: Array<CurrentInteraction> = [];
-export const fastHash = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return hash.toString(36);
-};
 const getInteractionType = (
   eventName: string,
 ): 'pointer' | 'keyboard' | null => {
@@ -319,17 +279,8 @@ const getInteractionType = (
   }
   return null;
 };
-// biome-ignore lint/suspicious/noExplicitAny: shut up biome
-export const getInteractionId = (interaction: any) => {
-  return `${interaction.performanceEntry.type}::${normalizePath(interaction.componentPath)}::${interaction.url}`;
-};
-export function normalizePath(path: string[]): string {
-  const cleaned = path.filter(Boolean);
 
-  const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);
 
-  return deduped.join('.');
-}
 let onEntryAnimationId: number | null = null;
 const setupPerformanceListener = (
   onEntry: (interaction: PerformanceInteraction) => void,

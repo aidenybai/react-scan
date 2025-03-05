@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
-  DroppedFramesEvent,
+  type DroppedFramesEvent,
   getComponentName,
   getEventSeverity,
-  InteractionEvent,
+  type InteractionEvent,
 } from './data';
 import { SlowdownHistoryItem } from './slowdown-history';
 import { ChevronRight } from './icons';
@@ -20,6 +20,7 @@ type CollapsedKeyboardInput = {
   events: Array<InteractionEvent>;
   timestamp: number;
 };
+
 const useNestedFlash = ({
   flashingItemsCount,
   totalEvents,
@@ -31,6 +32,7 @@ const useNestedFlash = ({
   const flashedFor = useRef(0);
   const lastFlashTime = useRef<number>(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: check!!!
   useEffect(() => {
     if (flashedFor.current >= totalEvents) {
       return;
@@ -52,26 +54,35 @@ const useNestedFlash = ({
         }, 2000);
       }, 50);
       return () => clearTimeout(timeout);
-    } else {
-      const delayNeeded = debounceTime - timeSinceLastFlash;
-      const timeout = setTimeout(() => {
-        setNewFlash(false);
-        setTimeout(() => {
-          flashedFor.current = totalEvents;
-          lastFlashTime.current = Date.now();
-          setNewFlash(true);
-          // horrible, don't look at this, move along
-          setTimeout(() => {
-            setNewFlash(false);
-          }, 2000);
-        }, 50);
-      }, delayNeeded);
-      return () => clearTimeout(timeout);
     }
+
+    const delayNeeded = debounceTime - timeSinceLastFlash;
+    const timeout = setTimeout(() => {
+      setNewFlash(false);
+      setTimeout(() => {
+        flashedFor.current = totalEvents;
+        lastFlashTime.current = Date.now();
+        setNewFlash(true);
+        // horrible, don't look at this, move along
+        setTimeout(() => {
+          setNewFlash(false);
+        }, 2000);
+      }, 50);
+    }, delayNeeded);
+    return () => clearTimeout(timeout);
   }, [flashingItemsCount]);
 
   return newFlash;
 };
+
+const IndentedContent = ({
+  children,
+}: { children: JSX.Element | JSX.Element[] }) => (
+  <div className="relative pl-6 flex flex-col gap-y-1">
+    <div className="absolute left-3 top-0 bottom-0 w-px bg-[#27272A]" />
+    {children}
+  </div>
+);
 
 export const CollapsedItem = ({
   item,
@@ -93,8 +104,11 @@ export const CollapsedItem = ({
       case 'low': {
         return prev;
       }
+      default: {
+        return prev;
+      }
     }
-  }, 'low');
+  }, 'low' as const);
   const flashingItemsCount = item.events.reduce(
     (prev, curr) => (shouldFlash(curr.id) ? prev + 1 : prev),
     0,
@@ -106,47 +120,41 @@ export const CollapsedItem = ({
   });
 
   return (
-    <div className={cn(['flex flex-col gap-y-0.5'])}>
+    <div className="flex flex-col gap-y-0.5">
       <button
+        type="button"
         onClick={() => setExpanded((expanded) => !expanded)}
+        // @TODO: @pivanov clean up
         className={cn([
-          'pl-2 py-1.5  text-sm flex items-center rounded-sm hover:bg-[#18181B] relative overflow-hidden',
+          'pl-2 py-1.5 text-sm flex items-center rounded-sm hover:bg-[#18181B] relative overflow-hidden',
           shouldFlashAgain &&
             !expanded &&
             'after:absolute after:inset-0 after:bg-purple-500/30 after:animate-[fadeOut_1s_ease-out_forwards]',
         ])}
       >
-        <div
-          className={cn([
-            'w-4/5 flex items-center justify-start h-full text-xs truncate gap-x-1.5',
-          ])}
-        >
-          <span className={cn(['min-w-fit'])}>
+        <div className="w-4/5 flex items-center justify-start h-full text-xs truncate gap-x-1.5">
+          <span className="min-w-fit">
             <ChevronRight
               key={`chevron-${item.timestamp}`}
+              size={14}
               className={cn([
                 'text-[#A1A1AA] transition-transform',
                 expanded ? 'rotate-90' : '',
               ])}
-              size={14}
             />
           </span>
 
-          <span className={cn(['text-xs'])}>
+          <span className="text-xs">
             {item.kind === 'collapsed-frame-drops'
               ? 'FPS Drops'
               : getComponentName(item.events.at(0)?.componentPath ?? [])}
           </span>
         </div>
-        <div
-          className={cn(['ml-auto min-w-fit flex justify-end items-center'])}
-        >
+        <div className="ml-auto min-w-fit flex justify-end items-center">
           <div
-            style={{
-              lineHeight: '10px',
-            }}
             className={cn([
               'w-fit flex items-center text-[10px] justify-center h-full text-white px-1 py-1 rounded-sm font-semibold',
+              'leading-[10px]',
               severity === 'low' && 'bg-green-500/60',
               severity === 'needs-improvement' && 'bg-[#b77116] text-[10px]',
               severity === 'high' && 'bg-[#b94040]',
@@ -162,6 +170,7 @@ export const CollapsedItem = ({
             .toSorted((a, b) => b.timestamp - a.timestamp)
             .map((event) => (
               <SlowdownHistoryItem
+                key={event.id}
                 event={event}
                 shouldFlash={shouldFlash(event.id)}
               />
@@ -171,12 +180,3 @@ export const CollapsedItem = ({
     </div>
   );
 };
-
-const IndentedContent = ({
-  children,
-}: { children: JSX.Element | JSX.Element[] }) => (
-  <div className="relative pl-6 flex flex-col gap-y-1">
-    <div className="absolute left-3 top-0 bottom-0 w-px bg-[#27272A]" />
-    {children}
-  </div>
-);

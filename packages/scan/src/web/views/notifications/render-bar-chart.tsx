@@ -4,7 +4,7 @@ import { getIsProduction } from '~core/index';
 import { iife } from '~core/notifications/performance-utils';
 import { cn } from '~web/utils/helpers';
 import {
-  NotificationEvent,
+  type NotificationEvent,
   getTotalTime,
   isRenderMemoizable,
   useNotificationsContext,
@@ -120,10 +120,8 @@ export const RenderBarChart = ({
 
   return (
     <div
-      onMouseLeave={() => {
-        fadeOutHighlights();
-      }}
-      className={cn(['flex flex-col h-full w-full gap-y-1'])}
+      onMouseLeave={fadeOutHighlights}
+      className="flex flex-col h-full w-full gap-y-1"
     >
       {iife(() => {
         if (isProduction && bars.length === 0) {
@@ -156,6 +154,7 @@ export const RenderBarChart = ({
         .toSorted((a, b) => b.totalTime - a.totalTime)
         .map((bar, index) => (
           <button
+            type="button"
             onMouseLeave={() => {
               debouncedMouseEnter.current.timer &&
                 clearTimeout(debouncedMouseEnter.current.timer);
@@ -262,9 +261,9 @@ export const RenderBarChart = ({
 
                 for await (const entries of getBatchedRectMap(trueElements)) {
                   // we draw the boundingClientRect instead of intersectionRect for better viability, as a trade off against aesthetics
-                  entries.forEach(({ boundingClientRect }) => {
+                  for (const { boundingClientRect } of entries) {
                     stateRects.push(boundingClientRect);
-                  });
+                  }
                   drawHighlights();
                 }
               };
@@ -314,11 +313,13 @@ export const RenderBarChart = ({
                 }
               }
             }}
-            // THIS IS ON PURPOSE, WE USE INDEX AS EQUALITY OF ANIMATION, THIS WILL NOT REORDER AND DOESN'T HOLD INTERNAL STATE, IF IT DID, IT MAY CREATE A BUG
+            // THIS IS ON PURPOSE, WE USE INDEX AS EQUALITY OF ANIMATION,
+            // THIS WILL NOT REORDER AND DOESN'T HOLD INTERNAL STATE, IF IT DID, IT MAY CREATE A BUG
+            // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
             key={index}
-            className={cn([
-              'w-full flex items-center group hover:bg-[#0f0f0f] rounded-md relative transition-colors text-xs',
-            ])}
+
+            // @TODO: @pivanov clean up
+            className="w-full flex items-center group hover:bg-[#0f0f0f] rounded-md relative transition-colors text-xs"
           >
             <div className={cn(['h-full w-[90%]'])}>
               <div
@@ -326,8 +327,9 @@ export const RenderBarChart = ({
                   minWidth: 'fit-content',
                   width: `${(bar.totalTime / totalBarTime) * 100}%`,
                 }}
+                // @TODO: @pivanov clean up
                 className={cn([
-                  'group-hover:bg-[#5b2d89]  flex items-center bg-[#412162] rounded-sm text-white text-xs relative h-[28px] transition-all',
+                  'group-hover:bg-[#5b2d89] flex items-center bg-[#412162] rounded-sm text-white text-xs relative h-[28px] transition-all',
                   bar.kind === 'other-frame-drop' &&
                     'bg-[#18181B] group-hover:bg-[#272727]',
                   bar.kind === 'other-javascript' &&
@@ -336,75 +338,54 @@ export const RenderBarChart = ({
                     'bg-[#214379d4] group-hover:bg-[#21437982]',
                 ])}
               >
-                <div
-                  className={cn([
-                    'absolute left-2 top-1/2 -translate-y-1/2 flex gap-x-2',
-                  ])}
-                >
-                  <span className={cn(['flex items-center whitespace-nowrap'])}>
-                    {/*  */}
-                    {iife(() => {
-                      switch (bar.kind) {
-                        case 'other-frame-drop': {
-                          return 'JavaScript, DOM updates, Draw Frame';
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 flex gap-x-2">
+                  <span className="flex items-center whitespace-nowrap">
+                    {
+                      iife(() => {
+                        switch (bar.kind) {
+                          case 'other-frame-drop': {
+                            return 'JavaScript, DOM updates, Draw Frame';
+                          }
+                          case 'other-javascript': {
+                            return 'JavaScript/React Hooks';
+                          }
+                          case 'other-not-javascript': {
+                            return 'Update DOM and Draw New Frame';
+                          }
+                          case 'render': {
+                            return bar.event.name;
+                          }
                         }
-                        case 'other-javascript': {
-                          return 'JavaScript/React Hooks';
-                        }
-                        case 'other-not-javascript': {
-                          return 'Update DOM and Draw New Frame';
-                        }
-                        case 'render': {
-                          return bar.event.name;
-                        }
-                      }
-                    })}
+                      })
+                    }
                   </span>
-                  {bar.kind === 'render' && isRenderMemoizable(bar.event) && (
-                    <div
-                      style={{
-                        lineHeight: '10px',
-                      }}
-                      className={cn([
-                        'px-1 py-0.5 bg-[#6a369e] flex items-center  rounded-sm font-semibold text-[8px] w-fit',
-                      ])}
-                    >
-                      Memoizable
-                    </div>
-                  )}
+                  {
+                    // @TODO: @pivanov clean up
+                    bar.kind === 'render' && isRenderMemoizable(bar.event) && (
+                      <div className="px-1 py-0.5 bg-[#6a369e] flex items-center rounded-sm font-semibold text-[8px] w-fit leading-[10px]">
+                        Memoizable
+                      </div>
+                    )
+                  }
                 </div>
               </div>
             </div>
 
-            <div
-              className={cn([
-                'w-[5%] min-w-fit h-full flex items-center justify-end text-[10px] pr-1 gap-x-1',
-              ])}
-            >
-              {bar.kind === 'render' && (
-                <span className={cn([''])}>x{bar.event.count}</span>
-              )}
+            {/* @TODO: @pivanov clean up */}
+            <div className="w-[5%] min-w-fit h-full flex items-center justify-end text-[10px] pr-1 gap-x-1">
+              {bar.kind === 'render' && `x${bar.event.count}`}
             </div>
+
+            {/* @TODO: @pivanov clean up */}
             {/* we don't have render times in production, so we just visualize the count (impl is hacky) */}
             {(bar.kind !== 'render' || !isProduction) && (
-              <div
-                className={cn([
-                  'w-[5%] min-w-fit text-[#7346a0] h-full flex items-center justify-end text-[10px] pr-1 gap-x-1',
-                ])}
-              >
-                <span>
-                  {bar.totalTime < 1 ? '<1' : bar.totalTime.toFixed(0)}
-                  ms
-                </span>
+              <div className="w-[5%] min-w-fit text-[#7346a0] h-full flex items-center justify-end text-[10px] pr-1 gap-x-1">
+                {bar.totalTime < 1 ? '<1' : bar.totalTime.toFixed(0)}ms
               </div>
             )}
 
-            <div
-              className={cn([
-                'absolute right-0 top-1/2 transition-none  -translate-y-1/2 bg-white text-black px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity mr-16',
-                'pointer-events-none',
-              ])}
-            >
+            {/* @TODO: @pivanov clean up */}
+            <div className="absolute right-0 top-1/2 transition-none  -translate-y-1/2 bg-white text-black px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity mr-16 pointer-events-none">
               Click to learn more
             </div>
           </button>

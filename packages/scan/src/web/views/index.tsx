@@ -5,7 +5,6 @@ import { signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { Header } from '~web/widget/header';
 import { ViewInspector } from './inspector';
-import { ViewSlowDowns } from './slow-downs';
 import { Toolbar } from './toolbar';
 import { NotificationWrapper } from './notifications/notifications';
 
