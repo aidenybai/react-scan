@@ -12,7 +12,6 @@ import type { RenderData } from 'src/core/utils';
 // import { initReactScanOverlay } from '~web/overlay';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
-import { ICONS } from '~web/assets/svgs/svgs';
 import { createToolbar } from '~web/toolbar';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { Outline } from '~web/utils/outline';
@@ -26,6 +25,7 @@ import type { InternalInteraction } from './monitor/types';
 import type { getSession } from './monitor/utils';
 import { startTimingTracking } from './notifications/event-tracking';
 import { createHighlightCanvas } from './notifications/outline-overlay';
+import packageJson from '../../package.json';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -48,19 +48,10 @@ const initRootContainer = (): RootContainer => {
 
   shadowRoot = rootContainer.attachShadow({ mode: 'open' });
 
-  const fragment = document.createDocumentFragment();
-
   const cssStyles = document.createElement('style');
   cssStyles.textContent = styles;
 
-  const iconSprite = new DOMParser().parseFromString(
-    ICONS,
-    'image/svg+xml',
-  ).documentElement;
-
-  fragment.appendChild(iconSprite);
-  fragment.appendChild(cssStyles);
-  shadowRoot.appendChild(fragment);
+  shadowRoot.appendChild(cssStyles);
 
   document.documentElement.appendChild(rootContainer);
 
@@ -231,6 +222,7 @@ export interface Internals {
   activeOutlines: Map<OutlineKey, Outline>; // we re-use the outline object on the scheduled outline
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
   Store: StoreType;
+  version: string;
 }
 
 export type FunctionalComponentStateChange = {
@@ -316,6 +308,7 @@ export const ReactScanInternals: Internals = {
   scheduledOutlines: new Map(),
   activeOutlines: new Map(),
   Store,
+  version: packageJson.version,
 };
 
 export type LocalStorageOptions = Omit<
@@ -344,10 +337,10 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       // case 'includeChildren':
       case 'log':
       case 'showToolbar':
-      case 'showFPS':
       // case 'report':
       // case 'alwaysShowLabels':
       case 'dangerouslyForceRunInProduction':
+      case 'showFPS':
         if (typeof value !== 'boolean') {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
@@ -533,6 +526,7 @@ export const start = () => {
     }
   } catch (e) {
     if (ReactScanInternals.options.value._debug === 'verbose') {
+      // biome-ignore lint/suspicious/noConsole: intended debug output
       console.error(
         '[React Scan Internal Error]',
         'Failed to create notifications outline canvas',
@@ -563,6 +557,7 @@ const createNotificationsOutlineCanvas = () => {
     createHighlightCanvas(highlightRoot);
   } catch (e) {
     if (ReactScanInternals.options.value._debug === 'verbose') {
+      // biome-ignore lint/suspicious/noConsole: intended debug output
       console.error(
         '[React Scan Internal Error]',
         'Failed to create notifications outline canvas',

@@ -1,6 +1,6 @@
 {
   "name": "@react-scan/extension",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,7 +22,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pivanov/utils": "^0.0.1",
+    "@pivanov/utils": "0.0.2",
+    "bippy": "0.2.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scan": "workspace:*",
@@ -35,7 +36,6 @@
     "@types/webextension-polyfill": "^0.10.0",
     "@vitejs/plugin-react": "^4.2.1",
     "bestzip": "^2.2.1",
-    "bippy": "0.2.7",
     "cross-env": "^7.0.3",
     "vite": "^6.0.7",
     "vite-plugin-web-extension": "^4.4.3",

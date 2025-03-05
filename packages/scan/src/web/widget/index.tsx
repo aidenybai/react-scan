@@ -8,7 +8,6 @@ import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../constants';
 import {
   defaultWidgetConfig,
   signalRefWidget,
-  signalSlowDowns,
   signalWidget,
   signalWidgetViews,
   updateDimensions,
@@ -22,7 +21,6 @@ import { ResizeHandle } from './resize-handle';
 
 export const Widget = () => {
   const refWidget = useRef<HTMLDivElement | null>(null);
-  const refNotificationState = useRef<boolean | null>(null);
   const refShouldOpen = useRef<boolean>(false);
 
   const refInitialMinimizedWidth = useRef<number>(0);
@@ -124,12 +122,6 @@ export const Widget = () => {
       if (!refWidget.current || (e.target as HTMLElement).closest('button'))
         return;
 
-      refNotificationState.current = signalSlowDowns.value.hideNotification;
-      signalSlowDowns.value = {
-        ...signalSlowDowns.value,
-        hideNotification: true,
-      };
-
       const container = refWidget.current;
       const containerStyle = container.style;
       const { dimensions } = signalWidget.value;
@@ -203,12 +195,6 @@ export const Widget = () => {
             containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
           });
 
-          if (refNotificationState.current !== null) {
-            signalSlowDowns.value = {
-              ...signalSlowDowns.value,
-              hideNotification: refNotificationState.current,
-            };
-          }
           return;
         }
 
@@ -264,6 +250,7 @@ export const Widget = () => {
     [],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     if (!refWidget.current) return;
 
@@ -368,8 +355,6 @@ export const Widget = () => {
           <ResizeHandle position="bottom" />
           <ResizeHandle position="left" />
           <ResizeHandle position="right" />
-
-          {/* <ToolbarNotification /> */}
           <Content />
         </div>
       </ToolbarElementContext.Provider>

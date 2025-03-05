@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
 import { StickySection } from '~web/components/sticky-section';
-import { signalIsSettingsOpen } from '~web/state';
+import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { ComponentsTree } from './components-tree';
@@ -120,7 +120,15 @@ const Inspector = constant(() => {
         state.fiber,
       );
 
-      if (!parentCompositeFiber) return;
+      if (!parentCompositeFiber) {
+        Store.inspectState.value = {
+          kind: 'inspect-off',
+        };
+        signalWidgetViews.value = {
+          view: 'none',
+        };
+        return;
+      }
 
       const isNewComponent =
         refLastInspectedFiber.current?.type !== parentCompositeFiber.type;
@@ -152,6 +160,9 @@ const Inspector = constant(() => {
       if (!parentCompositeFiber) {
         Store.inspectState.value = {
           kind: 'inspect-off',
+        };
+        signalWidgetViews.value = {
+          view: 'none',
         };
         return;
       }
