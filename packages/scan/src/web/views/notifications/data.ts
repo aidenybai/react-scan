@@ -1,6 +1,6 @@
 import { createContext } from 'preact';
-import { SetStateAction } from 'preact/compat';
-import { Dispatch, useContext } from 'preact/hooks';
+import type { SetStateAction } from 'preact/compat';
+import { type Dispatch, useContext } from 'preact/hooks';
 
 export type GroupedFiberRender = {
   id: string;

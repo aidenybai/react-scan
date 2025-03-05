@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';
 import {
-  GroupedFiberRender,
-  NotificationEvent,
+  type GroupedFiberRender,
+  type NotificationEvent,
   getComponentName,
   getTotalTime,
 } from './data';
@@ -16,7 +16,7 @@ const formatReactData = (groupedFiberRenders: Array<GroupedFiberRender>) => {
     .slice(0, 30)
     .filter((fiber) => fiber.totalTime > 5);
 
-  filteredFibers.forEach((fiberRender) => {
+  for (const fiberRender of filteredFibers) {
     let localText = '';
 
     localText += 'Component Name:';
@@ -27,28 +27,28 @@ const formatReactData = (groupedFiberRenders: Array<GroupedFiberRender>) => {
     localText += `Sum of self times for ${fiberRender.name} is ${fiberRender.totalTime.toFixed(0)}ms\n`;
     if (fiberRender.changes.props.length > 0) {
       localText += `Changed props for all ${fiberRender.name} instances ("name:count" pairs)\n`;
-      fiberRender.changes.props.forEach((change) => {
+      for (const change of fiberRender.changes.props) {
         localText += `${change.name}:${change.count}x\n`;
-      });
+      }
     }
 
     if (fiberRender.changes.state.length > 0) {
       localText += `Changed state for all ${fiberRender.name} instances ("hook index:count" pairs)\n`;
-      fiberRender.changes.state.forEach((change) => {
+      for (const change of fiberRender.changes.state) {
         localText += `${change.index}:${change.count}x\n`;
-      });
+      }
     }
 
     if (fiberRender.changes.context.length > 0) {
       localText += `Changed context for all ${fiberRender.name} instances ("context display name (if exists):count" pairs)\n`;
-      fiberRender.changes.context.forEach((change) => {
+      for (const change of fiberRender.changes.context) {
         localText += `${change.name}:${change.count}x\n`;
-      });
+      }
     }
 
     text += localText;
     text += '\n';
-  });
+  };
 
   return text;
 };
@@ -153,7 +153,7 @@ It's also important to remember if a component had no props/state/context change
 - find the most expensive components
 - see what's causing them to render
 - determine how you can make those state/props/context not change for a large set of the renders
-- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders. 
+- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders.
 
 An important thing to note is that if you see a lot of react renders (some components with very high render counts), but javascript excluding renders is much higher than render time, it is possible that the components with lots of renders run hooks like useEffect/useLayoutEffect, which run during the JS event handler period.
 
@@ -203,7 +203,7 @@ It's also important to remember if a component had no props/state/context change
 - find the most expensive components
 - see what's causing them to render
 - determine how you can make those state/props/context not change for a large set of the renders
-- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders. 
+- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders.
 
 An important thing to note is that if you see a lot of react renders (some components with very high render counts), but other time is much higher than render time, it is possible that the components with lots of renders run hooks like useEffect/useLayoutEffect, which run outside of what we profile (just react render time).
 
@@ -211,7 +211,7 @@ It's also good to note that react profiles hook times in development, and if man
 
 If a node_module is the component with high renders, you can experiment to see if that component is the root issue (because of hooks). You should use the same instructions for node_module debugging mentioned previously.
 
-If renders don't seem to be the problem, see if there are any expensive CSS properties being added/mutated, or any expensive DOM Element mutations/new elements being created that could cause this slowdown. 
+If renders don't seem to be the problem, see if there are any expensive CSS properties being added/mutated, or any expensive DOM Element mutations/new elements being created that could cause this slowdown.
 `;
 
 export const generateFrameDropExplanationPrompt = ({
@@ -241,7 +241,7 @@ It's also important to remember if a component had no props/state/context change
 - find the most expensive components
 - see what's causing them to render
 - determine how you can make those state/props/context not change for a large set of the renders
-- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders. 
+- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders.
 
 
 An important thing to note is that if you see a lot of react renders (some components with very high render counts), but other time is much higher than render time, it is possible that the components with lots of renders run hooks like useEffect/useLayoutEffect, which run outside of what we profile (just react render time).
@@ -318,7 +318,7 @@ It's also important to remember if a component had no props/state/context change
 - find the most expensive components
 - see what's causing them to render
 - determine how you can make those state/props/context not change for a large set of the renders
-- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders. 
+- once there are no more changes left, you can memoize the component so it no longer unnecessarily re-renders.
 
 
 An important thing to note is that if you see a lot of react renders (some components with very high render counts), but javascript excluding renders is much higher than render time, it is possible that the components with lots of renders run hooks like useEffect/useLayoutEffect, which run during the JS event handler period.
@@ -333,6 +333,7 @@ export const getLLMPrompt = (
 ) =>
   iife(() => {
     switch (activeTab) {
+      // biome-ignore lint/suspicious/noFallthroughSwitchClause: check!!!
       case 'data': {
         switch (selectedEvent.kind) {
           case 'dropped-frames': {
@@ -364,6 +365,7 @@ export const getLLMPrompt = (
           }
         }
       }
+      // biome-ignore lint/suspicious/noFallthroughSwitchClause: check!!!
       case 'explanation': {
         switch (selectedEvent.kind) {
           case 'dropped-frames': {
@@ -455,6 +457,7 @@ export const Optimize = ({
         <div className={cn(['bg-[#18181B] p-1 rounded-t-sm'])}>
           <div className={cn(['flex items-center gap-x-1'])}>
             <button
+              type="button"
               onClick={() => setActiveTab('fix')}
               className={cn([
                 'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
@@ -467,6 +470,7 @@ export const Optimize = ({
             </button>
 
             <button
+              type="button"
               onClick={() => setActiveTab('explanation')}
               className={cn([
                 'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
@@ -478,6 +482,7 @@ export const Optimize = ({
               Explanation
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('data')}
               className={cn([
                 'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
@@ -503,6 +508,7 @@ export const Optimize = ({
         </div>
       </div>
       <button
+        type="button"
         onClick={async () => {
           const text = getLLMPrompt(activeTab, selectedEvent);
 
@@ -532,6 +538,7 @@ export const Optimize = ({
             copying && 'scale-110',
           ])}
         >
+          <title>Copy</title>
           {copying ? (
             <path d="M20 6L9 17l-5-5" />
           ) : (

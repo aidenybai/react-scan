@@ -1,7 +1,6 @@
-// import { signalNotificationsOpen, signalSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import {
-  NotificationEvent,
+  type NotificationEvent,
   getComponentName,
   getEventSeverity,
   getTotalTime,
@@ -19,17 +18,11 @@ export const NotificationHeader = ({
     case 'interaction': {
       return (
         // h-[48px] is a hack to adjust for header size
-        <div
-          className={cn([`w-full flex border-b border-[#27272A] min-h-[48px]`])}
-        >
+        <div className="w-full flex border-b border-[#27272A] min-h-[48px]">
           {/* todo: make css variables for colors */}
-          <div
-            className={cn([
-              'min-w-fit w-full justify-start flex items-center border-r border-[#27272A] pl-5 pr-2 text-sm gap-x-4',
-            ])}
-          >
-            <div className={cn(['flex items-center gap-x-2 '])}>
-              <span className={cn(['text-[#5a5a5a] mr-0.5'])}>
+          <div className="min-w-fit w-full justify-start flex items-center border-r border-[#27272A] pl-5 pr-2 text-sm gap-x-4">
+            <div className="flex items-center gap-x-2 ">
+              <span className="text-[#5a5a5a] mr-0.5">
                 {selectedEvent.type === 'click' ? 'Clicked ' : 'Typed in '}
               </span>
               <span>{getComponentName(selectedEvent.componentPath)}</span>
@@ -45,15 +38,10 @@ export const NotificationHeader = ({
                 time
               </div>
             </div>
-            <div
-              className={cn(['flex items-center gap-x-2  justify-end ml-auto'])}
-            >
-              <div
-                className={cn([
-                  'p-2 flex justify-center items-center border-[#27272A]',
-                ])}
-              >
+            <div className="flex items-center gap-x-2  justify-end ml-auto">
+              <div className="p-2 flex justify-center items-center border-[#27272A]">
                 <button
+                  type="button"
                   onClick={() => {
                     signalWidgetViews.value = {
                       view: 'none',
@@ -70,15 +58,9 @@ export const NotificationHeader = ({
     }
     case 'dropped-frames': {
       return (
-        <div
-          className={cn([`w-full flex border-b border-[#27272A] min-h-[48px]`])}
-        >
-          <div
-            className={cn([
-              'min-w-fit w-full justify-start flex items-center border-r border-[#27272A] pl-5 pr-2 text-sm gap-x-4',
-            ])}
-          >
-            <div className={cn(['flex items-center gap-x-2 '])}>
+        <div className="w-full flex border-b border-[#27272A] min-h-[48px]">
+          <div className="min-w-fit w-full justify-start flex items-center border-r border-[#27272A] pl-5 pr-2 text-sm gap-x-4">
+            <div className="flex items-center gap-x-2">
               FPS Drop
               <div
                 className={cn([
@@ -92,17 +74,10 @@ export const NotificationHeader = ({
               </div>
             </div>
 
-            <div
-              className={cn([
-                'flex items-center gap-x-2 w-2/4 justify-end ml-auto',
-              ])}
-            >
-              <div
-                className={cn([
-                  'p-2 flex justify-center items-center border-[#27272A]',
-                ])}
-              >
+            <div className="flex items-center gap-x-2 w-2/4 justify-end ml-auto">
+              <div className="p-2 flex justify-center items-center border-[#27272A]">
                 <button
+                  type="button"
                   onClick={() => {
                     signalWidgetViews.value = {
                       view: 'none',

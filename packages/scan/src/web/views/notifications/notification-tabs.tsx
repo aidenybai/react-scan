@@ -1,5 +1,5 @@
 import { cn } from '~web/utils/helpers';
-import { NotificationEvent, useNotificationsContext } from './data';
+import { type NotificationEvent, useNotificationsContext } from './data';
 import { Popover } from './popover';
 import { VolumeOffIcon, VolumeOnIcon } from './icons';
 import { playNotificationSound } from '~core/utils';
@@ -12,17 +12,10 @@ export const NotificationTabs = ({
   const { notificationState, setNotificationState, setRoute } =
     useNotificationsContext();
   return (
-    <div
-      className={cn([
-        'flex w-full justify-between items-center px-3 py-2 text-xs',
-      ])}
-    >
-      <div
-        className={cn([
-          'bg-[#18181B] flex items-center gap-x-1 p-1 rounded-sm',
-        ])}
-      >
+    <div className="flex w-full justify-between items-center px-3 py-2 text-xs">
+      <div className="bg-[#18181B] flex items-center gap-x-1 p-1 rounded-sm">
         <button
+          type="button"
           onClick={() => {
             setRoute({
               route: 'render-visualization',
@@ -40,6 +33,7 @@ export const NotificationTabs = ({
           Ranked
         </button>
         <button
+          type="button"
           onClick={() => {
             setRoute({
               route: 'other-visualization',
@@ -56,6 +50,7 @@ export const NotificationTabs = ({
           Overview
         </button>
         <button
+          type="button"
           onClick={() => {
             setRoute({
               route: 'optimize',
@@ -75,6 +70,8 @@ export const NotificationTabs = ({
       <Popover
         triggerContent={
           <button
+            type="button"
+            className="ml-auto"
             onClick={() => {
               setNotificationState((prev) => {
                 if (
@@ -110,13 +107,8 @@ export const NotificationTabs = ({
                 };
               });
             }}
-            className="ml-auto"
           >
-            <div
-              className={cn([
-                'flex gap-x-2 justify-center items-center text-[#6E6E77]',
-              ])}
-            >
+            <div className="flex gap-x-2 justify-center items-center text-[#6E6E77]">
               <span>Alerts</span>
               {notificationState.audioNotificationsOptions.enabled ? (
                 <VolumeOnIcon size={16} className="text-[#6E6E77]" />
@@ -127,7 +119,7 @@ export const NotificationTabs = ({
           </button>
         }
       >
-        <>Play a chime when a slowdown is recorded</>
+        Play a chime when a slowdown is recorded
       </Popover>
     </div>
   );

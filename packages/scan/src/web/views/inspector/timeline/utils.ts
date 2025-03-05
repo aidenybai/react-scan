@@ -447,7 +447,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     };
   }
 
-  let hasNewChanges = false;
+  // let hasNewChanges = false;
 
   const propsData = emptySection();
   if (fiber.memoizedProps) {
@@ -463,7 +463,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     }
 
     for (const change of changes) {
-      hasNewChanges = true;
+      // hasNewChanges = true;
       propsData.changes.add(change.name);
       propsData.changesCounts.set(change.name, 1);
     }
@@ -483,7 +483,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     }
 
     for (const change of changes) {
-      hasNewChanges = true;
+      // hasNewChanges = true;
       stateData.changes.add(change.name);
       stateData.changesCounts.set(change.name, 1);
     }
@@ -502,7 +502,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
   }
 
   for (const change of changes) {
-    hasNewChanges = true;
+    // hasNewChanges = true;
     contextData.changes.add(change.name);
     contextData.changesCounts.set(change.name, 1);
   }
@@ -514,10 +514,8 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
   // }
 
   return {
-    // data: {
     fiberProps: propsData,
     fiberState: stateData,
     fiberContext: contextData,
-    // },
   };
 };

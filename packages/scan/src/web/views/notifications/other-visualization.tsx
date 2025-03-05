@@ -1,11 +1,11 @@
-import { ReactNode } from 'preact/compat';
+import type { ReactNode } from 'preact/compat';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { getIsProduction } from '~core/index';
 import { iife } from '~core/notifications/performance-utils';
 import { cn } from '~web/utils/helpers';
 import {
-  InteractionEvent,
-  NotificationEvent,
+  type InteractionEvent,
+  type NotificationEvent,
   getTotalTime,
   useNotificationsContext,
 } from './data';
@@ -22,7 +22,6 @@ type BaseTimeDataItem = {
     | 'other-frame-drop'
     | 'total-processing-time';
 };
-
 
 type TimeData = Array<BaseTimeDataItem>;
 
@@ -114,6 +113,7 @@ export const OtherVisualization = ({
   const root = useContext(ToolbarElementContext);
 
   // for when a user clicks a bar of a non render, and gets sent to the other visualization and passes a route message on the way
+  // biome-ignore lint/correctness/useExhaustiveDependencies: check!!!
   useEffect(() => {
     if (notificationState.routeMessage?.name) {
       const container = root?.querySelector('#overview-scroll-container');
@@ -130,6 +130,7 @@ export const OtherVisualization = ({
     }
   }, [notificationState.route]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: check!!!
   useEffect(() => {
     if (notificationState.route === 'other-visualization') {
       setExpandedItems((prev) =>
@@ -158,6 +159,7 @@ export const OtherVisualization = ({
           return (
             <div key={entry.kind} id={`react-scan-overview-bar-${entry.kind}`}>
               <button
+                type="button"
                 onClick={() =>
                   setExpandedItems((prev) =>
                     prev.includes(entry.kind)
@@ -176,6 +178,7 @@ export const OtherVisualization = ({
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
+                        <title>Chevron Right</title>
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -206,6 +209,7 @@ export const OtherVisualization = ({
                   <p className=" text-zinc-400 mb-4 text-xs">
                     {iife(() => {
                       switch (selectedEvent.kind) {
+                        // biome-ignore lint/suspicious/noFallthroughSwitchClause: check!!!
                         case 'interaction': {
                           switch (entry.kind) {
                             case 'render': {
@@ -388,6 +392,7 @@ const CopyPromptButton = () => {
 
   return (
     <button
+      type="button"
       onClick={async () => {
         if (!notificationState.selectedEvent) {
           return;
@@ -417,6 +422,7 @@ const CopyPromptButton = () => {
           copying && 'scale-110',
         ])}
       >
+        <title>Copy</title>
         {copying ? (
           <path d="M20 6L9 17l-5-5" />
         ) : (
@@ -526,8 +532,6 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
             production, use the <strong>Chrome profiler</strong> and analyze the
             function call times.
           </p>
-
-          <p></p>
         </div>
       );
     }
