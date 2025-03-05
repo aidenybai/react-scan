@@ -321,7 +321,7 @@ export const RenderBarChart = ({
             // @TODO: @pivanov clean up
             className="w-full flex items-center group hover:bg-[#0f0f0f] rounded-md relative transition-colors text-xs"
           >
-            <div className={cn(['h-full w-[90%]'])}>
+            <div className="h-full w-[90%]">
               <div
                 style={{
                   minWidth: 'fit-content',

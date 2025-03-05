@@ -345,7 +345,7 @@ export const Notifications = forwardRef<HTMLDivElement>((_, ref) => {
   const { notificationState } = useNotificationsContext();
 
   return (
-    <div ref={ref} className={cn(['h-full w-full flex flex-col'])}>
+    <div ref={ref} className="h-full w-full flex flex-col">
       {notificationState.selectedEvent && (
         <div
           className={cn([
@@ -370,10 +370,10 @@ export const Notifications = forwardRef<HTMLDivElement>((_, ref) => {
             'h-[calc(100%-150px)]',
         ])}
       >
-        <div className={cn(['h-full min-w-[200px]'])}>
+        <div className="h-full min-w-[200px]">
           <SlowdownHistory />
         </div>
-        <div className={cn(['w-[calc(100%-200px)] h-full overflow-y-auto'])}>
+        <div className="w-[calc(100%-200px)] h-full overflow-y-auto">
           <DetailsRoutes />
         </div>
       </div>
@@ -397,13 +397,13 @@ const MoreInfo = () => {
         event.kind === 'dropped-frames' && 'h-[calc(100%-25px)]',
       ])}
     >
-      <div className={cn(['flex flex-col gap-y-4 h-full'])}>
+      <div className="flex flex-col gap-y-4 h-full">
         {iife(() => {
           switch (event.kind) {
             case 'interaction': {
               return (
                 <>
-                  <div className={cn(['flex items-center gap-x-3'])}>
+                  <div className="flex items-center gap-x-3">
                     <span className="text-[#6F6F78] text-xs font-medium">
                       {event.type === 'click'
                         ? 'Clicked component location'
@@ -429,7 +429,7 @@ const MoreInfo = () => {
                     </div>
                   </div>
 
-                  <div className={cn(['flex items-center gap-x-3'])}>
+                  <div className="flex items-center gap-x-3">
                     <span className="text-[#6F6F78] text-xs font-medium">
                       Total Time
                     </span>
@@ -437,7 +437,7 @@ const MoreInfo = () => {
                       {getTotalTime(event.timing).toFixed(0)}ms
                     </span>
                   </div>
-                  <div className={cn(['flex items-center gap-x-3'])}>
+                  <div className="flex items-center gap-x-3">
                     <span className="text-[#6F6F78] text-xs font-medium">
                       Occurred
                     </span>
@@ -451,7 +451,7 @@ const MoreInfo = () => {
             case 'dropped-frames': {
               return (
                 <>
-                  <div className={cn(['flex items-center gap-x-3'])}>
+                  <div className="flex items-center gap-x-3">
                     <span className="text-[#6F6F78] text-xs font-medium">
                       Total Time
                     </span>
@@ -460,7 +460,7 @@ const MoreInfo = () => {
                     </span>
                   </div>
 
-                  <div className={cn(['flex items-center gap-x-3'])}>
+                  <div className="flex items-center gap-x-3">
                     <span className="text-[#6F6F78] text-xs font-medium">
                       Occurred
                     </span>

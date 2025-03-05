@@ -368,7 +368,7 @@ const TreeNodeItem = ({
         type="button"
         data-index={nodeIndex}
         onClick={handleTreeNodeToggle}
-        className={cn('w-6 h-6 flex items-center justify-center', 'text-left')}
+        className="w-6 h-6 flex items-center justify-center text-left"
       >
         {hasChildren && (
           <Icon

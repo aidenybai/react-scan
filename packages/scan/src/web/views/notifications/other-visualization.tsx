@@ -507,11 +507,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
   switch (input.kind) {
     case 'total-processing': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             This is the time it took to draw the entire frame that was presented
             to the user. To be at 60FPS, this number needs to be {'<=16ms'}
@@ -537,17 +533,13 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'render': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             This is the time it took React to run components, and internal logic
             to handle the output of your component.
           </p>
 
-          <div className={cn(['flex flex-col'])}>
+          <div className="flex flex-col">
             <p>The slowest components for this time period were:</p>
             {input.data.topByTime.map((item) => (
               <div key={item.name}>
@@ -574,11 +566,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'js-explanation-base': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             This is the period when JavaScript hooks and other JavaScript
             outside of React Renders run.
@@ -606,11 +594,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'high-render-count-high-js': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             This is the period when JavaScript hooks and other JavaScript
             outside of React Renders run.
@@ -637,7 +621,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
                 which could have contributed to the high JavaScript/Hook time if
                 they ran lots of hooks, like <code>useEffects</code>.
               </p>
-              <div className={cn(['flex flex-col'])}>
+                <div className="flex flex-col">
                 <p>You should try optimizing the renders of:</p>
                 {input.data.topByCount.map((item) => (
                   <div key={item.name}>
@@ -658,11 +642,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'low-render-count-high-js': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             This is the period when JavaScript hooks and other JavaScript
             outside of React Renders run.
@@ -684,11 +664,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'high-render-count-update-dom-draw-frame': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             These are the calculations the browser is forced to do in response
             to the JavaScript that ran during the interaction.
@@ -727,11 +703,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'update-dom-draw-frame': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             These are the calculations the browser is forced to do in response
             to the JavaScript that ran during the interaction.
@@ -756,11 +728,7 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
     }
     case 'other': {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className="text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2">
           <p>
             This is the time it took to run everything other than React renders.
             This can be hooks like <code>useEffect</code>, other JavaScript not

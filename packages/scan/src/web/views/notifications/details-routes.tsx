@@ -73,28 +73,28 @@ export const DetailsRoutes = () => {
         <div
           className={cn([
             'flex flex-col items-start pt-5 bg-[#0A0A0A] p-5 rounded-sm max-w-md',
-            ' shadow-lg',
+            'shadow-lg',
           ])}
         >
-          <div className={cn(['flex flex-col items-start gap-y-4'])}>
-            <div className={cn(['flex items-center'])}>
-              <span className={cn(['text-zinc-400 font-medium text-[17px]'])}>
+          <div className="flex flex-col items-start gap-y-4">
+            <div className="flex items-center">
+              <span className="text-zinc-400 font-medium text-[17px]">
                 Scanning for slowdowns
                 {dots}
               </span>
             </div>
             {notificationState.events.length !== 0 && (
-              <p className={cn(['text-xs'])}>
+              <p className="text-xs">
                 Click on an item in the{' '}
-                <span className={cn(['text-purple-400'])}>History</span> list to
-                get started
+                <span className="text-purple-400">History</span> list to get
+                started
               </p>
             )}
-            <p className={cn(['text-zinc-600 text-xs'])}>
+            <p className="text-zinc-600 text-xs">
               You don't need to keep this panel open for React Scan to record
               slowdowns
             </p>
-            <p className={cn(['text-zinc-600 text-xs'])}>
+            <p className="text-zinc-600 text-xs">
               Enable audio alerts to hear a delightful ding every time a large
               slowdown is recorded
             </p>
@@ -136,7 +136,7 @@ export const DetailsRoutes = () => {
               }}
               className={cn([
                 'px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-sm w-full',
-                ' text-sm flex items-center gap-x-2 justify-center',
+                'text-sm flex items-center gap-x-2 justify-center',
               ])}
             >
               {notificationState.audioNotificationsOptions.enabled ? (
@@ -188,7 +188,7 @@ export const DetailsRoutes = () => {
       return (
         <TabLayout>
           <div
-            className={cn(['flex w-full h-full flex-col overflow-y-auto'])}
+            className="flex w-full h-full flex-col overflow-y-auto"
             id="overview-scroll-container"
           >
             <OtherVisualization

@@ -164,7 +164,7 @@ export const DiffValueView = ({
       <button
         type="button"
         onClick={onToggle}
-        className={cn('flex items-center', 'p-0 mt-0.5 mr-1', 'opacity-50')}
+        className="flex items-center p-0 mt-0.5 mr-1 opacity-50"
       >
         <Icon
           name="icon-chevron-right"

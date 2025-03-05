@@ -448,14 +448,14 @@ export const Optimize = ({
   const [copying, setCopying] = useState(false);
 
   return (
-    <div className={cn(['w-full h-full'])}>
+    <div className="w-full h-full">
       <div
         className={cn([
           'border border-[#27272A] rounded-sm h-4/5 text-xs overflow-hidden',
         ])}
       >
-        <div className={cn(['bg-[#18181B] p-1 rounded-t-sm'])}>
-          <div className={cn(['flex items-center gap-x-1'])}>
+        <div className="bg-[#18181B] p-1 rounded-t-sm">
+          <div className="flex items-center gap-x-1">
             <button
               type="button"
               onClick={() => setActiveTab('fix')}
@@ -495,7 +495,7 @@ export const Optimize = ({
             </button>
           </div>
         </div>
-        <div className={cn(['overflow-y-auto h-full'])}>
+        <div className="overflow-y-auto h-full">
           <pre
             className={cn([
               'p-2 h-full',
