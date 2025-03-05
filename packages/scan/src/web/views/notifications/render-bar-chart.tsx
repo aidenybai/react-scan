@@ -121,7 +121,7 @@ export const RenderBarChart = ({
   return (
     <div
       onMouseLeave={fadeOutHighlights}
-      className="flex flex-col h-full w-full gap-y-1"
+      className="flex flex-col h-full w-full gap-y-1 pl-1"
     >
       {iife(() => {
         if (isProduction && bars.length === 0) {
@@ -372,14 +372,14 @@ export const RenderBarChart = ({
             </div>
 
             {/* @TODO: @pivanov clean up */}
-            <div className="w-[5%] min-w-fit h-full flex items-center justify-end text-[10px] pr-1 gap-x-1">
+            <div className="w-[5%] min-w-fit h-full flex items-center justify-end text-[10px] gap-x-1">
               {bar.kind === 'render' && `x${bar.event.count}`}
             </div>
 
             {/* @TODO: @pivanov clean up */}
             {/* we don't have render times in production, so we just visualize the count (impl is hacky) */}
             {(bar.kind !== 'render' || !isProduction) && (
-              <div className="w-[5%] min-w-fit text-[#7346a0] h-full flex items-center justify-end text-[10px] pr-1 gap-x-1">
+              <div className="w-[5%] min-w-fit text-[#7346a0] h-full flex items-center justify-end text-[10px] gap-x-1">
                 {bar.totalTime < 1 ? '<1' : bar.totalTime.toFixed(0)}ms
               </div>
             )}

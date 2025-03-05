@@ -160,7 +160,6 @@ An important thing to note is that if you see a lot of react renders (some compo
 It's also good to note that react profiles hook times in development, and if many hooks are called (lets say 5,000 components all called a useEffect), it will have to profile every single one. And it may also be the case the comparison of the hooks dependency can be expensive, and that would not be tracked in render time.
 
 If a node_module is the component with high renders, you can experiment to see if that component is the root issue (because of hooks). You should use the same instructions for node_module debugging mentioned previously.
-
 `;
 const generateFrameDropOptimizationPrompt = ({
   renderTime,
@@ -451,56 +450,56 @@ export const Optimize = ({
     <div className="w-full h-full">
       <div
         className={cn([
+          'flex flex-col',
           'border border-[#27272A] rounded-sm h-4/5 text-xs overflow-hidden',
         ])}
       >
-        <div className="bg-[#18181B] p-1 rounded-t-sm">
-          <div className="flex items-center gap-x-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('fix')}
-              className={cn([
-                'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
-                activeTab === 'fix'
-                  ? 'text-white bg-[#7521c8]'
-                  : 'text-[#6E6E77] hover:text-white',
-              ])}
-            >
-              Fix
-            </button>
+        <div className="bg-[#18181B] min-h-9 flex items-stretch gap-x-1 p-1 rounded-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab('fix')}
+            className={cn([
+              'flex items-center justify-center whitespace-nowrap px-3 gap-x-1 rounded-sm',
+              activeTab === 'fix'
+                ? 'text-white bg-[#7521c8]'
+                : 'text-[#6E6E77] hover:text-white',
+            ])}
+          >
+            Fix
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('explanation')}
-              className={cn([
-                'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
-                activeTab === 'explanation'
-                  ? 'text-white bg-[#7521c8]'
-                  : 'text-[#6E6E77] hover:text-white',
-              ])}
-            >
-              Explanation
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('data')}
-              className={cn([
-                'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
-                activeTab === 'data'
-                  ? 'text-white bg-[#7521c8]'
-                  : 'text-[#6E6E77] hover:text-white',
-              ])}
-            >
-              Data
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('explanation')}
+            className={cn([
+              'flex items-center justify-center whitespace-nowrap px-3 gap-x-1 rounded-sm',
+              activeTab === 'explanation'
+                ? 'text-white bg-[#7521c8]'
+                : 'text-[#6E6E77] hover:text-white',
+            ])}
+          >
+            Explanation
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('data')}
+            className={cn([
+              'flex items-center justify-center whitespace-nowrap px-3 gap-x-1 rounded-sm',
+              activeTab === 'data'
+                ? 'text-white bg-[#7521c8]'
+                : 'text-[#6E6E77] hover:text-white',
+            ])}
+          >
+            Data
+          </button>
         </div>
-        <div className="overflow-y-auto h-full">
+        <div className="py-2 pl-3 pr-1 overflow-hidden flex">
           <pre
             className={cn([
-              'p-2 h-full',
+              'flex-1',
               'whitespace-pre-wrap break-words',
-              'text-gray-300 font-mono ',
+              'text-gray-300 font-mono',
+              'overflow-y-auto',
             ])}
           >
             {getLLMPrompt(activeTab, selectedEvent)}

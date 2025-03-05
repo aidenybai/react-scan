@@ -20,7 +20,7 @@ export const NotificationHeader = ({
         // h-[48px] is a hack to adjust for header size
         <div className="w-full flex border-b border-[#27272A] min-h-[48px]">
           {/* todo: make css variables for colors */}
-          <div className="min-w-fit w-full justify-start flex items-center border-r border-[#27272A] pl-5 pr-2 text-sm gap-x-4">
+          <div className="min-w-fit w-full justify-start flex items-center border-[#27272A] pl-5 pr-2 text-sm gap-x-4">
             <div className="flex items-center gap-x-2 ">
               <span className="text-[#5a5a5a] mr-0.5">
                 {selectedEvent.type === 'click' ? 'Clicked ' : 'Typed in '}
@@ -59,7 +59,7 @@ export const NotificationHeader = ({
     case 'dropped-frames': {
       return (
         <div className="w-full flex border-b border-[#27272A] min-h-[48px]">
-          <div className="min-w-fit w-full justify-start flex items-center border-r border-[#27272A] pl-5 pr-2 text-sm gap-x-4">
+          <div className="min-w-fit w-full justify-start flex items-center border-[#27272A] pl-5 pr-2 text-sm gap-x-4">
             <div className="flex items-center gap-x-2">
               FPS Drop
               <div

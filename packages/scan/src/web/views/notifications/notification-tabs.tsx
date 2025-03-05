@@ -12,8 +12,8 @@ export const NotificationTabs = ({
   const { notificationState, setNotificationState, setRoute } =
     useNotificationsContext();
   return (
-    <div className="flex w-full justify-between items-center px-3 py-2 text-xs">
-      <div className="bg-[#18181B] flex items-center gap-x-1 p-1 rounded-sm">
+    <div className="flex w-full justify-between items-center pl-3 pr-4 py-2 text-xs">
+      <div className="bg-[#18181B] min-h-9 flex items-stretch gap-x-1 p-1 rounded-sm">
         <button
           type="button"
           onClick={() => {
@@ -23,11 +23,11 @@ export const NotificationTabs = ({
             });
           }}
           className={cn([
-            'w-1/2 flex items-center justify-center whitespace-nowrap py-[5px] px-1 gap-x-1',
+            'flex items-center justify-center whitespace-nowrap px-3 gap-x-1 rounded-sm',
             notificationState.route === 'render-visualization' ||
             notificationState.route === 'render-explanation'
-              ? 'text-white bg-[#7521c8] rounded-sm'
-              : 'text-[#6E6E77] bg-[#18181B] rounded-sm',
+              ? 'text-white bg-[#7521c8]'
+              : 'text-[#6E6E77] bg-[#18181B]',
           ])}
         >
           Ranked
@@ -41,10 +41,10 @@ export const NotificationTabs = ({
             });
           }}
           className={cn([
-            'w-1/2 flex items-center justify-center whitespace-nowrap py-[5px] px-1 gap-x-1',
+            'flex items-center justify-center whitespace-nowrap px-3 gap-x-1 rounded-sm',
             notificationState.route === 'other-visualization'
-              ? 'text-white bg-[#7521c8] rounded-sm'
-              : 'text-[#6E6E77] bg-[#18181B] rounded-sm',
+              ? 'text-white bg-[#7521c8]'
+              : 'text-[#6E6E77] bg-[#18181B]',
           ])}
         >
           Overview
@@ -58,10 +58,10 @@ export const NotificationTabs = ({
             });
           }}
           className={cn([
-            'w-1/2 flex items-center justify-center whitespace-nowrap py-[5px] px-1 gap-x-1',
+            'flex items-center justify-center whitespace-nowrap px-3 gap-x-1 rounded-sm',
             notificationState.route === 'optimize'
-              ? 'text-white bg-[#7521c8] rounded-sm'
-              : 'text-[#6E6E77] bg-[#18181B] rounded-sm',
+              ? 'text-white bg-[#7521c8]'
+              : 'text-[#6E6E77] bg-[#18181B]',
           ])}
         >
           <span>Prompts</span>

@@ -23,7 +23,7 @@ const TabLayout = ({ children }: { children: ReactNode }) => {
       <div className="h-[50px] w-full">
         <NotificationTabs selectedEvent={notificationState.selectedEvent} />
       </div>
-      <div className="h-calc(100%-50px) flex flex-col overflow-y-auto px-3">
+      <div className="h-calc(100%-50px) flex flex-col overflow-y-auto pl-3 pr-4">
         {children}
       </div>
     </div>
