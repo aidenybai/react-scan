@@ -83,48 +83,61 @@ const mergeRects = (rects: DOMRect[]) => {
   return new DOMRect(minX, minY, maxX - minX, maxY - minY);
 };
 
+interface IntersectionState {
+  resolveNext: ((value: IntersectionObserverEntry[]) => void) | null;
+  seenElements: Set<Element>;
+  uniqueElements: Set<Element>;
+  done: boolean;
+}
+
+function onIntersect(
+  this: IntersectionState,
+  entries: IntersectionObserverEntry[],
+  observer: IntersectionObserver,
+) {
+  const newEntries: IntersectionObserverEntry[] = [];
+
+  for (const entry of entries) {
+    const element = entry.target;
+    if (!this.seenElements.has(element)) {
+      this.seenElements.add(element);
+      newEntries.push(entry);
+    }
+  }
+
+  if (newEntries.length > 0 && this.resolveNext) {
+    this.resolveNext(newEntries);
+    this.resolveNext = null;
+  }
+
+  if (this.seenElements.size === this.uniqueElements.size) {
+    observer.disconnect();
+    this.done = true;
+    if (this.resolveNext) {
+      this.resolveNext([]);
+    }
+  }
+}
+
 export const getBatchedRectMap = async function* (
   elements: Element[],
 ): AsyncGenerator<IntersectionObserverEntry[], void, unknown> {
-  const uniqueElements = new Set(elements);
-  const seenElements = new Set<Element>();
+  const state: IntersectionState = {
+    uniqueElements: new Set(elements),
+    seenElements: new Set(),
+    resolveNext: null,
+    done: false,
+  };
+  const observer = new IntersectionObserver(onIntersect.bind(state));
 
-  let resolveNext: ((value: IntersectionObserverEntry[]) => void) | null = null;
-  let done = false;
-
-  const observer = new IntersectionObserver((entries) => {
-    const newEntries: IntersectionObserverEntry[] = [];
-
-    for (const entry of entries) {
-      const element = entry.target;
-      if (!seenElements.has(element)) {
-        seenElements.add(element);
-        newEntries.push(entry);
-      }
-    }
-
-    if (newEntries.length > 0 && resolveNext) {
-      resolveNext(newEntries);
-      resolveNext = null;
-    }
-
-    if (seenElements.size === uniqueElements.size) {
-      observer.disconnect();
-      done = true;
-      if (resolveNext) {
-        resolveNext([]);
-      }
-    }
-  });
-
-  for (const element of uniqueElements) {
+  for (const element of state.uniqueElements) {
     observer.observe(element);
   }
 
-  while (!done) {
+  while (!state.done) {
     const entries = await new Promise<IntersectionObserverEntry[]>(
       (resolve) => {
-        resolveNext = resolve;
+        state.resolveNext = resolve;
       },
     );
     if (entries.length > 0) {
@@ -153,6 +166,7 @@ export const flushOutlines = async () => {
 
   const rectsMap = new Map<Element, DOMRect>();
 
+  // TODO(Alexis): too complex, needs breakdown
   for await (const entries of getBatchedRectMap(elements)) {
     for (const entry of entries) {
       const element = entry.target;
@@ -328,6 +342,7 @@ export const getCanvasEl = () => {
   window.addEventListener('resize', () => {
     if (!isResizeScheduled) {
       isResizeScheduled = true;
+      // TODO(Alexis): bindable
       setTimeout(() => {
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -362,6 +377,7 @@ export const getCanvasEl = () => {
   window.addEventListener('scroll', () => {
     if (!isScrollScheduled) {
       isScrollScheduled = true;
+      // TODO(Alexis): bindable
       setTimeout(() => {
         const { scrollX, scrollY } = window;
         const deltaX = scrollX - prevScrollX;
@@ -375,9 +391,9 @@ export const getCanvasEl = () => {
             deltaY,
           });
         } else {
-          requestAnimationFrame(() => {
-            updateScroll(activeOutlines, deltaX, deltaY);
-          });
+          requestAnimationFrame(
+            updateScroll.bind(null, activeOutlines, deltaX, deltaY),
+          );
         }
         isScrollScheduled = false;
       }, 16 * 2);
@@ -386,9 +402,7 @@ export const getCanvasEl = () => {
 
   setInterval(() => {
     if (blueprintMapKeys.size) {
-      requestAnimationFrame(() => {
-        flushOutlines();
-      });
+      requestAnimationFrame(flushOutlines);
     }
   }, 16 * 2);
 

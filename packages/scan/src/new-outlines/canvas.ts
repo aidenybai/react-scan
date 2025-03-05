@@ -1,30 +1,48 @@
 import type { ActiveOutline, OutlineData } from './types';
 
 export const OUTLINE_ARRAY_SIZE = 7;
-export const MONO_FONT =
+const MONO_FONT =
   'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
-export const INTERPOLATION_SPEED = 0.1;
-export const lerp = (start: number, end: number) => {
+const INTERPOLATION_SPEED = 0.1;
+const lerp = (start: number, end: number) => {
   return Math.floor(start + (end - start) * INTERPOLATION_SPEED);
 };
 
-export const MAX_PARTS_LENGTH = 4;
-export const MAX_LABEL_LENGTH = 40;
-export const TOTAL_FRAMES = 45;
+const MAX_PARTS_LENGTH = 4;
+const MAX_LABEL_LENGTH = 40;
+const TOTAL_FRAMES = 45;
 
-export const primaryColor = '115,97,230';
-export const secondaryColor = '128,128,128';
+const PRIMARY_COLOR = '115,97,230';
+// const SECONDARY_COLOR = '128,128,128';
+
+function sortEntry(prev: [number, string[]], next: [number, string[]]): number {
+  return next[0] - prev[0];
+}
+
+function getSortedEntries(
+  countByNames: Map<number, string[]>,
+): [number, string[]][] {
+  const entries = [...countByNames.entries()];
+  return entries.sort(sortEntry);
+}
+
+function getLabelTextPart([count, names]: [number, string[]]): string {
+  let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
+  if (part.length > MAX_LABEL_LENGTH) {
+    part = `${part.slice(0, MAX_LABEL_LENGTH)}…`;
+  }
+  return part;
+}
 
 export const getLabelText = (outlines: ActiveOutline[]): string => {
   const nameByCount = new Map<string, number>();
-  for (const outline of outlines) {
-    const { name, count } = outline;
+  for (const { name, count } of outlines) {
     nameByCount.set(name, (nameByCount.get(name) || 0) + count);
   }
 
   const countByNames = new Map<number, string[]>();
-  for (const [name, count] of nameByCount.entries()) {
+  for (const [name, count] of nameByCount) {
     const names = countByNames.get(count);
     if (names) {
       names.push(name);
@@ -33,21 +51,12 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
     }
   }
 
-  const partsEntries = Array.from(countByNames.entries()).sort(
-    ([countA], [countB]) => countB - countA,
-  );
-  const partsLength = partsEntries.length;
-  let labelText = '';
-  for (let i = 0; i < partsLength; i++) {
-    const [count, names] = partsEntries[i];
-    let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
-    if (part.length > MAX_LABEL_LENGTH) {
-      part = `${part.slice(0, MAX_LABEL_LENGTH)}…`;
-    }
-    if (i !== partsLength - 1) {
-      part += ', ';
-    }
-    labelText += part;
+  // TODO(Alexis): Optimize
+  const partsEntries = getSortedEntries(countByNames);
+  let labelText = getLabelTextPart(partsEntries[0]);
+  for (let i = 1, len = partsEntries.length; i < len; i++) {
+    // biome-ignore lint/style/useTemplate: Templates are slow
+    labelText += ', ' + getLabelTextPart(partsEntries[i]);
   }
 
   if (labelText.length > MAX_LABEL_LENGTH) {
@@ -200,15 +209,14 @@ export const drawCanvas = (
     rectMap.set(rectKey, rect);
   }
 
-  for (const rect of rectMap.values()) {
-    const { x, y, width, height, alpha } = rect;
-    ctx.strokeStyle = `rgba(${primaryColor},${alpha})`;
+  for (const { x, y, width, height, alpha } of rectMap.values()) {
+    ctx.strokeStyle = `rgba(${PRIMARY_COLOR},${alpha})`;
     ctx.lineWidth = 1;
 
     ctx.beginPath();
     ctx.rect(x, y, width, height);
     ctx.stroke();
-    ctx.fillStyle = `rgba(${primaryColor},${alpha * 0.1})`;
+    ctx.fillStyle = `rgba(${PRIMARY_COLOR},${alpha * 0.1})`;
     ctx.fill();
   }
 
@@ -229,6 +237,7 @@ export const drawCanvas = (
 
   ctx.textRendering = 'optimizeSpeed';
 
+  // TODO(Alexis): optimizable?
   for (const outlines of groupedOutlinesMap.values()) {
     const first = outlines[0];
     const { x, y, frame } = first;
@@ -259,6 +268,7 @@ export const drawCanvas = (
     }
   }
 
+  // TODO(Alexis): optimize
   const sortedLabels = Array.from(labelMap.entries()).sort(
     ([_, a], [__, b]) => {
       return getAreaFromOutlines(b.outlines) - getAreaFromOutlines(a.outlines);
@@ -285,7 +295,7 @@ export const drawCanvas = (
         y + height > otherY &&
         otherY + otherHeight > y
       ) {
-        label.text = getLabelText([...label.outlines, ...otherLabel.outlines]);
+        label.text = getLabelText(label.outlines.concat(otherLabel.outlines));
         label.width = ctx.measureText(label.text).width;
         labelMap.delete(otherKey);
       }
@@ -295,13 +305,13 @@ export const drawCanvas = (
   for (const label of labelMap.values()) {
     const { x, y, alpha, width, height, text } = label;
 
-    let labelY: number = y - height - 4;
+    let labelY = y - height - 4;
 
     if (labelY < 0) {
       labelY = 0;
     }
 
-    ctx.fillStyle = `rgba(${primaryColor},${alpha})`;
+    ctx.fillStyle = `rgba(${PRIMARY_COLOR},${alpha})`;
     ctx.fillRect(x, labelY, width + 4, height + 4);
 
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
