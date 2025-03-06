@@ -8,14 +8,15 @@ import {
   isHostFiber,
   traverseFiber,
 } from 'bippy';
+
 import { type PropsChange, ReactScanInternals } from '~core/index';
 import { ChangeReason } from '~core/instrumentation';
 import { isEqual } from '~core/utils';
 import { batchGetBoundingRects } from '~web/utils/outline';
 import { globalInspectorState } from '.';
 import type { ExtendedReactRenderer } from '../../../types';
-import { TIMELINE_MAX_UPDATES } from './states';
 import type { MinimalFiberInfo } from './states';
+import { TIMELINE_MAX_UPDATES } from './states';
 import { getAllFiberContexts, getStateNames } from './timeline/utils';
 
 interface StateItem {
@@ -144,7 +145,6 @@ export const getParentCompositeFiber = (
 
   return null;
 };
-
 
 const isFiberInTree = (fiber: Fiber, root: Fiber): boolean => {
   {

@@ -1,4 +1,5 @@
 import type { Fiber } from 'bippy';
+
 import { Store } from '~core/index';
 import { findComponentDOMNode } from '~web/views/inspector/utils';
 import { readLocalStorage } from './helpers';
