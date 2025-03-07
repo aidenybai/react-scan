@@ -9,11 +9,10 @@ import {
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
 import type { RenderData } from 'src/core/utils';
-// import { initReactScanOverlay } from '~web/overlay';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
-import { ICONS } from '~web/assets/svgs/svgs';
-import { createToolbar, scriptLevelToolbar } from '~web/toolbar';
+import { createToolbar } from '~web/toolbar';
+import { IS_CLIENT } from '~web/utils/constants';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { Outline } from '~web/utils/outline';
 import type { States } from '~web/views/inspector/utils';
@@ -24,6 +23,9 @@ import type {
 } from './instrumentation';
 import type { InternalInteraction } from './monitor/types';
 import type { getSession } from './monitor/utils';
+import { startTimingTracking } from './notifications/event-tracking';
+import { createHighlightCanvas } from './notifications/outline-overlay';
+import packageJson from '../../package.json';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -46,20 +48,10 @@ const initRootContainer = (): RootContainer => {
 
   shadowRoot = rootContainer.attachShadow({ mode: 'open' });
 
-  const fragment = document.createDocumentFragment();
-
   const cssStyles = document.createElement('style');
   cssStyles.textContent = styles;
 
-  const iconSprite = new DOMParser().parseFromString(
-    ICONS,
-    'image/svg+xml',
-  ).documentElement;
-
-
-  fragment.appendChild(iconSprite);
-  fragment.appendChild(cssStyles);
-  shadowRoot.appendChild(fragment);
+  shadowRoot.appendChild(cssStyles);
 
   document.documentElement.appendChild(rootContainer);
 
@@ -161,6 +153,22 @@ export interface Options {
    */
   trackUnnecessaryRenders?: boolean;
 
+  /**
+   * Should the FPS meter show in the toolbar
+   *
+   *  @default true
+   */
+  showFPS?: boolean;
+
+  /**
+   * Should react scan log internal errors to the console.
+   *
+   * Useful if react scan is not behaving expected and you want to provide information to maintainers when submitting an issue https://github.com/aidenybai/react-scan/issues
+   *
+   *  @default false
+   */
+  _debug?: 'verbose' | false;
+
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
@@ -198,6 +206,9 @@ export interface StoreType {
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
+  interactionListeningForRenders:
+    | ((fiber: Fiber, renders: Array<Render>) => void)
+    | null;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -211,6 +222,7 @@ export interface Internals {
   activeOutlines: Map<OutlineKey, Outline>; // we re-use the outline object on the scheduled outline
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
   Store: StoreType;
+  version: string;
 }
 
 export type FunctionalComponentStateChange = {
@@ -260,9 +272,7 @@ export type ChangesListener = (changes: ChangesPayload) => void;
 
 export const Store: StoreType = {
   wasDetailsOpen: signal(true),
-  isInIframe: signal(
-    typeof window !== 'undefined' && window.self !== window.top,
-  ),
+  isInIframe: signal(IS_CLIENT && window.self !== window.top),
   inspectState: signal<States>({
     kind: 'uninitialized',
   }),
@@ -271,6 +281,7 @@ export const Store: StoreType = {
   reportData: new Map<number, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
+  interactionListeningForRenders: null,
 };
 
 export const ReactScanInternals: Internals = {
@@ -278,22 +289,24 @@ export const ReactScanInternals: Internals = {
   componentAllowList: null,
   options: signal({
     enabled: true,
-    includeChildren: true,
-    playSound: false,
+    // includeChildren: true,
+    // playSound: false,
     log: false,
     showToolbar: true,
-    renderCountThreshold: 0,
-    report: undefined,
-    alwaysShowLabels: false,
+    // renderCountThreshold: 0,
+    // report: undefined,
+    // alwaysShowLabels: false,
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
-    smoothlyAnimateOutlines: true,
-    trackUnnecessaryRenders: false,
+    showFPS: true,
+    // smoothlyAnimateOutlines: true,
+    // trackUnnecessaryRenders: false,
   }),
   onRender: null,
   scheduledOutlines: new Map(),
   activeOutlines: new Map(),
   Store,
+  version: packageJson.version,
 };
 
 export type LocalStorageOptions = Omit<
@@ -325,6 +338,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       // case 'report':
       // case 'alwaysShowLabels':
       case 'dangerouslyForceRunInProduction':
+      case 'showFPS':
         if (typeof value !== 'boolean') {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
@@ -422,6 +436,9 @@ export const setOptions = (userOptions: Partial<Options>) => {
     return;
   }
 
+  const shouldInitToolbar =
+    'showToolbar' in validOptions && validOptions.showToolbar !== undefined;
+
   const newOptions = {
     ...ReactScanInternals.options.value,
     ...validOptions,
@@ -434,17 +451,11 @@ export const setOptions = (userOptions: Partial<Options>) => {
 
   ReactScanInternals.options.value = newOptions;
 
-  const existingLocalStorageOptions =
-    readLocalStorage<LocalStorageOptions>('react-scan-options');
-  // we always want to persist the local storage option specifically for enabled to avoid annoying the user
-  // if the user doesn't have a toolbar we fallback to the true options because there wouldn't be a way to
-  // revert the local storage value
-  saveLocalStorage('react-scan-options', {
-    ...newOptions,
-    enabled: newOptions.showToolbar
-      ? (existingLocalStorageOptions?.enabled ?? newOptions.enabled ?? true)
-      : newOptions.enabled,
-  });
+  saveLocalStorage('react-scan-options', newOptions);
+
+  if (shouldInitToolbar) {
+    initToolbar(!!newOptions.showToolbar);
+  }
 
   return newOptions;
 };
@@ -469,50 +480,71 @@ export const getIsProduction = () => {
 };
 
 export const start = () => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  if (
-    getIsProduction() &&
-    !ReactScanInternals.options.value.dangerouslyForceRunInProduction
-  ) {
-    return;
-  }
-
-  const localStorageOptions =
-    readLocalStorage<LocalStorageOptions>('react-scan-options');
-
-  if (localStorageOptions) {
-    const { enabled } = localStorageOptions;
-    const validLocalOptions = validateOptions({ enabled });
-
-    if (Object.keys(validLocalOptions).length > 0) {
-      ReactScanInternals.options.value = {
-        ...ReactScanInternals.options.value,
-        ...validLocalOptions,
-      };
+  try {
+    if (!IS_CLIENT) {
+      return;
     }
-  }
 
-  const options = getOptions();
+    if (
+      getIsProduction() &&
+      !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+    ) {
+      return;
+    }
 
-  idempotent_createToolbar(!!options.value.showToolbar);
-  initReactScanInstrumentation();
+    const localStorageOptions =
+      readLocalStorage<LocalStorageOptions>('react-scan-options');
 
-  const isUsedInBrowserExtension = typeof window !== 'undefined';
-  if (!Store.monitor.value && !isUsedInBrowserExtension) {
-    setTimeout(() => {
-      if (isInstrumentationActive()) return;
-      // biome-ignore lint/suspicious/noConsole: Intended debug output
+    if (localStorageOptions) {
+      const validLocalOptions = validateOptions(localStorageOptions);
+
+      if (Object.keys(validLocalOptions).length > 0) {
+        ReactScanInternals.options.value = {
+          ...ReactScanInternals.options.value,
+          ...validLocalOptions,
+        };
+      }
+    }
+
+    const options = getOptions();
+
+    initReactScanInstrumentation(() => {
+      initToolbar(!!options.value.showToolbar);
+    });
+
+    const isUsedInBrowserExtension = IS_CLIENT;
+    if (!Store.monitor.value && !isUsedInBrowserExtension) {
+      setTimeout(() => {
+        if (isInstrumentationActive()) return;
+        // biome-ignore lint/suspicious/noConsole: Intended debug output
+        console.error(
+          '[React Scan] Failed to load. Must import React Scan before React runs.',
+        );
+      }, 5000);
+    }
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
+      // biome-ignore lint/suspicious/noConsole: intended debug output
       console.error(
-        '[React Scan] Failed to load. Must import React Scan before React runs.',
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
       );
-    }, 5000);
+    }
   }
 };
 
-const idempotent_createToolbar = (showToolbar: boolean) => {
+const initToolbar = (showToolbar: boolean) => {
+  window.reactScanCleanupListeners?.();
+
+  const cleanupTimingTracking = startTimingTracking();
+  const cleanupOutlineCanvas = createNotificationsOutlineCanvas();
+
+  window.reactScanCleanupListeners = () => {
+    cleanupTimingTracking();
+    cleanupOutlineCanvas?.();
+  };
+
   const windowToolbarContainer = window.__REACT_SCAN_TOOLBAR_CONTAINER__;
 
   if (!showToolbar) {
@@ -520,22 +552,25 @@ const idempotent_createToolbar = (showToolbar: boolean) => {
     return;
   }
 
-  // allows us to override toolbar by pasting a new script in console
-  if (!scriptLevelToolbar && windowToolbarContainer) {
-    windowToolbarContainer.remove();
-    const { shadowRoot } = initRootContainer();
-    createToolbar(shadowRoot);
-    return;
-  }
-
-  if (scriptLevelToolbar && windowToolbarContainer) {
-    // then a toolbar already exists and is subscribed to the correct instrumentation
-    return;
-  }
-
-  // then we are creating a toolbar for the first time
+  windowToolbarContainer?.remove();
   const { shadowRoot } = initRootContainer();
   createToolbar(shadowRoot);
+};
+
+const createNotificationsOutlineCanvas = () => {
+  try {
+    const highlightRoot = document.documentElement;
+    return createHighlightCanvas(highlightRoot);
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
+      // biome-ignore lint/suspicious/noConsole: intended debug output
+      console.error(
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
+      );
+    }
+  }
 };
 
 export const scan = (options: Options = {}) => {

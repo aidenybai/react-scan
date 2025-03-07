@@ -1,10 +1,11 @@
+import { computed, untracked, useSignalEffect } from '@preact/signals';
 import type { Fiber } from 'bippy';
 import { Component } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
 import { StickySection } from '~web/components/sticky-section';
-import { signalIsSettingsOpen } from '~web/state';
+import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { ComponentsTree } from './components-tree';
@@ -15,7 +16,11 @@ import {
   inspectorUpdateSignal,
   timelineActions,
 } from './states';
-import { collectInspectorData, getStateNames, resetTracking } from './timeline/utils';
+import {
+  collectInspectorData,
+  getStateNames,
+  resetTracking,
+} from './timeline/utils';
 import { extractMinimalFiberInfo, getCompositeFiberFromElement } from './utils';
 import { WhatChangedSection } from './what-changed';
 
@@ -73,33 +78,45 @@ class InspectorErrorBoundary extends Component {
   }
 }
 
-const Inspector = constant(() => {
-  const refInspector = useRef<HTMLDivElement>(null);
+const inspectorContainerClassName = computed(() =>
+  cn(
+    'react-scan-inspector',
+    'flex-1',
+    'opacity-0',
+    'overflow-y-auto overflow-x-hidden',
+    'transition-opacity delay-0',
+    'pointer-events-none',
+    !signalIsSettingsOpen.value && 'opacity-100 delay-300 pointer-events-auto',
+  ),
+);
+
+const Inspector = /* @__PURE__ */ constant(() => {
   const refLastInspectedFiber = useRef<Fiber | null>(null);
-  const isSettingsOpen = signalIsSettingsOpen.value;
 
-  useEffect(() => {
-    const processUpdate = (fiber: Fiber) => {
-      if (!fiber) return;
+  // NOTE(Alexis): no need for useCallback
+  const processUpdate = (fiber: Fiber) => {
+    if (!fiber) return;
 
-      refLastInspectedFiber.current = fiber;
-      const { data: inspectorData, shouldUpdate } = collectInspectorData(fiber);
+    refLastInspectedFiber.current = fiber;
+    const { data: inspectorData, shouldUpdate } = collectInspectorData(fiber);
 
-      if (shouldUpdate) {
-        const update: TimelineUpdate = {
-          timestamp: Date.now(),
-          fiberInfo: extractMinimalFiberInfo(fiber),
-          props: inspectorData.fiberProps,
-          state: inspectorData.fiberState,
-          context: inspectorData.fiberContext,
-          stateNames: getStateNames(fiber),
-        };
+    if (shouldUpdate) {
+      const update: TimelineUpdate = {
+        timestamp: Date.now(),
+        fiberInfo: extractMinimalFiberInfo(fiber),
+        props: inspectorData.fiberProps,
+        state: inspectorData.fiberState,
+        context: inspectorData.fiberContext,
+        stateNames: getStateNames(fiber),
+      };
 
-        timelineActions.addUpdate(update, fiber);
-      }
-    };
+      timelineActions.addUpdate(update, fiber);
+    }
+  };
 
-    const unSubState = Store.inspectState.subscribe((state) => {
+  useSignalEffect(() => {
+    const state = Store.inspectState.value;
+    untracked(() => {
       if (state.kind !== 'focused' || !state.focusedDomElement) {
         refLastInspectedFiber.current = null;
         globalInspectorState.cleanup();
@@ -112,13 +129,21 @@ const Inspector = constant(() => {
 
       const { parentCompositeFiber } = getCompositeFiberFromElement(
         state.focusedDomElement,
-        state.fiber
+        state.fiber,
       );
 
+      if (!parentCompositeFiber) {
+        Store.inspectState.value = {
+          kind: 'inspect-off',
+        };
+        signalWidgetViews.value = {
+          view: 'none',
+        };
+        return;
+      }
 
-      if (!parentCompositeFiber) return;
-
-      const isNewComponent = refLastInspectedFiber.current?.type !== parentCompositeFiber.type;
+      const isNewComponent =
+        refLastInspectedFiber.current?.type !== parentCompositeFiber.type;
 
       if (isNewComponent) {
         refLastInspectedFiber.current = parentCompositeFiber;
@@ -126,8 +151,12 @@ const Inspector = constant(() => {
         processUpdate(parentCompositeFiber);
       }
     });
+  });
 
-    const unSubInspectorUpdate = inspectorUpdateSignal.subscribe(() => {
+  useSignalEffect(() => {
+    // NOTE(Alexis): just track
+    inspectorUpdateSignal.value;
+    untracked(() => {
       const inspectState = Store.inspectState.value;
       if (inspectState.kind !== 'focused' || !inspectState.focusedDomElement) {
         refLastInspectedFiber.current = null;
@@ -137,12 +166,15 @@ const Inspector = constant(() => {
 
       const { parentCompositeFiber } = getCompositeFiberFromElement(
         inspectState.focusedDomElement,
-        inspectState.fiber
+        inspectState.fiber,
       );
 
       if (!parentCompositeFiber) {
         Store.inspectState.value = {
           kind: 'inspect-off',
+        };
+        signalWidgetViews.value = {
+          view: 'none',
         };
         return;
       }
@@ -158,30 +190,17 @@ const Inspector = constant(() => {
         };
       }
     });
+  });
 
+  useEffect(() => {
     return () => {
-      unSubState();
-      unSubInspectorUpdate();
       globalInspectorState.cleanup();
     };
   }, []);
 
   return (
     <InspectorErrorBoundary>
-      <div
-        ref={refInspector}
-        className={cn(
-          'react-scan-inspector',
-          'flex-1',
-          'opacity-0',
-          'overflow-y-auto overflow-x-hidden',
-          'transition-opacity delay-0',
-          'pointer-events-none',
-          {
-            'opacity-100 delay-300 pointer-events-auto': !isSettingsOpen,
-          },
-        )}
-      >
+      <div className={inspectorContainerClassName}>
         <WhatChangedSection />
         <StickySection>
           {(props) => <PropertySection section="props" {...props} />}
@@ -197,8 +216,7 @@ const Inspector = constant(() => {
   );
 });
 
-
-export const ViewInspector = constant(() => {
+export const ViewInspector = /* @__PURE__ */ constant(() => {
   if (Store.inspectState.value.kind !== 'focused') return null;
   return (
     <InspectorErrorBoundary>

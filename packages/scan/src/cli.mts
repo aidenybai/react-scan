@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
 import { bgMagenta, dim, red } from 'kleur';
@@ -225,24 +225,26 @@ const init = async () => {
     })();`,
   });
 
-  const page = await context.newPage();
-
-  const scriptContent = fs.readFileSync(
+  const scriptContent = await fs.readFile(
     path.resolve(__dirname, './auto.global.js'),
     'utf8',
   );
+
+  // Add React Scan script at context level so it's available for all pages
+  await context.addInitScript({
+    content: `window.hideIntro = true;${scriptContent}\n//# sourceURL=react-scan.js`,
+  });
+
+  const page = await context.newPage();
 
   const inputUrl = args._[0] || 'about:blank';
 
   const urlString = inferValidURL(inputUrl);
 
   await page.goto(urlString);
+
   await page.waitForLoadState('load');
   await page.waitForTimeout(500);
-
-  await page.addScriptTag({
-    content: `${scriptContent}\n//# sourceURL=react-scan.js`,
-  });
 
   const pollReport = async () => {
     if (page.url() !== currentURL) return;
@@ -289,17 +291,12 @@ const init = async () => {
       });
 
       if (!hasReactScan) {
-        await page.addScriptTag({
-          content: scriptContent,
-        });
+        // Script is already registered at context level, just reload
+        await page.reload();
+        return;
       }
 
       await page.waitForTimeout(100);
-
-      await page.evaluate(() => {
-        if (typeof globalThis.reactScan !== 'function') return;
-        globalThis.reactScan({ report: true });
-      });
 
       interval = setInterval(() => {
         pollReport().catch(() => {});

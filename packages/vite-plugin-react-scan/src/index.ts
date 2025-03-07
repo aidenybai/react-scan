@@ -88,7 +88,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
     enable = process.env.NODE_ENV === 'development',
     scanOptions = DEFAULT_SCAN_OPTIONS,
     debug = false,
-    autoDisplayNames = true,
+    autoDisplayNames = false,
   } = options;
 
   let config: ResolvedConfig;
@@ -117,10 +117,11 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
       `;
     }
 
-    // Development version remains the same
+    // Development version - use the base path from config
+    const base = config.base || '/';
     return `
     <script type="module">
-      import { scan } from '/@id/react-scan';
+      import { scan } from '${base}@id/react-scan';
       (async () => {
         try {
           scan(${hasOptions ? JSON.stringify(options) : ''});
@@ -135,6 +136,14 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
     name: PLUGIN_NAME,
     enforce: 'pre',
 
+    config(config) {
+      return {
+        optimizeDeps: {
+          exclude: [...(config.optimizeDeps?.exclude || []), 'react-scan'],
+        },
+      };
+    },
+
     transform: async (code, id) => {
       if (!autoDisplayNames || !isJsxFile(id)) {
         return null;
@@ -142,6 +151,15 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
 
       try {
         const result = await transformAsync(code, {
+          presets: [
+            [
+              '@babel/preset-typescript',
+              {
+                isTSX: isJsxFile(id),
+                allExtensions: true,
+              },
+            ],
+          ],
           plugins: [
             [
               '@babel/plugin-transform-react-jsx',
@@ -152,6 +170,8 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
             babelPluginReactDisplayName,
           ],
           filename: id,
+          configFile: false,
+          babelrc: false,
         });
 
         if (!result?.code) {
@@ -160,7 +180,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
         }
 
         log.debug(`Successfully transformed ${id}`);
-        return { code: result.code, map: result.map };
+        return { code: result.code };
       } catch (error) {
         log.error(`Failed to transform ${id}:`, error);
         return null;

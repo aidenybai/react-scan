@@ -35,7 +35,6 @@ import {
   type ContextChange,
   ReactScanInternals,
   type StateChange,
-  Store,
 } from './index';
 
 let fps = 0;
@@ -97,7 +96,6 @@ export const isElementInViewport = (
   return isVisible && rect.width && rect.height;
 };
 
-// biome-ignore lint/suspicious/noConstEnum: Using const enum for better performance since it's inlined at compile time and removed from the JS output
 export const enum ChangeReason {
   Props = 0b001,
   FunctionalState = 0b010,
@@ -338,6 +336,7 @@ interface InstrumentationConfig {
   onCommitFinish: OnCommitFinishHandler;
   onError: OnErrorHandler;
   onActive?: OnActiveHandler;
+  onPostCommitFiberRoot: () => void;
   // monitoring does not need to track changes, and it adds overhead to leave it on
   trackChanges: boolean;
   // allows monitoring to continue tracking renders even if react scan dev mode is disabled
@@ -419,6 +418,48 @@ export const isRenderUnnecessary = (fiber: Fiber) => {
 
 const TRACK_UNNECESSARY_RENDERS = false;
 
+export interface RenderData {
+  selfTime: number;
+  totalTime: number;
+  renderCount: number;
+  lastRenderTimestamp: number;
+}
+
+const RENDER_DEBOUNCE_MS = 16;
+
+export const renderDataMap = new WeakMap<object, RenderData>();
+
+const trackRender = (
+  type: unknown,
+  fiberSelfTime: number,
+  fiberTotalTime: number,
+  hasChanges: boolean,
+  hasDomMutations: boolean,
+) => {
+  const currentTimestamp = Date.now();
+  const existingData = renderDataMap.get(type as object);
+
+  if (
+    (hasChanges || hasDomMutations) &&
+    (!existingData ||
+      currentTimestamp - (existingData.lastRenderTimestamp || 0) >
+        RENDER_DEBOUNCE_MS)
+  ) {
+    const renderData: RenderData = existingData || {
+      selfTime: 0,
+      totalTime: 0,
+      renderCount: 0,
+      lastRenderTimestamp: currentTimestamp,
+    };
+
+    renderData.renderCount = (renderData.renderCount || 0) + 1;
+    renderData.selfTime = fiberSelfTime || 0;
+    renderData.totalTime = fiberTotalTime || 0;
+    renderData.lastRenderTimestamp = currentTimestamp;
+
+    renderDataMap.set(type as object, { ...renderData });
+  }
+};
 
 export const createInstrumentation = (
   instanceKey: string,
@@ -442,14 +483,15 @@ export const createInstrumentation = (
       onActive: config.onActive,
       onCommitFiberRoot(_rendererID, root) {
         instrumentation.fiberRoots.add(root);
-        if (
-          ReactScanInternals.instrumentation?.isPaused.value &&
-          (Store.inspectState.value.kind === 'inspect-off' ||
-            Store.inspectState.value.kind === 'uninitialized') &&
-          !config.forceAlwaysTrackRenders
-        ) {
-          return;
-        }
+        // for now we always track everything for notifications, it may be worth it to make this configurable
+        // if (
+        //   ReactScanInternals.instrumentation?.isPaused.value &&
+        //   (Store.inspectState.value.kind === "inspect-off" ||
+        //     Store.inspectState.value.kind === "uninitialized") &&
+        //   !config.forceAlwaysTrackRenders
+        // ) {
+        //   return;
+        // }
         const allInstances = getAllInstances();
         for (const instance of allInstances) {
           instance.config.onCommitStart();
@@ -477,7 +519,6 @@ export const createInstrumentation = (
               const changesState = collectStateChanges(fiber).changes;
               const changesContext = collectContextChanges(fiber).changes;
 
-              // Convert props changes
               changes.push.apply(
                 null,
                 changesProps.map(
@@ -490,7 +531,6 @@ export const createInstrumentation = (
                 ),
               );
 
-              // Convert state changes
               for (const change of changesState) {
                 if (fiber.tag === ClassComponentTag) {
                   changes.push({
@@ -507,7 +547,6 @@ export const createInstrumentation = (
                 }
               }
 
-              // Convert context changes
               changes.push.apply(
                 null,
                 changesContext.map(
@@ -522,7 +561,8 @@ export const createInstrumentation = (
               );
             }
 
-            const { selfTime } = getTimings(fiber);
+            const { selfTime: fiberSelfTime, totalTime: fiberTotalTime } =
+              getTimings(fiber);
 
             const fps = getFPS();
             const render: Render = {
@@ -530,17 +570,31 @@ export const createInstrumentation = (
               componentName: getDisplayName(type),
               count: 1,
               changes,
-              time: selfTime,
+              time: fiberSelfTime,
               forget: hasMemoCache(fiber),
               // todo: allow this to be toggle-able through toolbar
               // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
               unnecessary: TRACK_UNNECESSARY_RENDERS
                 ? isRenderUnnecessary(fiber)
                 : null,
-
               didCommit: didFiberCommit(fiber),
               fps,
             };
+
+            // First, determine if this is a real render we should track
+            const hasChanges = changes.length > 0;
+            const hasDomMutations = getMutatedHostFibers(fiber).length > 0;
+
+            if (phase === 'update') {
+              trackRender(
+                type,
+                fiberSelfTime,
+                fiberTotalTime,
+                hasChanges,
+                hasDomMutations,
+              );
+            }
+
             for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {
               const index = validInstancesIndicies[i];
               const instance = allInstances[index];
@@ -551,6 +605,12 @@ export const createInstrumentation = (
 
         for (const instance of allInstances) {
           instance.config.onCommitFinish();
+        }
+      },
+      onPostCommitFiberRoot() {
+        const allInstances = getAllInstances();
+        for (const instance of allInstances) {
+          instance.config.onPostCommitFiberRoot();
         }
       },
     });

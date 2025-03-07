@@ -1,34 +1,29 @@
 {
   "manifest_version": 3,
   "name": "React Scan",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Scan React apps for performance problems",
   "icons": {
-    "16": "icon/16.png",
-    "32": "icon/32.png",
-    "48": "icon/48.png",
-    "96": "icon/96.png",
-    "128": "icon/128.png"
+    "16": "icons/disabled/16.png",
+    "32": "icons/disabled/32.png",
+    "48": "icons/disabled/48.png",
+    "128": "icons/disabled/128.png"
   },
   "action": {
     "default_icon": {
-      "16": "icon/16.png",
-      "32": "icon/32.png",
-      "48": "icon/48.png",
-      "96": "icon/96.png",
-      "128": "icon/128.png"
+      "16": "icons/disabled/16.png",
+      "32": "icons/disabled/32.png",
+      "48": "icons/disabled/48.png",
+      "128": "icons/disabled/128.png"
     }
   },
   "background": {
     "service_worker": "src/background/index.ts"
   },
-  "permissions": [
-    "activeTab",
-    "tabs",
-    "scripting",
-    "storage",
-    "declarativeNetRequest"
-  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "permissions": ["activeTab", "tabs", "scripting"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {
@@ -51,7 +46,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icon/*", "workers/*"],
+      "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
   ]

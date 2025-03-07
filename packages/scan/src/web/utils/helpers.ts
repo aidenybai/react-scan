@@ -1,6 +1,5 @@
 import {
   type Fiber,
-  ForwardRefTag,
   MemoComponentTag,
   SimpleMemoComponentTag,
   SuspenseComponentTag,
@@ -8,6 +7,7 @@ import {
   hasMemoCache,
 } from 'bippy';
 import { type ClassValue, clsx } from 'clsx';
+import { IS_CLIENT } from './constants';
 import { twMerge } from 'tailwind-merge';
 
 export const cn = (...inputs: Array<ClassValue>): string => {
@@ -15,7 +15,8 @@ export const cn = (...inputs: Array<ClassValue>): string => {
 };
 
 export const isFirefox =
-  typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox');
+  /* @__PURE__ */ typeof navigator !== 'undefined' &&
+  navigator.userAgent.includes('Firefox');
 
 export const onIdle = (callback: () => void) => {
   if ('scheduler' in globalThis) {
@@ -53,7 +54,7 @@ export const tryOrElse = <T>(fn: () => T, defaultValue: T): T => {
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
-  if (typeof window === 'undefined') return null;
+  if (!IS_CLIENT) return null;
 
   try {
     const stored = localStorage.getItem(storageKey);
@@ -64,14 +65,14 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
 };
 
 export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
-  if (typeof window === 'undefined') return;
+  if (!IS_CLIENT) return;
 
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {}
 };
 export const removeLocalStorage = (storageKey: string): void => {
-  if (typeof window === 'undefined') return;
+  if (!IS_CLIENT) return;
 
   try {
     window.localStorage.removeItem(storageKey);
@@ -132,18 +133,6 @@ export const getExtendedDisplayName = (fiber: Fiber): ExtendedDisplayName => {
         ? 'This component has been auto-memoized by the React Compiler.'
         : 'Memoized component that skips re-renders if props are the same',
       compiler,
-    });
-  }
-
-  if (
-    tag === ForwardRefTag ||
-    (type as { $$typeof?: symbol })?.$$typeof ===
-      Symbol.for('react.forward_ref')
-  ) {
-    wrapperTypes.push({
-      type: 'forwardRef',
-      title:
-        'Component that can forward refs to DOM elements or other components',
     });
   }
 

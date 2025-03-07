@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { ReactScanInternals, Store } from '~core/index';
 
 import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
+import { IS_CLIENT } from '~web/utils/constants';
 import { cn, throttle } from '~web/utils/helpers';
 import { lerp } from '~web/utils/lerp';
 import {
@@ -38,8 +39,9 @@ const ANIMATION_CONFIG = {
   },
 } as const;
 
-export const OVERLAY_DPR =
-  typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+export const OVERLAY_DPR = IS_CLIENT
+  ? /* @__PURE__ */ window.devicePixelRatio || 1
+  : 1;
 
 export const currentLockIconRect: LockIconRect | null = null;
 
@@ -372,7 +374,7 @@ export const ScanOverlay = () => {
     startFadeOut();
   };
 
-  const handleMouseMove = throttle((e?: MouseEvent) => {
+  const handlePointerMove = throttle((e?: PointerEvent) => {
     const state = Store.inspectState.peek();
     if (state.kind !== 'inspecting' || !refEventCatcher.current) return;
 
@@ -673,7 +675,7 @@ export const ScanOverlay = () => {
 
     window.addEventListener('scroll', handleResizeOrScroll, { passive: true });
     window.addEventListener('resize', handleResizeOrScroll, { passive: true });
-    document.addEventListener('mousemove', handleMouseMove, {
+    document.addEventListener('pointermove', handlePointerMove, {
       passive: true,
       capture: true,
     });
@@ -688,7 +690,7 @@ export const ScanOverlay = () => {
       unSubState();
       window.removeEventListener('scroll', handleResizeOrScroll);
       window.removeEventListener('resize', handleResizeOrScroll);
-      document.removeEventListener('mousemove', handleMouseMove, {
+      document.removeEventListener('pointermove', handlePointerMove, {
         capture: true,
       });
       document.removeEventListener('click', handleClick, { capture: true });
@@ -709,6 +711,7 @@ export const ScanOverlay = () => {
       <div
         ref={refEventCatcher}
         className={cn('fixed inset-0 w-screen h-screen', 'z-[214748365]')}
+        // DO NOT DO NOT DO NOT REMOVE THE STYLE IT WILL CAUSE MASSIVE PERFORMANCE ISSUES https://x.com/RobKnight__/status/1897524145157439558
         style={{
           pointerEvents: 'none',
         }}

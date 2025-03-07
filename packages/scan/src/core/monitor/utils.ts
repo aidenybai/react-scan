@@ -1,3 +1,4 @@
+import { IS_CLIENT } from '~web/utils/constants';
 import { onIdle } from '~web/utils/helpers';
 import { isSSR } from './constants';
 import { Device, type Session } from './types';
@@ -12,17 +13,18 @@ interface ExtendedNavigator extends Navigator {
   deviceMemory?: number;
 }
 
+const MOBILE_PATTERN =
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+
+const TABLET_PATTERN = /iPad|Tablet/i;
+
 const getDeviceType = () => {
   const userAgent = navigator.userAgent;
 
-  if (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      userAgent,
-    )
-  ) {
+  if (MOBILE_PATTERN.test(userAgent)) {
     return Device.MOBILE;
   }
-  if (/iPad|Tablet/i.test(userAgent)) {
+  if (TABLET_PATTERN.test(userAgent)) {
     return Device.TABLET;
   }
   return Device.DESKTOP;
@@ -32,9 +34,7 @@ const getDeviceType = () => {
  * Measure layout time
  */
 export const doubleRAF = (callback: (...args: unknown[]) => void) => {
-  return requestAnimationFrame(() => {
-    requestAnimationFrame(callback);
-  });
+  return requestAnimationFrame(requestAnimationFrame.bind(window, callback));
 };
 
 export const generateId = () => {
@@ -131,4 +131,18 @@ export const getSession = async ({
   };
   cachedSession = session;
   return session;
+};
+
+export const not_globally_unique_generateId = () => {
+  if (!IS_CLIENT) {
+    return '0';
+  }
+
+  // @ts-expect-error
+  if (window.reactScanIdCounter === undefined) {
+    // @ts-expect-error
+    window.reactScanIdCounter = 0;
+  }
+  // @ts-expect-error
+  return `${++window.reactScanIdCounter}`;
 };

@@ -240,10 +240,10 @@ export const collectContextChanges = (
   const prev: Record<string, unknown> = {};
   const changes: Array<ContextChange> = [];
 
-  const seenContexts = new Set<string>();
+  const seenContexts = new Set<unknown>();
   for (const [contextType, ctx] of currentContexts) {
     const name = ctx.displayName;
-    const contextKey = `${name}-${contextType?.toString()}`;
+    const contextKey = contextType;
 
     if (seenContexts.has(contextKey)) continue;
     seenContexts.add(contextKey);
@@ -387,23 +387,39 @@ interface ContextInfo {
   displayName: string;
   contextType: unknown;
 }
+// hm we potentially want to revalidate this if a fiber has new context's, i'm not sure how we can do that reactively
+// i suppose we can do one traversal on render (or during the existing traversal) that checks if any new context providers were mounted
+// and when that happens we revalidate this cache
+
+// i suppose a case this breaks is if a fiber changes ancestors through a key but doesn't remount
+// then it would have new parents... and that new parent may have new context
+// may be a fine trade off
+// the motivation is this fiber traversal on every rendering fiber is extremely expensive
+const fiberContextsCache = new WeakMap<Fiber, Map<unknown, ContextInfo>>();
 
 export const getAllFiberContexts = (
   fiber: Fiber,
 ): Map<unknown, ContextInfo> => {
-  const contexts = new Map<unknown, ContextInfo>();
-
   if (!fiber) {
-    return contexts;
+    return new Map<unknown, ContextInfo>();
   }
 
+  // todo validate this works
+
+  const cachedContexts = fiberContextsCache.get(fiber);
+  if (cachedContexts) {
+    return cachedContexts;
+  }
+
+  const contexts = new Map<unknown, ContextInfo>();
   let currentFiber: Fiber | null = fiber;
 
   while (currentFiber) {
     const dependencies = currentFiber.dependencies;
 
     if (dependencies?.firstContext) {
-      let contextItem: ContextDependency<unknown> | null = dependencies.firstContext;
+      let contextItem: ContextDependency<unknown> | null =
+        dependencies.firstContext;
 
       while (contextItem) {
         const memoizedValue = contextItem.memoizedValue;
@@ -428,5 +444,98 @@ export const getAllFiberContexts = (
     currentFiber = currentFiber.return;
   }
 
+  // Cache the result for this fiber
+  fiberContextsCache.set(fiber, contexts);
+
   return contexts;
+};
+
+export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
+  const emptySection = (): SectionData => ({
+    current: [],
+    changes: new Set<string | number>(),
+    changesCounts: new Map<string | number, number>(),
+  });
+
+  if (!fiber) {
+    return {
+      fiberProps: emptySection(),
+      fiberState: emptySection(),
+      fiberContext: emptySection(),
+    };
+  }
+
+  // let hasNewChanges = false;
+
+  const propsData = emptySection();
+  if (fiber.memoizedProps) {
+    const { current, changes } = collectPropsChanges(fiber);
+
+    for (const [key, value] of Object.entries(current)) {
+      propsData.current.push({
+        name: key,
+        value: isPromise(value)
+          ? { type: 'promise', displayValue: 'Promise' }
+          : value,
+      });
+    }
+
+    for (const change of changes) {
+      // hasNewChanges = true;
+      propsData.changes.add(change.name);
+      propsData.changesCounts.set(change.name, 1);
+    }
+  }
+
+  const stateData = emptySection();
+  if (fiber.memoizedState) {
+    const { current, changes } = collectStateChanges(fiber);
+
+    for (const [key, value] of Object.entries(current)) {
+      stateData.current.push({
+        name: key,
+        value: isPromise(value)
+          ? { type: 'promise', displayValue: 'Promise' }
+          : value,
+      });
+    }
+
+    for (const change of changes) {
+      // hasNewChanges = true;
+      stateData.changes.add(change.name);
+      stateData.changesCounts.set(change.name, 1);
+    }
+  }
+
+  const contextData = emptySection();
+  const { current, changes } = collectContextChanges(fiber);
+
+  for (const [key, value] of Object.entries(current)) {
+    contextData.current.push({
+      name: key,
+      value: isPromise(value)
+        ? { type: 'promise', displayValue: 'Promise' }
+        : value,
+    });
+  }
+
+  for (const change of changes) {
+    // hasNewChanges = true;
+    contextData.changes.add(change.name);
+    contextData.changesCounts.set(change.name, 1);
+  }
+  // todo: is isInitialUpdate correct? Is this necessary:
+  // if (!hasNewChanges && !isInitialUpdate) {
+  //   propsData.changes.clear();
+  //   stateData.changes.clear();
+  //   contextData.changes.clear();
+  // }
+
+  return {
+    // data: {
+    fiberProps: propsData,
+    fiberState: stateData,
+    fiberContext: contextData,
+    // },
+  };
 };

@@ -27,6 +27,7 @@ declare global {
   var __REACT_SCAN__: {
     ReactScanInternals: ReactScanInternals;
   };
+  var reactScanCleanupListeners: (() => void) | undefined;
   var reactScan: Scan;
   var scheduler: {
     postTask: (cb: unknown, options: { priority: string }) => void;
@@ -47,7 +48,6 @@ declare global {
       onCommitFiberRoot: (
         rendererID: number,
         root: FiberRoot,
-        // biome-ignore lint/suspicious/noConfusingVoidType: may or may not exist
         priority: void | number,
       ) => void;
       onCommitFiberUnmount: (rendererID: number, fiber: Fiber) => void;

@@ -1,14 +1,8 @@
 {
   "name": "react-scan",
-  "version": "0.1.3",
+  "version": "0.2.12",
   "description": "Scan your React app for renders",
-  "keywords": [
-    "react",
-    "react-scan",
-    "react scan",
-    "render",
-    "performance"
-  ],
+  "keywords": ["react", "react-scan", "react scan", "render", "performance"],
   "homepage": "https://react-scan.million.dev",
   "bugs": {
     "url": "https://github.com/aidenybai/react-scan/issues"
@@ -172,27 +166,17 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "monitoring": [
-        "./dist/core/monitor/index.d.ts"
-      ],
-      "monitoring/next": [
-        "./dist/core/monitor/params/next.d.ts"
-      ],
+      "monitoring": ["./dist/core/monitor/index.d.ts"],
+      "monitoring/next": ["./dist/core/monitor/params/next.d.ts"],
       "monitoring/react-router-legacy": [
         "./dist/core/monitor/params/react-router-v5.d.ts"
       ],
       "monitoring/react-router": [
         "./dist/core/monitor/params/react-router-v6.d.ts"
       ],
-      "monitoring/remix": [
-        "./dist/core/monitor/params/remix.d.ts"
-      ],
-      "monitoring/astro": [
-        "./dist/core/monitor/params/astro/index.ts"
-      ],
-      "react-component-name/vite": [
-        "./dist/react-component-name/vite.d.ts"
-      ],
+      "monitoring/remix": ["./dist/core/monitor/params/remix.d.ts"],
+      "monitoring/astro": ["./dist/core/monitor/params/astro/index.ts"],
+      "react-component-name/vite": ["./dist/react-component-name/vite.d.ts"],
       "react-component-name/webpack": [
         "./dist/react-component-name/webpack.d.ts"
       ],
@@ -208,24 +192,14 @@
       "react-component-name/rollup": [
         "./dist/react-component-name/rollup.d.ts"
       ],
-      "react-component-name/astro": [
-        "./dist/react-component-name/astro.d.ts"
-      ],
-      "react-component-name/loader": [
-        "./dist/react-component-name/loader.d.ts"
-      ]
+      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"],
+      "react-component-name/loader": ["./dist/react-component-name/loader.d.ts"]
     }
   },
   "bin": "bin/cli.js",
-  "files": [
-    "dist",
-    "bin",
-    "package.json",
-    "README.md",
-    "LICENSE",
-    "auto.d.ts"
-  ],
+  "files": ["dist", "bin", "package.json", "README.md", "LICENSE", "auto.d.ts"],
   "scripts": {
+    "dev:kitchen": "node dist/cli.js http://localhost:5173",
     "build": "npm run build:css && NODE_ENV=production tsup",
     "postbuild": "pnpm copy-astro && node ../../scripts/version-warning.mjs",
     "build:copy": "npm run build:css && NODE_ENV=production tsup && cat dist/auto.global.js | pbcopy",
@@ -238,7 +212,11 @@
     "pack:bump": "bun scripts/bump-version.js && nr pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
     "prettier": "prettier --config .prettierrc.mjs -w src",
     "publint": "publint",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "biome lint src && pnpm typecheck",
+    "format": "biome format . --write",
+    "check": "biome check . --write",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@babel/core": "^7.26.0",
@@ -246,11 +224,11 @@
     "@babel/types": "^7.26.0",
     "@clack/core": "^0.3.5",
     "@clack/prompts": "^0.8.2",
-    "@pivanov/utils": "^0.0.1",
+    "@pivanov/utils": "0.0.2",
     "@preact/signals": "^1.3.1",
     "@rollup/pluginutils": "^5.1.3",
     "@types/node": "^20.17.9",
-    "bippy": "0.2.7",
+    "bippy": "^0.3.8",
     "esbuild": "^0.24.0",
     "estree-walker": "^3.0.3",
     "kleur": "^4.1.5",

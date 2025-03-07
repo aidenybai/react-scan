@@ -26,7 +26,7 @@ const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
 };
 
 const banner = `/**
- * Copyright 2024 Aiden Bai, Million Software, Inc.
+ * Copyright 2025 Aiden Bai, Million Software, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the “Software”), to deal in the Software without restriction,

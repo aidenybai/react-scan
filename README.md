@@ -27,121 +27,46 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 ## Install
 
-Add this script to your app:
+### Package managers
+
+```bash
+npm i react-scan
+```
+
+```bash
+pnpm add react-scan
+```
+
+```bash
+bun add react-scan
+```
+
+```bash
+yarn add react-scan
+```
+
+### CDN
 
 ```html
 <!-- import this BEFORE any scripts -->
 <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
 ```
 
-Examples:
+## Usage
 
-<details>
-<summary><b>Next.js (pages)</b></summary>
+- [NextJS App Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-app-router.md)
+- [NextJS Page Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-page-router.md)
+- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
+- [Vite](https://github.com/aidenybai/react-scan/blob/main/docs/installation/vite.md)
+- [Parcel](https://github.com/aidenybai/react-scan/blob/main/docs/installation/parcel.md)
+- [Remix](https://github.com/aidenybai/react-scan/blob/main/docs/installation/remix.md)
+- [React Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/react-router.md)
+- [Astro](https://github.com/aidenybai/react-scan/blob/main/docs/installation/astro.md)
+- [TanStack Start](https://github.com/aidenybai/react-scan/blob/main/docs/installation/tanstack-start.md)
 
-<br />
+### CLI
 
-Add the script tag to your `pages/_document.tsx`:
-
-```jsx
-import { Html, Head, Main, NextScript } from 'next/document';
-
-export default function Document() {
-  return (
-    <Html lang="en">
-      <Head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
-
-        {/* rest of your scripts go under */}
-      </Head>
-      <body>
-        <Main />
-        <NextScript />
-      </body>
-    </Html>
-  );
-}
-```
-
-</details>
-
-<details>
-<summary><b>Next.js (app)</b></summary>
-
-<br />
-
-Add the script tag to your `app/layout.tsx`:
-
-```jsx
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en">
-      <head>
-        <script src="https://unpkg.com/react-scan/dist/auto.global.js" async />
-        {/* rest of your scripts go under */}
-      </head>
-      <body>{children}</body>
-    </html>
-  )
-}
-```
-
-</details>
-
-<details>
-<summary><b>Vite / Create React App</b></summary>
-
-<br />
-
-Add the script tag to your `index.html`:
-
-```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
-
-    <!-- rest of your scripts go under -->
-  </head>
-  <body>
-    <!-- ... -->
-  </body>
-</html>
-```
-
-</details>
-
-If you want to install the Chrome extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/BROWSER_EXTENSION_GUIDE.md), or React Native support, see [here](https://github.com/aidenybai/react-scan/pull/23).
-
-## API Reference
-
-If you need a programmatic API to debug further, install via NPM instead:
-
-```bash
-npm install react-scan
-```
-
-Then, in your app, import this **BEFORE** `react`. This must run in a client context (e.g. not in a server component):
-
-```js
-import { scan } from 'react-scan'; // import this BEFORE react
-import React from 'react';
-
-if (typeof window !== 'undefined') {
-  scan({
-    enabled: true,
-    log: true, // logs render info to console (default: false)
-  });
-}
-```
-
-> Looking for [React Native](https://github.com/aidenybai/react-scan/pull/23)?
-
-If you don't have a local version of the site, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+If you don't have a local version of the site or you want to test a React app remotely, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
 
 ```bash
 npx react-scan@latest http://localhost:3000
@@ -159,6 +84,14 @@ You can add it to your existing dev process as well. Here's an example for Next.
   }
 }
 ```
+
+### Browser Extension
+
+If you want to install the extension, follow the guide [here](https://github.com/aidenybai/react-scan/blob/main/BROWSER_EXTENSION_GUIDE.md).
+
+### React Native
+
+See [discussion](https://github.com/aidenybai/react-scan/pull/23)
 
 ## API Reference
 
@@ -178,22 +111,17 @@ export interface Options {
    * @default true
    */
   enabled?: boolean;
-  /**
-   * Include children of a component applied with withScan
-   *
-   * @default true
-   */
-  includeChildren?: boolean;
 
   /**
-   * Enable/disable geiger sound
+   * Force React Scan to run in production (not recommended)
    *
-   * @default true
+   * @default false
    */
-  playSound?: boolean;
-
+  dangerouslyForceRunInProduction?: boolean;
   /**
    * Log renders to the console
+   *
+   * WARNING: This can add significant overhead when the app re-renders frequently
    *
    * @default false
    */
@@ -202,76 +130,35 @@ export interface Options {
   /**
    * Show toolbar bar
    *
+   * If you set this to true, and set {@link enabled} to false, the toolbar will still show, but scanning will be disabled.
+   *
    * @default true
    */
   showToolbar?: boolean;
-
-  /**
-   * Render count threshold, only show
-   * when a component renders more than this
-   *
-   * @default 0
-   */
-  renderCountThreshold?: number;
-
-  /**
-   * Clear aggregated fibers after this time in milliseconds
-   *
-   * @default 5000
-   */
-  resetCountTimeout?: number;
-
-  /**
-   * Maximum number of renders for red indicator
-   *
-   * @default 20
-   * @deprecated
-   */
-  maxRenders?: number;
-
-  /**
-   * Report data to getReport()
-   *
-   * @default false
-   */
-  report?: boolean;
-
-  /**
-   * Always show labels
-   *
-   * @default false
-   */
-  alwaysShowLabels?: boolean;
 
   /**
    * Animation speed
    *
    * @default "fast"
    */
-  animationSpeed?: 'slow' | 'fast' | 'off';
-
-    /**
-   * Smoothly animate the re-render outline when the element moves
-   *
-   * @default true
-   */
-  smoothlyAnimateOutlines?: boolean;
+  animationSpeed?: "slow" | "fast" | "off";
 
   /**
    * Track unnecessary renders, and mark their outlines gray when detected
    *
-   * An unnecessary render is defined as a component re-rendering with no change to the component's corresponding dom subtree (e.g. a component re-rendered, but nothing in the components UI did not change)
+   * An unnecessary render is defined as the component re-rendering with no change to the component's
+   * corresponding dom subtree
    *
-   *  @default true
+   *  @default false
    *  @warning tracking unnecessary renders can add meaningful overhead to react-scan
    */
   trackUnnecessaryRenders?: boolean;
 
   onCommitStart?: () => void;
-  onRender?: (fiber: Fiber, render: Render) => void;
+  onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
-  onPaintStart?: (outlines: PendingOutline[]) => void;
-  onPaintFinish?: (outlines: PendingOutline[]) => void;
+  onPaintStart?: (outlines: Array<Outline>) => void;
+  onPaintFinish?: (outlines: Array<Outline>) => void;
 }
 ```
 
@@ -279,12 +166,10 @@ export interface Options {
 
 - `scan(options: Options)`: Imperative API to start scanning
 - `useScan(options: Options)`: Hook API to start scanning
-- `withScan(Component, options: Options)`: Whitelist a specific component, do not scan other components
 - `getReport()`: Get a report of all the renders
 - `setOptions(options: Options): void`: Set options at runtime
 - `getOptions()`: Get the current options
 - `onRender(Component, onRender: (fiber: Fiber, render: Render) => void)`: Hook into a specific component's renders
-- `getRenderInfo(Component)`: Get the render info for a specific component
 
 ## Why React Scan?
 
@@ -297,7 +182,7 @@ However, this makes it easy to accidentally cause unnecessary renders, making th
 This often comes down to props that update in reference, like callbacks or object values. For example, the `onClick` function and `style` object are re-created on every render, causing `ExpensiveComponent` to slow down the app:
 
 ```jsx
-<ExpensiveComponent onClick={() => alert('hi')} style={{ color: 'purple' }} />
+<ExpensiveComponent onClick={() => alert("hi")} style={{ color: "purple" }} />
 ```
 
 React Scan helps you identify these issues by automatically detecting and highlighting renders that cause performance issues. Now, instead of guessing, you can see exactly which components you need to fix.
@@ -320,23 +205,13 @@ Also, some personal complaints about React Devtools' highlight feature:
 - No programmatic API
 - It's stuck in a chrome extension, I want to run it anywhere on the web
 - It looks subjectively ugly (lines look fuzzy, feels sluggish)
-- I'm more ambitious with react-scan (see our roadmap)
-
-**Q: React Native wen?**
-
-Soon :)
-
-**Q: Browser Extension wen?**
-
-The browser extension is available for Chrome, Firefox, and Brave, but it's awaiting approval from browser extension stores.
-
-In the meanwhile, you can install it manually by following the instructions in [BROWSER_EXTENSION_GUIDE.md](BROWSER_EXTENSION_GUIDE.md).
+- I'm more ambitious with react-scan
 
 ## Resources & Contributing Back
 
 Want to try it out? Check the [our demo](https://react-scan.million.dev).
 
-Looking to contribute back? Check the [Contributing Guide](https://github.com/aidenybai/react-scan/blob/main/.github/CONTRIBUTING.md) out.
+Looking to contribute back? Check the [Contributing Guide](https://github.com/aidenybai/react-scan/blob/main/CONTRIBUTING.md) out.
 
 Want to talk to the community? Hop in our [Discord](https://discord.gg/X9yFbcV2rF) and share your ideas and what you've build with React Scan.
 
@@ -344,36 +219,7 @@ Find a bug? Head over to our [issue tracker](https://github.com/aidenybai/react-
 
 We expect all contributors to abide by the terms of our [Code of Conduct](https://github.com/aidenybai/react-scan/blob/main/.github/CODE_OF_CONDUCT.md).
 
-[**→ Start contributing on GitHub**](https://github.com/aidenybai/react-scan/blob/main/.github/CONTRIBUTING.md)
-
-## Roadmap
-
-- [x] Scan only for unnecessary renders ("unstable" props)
-- [x] Scan API (`withScan`, `scan`)
-- [x] Cleanup config options
-- [x] Chrome extension (h/t [@biw](https://github.com/biw))
-- [x] Mode to highlight long tasks
-- [x] Add context updates
-- [x] Expose primitives / internals for advanced use cases
-- [x] More explicit options override API (start log at certain area, stop log, etc.)
-- [x] Don't show label if no reconciliation occurred ("client renders" in DevTools)
-- [x] "global" counter using `sessionStorage`, aggregate count stats instead of immediate replacement
-- [x] Give a general report of the app's performance
-- [x] Select areas of the screen to scan
-- [x] Report should include all renders
-- [x] heatmap decay (stacked renders will be more intense)
-- [x] Investigate components (UI allowlist)
-- [ ] Offscreen canvas on worker thread
-- [ ] UI for turning on/off options
-- [ ] “PageSpeed insights” for React
-- [ ] CLI
-- [ ] React Native support
-- [ ] Cleanup API reference
-- [ ] Name / explain the actual problem, docs
-- [ ] Simple FPS counter
-- [ ] [Runtime version guarding](https://github.com/lahmatiy/react-render-tracker/blob/229ad0e9c28853615300724d5dc86c140f250f60/src/publisher/react-integration/utils/getInternalReactConstants.ts#L28)
-- [ ] React as peer dependency (lock version to range)
-- [ ] Add a funny mascot, like the ["Stop I'm Changing" dude](https://www.youtube.com/shorts/FwOZdX7bDKI?app=desktop)
+[**→ Start contributing on GitHub**](https://github.com/aidenybai/react-scan/blob/main/CONTRIBUTING.md)
 
 ## Acknowledgments
 
@@ -385,4 +231,4 @@ React Scan takes inspiration from the following projects:
 
 ## License
 
-React Scan is [MIT-licensed](LICENSE) open-source software by Aiden Bai, [Million Software, Inc.](https://million.dev), and [contributors](https://github.com/aidenybai/react-scan/graphs/contributors):
+React Scan is [MIT-licensed](LICENSE) open-source software by Aiden Bai, [Million Software, Inc.](https://million.dev), and [contributors](https://github.com/aidenybai/react-scan/graphs/contributors).

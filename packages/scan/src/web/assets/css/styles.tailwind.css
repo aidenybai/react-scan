@@ -224,7 +224,7 @@ svg {
   @apply flex items-center gap-x-2;
   @apply pl-3 pr-2;
   @apply min-h-9;
-  @apply border-b-1 border-white/10;
+  @apply border-b-1 border-[#222];
   @apply whitespace-nowrap overflow-hidden;
 }
 
@@ -282,7 +282,7 @@ svg {
   @apply sticky z-100;
   @apply flex items-center gap-x-2;
   @apply px-3;
-  @apply w-full h-8;
+  @apply w-full h-7;
   @apply text-[#888] truncate;
   @apply bg-[#0a0a0a] border-b-1 border-[#222];
 }
@@ -309,7 +309,7 @@ svg {
 
 .react-scan-property-content {
   @apply flex-1 flex flex-col;
-  @apply py-1 min-h-6;
+  @apply min-h-7;
   @apply max-w-full;
   @apply overflow-hidden;
 }
@@ -342,10 +342,10 @@ svg {
 }
 
 .react-scan-arrow {
-  @apply absolute top-1 left-7;
+  @apply absolute top-0 left-7;
   @apply flex items-center justify-center;
   @apply cursor-pointer;
-  @apply w-6 h-6;
+  @apply w-6 h-7;
   @apply -translate-x-full;
   @apply z-10;
 
@@ -390,7 +390,7 @@ svg {
 
 .react-scan-preview-line {
   @apply relative;
-  @apply flex items-center min-h-6 gap-x-2;
+  @apply flex items-center min-h-7 gap-x-2;
 }
 
 .react-scan-flash-overlay {
@@ -405,13 +405,14 @@ svg {
 
 .react-scan-toggle {
   @apply relative;
-  @apply inline-block;
+  @apply inline-flex;
   @apply w-10 h-6;
 
   input {
     @apply absolute inset-0;
     @apply opacity-0 z-20;
     @apply cursor-pointer;
+    @apply w-full h-full;
   }
 
   input:checked {
@@ -551,15 +552,14 @@ svg {
 
 .resize-v-line {
   @apply flex items-center justify-center;
-  @apply min-w-5 max-w-5;
+  @apply min-w-1 max-w-1;
   @apply w-full h-full;
   @apply transition-colors;
-  @apply cursor-col-resize;
 
   &:hover,
   &:active {
     > span {
-      @apply bg-white/10;
+      @apply bg-[#222];
     }
 
     svg {
@@ -571,7 +571,7 @@ svg {
     @apply content-[""];
     @apply absolute inset-0 left-1/2 -translate-x-1/2;
     @apply w-[1px];
-    @apply bg-white/10;
+    @apply bg-[#222];
     @apply transition-colors;
   }
 
@@ -668,4 +668,8 @@ svg {
   &.is-visible {
     @apply translate-y-0;
   }
+}
+
+.react-scan-components-tree:has(.resize-v-line:hover, .resize-v-line:active) .tree {
+  overflow: hidden;
 }

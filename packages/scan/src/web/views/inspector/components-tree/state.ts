@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals';
 import type { Fiber } from 'bippy';
+import type { RenderData } from '~core/instrumentation';
 
 export interface TreeNode {
   label: string;
@@ -7,6 +8,7 @@ export interface TreeNode {
   fiber: Fiber;
   element?: HTMLElement;
   children?: TreeNode[];
+  renderData?: RenderData;
 }
 
 export interface FlattenedNode extends TreeNode {
@@ -33,4 +35,4 @@ export interface TreeItem {
   fiber: Fiber;
 }
 
-export const signalSkipTreeUpdate = signal(false);
+export const signalSkipTreeUpdate = /* @__PURE__ */ signal(false);

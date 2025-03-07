@@ -8,24 +8,22 @@
   "files": {
     "ignoreUnknown": false,
     "ignore": [
-      "examples/**",
       "**/dist/**",
       "**/build/**",
       "node_modules",
       "**/node_modules/**",
       "**/*.css",
       "**/*.astro",
-      "packages/website",
-      "kitchen-sink"
+      "packages/website"
     ]
   },
   "organizeImports": {
-    "enabled": true
+    "enabled": false
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "recommended": false,
       "correctness": {
         "noUnusedFunctionParameters": {
           "level": "warn",
@@ -46,17 +44,18 @@
         "noUnusedVariables": {
           "level": "warn",
           "fix": "unsafe"
-        }
+        },
+        "useExhaustiveDependencies": "warn"
       },
       "suspicious": {
-        "noExplicitAny": "error",
-        "noConsole": "error"
+        "noExplicitAny": "warn",
+        "noConsole": "warn"
       },
       "security": {
         "noDangerouslySetInnerHtml": "error"
       },
       "style": {
-        "noNonNullAssertion": "error"
+        "noNonNullAssertion": "warn"
       }
     }
   },
