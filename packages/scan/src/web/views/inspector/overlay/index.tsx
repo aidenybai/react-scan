@@ -1,4 +1,5 @@
 import { type Fiber, getDisplayName } from 'bippy';
+
 import { useEffect, useRef } from 'preact/hooks';
 import { ReactScanInternals, Store } from '~core/index';
 

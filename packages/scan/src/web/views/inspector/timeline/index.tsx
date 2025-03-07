@@ -1,4 +1,5 @@
 import { isInstrumentationActive } from 'bippy';
+
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useMemo, useRef } from 'preact/hooks';
 import { Icon } from '~web/components/icon';

@@ -8,6 +8,7 @@ import {
   type MemoizedState,
   SimpleMemoComponentTag,
 } from 'bippy';
+
 import { isEqual } from '~core/utils';
 import { getChangedPropsDetailed, isPromise } from '../utils';
 
@@ -90,7 +91,7 @@ export const trackChange = (
   return { hasChanged: false, count: existing.count };
 };
 
-export { propsTracker, stateTracker, contextTracker };
+export { contextTracker, propsTracker, stateTracker };
 
 export interface SectionData {
   current: Array<{ name: string | number; value: unknown }>;

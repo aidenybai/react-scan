@@ -1,5 +1,6 @@
-import { signal } from '@preact/signals';
 import type { Fiber } from 'bippy';
+
+import { signal } from '@preact/signals';
 import type { RenderData } from '~core/instrumentation';
 
 export interface TreeNode {
