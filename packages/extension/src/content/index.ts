@@ -1,13 +1,10 @@
-import { busDispatch, busSubscribe, storageSetItem } from '@pivanov/utils';
+import { busDispatch, busSubscribe } from '@pivanov/utils';
 import browser from 'webextension-polyfill';
 import {
   type BroadcastMessage,
   BroadcastSchema,
   type IEvents,
 } from '~types/messages';
-import { saveLocalStorage } from '../utils/helpers';
-import { EXTENSION_STORAGE_KEY, STORAGE_KEY } from '../utils/constants';
-
 
 chrome.runtime.onMessage.addListener(
   async (message: unknown, _sender, sendResponse) => {
@@ -23,27 +20,12 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
+    if (data.type === 'react-scan:page-reload') {
+      window.location.reload();
+      return false;
+    }
+
     if (data.type === 'react-scan:toggle-state') {
-      // Adter extension installation
-      const needsRefresh = localStorage.getItem('react-scan-needs-refresh');
-      if (needsRefresh === 'true') {
-        localStorage.removeItem('react-scan-needs-refresh');
-        try {
-          await storageSetItem(EXTENSION_STORAGE_KEY, 'isEnabled', true);
-        } catch {}
-
-        const updatedOptions = {
-          enabled: true,
-          showToolbar: true,
-          dangerouslyForceRunInProduction: true,
-        };
-
-        saveLocalStorage(STORAGE_KEY, updatedOptions);
-
-        window.location.reload();
-        return;
-      }
-
       busDispatch<IEvents['react-scan:toggle-state']>(
         'react-scan:toggle-state',
         undefined,

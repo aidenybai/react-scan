@@ -6,6 +6,7 @@ import {
   storageSetItem,
 } from '@pivanov/utils';
 import * as reactScan from 'react-scan';
+import { gt } from 'semver';
 import type { IEvents } from '~types/messages';
 import { EXTENSION_STORAGE_KEY, STORAGE_KEY } from '~utils/constants';
 import {
@@ -16,19 +17,15 @@ import {
 } from '~utils/helpers';
 import { createNotificationUI, toggleNotification } from './notification';
 
-export const isTargetPageAlreadyUsedReactScan = () => {
-  const reactScanExtensionVersion = reactScan.ReactScanInternals.version;
-  const currentReactScanVersion =
-    window.__REACT_SCAN__?.ReactScanInternals.version;
+const reactScanExtensionVersion = reactScan.ReactScanInternals.version;
+const isTargetPageAlreadyUsedReactScan = () => {
+  const currentReactScanVersion = window.__REACT_SCAN_VERSION__;
 
-  if (window.__REACT_SCAN__?.ReactScanInternals.Store.monitor.value) {
+  if (!reactScanExtensionVersion || !currentReactScanVersion) {
     return false;
   }
 
-  return (
-    !!window.__REACT_SCAN__ &&
-    reactScanExtensionVersion !== currentReactScanVersion
-  );
+  return gt(currentReactScanVersion, reactScanExtensionVersion);
 };
 
 const getInitialOptions = async (): Promise<reactScan.Options> => {
@@ -54,9 +51,12 @@ const getInitialOptions = async (): Promise<reactScan.Options> => {
 const initializeReactScan = async () => {
   const options = await getInitialOptions();
 
-  window.hideIntro = true;
-  reactScan.scan(options);
-  window.reactScan = undefined;
+  window.__REACT_SCAN_EXTENSION__ = true;
+  if (options.enabled) {
+    window.hideIntro = true;
+    reactScan.scan(options);
+    window.reactScan = undefined;
+  }
 };
 
 let timer: number | undefined;
@@ -152,7 +152,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     );
   }
 
-  window.reactScan = reactScan.setOptions;
+  if (!isTargetPageAlreadyUsedReactScan()) {
+    window.reactScan = reactScan.setOptions;
+  }
 
   busSubscribe<IEvents['react-scan:toggle-state']>(
     'react-scan:toggle-state',
@@ -167,7 +169,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           EXTENSION_STORAGE_KEY,
           'isEnabled',
         );
-        await updateReactScanState(isEnabled);
+        await updateReactScanState(!!isEnabled);
       } catch {
         await updateReactScanState(null);
       }

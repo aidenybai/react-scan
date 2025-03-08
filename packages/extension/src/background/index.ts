@@ -4,27 +4,28 @@ import { IconState, updateIconForTab } from './icon';
 
 const browserAction = browser.action || browser.browserAction;
 
-browser.runtime.onInstalled.addListener(async () => {
-  const tabs = await browser.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+const injectScripts = async (tabId: number) => {
+  try {
+    await browser.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        localStorage.setItem('react-scan-needs-refresh', 'true');
+      },
+    });
 
-  for (const tab of tabs) {
-    if (tab.id && !isInternalUrl(tab.url || '')) {
-      try {
-        await browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: () => {
-            localStorage.setItem('react-scan-needs-refresh', 'true');
-          },
-        });
+    await browser.scripting.executeScript({
+      target: { tabId },
+      files: ['src/content/index.js', 'src/inject/index.js'],
+    });
 
-        await browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['src/inject/index.js', 'src/content/index.js'],
-        });
-      } catch {}
-    }
+    await browser.tabs.sendMessage(tabId, {
+      type: 'react-scan:page-reload',
+    });
+  } catch (e) {
+    // biome-ignore lint/suspicious/noConsole: log error
+    console.error('Script injection error:', e);
   }
-});
+};
 
 const isScriptsLoaded = async (tabId: number): Promise<boolean> => {
   try {
@@ -44,6 +45,11 @@ const init = async (tab: browser.Tabs.Tab) => {
   }
 
   const isLoaded = await isScriptsLoaded(tab.id);
+
+  if (!isLoaded) {
+    await injectScripts(tab.id);
+  }
+
   if (!isLoaded) {
     await updateIconForTab(tab, IconState.DISABLED);
   }

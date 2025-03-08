@@ -6,7 +6,7 @@ let backdrop: HTMLDivElement | null = null;
 let isAnimating = false;
 
 const defaultMessage =
-  "React is not detected on this page. Please ensure you're visiting a React application!";
+  "React is not detected on this page. \nPlease ensure you're visiting a React application!";
 
 export const createNotificationUI = (message = defaultMessage) => {
   busDispatch<IEvents['react-scan:send-to-background']>(
@@ -43,13 +43,15 @@ export const createNotificationUI = (message = defaultMessage) => {
   messageElement.appendChild(icon);
 
   const text = document.createElement('span');
-  text.textContent = message.replace(/<br \/>/, '\n');
+  text.textContent = message;
   messageElement.appendChild(text);
 
   toast.appendChild(messageElement);
 
   const button = document.createElement('button');
   button.id = 'react-scan-toast-close-button';
+  button.type = 'button';
+  button.onclick = toggleNotification;
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '15');

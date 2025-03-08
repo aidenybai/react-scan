@@ -1,8 +1,2 @@
-import { installRDTHook } from 'bippy';
-import { canLoadReactScan, saveLocalStorage } from '../utils/helpers';
-
-saveLocalStorage('use-extension-worker', true);
-
-if (canLoadReactScan) {
-  installRDTHook();
-}
+// Bippy has a side-effect that installs the hook.
+import 'bippy';
