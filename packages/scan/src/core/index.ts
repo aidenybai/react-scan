@@ -1,4 +1,3 @@
-import { type Signal, signal } from '@preact/signals';
 import {
   type Fiber,
   detectReactBuildType,
@@ -6,6 +5,8 @@ import {
   getType,
   isInstrumentationActive,
 } from 'bippy';
+
+import { type Signal, signal } from '@preact/signals';
 import type { ComponentType } from 'preact';
 import type { ReactNode } from 'preact/compat';
 import type { RenderData } from 'src/core/utils';
@@ -16,6 +17,7 @@ import { IS_CLIENT } from '~web/utils/constants';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { Outline } from '~web/utils/outline';
 import type { States } from '~web/views/inspector/utils';
+import packageJson from '../../package.json';
 import type {
   ChangeReason,
   Render,
@@ -25,7 +27,6 @@ import type { InternalInteraction } from './monitor/types';
 import type { getSession } from './monitor/utils';
 import { startTimingTracking } from './notifications/event-tracking';
 import { createHighlightCanvas } from './notifications/outline-overlay';
-import packageJson from '../../package.json';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;

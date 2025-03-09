@@ -1,5 +1,6 @@
-import { signal } from '@preact/signals';
 import type { Fiber } from 'bippy';
+
+import { signal } from '@preact/signals';
 import type { ComponentType } from 'preact';
 import { flashManager } from './flash-overlay';
 import { type SectionData, resetTracking } from './timeline/utils';
