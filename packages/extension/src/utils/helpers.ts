@@ -2,6 +2,8 @@ export const isIframe = window !== window.top;
 export const isPopup = window.opener !== null;
 export const canLoadReactScan = !isIframe && !isPopup;
 
+export const IS_CLIENT = typeof window !== 'undefined';
+
 export const isInternalUrl = (url: string): boolean => {
   if (!url) return false;
 
@@ -105,7 +107,7 @@ export const hasReactFiber = (): boolean => {
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
-  if (typeof window === 'undefined') return null;
+  if (!IS_CLIENT) return null;
 
   try {
     const stored = localStorage.getItem(storageKey);
@@ -116,10 +118,18 @@ export const readLocalStorage = <T>(storageKey: string): T | null => {
 };
 
 export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
-  if (typeof window === 'undefined') return;
+  if (!IS_CLIENT) return;
 
   try {
     window.localStorage.setItem(storageKey, JSON.stringify(state));
+  } catch {}
+};
+
+export const removeLocalStorage = (storageKey: string): void => {
+  if (!IS_CLIENT) return;
+
+  try {
+    window.localStorage.removeItem(storageKey);
   } catch {}
 };
 

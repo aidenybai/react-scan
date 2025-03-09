@@ -5,10 +5,14 @@ import type { IEvents } from '~types/messages';
 let backdrop: HTMLDivElement | null = null;
 let isAnimating = false;
 
-const defaultMessage =
-  "React is not detected on this page. Please ensure you're visiting a React application!";
+const defaultTitle = 'React Not Detected';
+const defaultContent =
+  "React is not detected on this page. \nPlease ensure you're visiting a React application!";
 
-export const createNotificationUI = (message = defaultMessage) => {
+export const createNotificationUI = ({
+  title = defaultTitle,
+  content = defaultContent,
+}) => {
   busDispatch<IEvents['react-scan:send-to-background']>(
     'react-scan:send-to-background',
     {
@@ -34,22 +38,36 @@ export const createNotificationUI = (message = defaultMessage) => {
     e.stopPropagation();
   };
 
-  const messageElement = document.createElement('span');
-  messageElement.id = 'react-scan-toast-message';
+  // Create title element
+  const titleElement = document.createElement('div');
+  titleElement.id = 'react-scan-toast-title';
 
   const icon = document.createElement('span');
   icon.className = 'icon';
   icon.textContent = '⚛️';
-  messageElement.appendChild(icon);
+  titleElement.appendChild(icon);
+
+  const titleText = document.createElement('span');
+  titleText.textContent = title;
+  titleElement.appendChild(titleText);
+
+  toast.appendChild(titleElement);
+
+  // Create message element
+  const messageElement = document.createElement('div');
+  messageElement.id = 'react-scan-toast-message';
 
   const text = document.createElement('span');
-  text.textContent = message.replace(/<br \/>/, '\n');
+  text.textContent = content;
+  text.style.whiteSpace = 'pre-line'; // Preserve line breaks
   messageElement.appendChild(text);
 
   toast.appendChild(messageElement);
 
   const button = document.createElement('button');
   button.id = 'react-scan-toast-close-button';
+  button.type = 'button';
+  button.onclick = toggleNotification;
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '15');

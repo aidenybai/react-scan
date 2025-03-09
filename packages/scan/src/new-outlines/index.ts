@@ -8,7 +8,6 @@ import {
 } from 'bippy';
 import { ReactScanInternals, Store, ignoredProps } from '~core/index';
 import { createInstrumentation } from '~core/instrumentation';
-import { readLocalStorage, removeLocalStorage } from '~web/utils/helpers';
 import { log, logIntro } from '~web/utils/log';
 import { inspectorUpdateSignal } from '~web/views/inspector/states';
 import {
@@ -306,10 +305,7 @@ export const getCanvasEl = () => {
   canvasEl.width = width;
   canvasEl.height = height;
 
-  const useExtensionWorker = readLocalStorage<boolean>('use-extension-worker');
-  removeLocalStorage('use-extension-worker');
-
-  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !useExtensionWorker) {
+  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !window.__REACT_SCAN_EXTENSION__) {
     try {
       worker = new Worker(
         URL.createObjectURL(
@@ -476,9 +472,11 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       if (hasStopped()) return;
 
       scheduleSetup();
-      globalThis.__REACT_SCAN__ = {
-        ReactScanInternals,
-      };
+      if (!window.__REACT_SCAN_EXTENSION__) {
+        globalThis.__REACT_SCAN__ = {
+          ReactScanInternals,
+        };
+      }
       startReportInterval();
       logIntro();
     },

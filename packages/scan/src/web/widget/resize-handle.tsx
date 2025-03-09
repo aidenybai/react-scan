@@ -143,7 +143,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
           containerStyle.height = `${newSize.height}px`;
 
           // Adjust components tree width when widget is resized
-          const maxTreeWidth = Math.floor(newSize.width - MIN_SIZE.width / 2);
+          const maxTreeWidth = Math.floor(newSize.width - (MIN_CONTAINER_WIDTH / 2));
           const currentTreeWidth = signalWidget.value.componentsTree.width;
           const newTreeWidth = Math.min(
             maxTreeWidth,
