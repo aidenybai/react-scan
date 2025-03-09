@@ -118,9 +118,12 @@ export const startMonitoring = (): void => {
     }
   }, 2000);
 
-  globalThis.__REACT_SCAN__ = {
-    ReactScanInternals,
-  };
+  if (!window.__REACT_SCAN_EXTENSION__) {
+    globalThis.__REACT_SCAN__ = {
+      ReactScanInternals,
+    };
+  }
+
   const instrumentation = createInstrumentation('monitoring', {
     onCommitStart() {
       // ReactScanInternals.options.value.onCommitStart?.();

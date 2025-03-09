@@ -1,16 +1,19 @@
 import type * as reactScan from 'react-scan';
 
 declare global {
-  var __REACT_SCAN__: {
-    ReactScanInternals: {
-      version: string;
-    };
-  };
-  var __REACT_SCAN_TOOLBAR_CONTAINER__: HTMLElement | null;
-
   interface Window {
-    __REACT_SCAN__?: __REACT_SCAN__;
-    __REACT_SCAN_TOOLBAR_CONTAINER__: __REACT_SCAN_TOOLBAR_CONTAINER__;
+    __REACT_SCAN__?: {
+      ReactScanInternals: {
+        version: string;
+        Store: {
+          monitor: {
+            value: boolean;
+          };
+        };
+      };
+    };
+    __REACT_SCAN_EXTENSION__?: boolean;
+    __REACT_SCAN_VERSION__?: string;
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       checkDCE: (fn: unknown) => void;
       supportsFiber: boolean;
@@ -30,9 +33,5 @@ declare global {
     };
     hideIntro: boolean;
     reactScan: typeof reactScan.setOptions | undefined;
-  }
-
-  interface globalThis {
-    _reactScan: typeof reactScan;
   }
 }
