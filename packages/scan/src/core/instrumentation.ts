@@ -1,4 +1,3 @@
-import { type Signal, signal } from '@preact/signals';
 import {
   ClassComponentTag,
   type Fiber,
@@ -19,6 +18,8 @@ import {
   traverseProps,
   traverseRenderedFibers,
 } from 'bippy';
+
+import { type Signal, signal } from '@preact/signals';
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
 import {

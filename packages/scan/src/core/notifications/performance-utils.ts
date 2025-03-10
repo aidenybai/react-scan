@@ -1,4 +1,5 @@
 import { Fiber } from 'bippy';
+
 export const getChildrenFromFiberLL = (fiber: Fiber) => {
   const children: Array<Fiber> = [];
 

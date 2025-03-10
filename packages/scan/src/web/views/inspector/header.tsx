@@ -1,5 +1,7 @@
-import { computed, untracked, useSignalEffect } from '@preact/signals';
+
 import type { Fiber } from 'bippy';
+
+import { computed, untracked, useSignalEffect } from '@preact/signals';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Store } from '~core/index';
 import { signalIsSettingsOpen } from '~web/state';
