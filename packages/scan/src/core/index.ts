@@ -309,6 +309,10 @@ export const ReactScanInternals: Internals = {
   version: packageJson.version,
 };
 
+if (IS_CLIENT && window.__REACT_SCAN_EXTENSION__) {
+  window.__REACT_SCAN_VERSION__ = ReactScanInternals.version;
+}
+
 export type LocalStorageOptions = Omit<
   Options,
   | 'onCommitStart'
@@ -512,8 +516,7 @@ export const start = () => {
       initToolbar(!!options.value.showToolbar);
     });
 
-    const isUsedInBrowserExtension = IS_CLIENT;
-    if (!Store.monitor.value && !isUsedInBrowserExtension) {
+    if (!Store.monitor.value && IS_CLIENT) {
       setTimeout(() => {
         if (isInstrumentationActive()) return;
         // biome-ignore lint/suspicious/noConsole: Intended debug output

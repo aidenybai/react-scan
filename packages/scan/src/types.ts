@@ -38,7 +38,8 @@ declare global {
   interface Window {
     reactScan: Scan;
     __REACT_SCAN_TOOLBAR_CONTAINER__?: HTMLDivElement;
-
+    __REACT_SCAN_VERSION__?: string;
+    __REACT_SCAN_EXTENSION__?: boolean;
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       checkDCE: (fn: unknown) => void;
       supportsFiber: boolean;

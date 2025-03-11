@@ -5,6 +5,7 @@ export const BroadcastSchema = z.object({
     'react-scan:ping',
     'react-scan:is-enabled',
     'react-scan:toggle-state',
+    'react-scan:page-reload',
   ]),
   data: z.any().optional(),
 });

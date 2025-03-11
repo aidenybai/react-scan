@@ -1,35 +1,30 @@
 import browser from 'webextension-polyfill';
 import { isInternalUrl } from '~utils/helpers';
 import { IconState, updateIconForTab } from './icon';
+import { BroadcastMessage } from '~types/messages';
 
 const browserAction = browser.action || browser.browserAction;
 
-browser.runtime.onInstalled.addListener(async () => {
-  const tabs = await browser.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+const injectScripts = async (tabId: number) => {
+  try {
+    await browser.scripting.executeScript({
+      target: { tabId },
+      files: ['src/content/index.js', 'src/inject/index.js'],
+    });
 
-  for (const tab of tabs) {
-    if (tab.id && !isInternalUrl(tab.url || '')) {
-      try {
-        await browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: () => {
-            localStorage.setItem('react-scan-needs-refresh', 'true');
-          },
-        });
-
-        await browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['src/inject/index.js', 'src/content/index.js'],
-        });
-      } catch {}
-    }
+    await browser.tabs.sendMessage(tabId, {
+      type: 'react-scan:page-reload',
+    });
+  } catch (e) {
+    // biome-ignore lint/suspicious/noConsole: log error
+    console.error('Script injection error:', e);
   }
-});
+};
 
 const isScriptsLoaded = async (tabId: number): Promise<boolean> => {
   try {
-    const response = await browser.tabs.sendMessage(tabId, { type: 'react-scan:ping' });
-    return response?.pong === true;
+    await browser.tabs.sendMessage(tabId, { type: 'react-scan:ping' });
+    return true;
   } catch {
     return false;
   }
@@ -44,6 +39,11 @@ const init = async (tab: browser.Tabs.Tab) => {
   }
 
   const isLoaded = await isScriptsLoaded(tab.id);
+
+  if (!isLoaded) {
+    await injectScripts(tab.id);
+  }
+
   if (!isLoaded) {
     await updateIconForTab(tab, IconState.DISABLED);
   }
@@ -84,18 +84,11 @@ browserAction.onClicked.addListener(async (tab) => {
   }
 
   try {
-    const response = await browser.tabs.sendMessage(tab.id, {
+    await browser.tabs.sendMessage(tab.id, {
       type: 'react-scan:toggle-state',
     });
 
-    if (response && typeof response.hasReact === 'boolean') {
-      await updateIconForTab(
-        tab,
-        response.hasReact ? IconState.ENABLED : IconState.DISABLED,
-      );
-    } else {
-      await updateIconForTab(tab, IconState.DISABLED);
-    }
+    await updateIconForTab(tab, IconState.DISABLED);
   } catch {
     if (tab.id) {
       await updateIconForTab(tab, IconState.DISABLED);
@@ -103,12 +96,15 @@ browserAction.onClicked.addListener(async (tab) => {
   }
 });
 
-browser.runtime.onMessage.addListener((message, sender) => {
-  if (!sender.tab?.id) return;
-  if (message.type === 'react-scan:is-enabled') {
-    void updateIconForTab(
-      sender.tab,
-      message.data.state ? IconState.ENABLED : IconState.DISABLED,
-    );
-  }
-});
+browser.runtime.onMessage.addListener(
+  (message: unknown, sender: browser.Runtime.MessageSender) => {
+    const msg = message as BroadcastMessage;
+    if (!sender.tab?.id) return;
+    if (msg.type === 'react-scan:is-enabled') {
+      void updateIconForTab(
+        sender.tab,
+        msg.data?.state ? IconState.ENABLED : IconState.DISABLED,
+      );
+    }
+  },
+);
