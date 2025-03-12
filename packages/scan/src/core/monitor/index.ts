@@ -5,6 +5,7 @@ import {
   getTimings,
   isCompositeFiber,
 } from 'bippy';
+
 import { type FC, useEffect } from 'react';
 import { IS_CLIENT } from '~web/utils/constants';
 import {

@@ -1,4 +1,5 @@
 import { type Fiber, getDisplayName } from 'bippy';
+
 import { getCompositeComponentFromElement } from '~web/views/inspector/utils';
 import { Store } from '..';
 import type {

@@ -6,6 +6,7 @@ import {
   getNearestHostFibers,
   isCompositeFiber,
 } from 'bippy';
+
 import { ReactScanInternals, Store, ignoredProps } from '~core/index';
 import { createInstrumentation } from '~core/instrumentation';
 import { log, logIntro } from '~web/utils/log';
