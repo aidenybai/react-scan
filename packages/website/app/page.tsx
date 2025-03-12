@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import Companies from "@/components/companies";
 import TodoDemo from "@/components/todo-demo";
-import InstallGuide from "@/components/installl-guide";
+import InstallGuide from "@/components/install-guide";
 
 export default function Home() {
   const [showDemo, setShowDemo] = useState(false);
