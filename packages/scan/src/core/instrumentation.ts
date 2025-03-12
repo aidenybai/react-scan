@@ -425,6 +425,16 @@ export interface RenderData {
   lastRenderTimestamp: number;
 }
 
+export interface OldRenderData {
+  count: number;
+  time: number;
+  renders: Array<Render>;
+  displayName: string | null;
+  type: any;
+  changes?: any; // for now
+  
+}
+
 const RENDER_DEBOUNCE_MS = 16;
 
 export const renderDataMap = new WeakMap<object, RenderData>();

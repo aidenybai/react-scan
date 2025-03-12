@@ -673,3 +673,22 @@ svg {
 .react-scan-components-tree:has(.resize-v-line:hover, .resize-v-line:active) .tree {
   overflow: hidden;
 }
+
+
+
+.react-scan-expandable {
+  display: grid;
+  grid-template-rows: 0fr;
+  @apply overflow-hidden;
+  @apply transition-all duration-75;
+  transition-timing-function: ease-out;
+
+  > * {
+    min-height: 0;
+  }
+
+  &.react-scan-expanded {
+    grid-template-rows: 1fr;
+    transition-duration: 100ms;
+  }
+}
