@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   ChangesListener,
   ChangesPayload,
   ContextChange,
   Store,
-} from "~core/index";
+} from '~core/index';
 // import { AllAggregatedChanges } from './utils';
-import { Fiber, getFiberId } from "bippy";
-import { isEqual } from "~core/utils";
-import { signal } from "@preact/signals";
+import { Fiber, getFiberId } from 'bippy';
+import { isEqual } from '~core/utils';
+import { signal } from '@preact/signals';
 
 const CHANGES_QUEUE_INTERVAL = 50;
 
@@ -47,12 +47,12 @@ export type AllAggregatedChanges = {
   stateChanges: Map<any, AggregatedChanges>;
   contextChanges: Map<
     any,
-    | { changes: AggregatedChanges; kind: "initialized" }
+    | { changes: AggregatedChanges; kind: 'initialized' }
     | {
         // this looks weird, because it is
         // its a work around to allow context changes to be sent impotently
         // (react-scan internals do not yet handle sending context changes the render they change)
-        kind: "partially-initialized";
+        kind: 'partially-initialized';
         value: unknown;
         name: string;
         lastUpdated: number;
@@ -63,21 +63,21 @@ export type AllAggregatedChanges = {
 
 const getContextChangesValue = (
   discriminated:
-    | { kind: "partially-initialized"; value: unknown }
-    | { kind: "initialized"; changes: AggregatedChanges }
+    | { kind: 'partially-initialized'; value: unknown }
+    | { kind: 'initialized'; changes: AggregatedChanges },
 ) => {
   switch (discriminated.kind) {
-    case "initialized": {
+    case 'initialized': {
       return discriminated.changes.currentValue;
     }
-    case "partially-initialized": {
+    case 'partially-initialized': {
       return discriminated.value;
     }
   }
 };
 const processChanges = (
   changes: Array<{ name: string; value: unknown; prevValue?: unknown }>,
-  targetMap: Map<any, AggregatedChanges>
+  targetMap: Map<any, AggregatedChanges>,
 ) => {
   for (const change of changes) {
     const existing = targetMap.get(change.name);
@@ -107,7 +107,7 @@ const processChanges = (
 
 const processContextChanges = (
   contextChanges: Array<ContextChange>,
-  aggregatedChanges: AllAggregatedChanges
+  aggregatedChanges: AllAggregatedChanges,
 ) => {
   for (const change of contextChanges) {
     const existing = aggregatedChanges.contextChanges.get(change.contextType);
@@ -116,9 +116,9 @@ const processContextChanges = (
       if (isEqual(getContextChangesValue(existing), change.value)) {
         continue;
       }
-      if (existing.kind === "partially-initialized") {
+      if (existing.kind === 'partially-initialized') {
         aggregatedChanges.contextChanges.set(change.contextType, {
-          kind: "initialized",
+          kind: 'initialized',
           changes: {
             count: 1,
             currentValue: change.value,
@@ -132,7 +132,7 @@ const processContextChanges = (
       }
 
       aggregatedChanges.contextChanges.set(change.contextType, {
-        kind: "initialized",
+        kind: 'initialized',
         changes: {
           count: existing.changes.count + 1,
           currentValue: change.value,
@@ -147,7 +147,7 @@ const processContextChanges = (
     }
 
     aggregatedChanges.contextChanges.set(change.contextType, {
-      kind: "partially-initialized",
+      kind: 'partially-initialized',
       id: change.contextType.toString(),
       lastUpdated: Date.now(),
       name: change.name,
@@ -176,11 +176,11 @@ const collapseQueue = (queue: Array<ChangesPayload>) => {
 };
 const mergeSimpleChanges = <
   T extends
-    | AllAggregatedChanges["propsChanges"]
-    | AllAggregatedChanges["stateChanges"],
+    | AllAggregatedChanges['propsChanges']
+    | AllAggregatedChanges['stateChanges'],
 >(
   existingChanges: T,
-  incomingChanges: T
+  incomingChanges: T,
 ): T => {
   const mergedChanges = new Map();
 
@@ -211,9 +211,9 @@ const mergeSimpleChanges = <
 
 const mergeContextChanges = (
   existing: AllAggregatedChanges,
-  incoming: AllAggregatedChanges
+  incoming: AllAggregatedChanges,
 ) => {
-  const contextChanges: AllAggregatedChanges["contextChanges"] = new Map();
+  const contextChanges: AllAggregatedChanges['contextChanges'] = new Map();
 
   existing.contextChanges.forEach((value, key) => {
     contextChanges.set(key, value);
@@ -235,12 +235,12 @@ const mergeContextChanges = (
     }
 
     switch (existingChange.kind) {
-      case "initialized": {
+      case 'initialized': {
         switch (incomingChange.kind) {
-          case "initialized": {
+          case 'initialized': {
             const preInitEntryOffset = 1;
             contextChanges.set(key, {
-              kind: "initialized",
+              kind: 'initialized',
               changes: {
                 ...incomingChange.changes,
                 // if existing was initialized, the pre-initialization done by the collapsed queue was not necessary, so we need to increment count to account for the preInit entry
@@ -255,9 +255,9 @@ const mergeContextChanges = (
             });
             return;
           }
-          case "partially-initialized": {
+          case 'partially-initialized': {
             contextChanges.set(key, {
-              kind: "initialized",
+              kind: 'initialized',
               changes: {
                 count: existingChange.changes.count + 1,
                 currentValue: incomingChange.value,
@@ -271,11 +271,11 @@ const mergeContextChanges = (
           }
         }
       }
-      case "partially-initialized": {
+      case 'partially-initialized': {
         switch (incomingChange.kind) {
-          case "initialized": {
+          case 'initialized': {
             contextChanges.set(key, {
-              kind: "initialized",
+              kind: 'initialized',
               changes: {
                 count: incomingChange.changes.count + 1,
                 currentValue: incomingChange.changes.currentValue,
@@ -287,9 +287,9 @@ const mergeContextChanges = (
             });
             return;
           }
-          case "partially-initialized": {
+          case 'partially-initialized': {
             contextChanges.set(key, {
-              kind: "initialized",
+              kind: 'initialized',
               changes: {
                 count: 1,
                 currentValue: incomingChange.value,
@@ -311,17 +311,17 @@ const mergeContextChanges = (
 
 const mergeChanges = (
   existing: AllAggregatedChanges,
-  incoming: AllAggregatedChanges
+  incoming: AllAggregatedChanges,
 ): AllAggregatedChanges => {
   const contextChanges = mergeContextChanges(existing, incoming);
 
   const propChanges = mergeSimpleChanges(
     existing.propsChanges,
-    incoming.propsChanges
+    incoming.propsChanges,
   );
   const stateChanges = mergeSimpleChanges(
     existing.stateChanges,
-    incoming.stateChanges
+    incoming.stateChanges,
   );
 
   return {
@@ -338,16 +338,16 @@ export const calculateTotalChanges = (changes: AllAggregatedChanges) => {
   return (
     Array.from(changes.propsChanges.values()).reduce(
       (acc, change) => acc + change.count,
-      0
+      0,
     ) +
     Array.from(changes.stateChanges.values()).reduce(
       (acc, change) => acc + change.count,
-      0
+      0,
     ) +
     Array.from(changes.contextChanges.values())
       .filter(
-        (change): change is Extract<typeof change, { kind: "initialized" }> =>
-          change.kind === "initialized"
+        (change): change is Extract<typeof change, { kind: 'initialized' }> =>
+          change.kind === 'initialized',
       )
       .reduce((acc, change) => acc + change.changes.count, 0)
   );
@@ -358,8 +358,6 @@ export const useInspectedFiberChangeStore = ({
 }: {
   onChangeUpdate: (countUpdated: number) => void;
 }) => {
-  console.log("do i run tho");
-
   const pendingChanges = useRef<{ queue: ChangesPayload[] }>({ queue: [] });
   // flushed state read from queue stream
   const [aggregatedChanges, setAggregatedChanges] =
@@ -370,7 +368,7 @@ export const useInspectedFiberChangeStore = ({
     });
 
   const fiber =
-    Store.inspectState.value.kind === "focused"
+    Store.inspectState.value.kind === 'focused'
       ? Store.inspectState.value.fiber
       : null;
   const fiberId = fiber ? getFiberId(fiber) : null;
@@ -402,8 +400,6 @@ export const useInspectedFiberChangeStore = ({
   // un-throttled subscription
   useEffect(() => {
     if (!fiberId) {
-      console.log("no fiber id clown");
-
       return;
     }
     const listener: ChangesListener = (change) => {
@@ -428,7 +424,8 @@ export const useInspectedFiberChangeStore = ({
       pendingChanges.current.queue = [];
       Store.changesListeners.set(
         fiberId,
-        Store.changesListeners.get(fiberId)?.filter((l) => l !== listener) ?? []
+        Store.changesListeners.get(fiberId)?.filter((l) => l !== listener) ??
+          [],
       );
     };
   }, [fiberId]);

@@ -6,7 +6,7 @@ import { scan } from './index';
 
 if (IS_CLIENT) {
   scan({
-    dangerouslyForceRunInProduction: true
+    dangerouslyForceRunInProduction: true,
   });
   window.reactScan = scan;
 }

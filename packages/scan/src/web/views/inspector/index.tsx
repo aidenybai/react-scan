@@ -201,8 +201,11 @@ const Inspector = /* @__PURE__ */ constant(() => {
   return (
     <InspectorErrorBoundary>
       <div className={inspectorContainerClassName}>
+        <div className="w-full h-full">
+
         <WhatChangedSection />
-        <StickySection>
+        </div>
+        {/* <StickySection>
           {(props) => <PropertySection section="props" {...props} />}
         </StickySection>
         <StickySection>
@@ -210,7 +213,7 @@ const Inspector = /* @__PURE__ */ constant(() => {
         </StickySection>
         <StickySection>
           {(props) => <PropertySection section="context" {...props} />}
-        </StickySection>
+        </StickySection> */}
       </div>
     </InspectorErrorBoundary>
   );

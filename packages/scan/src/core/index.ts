@@ -1,31 +1,31 @@
-import { type Signal, signal } from "@preact/signals";
+import { type Signal, signal } from '@preact/signals';
 import {
   type Fiber,
   detectReactBuildType,
   getRDTHook,
   getType,
   isInstrumentationActive,
-} from "bippy";
-import type { ComponentType } from "preact";
-import type { ReactNode } from "preact/compat";
-import type { RenderData } from "src/core/utils";
-import { initReactScanInstrumentation } from "src/new-outlines";
-import styles from "~web/assets/css/styles.css";
-import { createToolbar } from "~web/toolbar";
-import { IS_CLIENT } from "~web/utils/constants";
-import { readLocalStorage, saveLocalStorage } from "~web/utils/helpers";
-import type { Outline } from "~web/utils/outline";
-import type { States } from "~web/views/inspector/utils";
+} from 'bippy';
+import type { ComponentType } from 'preact';
+import type { ReactNode } from 'preact/compat';
+import type { RenderData } from 'src/core/utils';
+import { initReactScanInstrumentation } from 'src/new-outlines';
+import styles from '~web/assets/css/styles.css';
+import { createToolbar } from '~web/toolbar';
+import { IS_CLIENT } from '~web/utils/constants';
+import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
+import type { Outline } from '~web/utils/outline';
+import type { States } from '~web/views/inspector/utils';
 import type {
   ChangeReason,
   Render,
   createInstrumentation,
-} from "./instrumentation";
-import type { InternalInteraction } from "./monitor/types";
-import type { getSession } from "./monitor/utils";
-import { startTimingTracking } from "./notifications/event-tracking";
-import { createHighlightCanvas } from "./notifications/outline-overlay";
-import packageJson from "../../package.json";
+} from './instrumentation';
+import type { InternalInteraction } from './monitor/types';
+import type { getSession } from './monitor/utils';
+import { startTimingTracking } from './notifications/event-tracking';
+import { createHighlightCanvas } from './notifications/outline-overlay';
+import packageJson from '../../package.json';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -43,12 +43,12 @@ const initRootContainer = (): RootContainer => {
     return { rootContainer, shadowRoot };
   }
 
-  rootContainer = document.createElement("div");
-  rootContainer.id = "react-scan-root";
+  rootContainer = document.createElement('div');
+  rootContainer.id = 'react-scan-root';
 
-  shadowRoot = rootContainer.attachShadow({ mode: "open" });
+  shadowRoot = rootContainer.attachShadow({ mode: 'open' });
 
-  const cssStyles = document.createElement("style");
+  const cssStyles = document.createElement('style');
   cssStyles.textContent = styles;
 
   shadowRoot.appendChild(cssStyles);
@@ -140,7 +140,7 @@ export interface Options {
    *
    * @default "fast"
    */
-  animationSpeed?: "slow" | "fast" | "off";
+  animationSpeed?: 'slow' | 'fast' | 'off';
 
   /**
    * Track unnecessary renders, and mark their outlines gray when detected
@@ -161,13 +161,20 @@ export interface Options {
   showFPS?: boolean;
 
   /**
+   * Should the number of slowdown notifications be shown in the toolbar
+   *
+   *  @default true
+   */
+  showNotificationCount?: boolean;
+
+  /**
    * Should react scan log internal errors to the console.
    *
    * Useful if react scan is not behaving expected and you want to provide information to maintainers when submitting an issue https://github.com/aidenybai/react-scan/issues
    *
    *  @default false
    */
-  _debug?: "verbose" | false;
+  _debug?: 'verbose' | false;
 
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
@@ -178,12 +185,12 @@ export interface Options {
 
 export type MonitoringOptions = Pick<
   Options,
-  | "enabled"
-  | "onCommitStart"
-  | "onCommitFinish"
-  | "onPaintStart"
-  | "onPaintFinish"
-  | "onRender"
+  | 'enabled'
+  | 'onCommitStart'
+  | 'onCommitFinish'
+  | 'onPaintStart'
+  | 'onPaintFinish'
+  | 'onRender'
 >;
 
 interface Monitor {
@@ -238,7 +245,7 @@ export type ClassComponentStateChange = {
   value: unknown;
   prevValue?: unknown;
   count?: number | undefined;
-  name: "state";
+  name: 'state';
 };
 
 export type StateChange =
@@ -275,7 +282,7 @@ export const Store: StoreType = {
   wasDetailsOpen: signal(true),
   isInIframe: signal(IS_CLIENT && window.self !== window.top),
   inspectState: signal<States>({
-    kind: "uninitialized",
+    kind: 'uninitialized',
   }),
   monitor: signal<Monitor | null>(null),
   fiberRoots: new Set<Fiber>(),
@@ -298,9 +305,10 @@ export const ReactScanInternals: Internals = {
     // renderCountThreshold: 0,
     // report: undefined,
     // alwaysShowLabels: false,
-    animationSpeed: "fast",
+    animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
     showFPS: true,
+    showNotificationCount: true,
     // smoothlyAnimateOutlines: true,
     // trackUnnecessaryRenders: false,
   }),
@@ -313,11 +321,11 @@ export const ReactScanInternals: Internals = {
 
 export type LocalStorageOptions = Omit<
   Options,
-  | "onCommitStart"
-  | "onRender"
-  | "onCommitFinish"
-  | "onPaintStart"
-  | "onPaintFinish"
+  | 'onCommitStart'
+  | 'onRender'
+  | 'onCommitFinish'
+  | 'onPaintStart'
+  | 'onPaintFinish'
 >;
 
 function isOptionKey(key: string): key is keyof Options {
@@ -333,15 +341,16 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
 
     const value = options[key];
     switch (key) {
-      case "enabled":
+      case 'enabled':
       // case 'includeChildren':
-      case "log":
-      case "showToolbar":
+      case 'log':
+      case 'showToolbar':
       // case 'report':
       // case 'alwaysShowLabels':
-      case "dangerouslyForceRunInProduction":
-      case "showFPS":
-        if (typeof value !== "boolean") {
+      case 'showNotificationCount':
+      case 'dangerouslyForceRunInProduction':
+      case 'showFPS':
+        if (typeof value !== 'boolean') {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
           validOptions[key] = value;
@@ -355,42 +364,42 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       //     validOptions[key] = value as number;
       //   }
       //   break;
-      case "animationSpeed":
-        if (!["slow", "fast", "off"].includes(value as string)) {
+      case 'animationSpeed':
+        if (!['slow', 'fast', 'off'].includes(value as string)) {
           errors.push(
-            `- Invalid animation speed "${value}". Using default "fast"`
+            `- Invalid animation speed "${value}". Using default "fast"`,
           );
         } else {
-          validOptions[key] = value as "slow" | "fast" | "off";
+          validOptions[key] = value as 'slow' | 'fast' | 'off';
         }
         break;
-      case "onCommitStart":
-        if (typeof value !== "function") {
+      case 'onCommitStart':
+        if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onCommitStart = value as () => void;
         }
         break;
-      case "onCommitFinish":
-        if (typeof value !== "function") {
+      case 'onCommitFinish':
+        if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onCommitFinish = value as () => void;
         }
         break;
-      case "onRender":
-        if (typeof value !== "function") {
+      case 'onRender':
+        if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onRender = value as (
             fiber: Fiber,
-            renders: Array<Render>
+            renders: Array<Render>,
           ) => void;
         }
         break;
-      case "onPaintStart":
-      case "onPaintFinish":
-        if (typeof value !== "function") {
+      case 'onPaintStart':
+      case 'onPaintFinish':
+        if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions[key] = value as (outlines: Array<Outline>) => void;
@@ -413,7 +422,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
 
   if (errors.length > 0) {
     // biome-ignore lint/suspicious/noConsole: Intended debug output
-    console.warn(`[React Scan] Invalid options:\n${errors.join("\n")}`);
+    console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
   }
 
   return validOptions;
@@ -439,7 +448,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
   }
 
   const shouldInitToolbar =
-    "showToolbar" in validOptions && validOptions.showToolbar !== undefined;
+    'showToolbar' in validOptions && validOptions.showToolbar !== undefined;
 
   const newOptions = {
     ...ReactScanInternals.options.value,
@@ -447,13 +456,13 @@ export const setOptions = (userOptions: Partial<Options>) => {
   };
 
   const { instrumentation } = ReactScanInternals;
-  if (instrumentation && "enabled" in validOptions) {
+  if (instrumentation && 'enabled' in validOptions) {
     instrumentation.isPaused.value = validOptions.enabled === false;
   }
 
   ReactScanInternals.options.value = newOptions;
 
-  saveLocalStorage("react-scan-options", newOptions);
+  saveLocalStorage('react-scan-options', newOptions);
 
   if (shouldInitToolbar) {
     initToolbar(!!newOptions.showToolbar);
@@ -474,7 +483,7 @@ export const getIsProduction = () => {
   rdtHook ??= getRDTHook();
   for (const renderer of rdtHook.renderers.values()) {
     const buildType = detectReactBuildType(renderer);
-    if (buildType === "production") {
+    if (buildType === 'production') {
       isProduction = true;
     }
   }
@@ -495,7 +504,7 @@ export const start = () => {
     }
 
     const localStorageOptions =
-      readLocalStorage<LocalStorageOptions>("react-scan-options");
+      readLocalStorage<LocalStorageOptions>('react-scan-options');
 
     if (localStorageOptions) {
       const validLocalOptions = validateOptions(localStorageOptions);
@@ -520,17 +529,17 @@ export const start = () => {
         if (isInstrumentationActive()) return;
         // biome-ignore lint/suspicious/noConsole: Intended debug output
         console.error(
-          "[React Scan] Failed to load. Must import React Scan before React runs."
+          '[React Scan] Failed to load. Must import React Scan before React runs.',
         );
       }, 5000);
     }
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === "verbose") {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
       // biome-ignore lint/suspicious/noConsole: intended debug output
       console.error(
-        "[React Scan Internal Error]",
-        "Failed to create notifications outline canvas",
-        e
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
       );
     }
   }
@@ -564,12 +573,12 @@ const createNotificationsOutlineCanvas = () => {
     const highlightRoot = document.documentElement;
     return createHighlightCanvas(highlightRoot);
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === "verbose") {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
       // biome-ignore lint/suspicious/noConsole: intended debug output
       console.error(
-        "[React Scan Internal Error]",
-        "Failed to create notifications outline canvas",
-        e
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
       );
     }
   }
@@ -597,7 +606,7 @@ export const useScan = (options: Options = {}) => {
 
 export const onRender = (
   type: unknown,
-  _onRender: (fiber: Fiber, renders: Array<Render>) => void
+  _onRender: (fiber: Fiber, renders: Array<Render>) => void,
 ) => {
   const prevOnRender = ReactScanInternals.onRender;
   ReactScanInternals.onRender = (fiber, renders) => {
@@ -613,7 +622,7 @@ export const ignoredProps = new WeakSet<
 >();
 
 export const ignoreScan = (node: ReactNode) => {
-  if (node && typeof node === "object") {
+  if (node && typeof node === 'object') {
     ignoredProps.add(node);
   }
 };

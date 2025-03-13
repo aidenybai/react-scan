@@ -113,14 +113,15 @@ export const HeaderInspect = () => {
   return (
     <div className={headerInspectClassName}>
       {componentName}
-      <div className="flex items-center gap-x-2 mr-auto text-xs text-[#888]">
+      {/* useless info */}
+      {/* <div className="flex items-center gap-x-2 mr-auto text-xs text-[#888]">
         <span
           ref={refReRenders}
           className="with-data-text cursor-pointer !overflow-visible"
           title="Click to toggle between rerenders and total renders"
         />
         <span ref={refTiming} className="with-data-text !overflow-visible" />
-      </div>
+      </div> */}
     </div>
   );
 };

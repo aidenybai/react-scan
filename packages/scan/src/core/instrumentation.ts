@@ -292,7 +292,7 @@ function getContextChangesTraversal(
     type: ChangeReason.Context,
     name:
       (nextValue.context as { displayName: string | undefined }).displayName ??
-      'UnnamedContext',
+      'Context.Provider',
     value: nextMemoizedValue,
     contextType: getContextId(nextValue.context as ContextFiber),
 

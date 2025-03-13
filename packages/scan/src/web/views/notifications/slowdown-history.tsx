@@ -356,7 +356,7 @@ export const SlowdownHistory = () => {
   return (
     <div
       className={cn([
-        `w-full h-full gap-y-2 flex flex-col border-r border-[#27272A] pt-2 overflow-y-auto`,
+        `w-full h-full gap-y-2 flex flex-col border-r border-[#27272A] overflow-y-auto`,
       ])}
     >
       <div

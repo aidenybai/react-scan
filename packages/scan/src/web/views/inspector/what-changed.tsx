@@ -3,8 +3,8 @@ import {
   useComputed,
   useSignal,
   useSignalEffect,
-} from "@preact/signals";
-import { type ReactNode, memo } from "preact/compat";
+} from '@preact/signals';
+import { type ReactNode, memo } from 'preact/compat';
 import {
   type Dispatch,
   type StateUpdater,
@@ -12,27 +12,29 @@ import {
   useEffect,
   useRef,
   useState,
-} from "preact/hooks";
-import { isEqual } from "~core/utils";
-import { CopyToClipboard } from "~web/components/copy-to-clipboard";
-import { Icon } from "~web/components/icon";
-import { StickySection } from "~web/components/sticky-section";
-import type { useMergedRefs } from "~web/hooks/use-merged-refs";
-import { cn, throttle } from "~web/utils/helpers";
-import { DiffValueView } from "./diff-value";
-import { type MinimalFiberInfo, timelineState } from "./states";
-import { Timeline } from "./timeline";
+} from 'preact/hooks';
+import { isEqual } from '~core/utils';
+import { CopyToClipboard } from '~web/components/copy-to-clipboard';
+import { Icon } from '~web/components/icon';
+import { StickySection } from '~web/components/sticky-section';
+import type { useMergedRefs } from '~web/hooks/use-merged-refs';
+import { cn, throttle } from '~web/utils/helpers';
+import { DiffValueView } from './diff-value';
+import { type MinimalFiberInfo, timelineState } from './states';
+import { Timeline } from './timeline';
 import {
   AggregatedChanges,
   formatFunctionPreview,
   formatPath,
   getObjectDiff,
   isPromise,
-} from "./utils";
+} from './utils';
 import {
   calculateTotalChanges,
   useInspectedFiberChangeStore,
-} from "./whats-changed/use-change-store";
+} from './whats-changed/use-change-store';
+import { getDisplayName, getType } from 'bippy';
+import { Store } from '~core/index';
 
 export type Setter<T> = Dispatch<StateUpdater<T>>;
 
@@ -45,22 +47,22 @@ type Change = {
 
 const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
   if (value === null || value === undefined) return { value };
-  if (typeof value === "function") return { value };
-  if (typeof value !== "object") return { value };
+  if (typeof value === 'function') return { value };
+  if (typeof value !== 'object') return { value };
 
   if (isPromise(value)) {
-    return { value: "Promise" };
+    return { value: 'Promise' };
   }
 
   try {
     const proto = Object.getPrototypeOf(value);
-    if (proto === Promise.prototype || proto?.constructor?.name === "Promise") {
-      return { value: "Promise" };
+    if (proto === Promise.prototype || proto?.constructor?.name === 'Promise') {
+      return { value: 'Promise' };
     }
 
     return { value };
   } catch {
-    return { value: null, error: "Error accessing value" };
+    return { value: null, error: 'Error accessing value' };
   }
 };
 
@@ -99,14 +101,10 @@ export const WhatChangedSection = /* @__PURE__ */ memo(() => {
 
   return useComputed(() => (
     <>
-      {showTimeline.value && (
+      {/* {showTimeline.value && (
         <StickySection>{(props) => <Timeline {...props} />}</StickySection>
-      )}
-      <StickySection>
-        {(props) => (
-          <WhatChanged {...props} />
-        )}
-      </StickySection>
+      )} */}
+      <StickySection>{(props) => <WhatChanged {...props} />}</StickySection>
     </>
   ));
 });
@@ -126,67 +124,103 @@ export const WhatChanged = /* @__PURE__ */ memo(
       },
     });
 
+    const [hasInitialized, setHasInitialized] = useState(false);
+    const hasAnyChanges = calculateTotalChanges(aggregatedChanges) > 0;
+    useEffect(() => {
+      if (!hasInitialized && hasAnyChanges) {
+        const timer = setTimeout(() => {
+          setHasInitialized(true);
+          requestAnimationFrame(() => {
+            setIsExpanded(true);
+          });
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }, [hasInitialized, hasAnyChanges]);
+
     const initializedContextChanges = new Map(
       Array.from(aggregatedChanges.contextChanges.entries())
-        .filter(([, value]) => value.kind === "initialized")
+        .filter(([, value]) => value.kind === 'initialized')
         .map(([key, value]) => [
           key,
-          value.kind === "partially-initialized" ? null! : value.changes,
-        ])
+          value.kind === 'partially-initialized' ? null! : value.changes,
+        ]),
     );
+
+    const fiber =
+      Store.inspectState.value.kind === 'focused'
+        ? Store.inspectState.value.fiber
+        : null;
+
+    if (!fiber) {
+      // invariant
+      return;
+    }
     // if (!shouldShowChanges) {
     //   return null;
     // }
-  
 
     return (
       <>
         <WhatsChangedHeader
+          calculateStickyTop={calculateStickyTop}
           refSticky={refSticky}
           isSticky={isSticky}
-          calculateStickyTop={calculateStickyTop}
           isExpanded={isExpanded}
-          shouldShowChanges={true}
+          // hasInitialized={hasInitialized}
           setIsExpanded={setIsExpanded}
+          // setUnViewedChanges={setUnViewedChanges}
+          // unViewedChanges={unViewedChanges}
         />
-        <div
-          className={cn(
-            "react-scan-expandable",
-            isExpanded && "react-scan-expanded"
-          )}
-        >
-          <div className="overflow-hidden">
-            {true && (
-              <div
-                className={cn(
-                  "relative",
-                  "flex flex-col gap-y-2",
-                  "pl-9 pr-2",
-                  'before:content-[""] before:absolute before:inset-x-0 before:bottom-0 before:h-[1px] before:bg-[#333]'
-                )}
-              >
-                <Section
-                  changes={aggregatedChanges.propsChanges}
-                  title="Props"
-                  isExpanded={isExpanded}
-                />
-                <Section
-                  changes={aggregatedChanges.stateChanges}
-                  title="State"
-                  isExpanded={isExpanded}
-                />
-                <Section
-                  changes={initializedContextChanges}
-                  title="Context"
-                  isExpanded={isExpanded}
-                />
+
+        <div className="overflow-hidden h-full flex flex-col gap-y-2">
+          <div className="flex flex-col gap-2 px-3 pt-2">
+            <span className="text-sm font-medium text-[#888]">
+              Why did{' '}
+              <span className="text-[#A855F7]">{getDisplayName(fiber)}</span>{' '}
+              render?
+            </span>
+            {!hasAnyChanges && (
+              <div className="text-sm text-[#737373] bg-[#1E1E1E] rounded-md p-4 flex flex-col gap-4">
+                <div>No changes detected since selecting</div>
+                <div>
+                  The props, state, and context changes within your component
+                  will be reported here
+                </div>
               </div>
             )}
+          </div>
+          <div
+            className={cn(
+              'flex flex-col gap-y-2 pl-3 relative overflow-y-auto h-full',
+            )}
+          >
+            <Section
+              changes={aggregatedChanges.propsChanges}
+              title="Changed Props"
+              isExpanded={isExpanded}
+            />
+            <Section
+              renderName={(name) =>
+                renderStateName(
+                  name,
+                  getDisplayName(getType(fiber)) ?? 'Unknown Component',
+                )
+              }
+              changes={aggregatedChanges.stateChanges}
+              title="Changed State"
+              isExpanded={isExpanded}
+            />
+            <Section
+              changes={initializedContextChanges}
+              title="Changed Context"
+              isExpanded={isExpanded}
+            />
           </div>
         </div>
       </>
     );
-  }
+  },
 );
 
 const renderStateName = (key: string, componentName: string) => {
@@ -199,17 +233,17 @@ const renderStateName = (key: string, componentName: string) => {
     const lastDigit = num % 10;
     const lastTwoDigits = num % 100;
     if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
-      return "th";
+      return 'th';
     }
     switch (lastDigit) {
       case 1:
-        return "st";
+        return 'st';
       case 2:
-        return "nd";
+        return 'nd';
       case 3:
-        return "rd";
+        return 'rd';
       default:
-        return "th";
+        return 'th';
     }
   };
 
@@ -217,9 +251,9 @@ const renderStateName = (key: string, componentName: string) => {
     <span className="truncate">
       <span className="text-white">
         {n}
-        {getOrdinalSuffix(n)} hook{" "}
+        {getOrdinalSuffix(n)} hook{' '}
       </span>
-      <span style={{ color: "#666" }}>
+      <span style={{ color: '#666' }}>
         called in <i className="text-[#A855F7] truncate">{componentName}</i>
       </span>
     </span>
@@ -233,16 +267,18 @@ const WhatsChangedHeader = memo<{
   isSticky?: boolean;
   calculateStickyTop: (removeSticky?: boolean) => void;
   isExpanded: boolean;
-  shouldShowChanges: boolean;
   setIsExpanded: Setter<boolean>;
+  // hasInitialized: boolean;
+  // setUnViewedChanges: Setter<number>;
 }>(
   ({
     refSticky,
     isSticky,
     calculateStickyTop,
     isExpanded,
-    shouldShowChanges,
     setIsExpanded,
+    // hasInitialized,
+    // setUnViewedChanges,
   }) => {
     const refProps = useRef<HTMLDivElement>(null);
     const refState = useRef<HTMLDivElement>(null);
@@ -261,20 +297,20 @@ const WhatsChangedHeader = memo<{
     useEffect(() => {
       const flash = throttle(() => {
         const flashElements = [];
-        if (refProps.current?.dataset.flash === "true") {
+        if (refProps.current?.dataset.flash === 'true') {
           flashElements.push(refProps.current);
         }
-        if (refState.current?.dataset.flash === "true") {
+        if (refState.current?.dataset.flash === 'true') {
           flashElements.push(refState.current);
         }
-        if (refContext.current?.dataset.flash === "true") {
+        if (refContext.current?.dataset.flash === 'true') {
           flashElements.push(refContext.current);
         }
 
         for (const element of flashElements) {
-          element.classList.remove("count-flash-white");
+          element.classList.remove('count-flash-white');
           void element.offsetWidth;
-          element.classList.add("count-flash-white");
+          element.classList.add('count-flash-white');
         }
       }, 400);
 
@@ -298,15 +334,15 @@ const WhatsChangedHeader = memo<{
           isContextChanged: (currentUpdate.context?.changes?.size ?? 0) > 0,
         };
 
-        if (refProps.current.dataset.flash !== "true") {
+        if (refProps.current.dataset.flash !== 'true') {
           refProps.current.dataset.flash =
             refStats.current.isPropsChanged.toString();
         }
-        if (refState.current.dataset.flash !== "true") {
+        if (refState.current.dataset.flash !== 'true') {
           refState.current.dataset.flash =
             refStats.current.isStateChanged.toString();
         }
-        if (refContext.current.dataset.flash !== "true") {
+        if (refContext.current.dataset.flash !== 'true') {
           refContext.current.dataset.flash =
             refStats.current.isContextChanged.toString();
         }
@@ -326,20 +362,20 @@ const WhatsChangedHeader = memo<{
 
     const onTransitionStart = useCallback(
       (e: TransitionEvent) => {
-        if (e.propertyName === "max-height") {
+        if (e.propertyName === 'max-height') {
           calculateStickyTop(true);
         }
       },
-      [calculateStickyTop]
+      [calculateStickyTop],
     );
 
     const onTransitionEnd = useCallback(
       (e: TransitionEvent) => {
-        if (e.propertyName === "max-height") {
+        if (e.propertyName === 'max-height') {
           calculateStickyTop(false);
         }
       },
-      [calculateStickyTop]
+      [calculateStickyTop],
     );
 
     return (
@@ -350,19 +386,13 @@ const WhatsChangedHeader = memo<{
         onTransitionStart={onTransitionStart}
         onTransitionEnd={onTransitionEnd}
         className={cn(
-          "react-section-header",
-          "overflow-hidden",
-          "max-h-0",
-          "transition-[max-height]",
-          shouldShowChanges && "max-h-8"
+          'react-section-header',
+          'overflow-hidden',
+          'max-h-0',
+          'transition-[max-height]',
         )}
       >
-        <div
-          className={cn(
-            "flex-1 react-scan-expandable",
-            shouldShowChanges && "react-scan-expanded"
-          )}
-        >
+        <div className={cn('flex-1 react-scan-expandable')}>
           <div className="overflow-hidden">
             <div className="flex items-center whitespace-nowrap">
               <div className="flex items-center gap-x-2">
@@ -371,8 +401,8 @@ const WhatsChangedHeader = memo<{
                     name="icon-chevron-right"
                     size={12}
                     className={cn(
-                      isExpanded && "rotate-90",
-                      isSticky && isExpanded && "rotate-0"
+                      isExpanded && 'rotate-90',
+                      isSticky && isExpanded && 'rotate-0',
                     )}
                   />
                 </div>
@@ -381,11 +411,11 @@ const WhatsChangedHeader = memo<{
 
               <div
                 className={cn(
-                  "ml-auto",
-                  "change-scope",
-                  "opacity-0",
-                  "transition-opacity duration-300 delay-150",
-                  isExpanded ? "opacity-0" : "opacity-100"
+                  'ml-auto',
+                  'change-scope',
+                  'opacity-0',
+                  'transition-opacity duration-300 delay-150',
+                  isExpanded ? 'opacity-0' : 'opacity-100',
                 )}
               >
                 <div ref={refProps}>props</div>
@@ -397,7 +427,7 @@ const WhatsChangedHeader = memo<{
         </div>
       </button>
     );
-  }
+  },
 );
 
 interface SectionProps {
@@ -498,11 +528,6 @@ const Section = /* @__PURE__ */ memo(
       });
     }, []);
 
-    const memoizedRenderStateName = useCallback((name: string): ReactNode => {
-      if (!refFiberInfo.current) return name;
-      return renderStateName(name, refFiberInfo.current.displayName);
-    }, []);
-
     // if (changes.length === 0) {
     //   return null;
     // }
@@ -522,10 +547,10 @@ const Section = /* @__PURE__ */ memo(
           {entries.map(([entryKey, change]) => {
             const isEntryExpanded = expandedEntries.has(String(entryKey));
             const { value: prevValue, error: prevError } = safeGetValue(
-              change.previousValue
+              change.previousValue,
             );
             const { value: currValue, error: currError } = safeGetValue(
-              change.currentValue
+              change.currentValue,
             );
 
             const diff = getObjectDiff(prevValue, currValue);
@@ -551,10 +576,10 @@ const Section = /* @__PURE__ */ memo(
                       name="icon-chevron-right"
                       size={12}
                       className={cn(
-                        "text-[#666] transition-transform duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                        'text-[#666] transition-transform duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]',
                         {
-                          "rotate-90": isEntryExpanded,
-                        }
+                          'rotate-90': isEntryExpanded,
+                        },
                       )}
                     />
                     <div className="whitespace-pre-wrap break-words text-left font-medium flex items-center gap-x-1.5">
@@ -562,7 +587,7 @@ const Section = /* @__PURE__ */ memo(
 
                       <CountBadge
                         count={change.count}
-                        isFunction={typeof change.currentValue === "function"}
+                        isFunction={typeof change.currentValue === 'function'}
                         showWarning={diff.changes.length === 0}
                         forceFlash
                         // showFlame={diff.changes.length === 0}
@@ -572,8 +597,8 @@ const Section = /* @__PURE__ */ memo(
                   </div>
                 </button>
                 <div
-                  className={cn("react-scan-expandable", {
-                    "react-scan-expanded": isEntryExpanded,
+                  className={cn('react-scan-expandable', {
+                    'react-scan-expanded': isEntryExpanded,
                   })}
                 >
                   <div className="pl-3 text-xs font-mono border-l-1 border-[#333]">
@@ -610,10 +635,10 @@ const Section = /* @__PURE__ */ memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
-type SectionType = "props" | "state" | "context";
+type SectionType = 'props' | 'state' | 'context';
 // const CountBadge = ({
 //   count,
 //   showFlame,
@@ -724,25 +749,25 @@ const DiffChange = ({
 }) => {
   return diff.changes.map((diffChange, i) => {
     const { value: prevDiffValue, error: prevDiffError } = safeGetValue(
-      diffChange.prevValue
+      diffChange.prevValue,
     );
     const { value: currDiffValue, error: currDiffError } = safeGetValue(
-      diffChange.currentValue
+      diffChange.currentValue,
     );
 
     const isFunction =
-      typeof prevDiffValue === "function" ||
-      typeof currDiffValue === "function";
+      typeof prevDiffValue === 'function' ||
+      typeof currDiffValue === 'function';
 
     let path: string | undefined;
 
-    if (title === "Props") {
+    if (title === 'Props') {
       path =
         diffChange.path.length > 0
           ? `${renderName(String(change.name))}.${formatPath(diffChange.path)}`
           : undefined;
     }
-    if (title === "State" && diffChange.path.length > 0) {
+    if (title === 'State' && diffChange.path.length > 0) {
       path = `state.${formatPath(diffChange.path)}`;
     }
 
@@ -754,21 +779,21 @@ const DiffChange = ({
       <div
         key={`${path}-${change.name}-${i}`}
         className={cn(
-          "flex flex-col gap-y-1",
-          i < diff.changes.length - 1 && "mb-4"
+          'flex flex-col gap-y-1',
+          i < diff.changes.length - 1 && 'mb-4',
         )}
       >
         {path && <div className="text-[#666] text-[10px]">{path}</div>}
         <button
           type="button"
           className={cn(
-            "group",
-            "flex items-start",
-            "py-[3px] px-1.5",
-            "text-left text-[#f87171] bg-[#2a1515]",
-            "rounded",
-            "overflow-hidden break-all",
-            isFunction && "cursor-pointer"
+            'group',
+            'flex items-start',
+            'py-[3px] px-1.5',
+            'text-left text-[#f87171] bg-[#2a1515]',
+            'rounded',
+            'overflow-hidden break-all',
+            isFunction && 'cursor-pointer',
           )}
           onClick={
             isFunction
@@ -799,10 +824,10 @@ const DiffChange = ({
                   <span className="flex-1 max-h-40">
                     {formatFunctionPreview(
                       prevDiffValue as (...args: unknown[]) => unknown,
-                      expandedFns.has(`${formatPath(diffChange.path)}-prev`)
+                      expandedFns.has(`${formatPath(diffChange.path)}-prev`),
                     )}
                   </span>
-                  {typeof prevDiffValue === "function" && (
+                  {typeof prevDiffValue === 'function' && (
                     <CopyToClipboard
                       text={prevDiffValue.toString()}
                       className="opacity-0 transition-opacity group-hover:opacity-100"
@@ -821,7 +846,7 @@ const DiffChange = ({
               <DiffValueView
                 value={prevDiffValue}
                 expanded={expandedFns.has(
-                  `${formatPath(diffChange.path)}-prev`
+                  `${formatPath(diffChange.path)}-prev`,
                 )}
                 onToggle={() => {
                   const key = `${formatPath(diffChange.path)}-prev`;
@@ -843,13 +868,13 @@ const DiffChange = ({
         <button
           type="button"
           className={cn(
-            "group",
-            "flex items-start",
-            "py-[3px] px-1.5",
-            "text-left text-[#4ade80] bg-[#1a2a1a]",
-            "rounded",
-            "overflow-hidden break-all",
-            isFunction && "cursor-pointer"
+            'group',
+            'flex items-start',
+            'py-[3px] px-1.5',
+            'text-left text-[#4ade80] bg-[#1a2a1a]',
+            'rounded',
+            'overflow-hidden break-all',
+            isFunction && 'cursor-pointer',
           )}
           onClick={
             isFunction
@@ -880,10 +905,10 @@ const DiffChange = ({
                   <span className="flex-1">
                     {formatFunctionPreview(
                       currDiffValue as (...args: unknown[]) => unknown,
-                      expandedFns.has(`${formatPath(diffChange.path)}-current`)
+                      expandedFns.has(`${formatPath(diffChange.path)}-current`),
                     )}
                   </span>
-                  {typeof currDiffValue === "function" && (
+                  {typeof currDiffValue === 'function' && (
                     <CopyToClipboard
                       text={currDiffValue.toString()}
                       className="opacity-0 transition-opacity group-hover:opacity-100"
@@ -902,7 +927,7 @@ const DiffChange = ({
               <DiffValueView
                 value={currDiffValue}
                 expanded={expandedFns.has(
-                  `${formatPath(diffChange.path)}-current`
+                  `${formatPath(diffChange.path)}-current`,
                 )}
                 onToggle={() => {
                   const key = `${formatPath(diffChange.path)}-current`;
@@ -989,9 +1014,16 @@ const ReferenceOnlyChange = ({
           />
         </span>
       </div>
-      {typeof currValue === "object" && currValue !== null && (
-        <div className="text-[#666] text-[10px] italic mt-1">
-          Reference changed but objects are the same
+      {typeof currValue === 'object' && currValue !== null && (
+        <div className="text-[#666] text-[10px] italic mt-1 flex items-center gap-x-1">
+          <Icon
+            name="icon-triangle-alert"
+            className="text-yellow-500 mb-px"
+            size={14}
+          />
+          <span>
+            Reference changed but objects are the structurally the same
+          </span>
         </div>
       )}
     </>
@@ -1019,9 +1051,9 @@ const CountBadge = ({
       return;
     }
 
-    element.classList.remove("count-flash");
+    element.classList.remove('count-flash');
     void element.offsetWidth;
-    element.classList.add("count-flash");
+    element.classList.add('count-flash');
 
     refPrevCount.current = count;
   }, [count]);
@@ -1034,9 +1066,9 @@ const CountBadge = ({
 
     if (forceFlash) {
       let timer = setTimeout(() => {
-        refBadge.current?.classList.add("count-flash-white");
+        refBadge.current?.classList.add('count-flash-white');
         timer = setTimeout(() => {
-          refBadge.current?.classList.remove("count-flash-white");
+          refBadge.current?.classList.remove('count-flash-white');
         }, 300);
       }, 500);
       return () => {

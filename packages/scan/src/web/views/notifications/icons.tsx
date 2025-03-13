@@ -1,3 +1,4 @@
+import { ReactScanInternals } from '~core/index';
 import { cn } from '~web/utils/helpers';
 
 export const ChevronRight = ({
@@ -48,7 +49,6 @@ export const CopyX = ({
   </svg>
 );
 
-const SHOW_DOT = false;
 export const Notification = ({
   className = '',
   size = 24,
@@ -64,6 +64,7 @@ export const Notification = ({
   const badgeSize = hasHighSeverity
     ? Math.max(size * 0.6, 14)
     : Math.max(size * 0.4, 6);
+
 
   return (
     <div className="relative">
@@ -82,26 +83,28 @@ export const Notification = ({
         <path d="M10.268 21a2 2 0 0 0 3.464 0" />
         <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
       </svg>
-      {events.length > 0 && (SHOW_DOT || totalSevere > 0) && (
-        <div
-          className={cn([
-            'absolute',
-            hasHighSeverity ? '-top-2.5 -right-2.5' : '-top-1 -right-1',
-            'rounded-full',
-            'flex items-center justify-center',
-            'text-[8px] font-medium text-white',
-            'aspect-square',
-            hasHighSeverity ? 'bg-red-500/90' : 'bg-purple-500/90',
-          ])}
-          style={{
-            width: `${badgeSize}px`,
-            height: `${badgeSize}px`,
-            padding: hasHighSeverity ? '0.5px' : '0',
-          }}
-        >
-          {hasHighSeverity && displayCount}
-        </div>
-      )}
+      {events.length > 0 &&
+        totalSevere > 0 &&
+        ReactScanInternals.options.value.showNotificationCount && (
+          <div
+            className={cn([
+              'absolute',
+              hasHighSeverity ? '-top-2.5 -right-2.5' : '-top-1 -right-1',
+              'rounded-full',
+              'flex items-center justify-center',
+              'text-[8px] font-medium text-white',
+              'aspect-square',
+              hasHighSeverity ? 'bg-red-500/90' : 'bg-purple-500/90',
+            ])}
+            style={{
+              width: `${badgeSize}px`,
+              height: `${badgeSize}px`,
+              padding: hasHighSeverity ? '0.5px' : '0',
+            }}
+          >
+            {hasHighSeverity && displayCount}
+          </div>
+        )}
     </div>
   );
 };
