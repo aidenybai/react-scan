@@ -1,6 +1,7 @@
 import { createContext } from 'preact';
 import { SetStateAction } from 'preact/compat';
 import { Dispatch, useContext } from 'preact/hooks';
+import { HIGH_SEVERITY_FPS_DROP_TIME } from '~core/notifications/event-tracking';
 
 export type GroupedFiberRender = {
   id: string;
@@ -16,6 +17,7 @@ export type GroupedFiberRender = {
   totalTime: number;
   elements: Array<Element>; // can't do a weak set because need to iterate over them......
   deletedAll: boolean;
+  parents: Set<string>;
 };
 export const getComponentName = (path: Array<string>) => {
   const filteredPath = path.filter((item) => item.length > 2);
@@ -167,7 +169,7 @@ export const getEventSeverity = (event: NotificationEvent) => {
     }
     case 'dropped-frames': {
       if (totalTime < 50) return 'low';
-      if (totalTime < 100) return 'needs-improvement';
+      if (totalTime < HIGH_SEVERITY_FPS_DROP_TIME) return 'needs-improvement';
       return 'high';
     }
   }

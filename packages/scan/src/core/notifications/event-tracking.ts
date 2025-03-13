@@ -288,6 +288,9 @@ export const startDirtyTaskTracking = () => {
   };
 };
 
+
+export const HIGH_SEVERITY_FPS_DROP_TIME = 150
+
 let framesDrawnInTheLastSecond: Array<number> = [];
 
 export function startLongPipelineTracking() {
@@ -322,7 +325,7 @@ export function startLongPipelineTracking() {
             : null;
 
 
-        if (duration > 100 && !taskConsideredDirty) {
+        if (duration > HIGH_SEVERITY_FPS_DROP_TIME && !taskConsideredDirty) {
           const endAt = endOrigin + endNow;
           const startAt = startTime + startOrigin;
 
