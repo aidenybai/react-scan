@@ -878,9 +878,8 @@ export const listenForRenders = (
     const existing = fiberRenders[displayName];
     if (!existing) {
       const parents = new Set<string>();
-      const parentCompositeName = getDisplayName(
-        getParentCompositeFiber(fiber),
-      );
+      const res = fiber.return && getParentCompositeFiber(fiber.return);
+      const parentCompositeName = res && getDisplayName(res[0]);
       if (parentCompositeName) {
         parents.add(parentCompositeName);
       }
@@ -916,7 +915,8 @@ export const listenForRenders = (
     }
     const parentType = getParentCompositeFiber(fiber)?.[0]?.type;
     if (parentType) {
-      const parentCompositeName = getDisplayName(parentType);
+      const res = fiber.return && getParentCompositeFiber(fiber.return);
+      const parentCompositeName = res && getDisplayName(res[0]);
       if (parentCompositeName) {
         existing.parents.add(parentCompositeName);
       }

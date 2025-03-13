@@ -25,6 +25,7 @@ const getGroupedFiberRenders = (fiberRenders: FiberRenders) => {
     count: render.nodeInfo.length,
     name: render.nodeInfo[0].name, // invariant, at least one exists,
     deletedAll: false,
+    parents: render.parents,
     // it would be nice if we calculated the % of components memoizable, but this would have to be calculated downstream before it got aggregated
     elements: render.nodeInfo.map((node) => node.element),
     changes: {
