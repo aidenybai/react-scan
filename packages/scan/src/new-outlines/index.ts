@@ -465,7 +465,7 @@ const reportRenderToListeners = (fiber: Fiber) => {
       const listeners = Store.changesListeners.get(getFiberId(fiber));
 
 
-      console.log('listeners', listeners);
+      // console.log('listeners', listeners);
       
 
       if (listeners?.length) {
@@ -603,7 +603,7 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
         inspectorUpdateSignal.value = Date.now();
       }
       if (!isInspectorInactive) {
-        console.log('reporting yay');
+        // console.log('reporting yay');
         
         reportRenderToListeners(fiber);
       }

@@ -73,7 +73,7 @@ export default function InstallGuide() {
 <script
   crossOrigin="anonymous"
   src="//unpkg.com/react-scan/dist/auto.global.js"
-/>
+></script>
 `;
       case 'nextjs-app':
         return `export default function RootLayout({
