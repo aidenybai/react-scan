@@ -43,9 +43,12 @@ export type AggregatedChanges = {
 };
 
 export type AllAggregatedChanges = {
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   propsChanges: Map<any, AggregatedChanges>;
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   stateChanges: Map<any, AggregatedChanges>;
   contextChanges: Map<
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     any,
     | { changes: AggregatedChanges; kind: 'initialized' }
     | {
@@ -77,6 +80,7 @@ const getContextChangesValue = (
 };
 const processChanges = (
   changes: Array<{ name: string; value: unknown; prevValue?: unknown }>,
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   targetMap: Map<any, AggregatedChanges>,
 ) => {
   for (const change of changes) {
@@ -353,10 +357,8 @@ export const calculateTotalChanges = (changes: AllAggregatedChanges) => {
   );
 };
 
-export const useInspectedFiberChangeStore = ({
-  onChangeUpdate,
-}: {
-  onChangeUpdate: (countUpdated: number) => void;
+export const useInspectedFiberChangeStore = (opts?: {
+  onChangeUpdate?: (countUpdated: number) => void;
 }) => {
   const pendingChanges = useRef<{ queue: ChangesPayload[] }>({ queue: [] });
   // flushed state read from queue stream
@@ -373,6 +375,7 @@ export const useInspectedFiberChangeStore = ({
       : null;
   const fiberId = fiber ? getFiberId(fiber) : null;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     const interval = setInterval(() => {
       // optimization to avoid unconditional renders
@@ -384,7 +387,7 @@ export const useInspectedFiberChangeStore = ({
         const prevTotal = calculateTotalChanges(prevAggregatedChanges);
         const newTotal = calculateTotalChanges(merged);
         const changeCount = newTotal - prevTotal;
-        onChangeUpdate(changeCount);
+        opts?.onChangeUpdate?.(changeCount);
 
         return merged;
       });

@@ -1,27 +1,16 @@
-import {
-  untracked,
-  useComputed,
-  useSignal,
-  useSignalEffect,
-} from '@preact/signals';
 import { type ReactNode, memo } from 'preact/compat';
 import {
   type Dispatch,
   type StateUpdater,
-  useCallback,
   useEffect,
   useRef,
   useState,
 } from 'preact/hooks';
-import { isEqual } from '~core/utils';
 import { CopyToClipboard } from '~web/components/copy-to-clipboard';
 import { Icon } from '~web/components/icon';
-import { StickySection } from '~web/components/sticky-section';
-import type { useMergedRefs } from '~web/hooks/use-merged-refs';
 import { cn, throttle } from '~web/utils/helpers';
 import { DiffValueView } from './diff-value';
-import { type MinimalFiberInfo, timelineState } from './states';
-import { Timeline } from './timeline';
+import { timelineState } from './states';
 import {
   AggregatedChanges,
   formatFunctionPreview,
@@ -37,13 +26,6 @@ import { getDisplayName, getType } from 'bippy';
 import { Store } from '~core/index';
 
 export type Setter<T> = Dispatch<StateUpdater<T>>;
-
-type Change = {
-  name: string | number;
-  value: unknown;
-  prevValue?: unknown;
-  count: number;
-};
 
 const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
   if (value === null || value === undefined) return { value };
@@ -66,162 +48,95 @@ const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
   }
 };
 
-interface WhatChangedProps {
-  isSticky?: boolean;
-  refSticky?:
-    | ReturnType<typeof useMergedRefs<HTMLElement>>
-    | ((node: HTMLElement | null) => void);
-  calculateStickyTop: (removeSticky?: boolean) => void;
-  // shouldShowChanges: boolean;
-}
+export const WhatChanged = /* @__PURE__ */ memo(() => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const aggregatedChanges = useInspectedFiberChangeStore();
 
-export const WhatChangedSection = /* @__PURE__ */ memo(() => {
-  const showTimeline = useSignal(false);
-  // const shouldShowChanges = useSignal(true);
-
-  // useSignalEffect(() => {
-  //   const state = timelineState.value;
-
-  //   const { currentIndex, updates } = state;
-
-  //   if (currentIndex === 0) {
-  //     shouldShowChanges.value = false;
-  //     return;
-  //   }
-
-  //   if (updates.length > 0) {
-  //     untracked(() => {
-  //       if (!showTimeline.value) {
-  //         showTimeline.value = true;
-  //       }
-  //     });
-  //     shouldShowChanges.value = true;
-  //   }
-  // });
-
-  return useComputed(() => (
-    <>
-      {/* {showTimeline.value && (
-        <StickySection>{(props) => <Timeline {...props} />}</StickySection>
-      )} */}
-      <StickySection>{(props) => <WhatChanged {...props} />}</StickySection>
-    </>
-  ));
-});
-
-export const WhatChanged = /* @__PURE__ */ memo(
-  ({
-    isSticky,
-    refSticky,
-    calculateStickyTop,
-    // shouldShowChanges,
-  }: WhatChangedProps) => {
-    const [isExpanded, setIsExpanded] = useState(true);
-    const [unViewedChanges, setUnViewedChanges] = useState(0);
-    const aggregatedChanges = useInspectedFiberChangeStore({
-      onChangeUpdate: (count) => {
-        setUnViewedChanges((prev) => prev + count);
-      },
-    });
-
-    const [hasInitialized, setHasInitialized] = useState(false);
-    const hasAnyChanges = calculateTotalChanges(aggregatedChanges) > 0;
-    useEffect(() => {
-      if (!hasInitialized && hasAnyChanges) {
-        const timer = setTimeout(() => {
-          setHasInitialized(true);
-          requestAnimationFrame(() => {
-            setIsExpanded(true);
-          });
-        }, 0);
-        return () => clearTimeout(timer);
-      }
-    }, [hasInitialized, hasAnyChanges]);
-
-    const initializedContextChanges = new Map(
-      Array.from(aggregatedChanges.contextChanges.entries())
-        .filter(([, value]) => value.kind === 'initialized')
-        .map(([key, value]) => [
-          key,
-          value.kind === 'partially-initialized' ? null! : value.changes,
-        ]),
-    );
-
-    const fiber =
-      Store.inspectState.value.kind === 'focused'
-        ? Store.inspectState.value.fiber
-        : null;
-
-    if (!fiber) {
-      // invariant
-      return;
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const hasAnyChanges = calculateTotalChanges(aggregatedChanges) > 0;
+  useEffect(() => {
+    if (!hasInitialized && hasAnyChanges) {
+      const timer = setTimeout(() => {
+        setHasInitialized(true);
+        requestAnimationFrame(() => {
+          setIsExpanded(true);
+        });
+      }, 0);
+      return () => clearTimeout(timer);
     }
-    // if (!shouldShowChanges) {
-    //   return null;
-    // }
+  }, [hasInitialized, hasAnyChanges]);
 
-    return (
-      <>
-        <WhatsChangedHeader
-          calculateStickyTop={calculateStickyTop}
-          refSticky={refSticky}
-          isSticky={isSticky}
-          isExpanded={isExpanded}
-          // hasInitialized={hasInitialized}
-          setIsExpanded={setIsExpanded}
-          // setUnViewedChanges={setUnViewedChanges}
-          // unViewedChanges={unViewedChanges}
-        />
+  const initializedContextChanges = new Map(
+    Array.from(aggregatedChanges.contextChanges.entries())
+      .filter(([, value]) => value.kind === 'initialized')
+      .map(([key, value]) => [
+        key,
+        // biome-ignore lint/style/noNonNullAssertion: <explanation>
+        value.kind === 'partially-initialized' ? null! : value.changes,
+      ]),
+  );
 
-        <div className="overflow-hidden h-full flex flex-col gap-y-2">
-          <div className="flex flex-col gap-2 px-3 pt-2">
-            <span className="text-sm font-medium text-[#888]">
-              Why did{' '}
-              <span className="text-[#A855F7]">{getDisplayName(fiber)}</span>{' '}
-              render?
-            </span>
-            {!hasAnyChanges && (
-              <div className="text-sm text-[#737373] bg-[#1E1E1E] rounded-md p-4 flex flex-col gap-4">
-                <div>No changes detected since selecting</div>
-                <div>
-                  The props, state, and context changes within your component
-                  will be reported here
-                </div>
+  const fiber =
+    Store.inspectState.value.kind === 'focused'
+      ? Store.inspectState.value.fiber
+      : null;
+
+  if (!fiber) {
+    // invariant
+    return;
+  }
+  return (
+    <>
+      <WhatsChangedHeader />
+
+      <div className="overflow-hidden h-full flex flex-col gap-y-2">
+        <div className="flex flex-col gap-2 px-3 pt-2">
+          <span className="text-sm font-medium text-[#888]">
+            Why did{' '}
+            <span className="text-[#A855F7]">{getDisplayName(fiber)}</span>{' '}
+            render?
+          </span>
+          {!hasAnyChanges && (
+            <div className="text-sm text-[#737373] bg-[#1E1E1E] rounded-md p-4 flex flex-col gap-4">
+              <div>No changes detected since selecting</div>
+              <div>
+                The props, state, and context changes within your component will
+                be reported here
               </div>
-            )}
-          </div>
-          <div
-            className={cn(
-              'flex flex-col gap-y-2 pl-3 relative overflow-y-auto h-full',
-            )}
-          >
-            <Section
-              changes={aggregatedChanges.propsChanges}
-              title="Changed Props"
-              isExpanded={isExpanded}
-            />
-            <Section
-              renderName={(name) =>
-                renderStateName(
-                  name,
-                  getDisplayName(getType(fiber)) ?? 'Unknown Component',
-                )
-              }
-              changes={aggregatedChanges.stateChanges}
-              title="Changed State"
-              isExpanded={isExpanded}
-            />
-            <Section
-              changes={initializedContextChanges}
-              title="Changed Context"
-              isExpanded={isExpanded}
-            />
-          </div>
+            </div>
+          )}
         </div>
-      </>
-    );
-  },
-);
+        <div
+          className={cn(
+            'flex flex-col gap-y-2 pl-3 relative overflow-y-auto h-full',
+          )}
+        >
+          <Section
+            changes={aggregatedChanges.propsChanges}
+            title="Changed Props"
+            isExpanded={isExpanded}
+          />
+          <Section
+            renderName={(name) =>
+              renderStateName(
+                name,
+                getDisplayName(getType(fiber)) ?? 'Unknown Component',
+              )
+            }
+            changes={aggregatedChanges.stateChanges}
+            title="Changed State"
+            isExpanded={isExpanded}
+          />
+          <Section
+            changes={initializedContextChanges}
+            title="Changed Context"
+            isExpanded={isExpanded}
+          />
+        </div>
+      </div>
+    </>
+  );
+});
 
 const renderStateName = (key: string, componentName: string) => {
   if (Number.isNaN(Number(key))) {
@@ -260,286 +175,156 @@ const renderStateName = (key: string, componentName: string) => {
   );
 };
 
-const WhatsChangedHeader = memo<{
-  refSticky?:
-    | ReturnType<typeof useMergedRefs<HTMLElement>>
-    | ((node: HTMLElement | null) => void);
-  isSticky?: boolean;
-  calculateStickyTop: (removeSticky?: boolean) => void;
-  isExpanded: boolean;
-  setIsExpanded: Setter<boolean>;
-  // hasInitialized: boolean;
-  // setUnViewedChanges: Setter<number>;
-}>(
-  ({
-    refSticky,
-    isSticky,
-    calculateStickyTop,
-    isExpanded,
-    setIsExpanded,
-    // hasInitialized,
-    // setUnViewedChanges,
-  }) => {
-    const refProps = useRef<HTMLDivElement>(null);
-    const refState = useRef<HTMLDivElement>(null);
-    const refContext = useRef<HTMLDivElement>(null);
+const WhatsChangedHeader = memo(() => {
+  const refProps = useRef<HTMLDivElement>(null);
+  const refState = useRef<HTMLDivElement>(null);
+  const refContext = useRef<HTMLDivElement>(null);
 
-    const refStats = useRef<{
-      isPropsChanged: boolean;
-      isStateChanged: boolean;
-      isContextChanged: boolean;
-    }>({
-      isPropsChanged: false,
-      isStateChanged: false,
-      isContextChanged: false,
+  const refStats = useRef<{
+    isPropsChanged: boolean;
+    isStateChanged: boolean;
+    isContextChanged: boolean;
+  }>({
+    isPropsChanged: false,
+    isStateChanged: false,
+    isContextChanged: false,
+  });
+
+  useEffect(() => {
+    const flash = throttle(() => {
+      const flashElements = [];
+      if (refProps.current?.dataset.flash === 'true') {
+        flashElements.push(refProps.current);
+      }
+      if (refState.current?.dataset.flash === 'true') {
+        flashElements.push(refState.current);
+      }
+      if (refContext.current?.dataset.flash === 'true') {
+        flashElements.push(refContext.current);
+      }
+
+      for (const element of flashElements) {
+        element.classList.remove('count-flash-white');
+        void element.offsetWidth;
+        element.classList.add('count-flash-white');
+      }
+    }, 400);
+
+    const unsubscribe = timelineState.subscribe((state) => {
+      if (!refProps.current || !refState.current || !refContext.current) {
+        return;
+      }
+
+      const { currentIndex, updates } = state;
+      const currentUpdate = updates[currentIndex];
+
+      if (!currentUpdate || currentIndex === 0) {
+        return;
+      }
+
+      flash();
+
+      refStats.current = {
+        isPropsChanged: (currentUpdate.props?.changes?.size ?? 0) > 0,
+        isStateChanged: (currentUpdate.state?.changes?.size ?? 0) > 0,
+        isContextChanged: (currentUpdate.context?.changes?.size ?? 0) > 0,
+      };
+
+      if (refProps.current.dataset.flash !== 'true') {
+        refProps.current.dataset.flash =
+          refStats.current.isPropsChanged.toString();
+      }
+      if (refState.current.dataset.flash !== 'true') {
+        refState.current.dataset.flash =
+          refStats.current.isStateChanged.toString();
+      }
+      if (refContext.current.dataset.flash !== 'true') {
+        refContext.current.dataset.flash =
+          refStats.current.isContextChanged.toString();
+      }
     });
 
-    useEffect(() => {
-      const flash = throttle(() => {
-        const flashElements = [];
-        if (refProps.current?.dataset.flash === 'true') {
-          flashElements.push(refProps.current);
-        }
-        if (refState.current?.dataset.flash === 'true') {
-          flashElements.push(refState.current);
-        }
-        if (refContext.current?.dataset.flash === 'true') {
-          flashElements.push(refContext.current);
-        }
+    return unsubscribe;
+  }, []);
 
-        for (const element of flashElements) {
-          element.classList.remove('count-flash-white');
-          void element.offsetWidth;
-          element.classList.add('count-flash-white');
-        }
-      }, 400);
+  // const toggleExpanded = useCallback(() => {
+  //   setIsExpanded((state) => {
+  //     if (isSticky && isExpanded) {
+  //       return state;
+  //     }
+  //     return !state;
+  //   });
+  // }, [setIsExpanded, isExpanded, isSticky]);
 
-      const unsubscribe = timelineState.subscribe((state) => {
-        if (!refProps.current || !refState.current || !refContext.current) {
-          return;
-        }
+  // const onTransitionStart = useCallback(
+  //   (e: TransitionEvent) => {
+  //     if (e.propertyName === 'max-height') {
+  //       calculateStickyTop(true);
+  //     }
+  //   },
+  //   [calculateStickyTop],
+  // );
 
-        const { currentIndex, updates } = state;
-        const currentUpdate = updates[currentIndex];
+  // const onTransitionEnd = useCallback(
+  //   (e: TransitionEvent) => {
+  //     if (e.propertyName === 'max-height') {
+  //       calculateStickyTop(false);
+  //     }
+  //   },
+  //   [calculateStickyTop],
+  // );
 
-        if (!currentUpdate || currentIndex === 0) {
-          return;
-        }
+  return (
+    <button
+      type="button"
+      className={cn(
+        'react-section-header',
+        'overflow-hidden',
+        'max-h-0',
+        'transition-[max-height]',
+      )}
+    >
+      <div className={cn('flex-1 react-scan-expandable')}>
+        <div className="overflow-hidden">
+          <div className="flex items-center whitespace-nowrap">
+            <div className="flex items-center gap-x-2">What changed?</div>
 
-        flash();
-
-        refStats.current = {
-          isPropsChanged: (currentUpdate.props?.changes?.size ?? 0) > 0,
-          isStateChanged: (currentUpdate.state?.changes?.size ?? 0) > 0,
-          isContextChanged: (currentUpdate.context?.changes?.size ?? 0) > 0,
-        };
-
-        if (refProps.current.dataset.flash !== 'true') {
-          refProps.current.dataset.flash =
-            refStats.current.isPropsChanged.toString();
-        }
-        if (refState.current.dataset.flash !== 'true') {
-          refState.current.dataset.flash =
-            refStats.current.isStateChanged.toString();
-        }
-        if (refContext.current.dataset.flash !== 'true') {
-          refContext.current.dataset.flash =
-            refStats.current.isContextChanged.toString();
-        }
-      });
-
-      return unsubscribe;
-    }, []);
-
-    const toggleExpanded = useCallback(() => {
-      setIsExpanded((state) => {
-        if (isSticky && isExpanded) {
-          return state;
-        }
-        return !state;
-      });
-    }, [setIsExpanded, isExpanded, isSticky]);
-
-    const onTransitionStart = useCallback(
-      (e: TransitionEvent) => {
-        if (e.propertyName === 'max-height') {
-          calculateStickyTop(true);
-        }
-      },
-      [calculateStickyTop],
-    );
-
-    const onTransitionEnd = useCallback(
-      (e: TransitionEvent) => {
-        if (e.propertyName === 'max-height') {
-          calculateStickyTop(false);
-        }
-      },
-      [calculateStickyTop],
-    );
-
-    return (
-      <button
-        ref={refSticky}
-        type="button"
-        onClick={toggleExpanded}
-        onTransitionStart={onTransitionStart}
-        onTransitionEnd={onTransitionEnd}
-        className={cn(
-          'react-section-header',
-          'overflow-hidden',
-          'max-h-0',
-          'transition-[max-height]',
-        )}
-      >
-        <div className={cn('flex-1 react-scan-expandable')}>
-          <div className="overflow-hidden">
-            <div className="flex items-center whitespace-nowrap">
-              <div className="flex items-center gap-x-2">
-                <div className="w-4 h-4 flex items-center justify-center">
-                  <Icon
-                    name="icon-chevron-right"
-                    size={12}
-                    className={cn(
-                      isExpanded && 'rotate-90',
-                      isSticky && isExpanded && 'rotate-0',
-                    )}
-                  />
-                </div>
-                What changed?
-              </div>
-
-              <div
-                className={cn(
-                  'ml-auto',
-                  'change-scope',
-                  'opacity-0',
-                  'transition-opacity duration-300 delay-150',
-                  isExpanded ? 'opacity-0' : 'opacity-100',
-                )}
-              >
-                <div ref={refProps}>props</div>
-                <div ref={refState}>state</div>
-                <div ref={refContext}>context</div>
-              </div>
+            <div
+              className={cn(
+                'ml-auto',
+                'change-scope',
+                'transition-opacity duration-300 delay-150',
+              )}
+            >
+              <div ref={refProps}>props</div>
+              <div ref={refState}>state</div>
+              <div ref={refContext}>context</div>
             </div>
           </div>
         </div>
-      </button>
-    );
-  },
-);
+      </div>
+    </button>
+  );
+});
 
 interface SectionProps {
   title: string;
   isExpanded: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   changes: Map<any, AggregatedChanges>;
   renderName?: (name: string) => ReactNode;
 }
 const identity = <T,>(x: T) => x;
 const Section = /* @__PURE__ */ memo(
-  ({ title, isExpanded, changes, renderName = identity }: SectionProps) => {
-    const refFiberInfo = useRef<MinimalFiberInfo | null>(null);
-    const refLastUpdated = useRef(new Set<string | number>());
-    const refChangesValues = useRef(new Map<string | number, ChangeValues>());
-    // const refLatestChanges = useRef<Change[]>([]);
-    // const [changes, setChanges] = useState<Change[]>([]);
-
+  ({ title, changes, renderName = identity }: SectionProps) => {
     const [expandedFns, setExpandedFns] = useState(new Set<string>());
     const [expandedEntries, setExpandedEntries] = useState(new Set<string>());
 
     const entries = Array.from(changes.entries());
-    // useEffect(() => {
-    //   const unsubscribe = timelineState.subscribe((state) => {
-    //     const { currentIndex, updates } = state;
-    //     const currentUpdate = currentIndex >= 0 ? updates[currentIndex] : null;
-    //     const prevUpdate = currentIndex > 0 ? updates[currentIndex - 1] : null;
-    //     const currentData = currentUpdate?.[title.toLowerCase() as SectionType];
-    //     const prevData = prevUpdate?.[title.toLowerCase() as SectionType];
 
-    //     if (!currentData) {
-    //       return;
-    //     }
-
-    //     refFiberInfo.current = currentUpdate?.fiberInfo;
-    //     refLastUpdated.current.clear();
-
-    //     const changesMap = new Map<string | number, Change>(
-    //       refLatestChanges.current.map((c) => [c.name, c]),
-    //     );
-
-    //     for (const { name, value } of currentData.current) {
-    //       const currentCount = currentData.changesCounts?.get(name) ?? 0;
-    //       const prevCount = prevData?.changesCounts?.get(name) ?? 0;
-    //       const count = Math.max(currentCount, prevCount);
-
-    //       const prevValue = prevData?.current.find((p) => p.name === name)?.value;
-
-    //       const hasValueChange = !isEqual(value, prevValue);
-
-    //       if (count > 0 || hasValueChange) {
-    //         const { value: safePrevValue, error: prevError } =
-    //           safeGetValue(prevValue);
-    //         const { value: safeCurrValue, error: currError } =
-    //           safeGetValue(value);
-    //         const diff = getObjectDiff(safePrevValue, safeCurrValue);
-
-    //         refChangesValues.current.set(name, {
-    //           name,
-    //           prevValue,
-    //           currValue: value,
-    //           prevError,
-    //           currError,
-    //           diff,
-    //           isFunction: typeof value === 'function',
-    //         });
-
-    //         const change = { name, value, prevValue, count };
-    //         const existingChange = changesMap.get(name);
-
-    //         if (
-    //           !existingChange ||
-    //           existingChange.count !== count ||
-    //           !isEqual(existingChange.value, value)
-    //         ) {
-    //           refLastUpdated.current.add(name);
-    //         }
-
-    //         changesMap.set(name, change);
-    //       }
-    //     }
-
-    //     refLatestChanges.current = Array.from(changesMap.values());
-    //     setChanges(refLatestChanges.current);
-    //   });
-
-    //   return unsubscribe;
-    // }, [title]);
-
-    const handleExpandEntry = useCallback((entryKey: string) => {
-      setExpandedEntries((prev) => {
-        const next = new Set(prev);
-        if (next.has(String(entryKey))) {
-          next.delete(String(entryKey));
-        } else {
-          next.add(String(entryKey));
-        }
-        return next;
-      });
-    }, []);
-
-    // if (changes.length === 0) {
-    //   return null;
-    // }
-
-    // const shouldShowChanges = calculateTotalChanges(aggregatedChanges) > 0;
     if (changes.size === 0) {
       return null;
     }
-    // if (!shouldShowChanges) {
-    //   return null;
-    // }
-
     return (
       <div>
         <div className="text-xs text-[#888] mb-1.5">{title}</div>
@@ -637,71 +422,6 @@ const Section = /* @__PURE__ */ memo(
     );
   },
 );
-
-type SectionType = 'props' | 'state' | 'context';
-// const CountBadge = ({
-//   count,
-//   showFlame,
-//   showFn,
-// }: { count: number; showFlame: boolean; showFn: boolean }) => {
-//   const badgeRef = useRef<HTMLDivElement>(null);
-//   const prevCount = useRef(count);
-
-//   useEffect(() => {
-//     const element = badgeRef.current;
-//     if (!element) {
-//       return;
-//     }
-
-//     if (prevCount.current === count) {
-//       return;
-//     }
-
-//     element.classList.remove('count-flash');
-//     void element.offsetWidth;
-//     element.classList.add('count-flash');
-
-//     prevCount.current = count;
-//   }, [count]);
-
-//   return (
-//     <div
-//       ref={badgeRef}
-//       className={cn(
-//         'count-badge',
-//         'text-[#a855f7] text-xs font-medium tabular-nums px-1.5 py-0.5 rounded-[4px] origin-center flex gap-x-2 items-center',
-//       )}
-//     >
-//       {showFlame && (
-//         <Icon
-//           name="icon-triangle-alert"
-//           className="text-yellow-500 mb-px"
-//           size={14}
-//         />
-//       )}
-//       {showFn && (
-//         <Icon name="icon-function" className="text-[#A855F7] mb-px" size={14} />
-//       )}
-//       x{count}
-//     </div>
-//   );
-// };
-
-type ChangeValues = {
-  name: string | number;
-  prevValue: unknown;
-  currValue: unknown;
-  prevError?: string;
-  currError?: string;
-  diff: {
-    changes: {
-      path: string[];
-      prevValue: unknown;
-      currentValue: unknown;
-    }[];
-  };
-  isFunction: boolean;
-};
 
 const AccessError = ({
   prevError,
