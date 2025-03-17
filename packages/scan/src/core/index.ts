@@ -161,6 +161,13 @@ export interface Options {
   showFPS?: boolean;
 
   /**
+   * Should the number of slowdown notifications be shown in the toolbar
+   *
+   *  @default true
+   */
+  showNotificationCount?: boolean;
+
+  /**
    * Should react scan log internal errors to the console.
    *
    * Useful if react scan is not behaving expected and you want to provide information to maintainers when submitting an issue https://github.com/aidenybai/react-scan/issues
@@ -206,6 +213,7 @@ export interface StoreType {
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
+  changesListeners: Map<number, Array<ChangesListener>>;
   interactionListeningForRenders:
     | ((fiber: Fiber, renders: Array<Render>) => void)
     | null;
@@ -282,6 +290,7 @@ export const Store: StoreType = {
   legacyReportData: new Map<string, RenderData>(),
   lastReportTime: signal(0),
   interactionListeningForRenders: null,
+  changesListeners: new Map(),
 };
 
 export const ReactScanInternals: Internals = {
@@ -299,6 +308,7 @@ export const ReactScanInternals: Internals = {
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
     showFPS: true,
+    showNotificationCount: true,
     // smoothlyAnimateOutlines: true,
     // trackUnnecessaryRenders: false,
   }),
@@ -341,6 +351,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       case 'showToolbar':
       // case 'report':
       // case 'alwaysShowLabels':
+      case 'showNotificationCount':
       case 'dangerouslyForceRunInProduction':
       case 'showFPS':
         if (typeof value !== 'boolean') {

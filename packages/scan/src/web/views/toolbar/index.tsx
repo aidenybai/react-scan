@@ -1,5 +1,10 @@
 import { useSignalEffect } from '@preact/signals';
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from 'preact/hooks';
 import {
   type LocalStorageOptions,
   ReactScanInternals,
@@ -34,6 +39,8 @@ export const Toolbar = constant(() => {
   const isInspectActive = inspectState.value.kind === 'inspecting';
   const isInspectFocused = inspectState.value.kind === 'focused';
 
+  const [seenEvents, setSeenEvents] = useState<Array<string>>([]);
+
   const onToggleInspect = useCallback(() => {
     const currentState = Store.inspectState.value;
 
@@ -58,6 +65,7 @@ export const Toolbar = constant(() => {
         };
         return;
       }
+      // todo: auto select the root fibers first stateNode, and tell the user to select the element
       case 'inspect-off': {
         signalWidgetViews.value = {
           view: 'none',
@@ -69,37 +77,6 @@ export const Toolbar = constant(() => {
         return;
       }
       case 'uninitialized': {
-        return;
-      }
-    }
-  }, []);
-
-  const onToggleNotifications = useCallback(() => {
-    if (Store.inspectState.value.kind !== 'inspect-off') {
-      Store.inspectState.value = {
-        kind: 'inspect-off',
-      };
-    }
-    switch (signalWidgetViews.value.view) {
-      case 'inspector': {
-        Store.inspectState.value = {
-          kind: 'inspect-off',
-        };
-        signalWidgetViews.value = {
-          view: 'notifications',
-        };
-        return;
-      }
-      case 'notifications': {
-        signalWidgetViews.value = {
-          view: 'none',
-        };
-        return;
-      }
-      case 'none': {
-        signalWidgetViews.value = {
-          view: 'notifications',
-        };
         return;
       }
     }
@@ -146,6 +123,15 @@ export const Toolbar = constant(() => {
     inspectColor = '#999';
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  useLayoutEffect(() => {
+    if (signalWidgetViews.value.view !== 'notifications') {
+      return;
+    }
+    const ids = new Set(events.map((event) => event.id));
+    setSeenEvents([...ids.values()]);
+  }, [events.length, signalWidgetViews.value.view]);
+
   return (
     <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
       <div className="h-full flex items-center min-w-fit">
@@ -165,14 +151,48 @@ export const Toolbar = constant(() => {
         <button
           type="button"
           id="react-scan-notifications"
-          onClick={onToggleNotifications}
+          onClick={() => {
+            if (Store.inspectState.value.kind !== 'inspect-off') {
+              Store.inspectState.value = {
+                kind: 'inspect-off',
+              };
+            }
+            switch (signalWidgetViews.value.view) {
+              case 'inspector': {
+                Store.inspectState.value = {
+                  kind: 'inspect-off',
+                };
+
+                const ids = new Set(events.map((event) => event.id));
+                setSeenEvents([...ids.values()]);
+                signalWidgetViews.value = {
+                  view: 'notifications',
+                };
+                return;
+              }
+              case 'notifications': {
+                signalWidgetViews.value = {
+                  view: 'none',
+                };
+                return;
+              }
+              case 'none': {
+                const ids = new Set(events.map((event) => event.id));
+                setSeenEvents([...ids.values()]);
+                signalWidgetViews.value = {
+                  view: 'notifications',
+                };
+                return;
+              }
+            }
+          }}
           className="button flex items-center justify-center h-full pl-2.5 pr-2.5"
           style={{ color: inspectColor }}
         >
           <Notification
-            events={laggedEvents.map(
-              (event) => getEventSeverity(event) === 'high',
-            )}
+            events={laggedEvents
+              .filter((event) => !seenEvents.includes(event.id))
+              .map((event) => getEventSeverity(event) === 'high')}
             size={16}
             className={cn([
               'text-[#999]',

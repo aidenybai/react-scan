@@ -4,13 +4,11 @@ import { Component } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { Store } from '~core/index';
 import { Icon } from '~web/components/icon';
-import { StickySection } from '~web/components/sticky-section';
 import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import { constant } from '~web/utils/preact/constant';
 import { ComponentsTree } from './components-tree';
 import { flashManager } from './flash-overlay';
-import { PropertySection } from './properties';
 import {
   type TimelineUpdate,
   inspectorUpdateSignal,
@@ -22,7 +20,7 @@ import {
   resetTracking,
 } from './timeline/utils';
 import { extractMinimalFiberInfo, getCompositeFiberFromElement } from './utils';
-import { WhatChangedSection } from './what-changed';
+import { WhatChanged } from './what-changed';
 
 export const globalInspectorState = {
   lastRendered: new Map<string, unknown>(),
@@ -201,16 +199,9 @@ const Inspector = /* @__PURE__ */ constant(() => {
   return (
     <InspectorErrorBoundary>
       <div className={inspectorContainerClassName}>
-        <WhatChangedSection />
-        <StickySection>
-          {(props) => <PropertySection section="props" {...props} />}
-        </StickySection>
-        <StickySection>
-          {(props) => <PropertySection section="state" {...props} />}
-        </StickySection>
-        <StickySection>
-          {(props) => <PropertySection section="context" {...props} />}
-        </StickySection>
+        <div className="w-full h-full">
+          <WhatChanged />
+        </div>
       </div>
     </InspectorErrorBoundary>
   );

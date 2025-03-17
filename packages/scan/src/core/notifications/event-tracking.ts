@@ -274,6 +274,34 @@ export const useToolbarEventLog = () => {
 let taskDirtyAt: null | number = null;
 let taskDirtyOrigin: null | number = null;
 
+let previousTrackCurrentMouseOverElementCallback:
+  | ((e: MouseEvent) => void)
+  | null = null;
+
+let overToolbar: boolean | null;
+
+const trackCurrentMouseOverToolbar = () => {
+  const callback = (e: MouseEvent) => {
+    overToolbar = e
+      .composedPath()
+      .map((path) => (path as Element).id)
+      .filter(Boolean)
+      .includes('react-scan-toolbar');
+  };
+
+  document.addEventListener('mouseover', callback);
+  previousTrackCurrentMouseOverElementCallback = callback;
+
+  return () => {
+    if (previousTrackCurrentMouseOverElementCallback) {
+      document.removeEventListener(
+        'mouseover',
+        previousTrackCurrentMouseOverElementCallback,
+      );
+    }
+  };
+};
+
 // stops long tasks b/c backgrounded from being reported
 export const startDirtyTaskTracking = () => {
   const onVisibilityChange = () => {
@@ -288,8 +316,7 @@ export const startDirtyTaskTracking = () => {
   };
 };
 
-
-export const HIGH_SEVERITY_FPS_DROP_TIME = 150
+export const HIGH_SEVERITY_FPS_DROP_TIME = 150;
 
 let framesDrawnInTheLastSecond: Array<number> = [];
 
@@ -323,12 +350,16 @@ export function startLongPipelineTracking() {
           taskDirtyAt !== null && taskDirtyOrigin !== null
             ? endNow + endOrigin - (taskDirtyOrigin + taskDirtyAt) < 100
             : null;
+        // not useful to report slowdowns caused by things like outlines (can get expensive not fully optimized)
+        const wasTaskInfluencedByToolbar = overToolbar !== null && overToolbar;
 
-
-        if (duration > HIGH_SEVERITY_FPS_DROP_TIME && !taskConsideredDirty) {
+        if (
+          duration > HIGH_SEVERITY_FPS_DROP_TIME &&
+          !taskConsideredDirty &&
+          !wasTaskInfluencedByToolbar
+        ) {
           const endAt = endOrigin + endNow;
           const startAt = startTime + startOrigin;
-
 
           toolbarEventStore.getState().actions.addEvent({
             kind: 'long-render',
@@ -366,6 +397,7 @@ export function startLongPipelineTracking() {
 }
 export const startTimingTracking = () => {
   const unSubPerformance = setupPerformancePublisher();
+  const unSubMouseOver = trackCurrentMouseOverToolbar();
   const unSubDirtyTaskTracking = startDirtyTaskTracking();
   const unSubLongPipelineTracking = startLongPipelineTracking();
 
@@ -424,6 +456,7 @@ export const startTimingTracking = () => {
   );
 
   return () => {
+    unSubMouseOver();
     unSubDirtyTaskTracking();
     unSubLongPipelineTracking();
     unSubPerformance();

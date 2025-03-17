@@ -153,6 +153,11 @@ export const Widget = () => {
           currentX = Number(initialX) + deltaX;
           currentY = Number(initialY) + deltaY;
 
+          /* [CURSOR GENERATED] Anti-blur fix:
+           * Changed from transition: 'all' and transform: translate() to:
+           * 1. transition: none - Prevents interpolation blur during drag
+           * 2. translate3d - Forces GPU acceleration for crisp text
+           */
           containerStyle.transition = 'none';
           containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
           rafId = null;
@@ -189,7 +194,13 @@ export const Widget = () => {
         );
 
         if (newCorner === signalWidget.value.corner) {
-          containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          /* [CURSOR GENERATED] Anti-blur fix:
+           * Changed from transition: 'all' to transition: 'transform'
+           * to prevent unnecessary property interpolation that was
+           * causing text blur during animation
+           */
+          containerStyle.transition =
+            'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
           const currentPosition = signalWidget.value.dimensions.position;
           requestAnimationFrame(() => {
             containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
@@ -217,7 +228,8 @@ export const Widget = () => {
         };
 
         container.addEventListener('transitionend', onTransitionEnd);
-        containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        containerStyle.transition =
+          'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 
         requestAnimationFrame(() => {
           containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;

@@ -292,7 +292,7 @@ function getContextChangesTraversal(
     type: ChangeReason.Context,
     name:
       (nextValue.context as { displayName: string | undefined }).displayName ??
-      'UnnamedContext',
+      'Context.Provider',
     value: nextMemoizedValue,
     contextType: getContextId(nextValue.context as ContextFiber),
 
@@ -423,6 +423,17 @@ export interface RenderData {
   totalTime: number;
   renderCount: number;
   lastRenderTimestamp: number;
+}
+
+export interface OldRenderData {
+  count: number;
+  time: number;
+  renders: Array<Render>;
+  displayName: string | null;
+  // biome-ignore lint/suspicious/noExplicitAny: temporary type hack cause im lazy
+  type: any;
+  // biome-ignore lint/suspicious/noExplicitAny: temporary type hack cause im lazy
+  changes?: any;
 }
 
 const RENDER_DEBOUNCE_MS = 16;

@@ -104,8 +104,19 @@ svg {
   @apply z-[2147483678];
   @apply animate-fade-in animation-duration-300 animation-delay-300;
   @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
-
   @apply place-self-start;
+
+  /* [CURSOR GENERATED] Anti-blur fixes:
+   * We removed will-change-transform and replaced it with these properties
+   * because will-change was causing stacking context issues and inconsistent
+   * text rendering. The new properties work together to force proper
+   * GPU acceleration without z-index side effects:
+   */
+  transform: translate3d(0, 0, 0);      /* Forces GPU acceleration without causing stacking issues */
+  backface-visibility: hidden;          /* Prevents blurry text during transforms */
+  perspective: 1000;                    /* Creates proper 3D context for crisp text */
+  -webkit-transform-style: preserve-3d; /* Ensures consistent text rendering across browsers */
+  transform-style: preserve-3d;
 }
 
 .button {
@@ -672,4 +683,23 @@ svg {
 
 .react-scan-components-tree:has(.resize-v-line:hover, .resize-v-line:active) .tree {
   overflow: hidden;
+}
+
+
+
+.react-scan-expandable {
+  display: grid;
+  grid-template-rows: 0fr;
+  @apply overflow-hidden;
+  @apply transition-all duration-75;
+  transition-timing-function: ease-out;
+
+  > * {
+    min-height: 0;
+  }
+
+  &.react-scan-expanded {
+    grid-template-rows: 1fr;
+    transition-duration: 100ms;
+  }
 }

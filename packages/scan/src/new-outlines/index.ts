@@ -4,10 +4,25 @@ import {
   getDisplayName,
   getFiberId,
   getNearestHostFibers,
+  getTimings,
+  getType,
   isCompositeFiber,
 } from 'bippy';
-import { ReactScanInternals, Store, ignoredProps } from '~core/index';
-import { createInstrumentation } from '~core/instrumentation';
+import {
+  Change,
+  ContextChange,
+  PropsChange,
+  ReactScanInternals,
+  Store,
+  ignoredProps,
+} from '~core/index';
+import {
+  ChangeReason,
+  createInstrumentation,
+  getContextChanges,
+  getStateChanges,
+  OldRenderData,
+} from '~core/instrumentation';
 import { log, logIntro } from '~web/utils/log';
 import { inspectorUpdateSignal } from '~web/views/inspector/states';
 import {
@@ -18,6 +33,7 @@ import {
   updateScroll,
 } from './canvas';
 import type { ActiveOutline, BlueprintOutline, OutlineData } from './types';
+import { getChangedPropsDetailed } from '~web/views/inspector/utils';
 
 // The worker code will be replaced at build time
 const workerCode = '__WORKER_CODE__';
@@ -305,7 +321,10 @@ export const getCanvasEl = () => {
   canvasEl.width = width;
   canvasEl.height = height;
 
-  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !window.__REACT_SCAN_EXTENSION__) {
+  if (
+    IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED &&
+    !window.__REACT_SCAN_EXTENSION__
+  ) {
     try {
       worker = new Worker(
         URL.createObjectURL(
@@ -422,6 +441,76 @@ export const cleanup = () => {
   }
 };
 
+const reportRenderToListeners = (fiber: Fiber) => {
+  if (isCompositeFiber(fiber)) {
+    // report render has a non trivial cost because it calls Date.now(), so we want to avoid the computation if possible
+    if (
+      ReactScanInternals.options.value.showToolbar !== false &&
+      Store.inspectState.value.kind === 'focused'
+    ) {
+      const reportFiber = fiber;
+      const { selfTime } = getTimings(fiber);
+      const displayName = getDisplayName(fiber.type);
+      const fiberId = getFiberId(reportFiber);
+
+      const currentData = Store.reportData.get(fiberId);
+      const existingCount = currentData?.count ?? 0;
+      const existingTime = currentData?.time ?? 0;
+
+      const changes: Array<Change> = [];
+
+      // optimization, for now only track changes on inspected prop, cleanup later when changes is used in outline drawing
+      const listeners = Store.changesListeners.get(getFiberId(fiber));
+
+      if (listeners?.length) {
+        const propsChanges: Array<PropsChange> = getChangedPropsDetailed(
+          fiber,
+        ).map((change) => ({
+          type: ChangeReason.Props,
+          name: change.name,
+          value: change.value,
+          prevValue: change.prevValue,
+          unstable: false,
+        }));
+
+        const stateChanges = getStateChanges(fiber);
+
+        // context changes are incorrect, bippy needs to tell us the context dependencies that changed and provide those values every render
+        // currently, we say every context change, regardless of the render it happened, is a change. Which requires us to hack change tracking
+        // in the whats-changed toolbar component
+        const fiberContext = getContextChanges(fiber);
+        const contextChanges: Array<ContextChange> = fiberContext.map(
+          (info) => ({
+            name: info.name,
+            type: ChangeReason.Context,
+            value: info.value,
+            contextType: info.contextType,
+          }),
+        );
+
+        listeners.forEach((listener) => {
+          listener({
+            propsChanges,
+            stateChanges,
+            contextChanges,
+          });
+        });
+      }
+      const fiberData: OldRenderData = {
+        count: existingCount + 1,
+        time: existingTime + selfTime || 0,
+        renders: [],
+        displayName,
+        type: getType(fiber.type) || null,
+        changes,
+      };
+
+      Store.reportData.set(fiberId, fiberData);
+      needsReport = true;
+    }
+  }
+};
+
 let needsReport = false;
 let reportInterval: ReturnType<typeof setInterval>;
 export const startReportInterval = () => {
@@ -508,6 +597,9 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
 
       if (Store.inspectState.value.kind === 'focused') {
         inspectorUpdateSignal.value = Date.now();
+      }
+      if (!isInspectorInactive) {
+        reportRenderToListeners(fiber);
       }
 
       ReactScanInternals.options.value.onRender?.(fiber, renders);

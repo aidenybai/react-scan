@@ -57,6 +57,8 @@ type Bars = Array<
   | { kind: 'render'; event: GroupedFiberRender; totalTime: number }
 >;
 
+export const NO_PURGE = ['hover:bg-[#0f0f0f]'];
+
 export const RenderBarChart = ({
   selectedEvent,
 }: { selectedEvent: NotificationEvent }) => {
@@ -154,6 +156,7 @@ export const RenderBarChart = ({
         .toSorted((a, b) => b.totalTime - a.totalTime)
         .map((bar) => (
           <RenderBar
+            key={bar.kind === 'render' ? bar.event.id : bar.kind}
             bars={bars}
             bar={bar}
             debouncedMouseEnter={debouncedMouseEnter}
@@ -438,7 +441,8 @@ const RenderBar = ({
             bar.kind === 'render' && !isLeaf && setIsExpanded(!isExpanded)
           }
           className={cn([
-            'flex items-center min-w-fit shrink-0 hover:bg-[#0f0f0f] rounded-r-md h-[28px]',
+            'flex items-center min-w-fit shrink-0 rounded-r-md h-[28px]',
+            !isLeaf && 'hover:bg-[#0f0f0f]',
             bar.kind === 'render' && !isLeaf
               ? 'cursor-pointer'
               : 'cursor-default',
@@ -456,7 +460,12 @@ const RenderBar = ({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-x-1 min-w-[60px]">
+          <div
+            style={{
+              minWidth: isLeaf ? 'fit-content' : isProduction ? '30px' : '60px',
+            }}
+            className="flex items-center justify-end gap-x-1"
+          >
             {bar.kind === 'render' && (
               <span className={cn(['text-[10px]'])}>x{bar.event.count}</span>
             )}

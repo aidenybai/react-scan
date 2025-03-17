@@ -113,6 +113,7 @@ export const HeaderInspect = () => {
   return (
     <div className={headerInspectClassName}>
       {componentName}
+      {/* useless info */}
       <div className="flex items-center gap-x-2 mr-auto text-xs text-[#888]">
         <span
           ref={refReRenders}
