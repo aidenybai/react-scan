@@ -92,7 +92,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
   } = options;
 
   let config: ResolvedConfig;
-  let isProduction = false;
+  let isBuild = false;
   let scanFilePath = '';
   let assetsDir = '';
 
@@ -101,7 +101,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
   const generateScanScript = (options: Options = {}) => {
     const hasOptions = Object.keys(options).length > 0;
 
-    if (isProduction) {
+    if (isBuild) {
       // Create a proper JSON string for the options and wrap it in single quotes
       const optionsJson = hasOptions ? `${JSON.stringify(options)}` : '{}';
 
@@ -189,7 +189,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
 
     configResolved(resolvedConfig) {
       config = resolvedConfig;
-      isProduction = config.isProduction;
+      isBuild = config.command === 'build';
       assetsDir = config.build?.assetsDir || 'assets';
       const base = config.base || '/';
 
@@ -200,7 +200,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
         mode: config.mode,
         base,
         enable,
-        isProduction,
+        isBuild,
         assetsDir,
         scanOptions,
         scanFilePath,
@@ -231,21 +231,21 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
           log.debug(`Removed ${removedCount} existing scan script(s)`);
         }
 
-        if (isProduction) {
-          // In production, insert at the beginning of head
+        if (isBuild) {
+          // In build, insert at the beginning of head
           $('head').prepend(scanScript);
           log.debug(
-            'Injected scan script at the beginning of head (production)',
+            'Injected scan script at the beginning of head (build)',
           );
         } else {
           // In development, insert after Vite's client script
           const viteClientScript = $('script[src="/@vite/client"]');
           if (viteClientScript.length) {
             viteClientScript.after(scanScript);
-            log.debug('Injected scan script after Vite client (development)');
+            log.debug('Injected scan script after Vite client (serve)');
           } else {
             $('head').append(scanScript);
-            log.debug('Injected scan script at end of head (development)');
+            log.debug('Injected scan script at end of head (serve)');
           }
         }
 
@@ -257,7 +257,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
     },
 
     resolveId(id) {
-      if (!isProduction && id === `/@id/${REACT_SCAN_IDENTIFIER}`) {
+      if (!isBuild && id === `/@id/${REACT_SCAN_IDENTIFIER}`) {
         log.debug('Resolving react-scan module');
         return REACT_SCAN_IDENTIFIER;
       }
@@ -265,8 +265,8 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
     },
 
     async generateBundle() {
-      if (isProduction && enable) {
-        log.debug('Production build started, processing react-scan');
+      if (isBuild && enable) {
+        log.debug('Build started, processing react-scan');
 
         try {
           const nodeModulesPath = path.resolve('node_modules');
@@ -298,7 +298,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
     },
 
     buildEnd() {
-      if (isProduction) {
+      if (isBuild) {
         log.debug('Build completed');
       }
     },
