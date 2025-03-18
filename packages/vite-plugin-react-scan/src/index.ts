@@ -6,6 +6,21 @@ import * as cheerio from 'cheerio';
 import type { Options } from 'react-scan';
 import type { Plugin, ResolvedConfig } from 'vite';
 
+async function resolveModuleFileContent(moduleName: string, startDir: string = process.cwd()) {
+  const modulePath = path.join('node_modules', moduleName);
+  const resolvedPath = path.resolve(startDir, modulePath);
+
+  try {
+    return await fs.promises.readFile(resolvedPath, 'utf-8');
+  } catch {
+    const parentDir = path.dirname(startDir);
+    if (parentDir !== startDir) {
+      return resolveModuleFileContent(moduleName, parentDir);
+    }
+    throw new Error(`Module ${moduleName} not found`);
+  }
+}
+
 interface Logger {
   debug: (...args: unknown[]) => void;
   info: (...args: unknown[]) => void;
@@ -269,14 +284,8 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
         log.debug('Build started, processing react-scan');
 
         try {
-          const nodeModulesPath = path.resolve('node_modules');
-          const reactScanPath = path.join(
-            nodeModulesPath,
-            REACT_SCAN_IDENTIFIER,
-            'dist',
-            'auto.global.js',
-          );
-          const content = await fs.promises.readFile(reactScanPath, 'utf-8');
+          const moduleNamePath = `${REACT_SCAN_IDENTIFIER}/dist/auto.global.js`;
+          const content = await resolveModuleFileContent(moduleNamePath);
 
           // Let Vite handle the file placement in configured assets directory
           const assetFileName = `${assetsDir}/auto.global.js`;
