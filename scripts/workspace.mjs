@@ -2,8 +2,9 @@ import { execSync, spawn } from 'node:child_process';
 
 const runCommand = (command, filters = []) => {
   const filterArgs = filters.map((filter) => `--filter ${filter}`).join(' ');
-  execSync(`WORKSPACE_BUILD=1 pnpm ${filterArgs} ${command}`, {
+  execSync(`pnpm ${filterArgs} ${command}`, {
     stdio: 'inherit',
+    env: { ...process.env, WORKSPACE_BUILD: '1' },
   });
 };
 

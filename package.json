@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "build": "WORKSPACE_BUILD=true node scripts/workspace.mjs build",
+    "build": "node scripts/workspace.mjs build",
     "postbuild": "node scripts/version-warning.mjs",
     "dev": "node scripts/workspace.mjs dev",
     "pack": "node scripts/workspace.mjs pack",
@@ -24,6 +24,7 @@
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
     "postcss": "^8.4.49",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.17",
     "typescript": "latest",
     "vite-tsconfig-paths": "^5.1.4"

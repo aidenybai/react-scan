@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "rimraf dist",
     "build": "vite build",
     "postbuild": "node ../../scripts/version-warning.mjs",
     "dev": "pnpm dev:chrome",
@@ -15,7 +15,7 @@
     "pack:chrome": "pnpm clean && pnpm build && pnpm mkdir && cd dist && zip -r \"../build/chrome-extension-v$npm_package_version.zip\" .",
     "pack:firefox": "pnpm clean && BROWSER=firefox pnpm build && pnpm mkdir && cd dist && zip -r \"../build/firefox-extension-v$npm_package_version.zip\" .",
     "pack:brave": "pnpm clean && BROWSER=brave pnpm build && pnpm mkdir && cd dist && zip -r \"../build/brave-extension-v$npm_package_version.zip\" .",
-    "pack:all": "rm -rf build && pnpm pack:chrome && pnpm pack:firefox && pnpm pack:brave",
+    "pack:all": "rimraf build && pnpm pack:chrome && pnpm pack:firefox && pnpm pack:brave",
     "lint": "biome lint src && pnpm typecheck",
     "format": "biome format . --write",
     "check": "biome check . --write",

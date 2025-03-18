@@ -64,7 +64,7 @@ function getPackageInfo() {
   const isWorkspacePackage = cwd.includes('packages/');
   const isRootDir = cwd === resolve(__dirname, '..');
   const isDirectPackageBuild =
-    isWorkspacePackage && !process.env.WORKSPACE_BUILD;
+    isWorkspacePackage && process.env.WORKSPACE_BUILD !== '1';
 
   if (isDirectPackageBuild) {
     const pkgPath = resolve(cwd, 'package.json');

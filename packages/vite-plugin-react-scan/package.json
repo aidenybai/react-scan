@@ -7,13 +7,13 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rimraf dist && tsc",
     "postbuild": "node ../../scripts/version-warning.mjs",
     "lint": "biome lint src && pnpm typecheck",
     "format": "biome format . --write",
     "check": "biome check . --write",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "rm -rf dist && npm run build"
+    "prepublishOnly": "rimraf dist && npm run build"
   },
   "peerDependenciesMeta": {
     "react-scan": {
