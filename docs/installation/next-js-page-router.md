@@ -2,7 +2,9 @@
 
 ## As a script tag
 
-Add the script tag to your `pages/_document`:
+Add the script tag to your `pages/_document`
+
+Refer to the [CDN Guide](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md) for the available URLs.
 
 ```jsx
 // pages/_document

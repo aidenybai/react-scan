@@ -45,15 +45,9 @@ bun add react-scan
 yarn add react-scan
 ```
 
-### CDN
-
-```html
-<!-- import this BEFORE any scripts -->
-<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>
-```
-
 ## Usage
 
+- [CDN](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md)
 - [NextJS App Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-app-router.md)
 - [NextJS Page Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-page-router.md)
 - [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)

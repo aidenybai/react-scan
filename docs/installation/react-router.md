@@ -2,7 +2,9 @@
 
 ## As a script tag
 
-Add the script tag to your `Layout` component in the `app/root`:
+Add the script tag to your `Layout` component in the `app/root`.
+
+Refer to the [CDN Guide](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md) for the available URLs.
 
 ```jsx
 // app/root

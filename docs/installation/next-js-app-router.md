@@ -2,7 +2,9 @@
 
 ## As a script tag
 
-Add the script tag to your `app/layout`:
+Add the script tag to your `app/layout`.
+
+Refer to the [CDN Guide](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md) for the available URLs.
 
 ```jsx
 // app/layout
@@ -56,9 +58,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <ReactScan />
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

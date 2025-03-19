@@ -2,7 +2,9 @@
 
 ## As a script tag
 
-Add the script tag to your `index.html`:
+Add the script tag to your `index.html`.
+
+Refer to the [CDN Guide](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md) for the available URLs.
 
 ```html
 <!doctype html>
@@ -26,7 +28,7 @@ In your project entrypoint (e.g. `src/index`, `src/main`):
 // src/index.jsx
 
 // must be imported before React and React DOM
-import { scan } from "react-scan"; 
+import { scan } from "react-scan";
 import React from "react";
 
 scan({

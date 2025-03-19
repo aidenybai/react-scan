@@ -2,7 +2,9 @@
 
 ## As a script tag
 
-Add the script tag to your `<RootDocument>` component at `app/routes/__root`:
+Add the script tag to your `<RootDocument>` component at `app/routes/__root`.
+
+Refer to the [CDN Guide](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md) for the available URLs.
 
 ```jsx
 // app/routes/__root
