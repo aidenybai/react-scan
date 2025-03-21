@@ -76,8 +76,10 @@ html.freeze #react-scan-toast {
 }
 
 @media (max-width: 720px) {
-  br {
-    display: none;
+  #react-scan-toast {
+    br {
+      display: none;
+    }
   }
 }
 
