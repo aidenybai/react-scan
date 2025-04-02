@@ -169,7 +169,7 @@ export const getLabelText = (
 export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
   ReactScanInternals.options.value.onRender?.(fiber, renders);
   const type = getType(fiber.type) || fiber.type;
-  if (type && typeof type === 'function' && typeof type === 'object') {
+  if (type && (typeof type === 'function' || typeof type === 'object')) {
     const renderData = (type.renderData || {
       count: 0,
       time: 0,
