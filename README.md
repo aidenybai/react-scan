@@ -57,6 +57,7 @@ yarn add react-scan
 - [React Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/react-router.md)
 - [Astro](https://github.com/aidenybai/react-scan/blob/main/docs/installation/astro.md)
 - [TanStack Start](https://github.com/aidenybai/react-scan/blob/main/docs/installation/tanstack-start.md)
+- [Rsbuild](https://github.com/aidenybai/react-scan/blob/main/docs/installation/rsbuild.md)
 
 ### CLI
 
