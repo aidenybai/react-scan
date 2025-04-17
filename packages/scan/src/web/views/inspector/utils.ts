@@ -145,7 +145,6 @@ export const getParentCompositeFiber = (
   return null;
 };
 
-
 const isFiberInTree = (fiber: Fiber, root: Fiber): boolean => {
   {
     // const root= fiberRootCache.get(fiber) || (fiber.alternate && fiberRootCache.get(fiber.alternate) )

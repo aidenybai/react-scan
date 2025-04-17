@@ -4,30 +4,14 @@
     "rootDir": "src",
     "outDir": "dist",
     "baseUrl": ".",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "paths": {
-      "~web/*": [
-        "src/web/*"
-      ],
-      "~core/*": [
-        "src/core/*"
-      ],
-      "~monitor/*": [
-        "src/monitor/*"
-      ],
-      "~instrumentation/*": [
-        "src/instrumentation/*"
-      ]
+      "~web/*": ["src/web/*"],
+      "~core/*": ["src/core/*"],
+      "~monitor/*": ["src/monitor/*"],
+      "~instrumentation/*": ["src/instrumentation/*"]
     }
   },
-  "include": [
-    "src",
-    "global.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src", "global.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

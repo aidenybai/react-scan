@@ -1,5 +1,5 @@
-import { BoundedArray } from "~core/notifications/performance-utils";
-import { CompletedInteraction } from "./performance";
+import { BoundedArray } from '~core/notifications/performance-utils';
+import { CompletedInteraction } from './performance';
 
 type Subscriber<T> = (data: T) => void;
 
@@ -32,5 +32,5 @@ export class Store<T> {
 }
 export const MAX_INTERACTION_BATCH = 150;
 export const interactionStore = new Store<BoundedArray<CompletedInteraction>>(
-  new BoundedArray(MAX_INTERACTION_BATCH)
+  new BoundedArray(MAX_INTERACTION_BATCH),
 );

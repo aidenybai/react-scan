@@ -15,14 +15,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "packages",
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["packages"],
+  "exclude": ["node_modules"]
 }

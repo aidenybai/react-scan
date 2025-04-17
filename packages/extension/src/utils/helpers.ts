@@ -25,25 +25,41 @@ const ReactDetection = {
   limits: {
     MAX_DEPTH: 10,
     MAX_ELEMENTS: 30,
-    ELEMENTS_PER_LEVEL: 5
+    ELEMENTS_PER_LEVEL: 5,
   },
   nonVisualTags: new Set([
     // Document level
-    'HTML', 'HEAD', 'META', 'TITLE', 'BASE',
+    'HTML',
+    'HEAD',
+    'META',
+    'TITLE',
+    'BASE',
     // Scripts and styles
-    'SCRIPT', 'STYLE', 'LINK', 'NOSCRIPT',
+    'SCRIPT',
+    'STYLE',
+    'LINK',
+    'NOSCRIPT',
     // Media and embeds
-    'SOURCE', 'TRACK', 'EMBED', 'OBJECT', 'PARAM',
+    'SOURCE',
+    'TRACK',
+    'EMBED',
+    'OBJECT',
+    'PARAM',
     // Special elements
-    'TEMPLATE', 'PORTAL', 'SLOT',
+    'TEMPLATE',
+    'PORTAL',
+    'SLOT',
     // Others
-    'AREA', 'XML', 'DOCTYPE', 'COMMENT'
+    'AREA',
+    'XML',
+    'DOCTYPE',
+    'COMMENT',
   ]),
   reactMarkers: {
     root: '_reactRootContainer',
     fiber: '__reactFiber',
-    instance: '__reactInternalInstance$'
-  }
+    instance: '__reactInternalInstance$',
+  },
 } as const;
 
 const childrenCache = new WeakMap<Element, Element[]>();
@@ -91,7 +107,10 @@ export const hasReactFiber = (): boolean => {
 
     if (depth < ReactDetection.limits.MAX_DEPTH) {
       const children = getChildren(element);
-      const maxCheck = Math.min(children.length, ReactDetection.limits.ELEMENTS_PER_LEVEL);
+      const maxCheck = Math.min(
+        children.length,
+        ReactDetection.limits.ELEMENTS_PER_LEVEL,
+      );
 
       for (let i = 0; i < maxCheck; i++) {
         if (checkElement(children[i], depth + 1)) {

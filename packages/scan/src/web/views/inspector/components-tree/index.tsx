@@ -8,10 +8,7 @@ import {
 import { Store } from '~core/index';
 import { renderDataMap } from '~core/instrumentation';
 import { Icon } from '~web/components/icon';
-import {
-  LOCALSTORAGE_KEY,
-  MIN_CONTAINER_WIDTH,
-} from '~web/constants';
+import { LOCALSTORAGE_KEY, MIN_CONTAINER_WIDTH } from '~web/constants';
 import { useVirtualList } from '~web/hooks/use-virtual-list';
 import { signalWidget } from '~web/state';
 import {
@@ -677,7 +674,7 @@ export const ComponentsTree = () => {
     if (!refResizeHandle.current) return;
 
     const parentWidth = signalWidget.value.dimensions.width;
-    const maxWidth = Math.floor(parentWidth - (MIN_CONTAINER_WIDTH / 2));
+    const maxWidth = Math.floor(parentWidth - MIN_CONTAINER_WIDTH / 2);
 
     refResizeHandle.current.classList.remove(
       'cursor-ew-resize',
@@ -707,7 +704,7 @@ export const ComponentsTree = () => {
       const startX = e.clientX;
       const startWidth = refContainer.current.offsetWidth;
       const parentWidth = signalWidget.value.dimensions.width;
-      const maxWidth = Math.floor(parentWidth - (MIN_CONTAINER_WIDTH / 2));
+      const maxWidth = Math.floor(parentWidth - MIN_CONTAINER_WIDTH / 2);
 
       updateResizeDirection(startWidth);
 
