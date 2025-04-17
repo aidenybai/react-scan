@@ -603,11 +603,11 @@ const createNotificationsOutlineCanvas = () => {
 
 export const scan = (options: Options = {}) => {
   setOptions(options);
-  const isInIframe = Store.isInIframe.value;
+  // const isInIframe = Store.isInIframe.value;
 
-  if (isInIframe) {
-    return;
-  }
+  // if (isInIframe) {
+  //   return;
+  // }
 
   if (options.enabled === false && options.showToolbar !== true) {
     return;
