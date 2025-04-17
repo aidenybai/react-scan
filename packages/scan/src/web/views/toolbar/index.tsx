@@ -151,6 +151,7 @@ export const Toolbar = constant(() => {
         <button
           type="button"
           id="react-scan-notifications"
+          title="Notifications"
           onClick={() => {
             if (Store.inspectState.value.kind !== 'inspect-off') {
               Store.inspectState.value = {
@@ -207,6 +208,7 @@ export const Toolbar = constant(() => {
         checked={!ReactScanInternals.instrumentation?.isPaused.value}
         onChange={onToggleActive}
         className="place-self-center"
+        title="Visualise component updates"
       />
 
       {/* todo add back showFPS*/}
