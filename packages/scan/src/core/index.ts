@@ -168,6 +168,13 @@ export interface Options {
   showNotificationCount?: boolean;
 
   /**
+   * Allow React Scan to run inside iframes
+   * 
+   * @default false
+   */
+  allowInIframe?: boolean;
+
+  /**
    * Should react scan log internal errors to the console.
    *
    * Useful if react scan is not behaving expected and you want to provide information to maintainers when submitting an issue https://github.com/aidenybai/react-scan/issues
@@ -309,6 +316,7 @@ export const ReactScanInternals: Internals = {
     dangerouslyForceRunInProduction: false,
     showFPS: true,
     showNotificationCount: true,
+    allowInIframe: false,
     // smoothlyAnimateOutlines: true,
     // trackUnnecessaryRenders: false,
   }),
@@ -354,6 +362,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       case 'showNotificationCount':
       case 'dangerouslyForceRunInProduction':
       case 'showFPS':
+      case 'allowInIframe':
         if (typeof value !== 'boolean') {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
@@ -605,7 +614,7 @@ export const scan = (options: Options = {}) => {
   setOptions(options);
   const isInIframe = Store.isInIframe.value;
 
-  if (isInIframe) {
+  if (isInIframe && !ReactScanInternals.options.value.allowInIframe) {
     return;
   }
 
