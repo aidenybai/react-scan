@@ -59,6 +59,7 @@ export const NotificationHeader = ({
                       view: 'none',
                     };
                   }}
+                  title="Close"
                 >
                   <CloseIcon size={18} className="text-[#6F6F78]" />
                 </button>
