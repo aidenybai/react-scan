@@ -2,9 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { getFPS } from '~core/instrumentation';
 import { cn } from '~web/utils/helpers';
 
-export const FpsMeterInner = ({fps}:{fps: number}) => {
-
-
+export const FpsMeterInner = ({ fps }: { fps: number }) => {
   const getColor = (fps: number) => {
     if (fps < 30) return '#EF4444';
     if (fps < 50) return '#F59E0B';
@@ -35,7 +33,6 @@ export const FpsMeterInner = ({fps}:{fps: number}) => {
   );
 };
 
-
 export const FPSMeter = () => {
   const [fps, setFps] = useState<null | number>(null);
 
@@ -59,5 +56,3 @@ export const FPSMeter = () => {
     </div>
   );
 };
-
-

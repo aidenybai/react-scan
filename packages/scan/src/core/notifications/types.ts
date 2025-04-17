@@ -13,7 +13,7 @@ export interface PerformanceInteraction {
   latency: number;
   entries: Array<PerformanceInteractionEntry>;
   target: Element | null;
-  type: "pointer" | "keyboard";
+  type: 'pointer' | 'keyboard';
   startTime: number;
   endTime: number;
   processingStart: number;
@@ -23,7 +23,7 @@ export interface PerformanceInteraction {
   processingDuration: number;
   presentationDelay: number;
   timestamp: number;
-  timeSinceTabInactive: number | "never-hidden";
+  timeSinceTabInactive: number | 'never-hidden';
   visibilityState: DocumentVisibilityState;
   timeOrigin: number;
   referrer: string;

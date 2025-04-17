@@ -6,4 +6,4 @@ await esbuild.build({
   format: 'iife',
   outfile: 'dist/offscreen-canvas.worker.js',
   minify: true,
-}); 
+});

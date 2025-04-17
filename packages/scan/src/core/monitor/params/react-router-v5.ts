@@ -1,6 +1,9 @@
 import { createElement } from 'react';
 import { useRouteMatch, useLocation } from 'react-router';
-import { Monitoring as BaseMonitoring, type MonitoringWithoutRouteProps} from '..';
+import {
+  Monitoring as BaseMonitoring,
+  type MonitoringWithoutRouteProps,
+} from '..';
 import { computeRoute } from './utils';
 import type { RouteInfo } from './types';
 

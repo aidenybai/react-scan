@@ -1,5 +1,5 @@
-import { BoundedArray } from "./performance-utils";
-import { PerformanceEntryChannelEvent } from "./performance";
+import { BoundedArray } from './performance-utils';
+import { PerformanceEntryChannelEvent } from './performance';
 
 type UnSubscribe = () => void;
 type Callback<T> = (item: T) => void;
@@ -12,7 +12,7 @@ type PerformanceEntryChannelsType<T> = {
     item: T,
     to: ChanelName,
     dropFirst: boolean,
-    createIfNoChannel: boolean
+    createIfNoChannel: boolean,
   ) => void;
   channels: Record<
     ChanelName,
@@ -22,7 +22,7 @@ type PerformanceEntryChannelsType<T> = {
   updateChannelState: (
     channel: ChanelName,
     updater: Updater<T>,
-    createIfNoChannel: boolean
+    createIfNoChannel: boolean,
   ) => void;
 };
 
@@ -31,7 +31,7 @@ export const MAX_CHANNEL_SIZE = 50;
 // the state in the channel is persisted until the receiving end consumes it
 // multiple subscribes to the same channel will likely lead to unintended behavior if the subscribers are separate entities
 class PerformanceEntryChannels<T> implements PerformanceEntryChannelsType<T> {
-  channels: PerformanceEntryChannelsType<T>["channels"] = {};
+  channels: PerformanceEntryChannelsType<T>['channels'] = {};
   publish(item: T, to: ChanelName, createIfNoChannel = true) {
     const existingChannel = this.channels[to];
     if (!existingChannel) {
@@ -62,11 +62,11 @@ class PerformanceEntryChannels<T> implements PerformanceEntryChannelsType<T> {
       }
       return () => {
         const filtered = this.channels[to].callbacks.filter(
-          (subscribed) => subscribed !== cb
+          (subscribed) => subscribed !== cb,
         );
         this.channels[to].callbacks = BoundedArray.fromArray(
           filtered,
-          MAX_CHANNEL_SIZE
+          MAX_CHANNEL_SIZE,
         );
       };
     };
@@ -86,7 +86,7 @@ class PerformanceEntryChannels<T> implements PerformanceEntryChannelsType<T> {
   updateChannelState(
     channel: ChanelName,
     updater: Updater<T>,
-    createIfNoChannel = true
+    createIfNoChannel = true,
   ) {
     const existingChannel = this.channels[channel];
     if (!existingChannel) {

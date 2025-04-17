@@ -3,9 +3,11 @@ import { Icon } from './components/icon';
 import { Widget } from './widget';
 import { SvgSprite } from './components/svg-sprite';
 
-
 class ToolbarErrorBoundary extends Component {
-  state: { hasError: boolean; error: Error | null } = { hasError: false, error: null };
+  state: { hasError: boolean; error: Error | null } = {
+    hasError: false,
+    error: null,
+  };
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };

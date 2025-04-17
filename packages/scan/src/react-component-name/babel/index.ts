@@ -245,7 +245,11 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
             if (assignedNames.has(name)) {
               return;
             }
-            assignDisplayName(path, name, options?.flags?.noTryCatchDisplayNames);
+            assignDisplayName(
+              path,
+              name,
+              options?.flags?.noTryCatchDisplayNames,
+            );
           }
         },
         FunctionDeclaration(path) {
@@ -268,7 +272,11 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
             if (assignedNames.has(name)) {
               return;
             }
-            assignDisplayName(path, name, options?.flags?.noTryCatchDisplayNames);
+            assignDisplayName(
+              path,
+              name,
+              options?.flags?.noTryCatchDisplayNames,
+            );
           }
         },
         VariableDeclarator(path) {

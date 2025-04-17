@@ -6,7 +6,10 @@ import * as cheerio from 'cheerio';
 import type { Options } from 'react-scan';
 import type { Plugin, ResolvedConfig } from 'vite';
 
-async function resolveModuleFileContent(moduleName: string, startDir: string = process.cwd()) {
+async function resolveModuleFileContent(
+  moduleName: string,
+  startDir: string = process.cwd(),
+) {
   const modulePath = path.join('node_modules', moduleName);
   const resolvedPath = path.resolve(startDir, modulePath);
 
@@ -249,9 +252,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
         if (isBuild) {
           // In build, insert at the beginning of head
           $('head').prepend(scanScript);
-          log.debug(
-            'Injected scan script at the beginning of head (build)',
-          );
+          log.debug('Injected scan script at the beginning of head (build)');
         } else {
           // In development, insert after Vite's client script
           const viteClientScript = $('script[src="/@vite/client"]');

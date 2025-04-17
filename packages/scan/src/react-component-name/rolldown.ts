@@ -1,4 +1,3 @@
-import { reactComponentNamePlugin } from ".";
-
+import { reactComponentNamePlugin } from '.';
 
 export default reactComponentNamePlugin.rolldown;

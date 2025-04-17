@@ -2,9 +2,7 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "ES6",
-    "lib": [
-      "es2016"
-    ],
+    "lib": ["es2016"],
     "moduleResolution": "node",
     "esModuleInterop": true,
     "strict": true,
@@ -17,11 +15,6 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
