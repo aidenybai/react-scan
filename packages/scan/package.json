@@ -258,7 +258,7 @@
     "tailwind-merge": "^2.5.5",
     "terser": "^5.36.0",
     "tsup": "^8.0.0",
-    "vitest": "^1.0.0"
+    "vitest": "^3.0.0"
   },
   "peerDependencies": {
     "@remix-run/react": ">=1.0.0",
