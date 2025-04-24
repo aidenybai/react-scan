@@ -208,7 +208,7 @@ export const Toolbar = constant(() => {
         checked={!ReactScanInternals.instrumentation?.isPaused.value}
         onChange={onToggleActive}
         className="place-self-center"
-        title="Visualise component updates"
+        title="Outline Re-renders"
       />
 
       {/* todo add back showFPS*/}
