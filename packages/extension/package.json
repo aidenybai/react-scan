@@ -39,7 +39,7 @@
     "bestzip": "^2.2.1",
     "cross-env": "^7.0.3",
     "semver": "^7.7.1",
-    "vite": "^6.0.7",
+    "vite": "^6.3.0",
     "vite-plugin-web-extension": "^4.4.3",
     "vite-tsconfig-paths": "^5.1.4",
     "webextension-polyfill": "^0.12.0"
