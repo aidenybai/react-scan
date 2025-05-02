@@ -97,7 +97,12 @@ export const getInteractionPath = (
   let fiber = initialFiber;
   while (fiber.return) {
     const name = getCleanComponentName(fiber.type);
-    if (name && !isMinified(name) && shouldIncludeInPath(name, filters) && name.toLowerCase() !== name) {
+    if (
+      name &&
+      !isMinified(name) &&
+      shouldIncludeInPath(name, filters) &&
+      name.toLowerCase() !== name
+    ) {
       stack.push(name);
     }
     fiber = fiber.return;

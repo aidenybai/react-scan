@@ -17,25 +17,13 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
-      "react-scan": [
-        "../scan/dist"
-      ],
-      "~utils/*": [
-        "./src/utils/*"
-      ],
-      "~types/*": [
-        "./src/types/*"
-      ],
-      "~assets/*": [
-        "./src/assets/*"
-      ]
+      "react-scan": ["../scan/dist"],
+      "~utils/*": ["./src/utils/*"],
+      "~types/*": ["./src/types/*"],
+      "~assets/*": ["./src/assets/*"]
     },
-    "types": [
-      "chrome"
-    ]
+    "types": ["chrome"]
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

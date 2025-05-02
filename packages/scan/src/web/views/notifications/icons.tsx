@@ -65,7 +65,6 @@ export const Notification = ({
     ? Math.max(size * 0.6, 14)
     : Math.max(size * 0.4, 6);
 
-
   return (
     <div className="relative">
       <svg

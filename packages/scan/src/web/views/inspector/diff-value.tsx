@@ -45,9 +45,8 @@ const TreeNode = ({
   isNegative: boolean;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const canExpand = value !== null &&
-    typeof value === 'object' &&
-    !(value instanceof Date);
+  const canExpand =
+    value !== null && typeof value === 'object' && !(value instanceof Date);
 
   if (!canExpand) {
     return (
@@ -81,7 +80,9 @@ const TreeNode = ({
         <span className="text-gray-500">{path}:</span>
         {!isExpanded && (
           <span className="truncate">
-            {value instanceof Date ? formatValuePreview(value) : `{${Object.keys(value).join(', ')}}`}
+            {value instanceof Date
+              ? formatValuePreview(value)
+              : `{${Object.keys(value).join(', ')}}`}
           </span>
         )}
       </div>
@@ -180,16 +181,16 @@ export const DiffValueView = ({
         {!expanded ? (
           <span>{formatValuePreview(safeValue)}</span>
         ) : (
-            <div className="pl-2 border-l border-[#333] mt-0.5 ml-1 flex flex-col gap-0.5">
-              {Object.entries(safeValue as object).map(([key, val]) => (
-                <TreeNode
-                  key={key}
-                  value={val}
-                  path={key}
-                  isNegative={isNegative}
-                />
-              ))}
-            </div>
+          <div className="pl-2 border-l border-[#333] mt-0.5 ml-1 flex flex-col gap-0.5">
+            {Object.entries(safeValue as object).map(([key, val]) => (
+              <TreeNode
+                key={key}
+                value={val}
+                path={key}
+                isNegative={isNegative}
+              />
+            ))}
+          </div>
         )}
       </div>
       <CopyToClipboard

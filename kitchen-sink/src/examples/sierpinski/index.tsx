@@ -7,7 +7,6 @@ import { scan, Store } from 'react-scan';
 
 import './styles.css';
 
-
 Store.isInIframe.value = false;
 scan({
   enabled: true,
@@ -80,7 +79,6 @@ const SlowTriangle = ({ x, y, s, seconds }: SlowTriangleProps) => {
 };
 
 interface TriangleProps {
-
   x: number;
   y: number;
   s: number;
