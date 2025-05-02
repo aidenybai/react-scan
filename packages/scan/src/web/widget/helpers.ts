@@ -94,6 +94,8 @@ export const calculatePosition = (
   width: number,
   height: number,
 ): Position => {
+  const isRTL = getComputedStyle(document.body).direction === 'rtl';
+
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
 
@@ -112,38 +114,52 @@ export const calculatePosition = (
   let x: number;
   let y: number;
 
+  let leftBound = SAFE_AREA;
+  let rightBound =  windowWidth - effectiveWidth - SAFE_AREA;
+  let topBound = SAFE_AREA;
+  let bottomBound = windowHeight - effectiveHeight - SAFE_AREA;
+
   switch (corner) {
     case 'top-right':
-      x = windowWidth - effectiveWidth - SAFE_AREA;
-      y = SAFE_AREA;
+      x = isRTL ? -leftBound : rightBound;
+      y = topBound;
       break;
     case 'bottom-right':
-      x = windowWidth - effectiveWidth - SAFE_AREA;
-      y = windowHeight - effectiveHeight - SAFE_AREA;
+      x = isRTL ? -leftBound : rightBound;
+      y = bottomBound;
       break;
     case 'bottom-left':
-      x = SAFE_AREA;
-      y = windowHeight - effectiveHeight - SAFE_AREA;
+      x = isRTL ? -rightBound : leftBound;
+      y = bottomBound;
       break;
     case 'top-left':
-      x = SAFE_AREA;
-      y = SAFE_AREA;
+      x = isRTL ? -rightBound : leftBound;
+      y = topBound;
       break;
     default:
-      x = SAFE_AREA;
-      y = SAFE_AREA;
+      x = leftBound;
+      y = topBound;
       break;
   }
 
   // Only ensure positions are within bounds if minimized
   if (isMinimized) {
-    x = Math.max(
-      SAFE_AREA,
-      Math.min(x, windowWidth - effectiveWidth - SAFE_AREA),
-    );
+    if (isRTL) {
+      // For RTL
+      x = Math.min(
+        -leftBound,
+        Math.max(x, -rightBound)
+      );
+    } else {
+      // For LTR
+      x = Math.max(
+        leftBound,
+        Math.min(x, rightBound),
+      );
+    }
     y = Math.max(
-      SAFE_AREA,
-      Math.min(y, windowHeight - effectiveHeight - SAFE_AREA),
+      topBound,
+      Math.min(y, bottomBound),
     );
   }
 
@@ -207,6 +223,8 @@ export const calculateNewSizeAndPosition = (
   deltaX: number,
   deltaY: number,
 ): { newSize: Size; newPosition: Position } => {
+  const isRTL = getComputedStyle(document.body).direction === 'rtl';
+
   const maxWidth = window.innerWidth - SAFE_AREA * 2;
   const maxHeight = window.innerHeight - SAFE_AREA * 2;
 
@@ -215,14 +233,28 @@ export const calculateNewSizeAndPosition = (
   let newX = initialPosition.x;
   let newY = initialPosition.y;
 
-  // horizontal resize
-  if (position.includes('right')) {
+  // horizontal resize for RTL
+  if (isRTL && position.includes('right')) {
+    // Check if we have enough space on the right
+    const availableWidth = -initialPosition.x + initialSize.width - SAFE_AREA;
+    const proposedWidth = Math.min(initialSize.width + deltaX, availableWidth);
+    newWidth = Math.min(maxWidth, Math.max(MIN_SIZE.width, proposedWidth));
+    newX = initialPosition.x + (newWidth - initialSize.width);
+  }
+  if (isRTL && position.includes('left')) {
+    // Check if we have enough space on the left
+    const availableWidth = window.innerWidth - initialPosition.x - SAFE_AREA;
+    const proposedWidth = Math.min(initialSize.width - deltaX, availableWidth);
+    newWidth = Math.min(maxWidth, Math.max(MIN_SIZE.width, proposedWidth));
+  }
+  // horizontal resize for LTR
+  if (!isRTL && position.includes('right')) {
     // Check if we have enough space on the right
     const availableWidth = window.innerWidth - initialPosition.x - SAFE_AREA;
     const proposedWidth = Math.min(initialSize.width + deltaX, availableWidth);
     newWidth = Math.min(maxWidth, Math.max(MIN_SIZE.width, proposedWidth));
   }
-  if (position.includes('left')) {
+  if (!isRTL && position.includes('left')) {
     // Check if we have enough space on the left
     const availableWidth = initialPosition.x + initialSize.width - SAFE_AREA;
     const proposedWidth = Math.min(initialSize.width - deltaX, availableWidth);
@@ -257,14 +289,29 @@ export const calculateNewSizeAndPosition = (
     newY = initialPosition.y - (newHeight - initialSize.height);
   }
 
+  let leftBound = SAFE_AREA;
+  let rightBound = window.innerWidth - SAFE_AREA - newWidth;
+  let topBound = SAFE_AREA;
+  let bottomBound = window.innerHeight - SAFE_AREA - newHeight;
+
   // Ensure position stays within bounds
-  newX = Math.max(
-    SAFE_AREA,
-    Math.min(newX, window.innerWidth - SAFE_AREA - newWidth),
-  );
+  if (isRTL) {
+    // for RTL
+    newX = Math.min(
+      -leftBound,
+      Math.max(newX, -rightBound)
+    );
+  } else {
+    // for LTR
+    newX = Math.max(
+      leftBound,
+      Math.min(newX, rightBound),
+    );
+  }
+
   newY = Math.max(
-    SAFE_AREA,
-    Math.min(newY, window.innerHeight - SAFE_AREA - newHeight),
+    topBound,
+    Math.min(newY, bottomBound),
   );
 
   return {
