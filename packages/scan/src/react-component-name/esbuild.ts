@@ -1,3 +1,3 @@
-import { reactComponentNamePlugin } from '.'
+import { reactComponentNamePlugin } from '.';
 
-export default reactComponentNamePlugin.esbuild
+export default reactComponentNamePlugin.esbuild;

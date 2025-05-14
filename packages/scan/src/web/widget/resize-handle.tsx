@@ -7,11 +7,7 @@ import {
   MIN_CONTAINER_WIDTH,
   MIN_SIZE,
 } from '~web/constants';
-import {
-  signalRefWidget,
-  signalWidget,
-  signalWidgetViews,
-} from '~web/state';
+import { signalRefWidget, signalWidget, signalWidgetViews } from '~web/state';
 import { cn, saveLocalStorage } from '~web/utils/helpers';
 import {
   calculateNewSizeAndPosition,
@@ -143,7 +139,9 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
           containerStyle.height = `${newSize.height}px`;
 
           // Adjust components tree width when widget is resized
-          const maxTreeWidth = Math.floor(newSize.width - (MIN_CONTAINER_WIDTH / 2));
+          const maxTreeWidth = Math.floor(
+            newSize.width - MIN_CONTAINER_WIDTH / 2,
+          );
           const currentTreeWidth = signalWidget.value.componentsTree.width;
           const newTreeWidth = Math.min(
             maxTreeWidth,

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { scan, Store } from 'react-scan';
 import './styles.css';
 
-
 Store.isInIframe.value = false;
 scan({
   enabled: true,
@@ -29,8 +28,8 @@ function TodoListItem({ item, setList }: TodoListItemProps): JSX.Element {
           type="button"
           className={`todo-item-toggle ${item.done ? 'complete' : 'pending'}`}
           onClick={(): void => {
-            setList(list =>
-              list.map(value => {
+            setList((list) =>
+              list.map((value) => {
                 if (value === item) {
                   return {
                     ...value,
@@ -48,7 +47,7 @@ function TodoListItem({ item, setList }: TodoListItemProps): JSX.Element {
           type="button"
           className="todo-item-delete"
           onClick={(): void => {
-            setList(list => list.filter(value => value.id !== item.id));
+            setList((list) => list.filter((value) => value.id !== item.id));
           }}
         >
           Delete
@@ -77,7 +76,7 @@ function TodoListForm({
       onSubmit={(e): void => {
         e.preventDefault();
 
-        setList(list => [
+        setList((list) => [
           ...list,
           {
             done: false,
@@ -110,7 +109,7 @@ function TodoList(): JSX.Element {
     <>
       <TodoListForm setList={setList} index={index} setIndex={setIndex} />
       <div className="todo-list">
-        {list.map(item => (
+        {list.map((item) => (
           <TodoListItem key={item.id} item={item} setList={setList} />
         ))}
       </div>
