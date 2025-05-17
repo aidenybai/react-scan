@@ -187,31 +187,6 @@ export function fastSerialize(value: unknown, depth = 0): string {
   return str;
 }
 
-export const getPropsChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
-
-  const prevProps = fiber.alternate?.memoizedProps || {};
-  const nextProps = fiber.memoizedProps || {};
-
-  const allKeys = new Set([
-    ...Object.keys(prevProps),
-    ...Object.keys(nextProps),
-  ]);
-  for (const propName in allKeys) {
-    // const prevValue = prevProps?.[propName];
-    const nextValue = nextProps?.[propName];
-
-    const change: Change = {
-      type: ChangeReason.Props,
-      name: propName,
-      value: nextValue,
-    };
-    changes.push(change);
-  }
-
-  return changes;
-};
-
 export const getStateChanges = (fiber: Fiber): StateChange[] => {
   if (!fiber) return [];
   const changes: StateChange[] = [];
@@ -457,10 +432,10 @@ export function getRenderData(fiber: Fiber) {
 }
 
 export function setRenderData(fiber: Fiber, value: RenderData) {
-  const type = getType(fiber.type)
+  const type = getType(fiber.type);
   const id = getFiberIdentifier(fiber);
   let keyMap = renderDataMap.get(type as object);
-  
+
   if (!keyMap) {
     keyMap = new Map();
     renderDataMap.set(type as object, keyMap);
