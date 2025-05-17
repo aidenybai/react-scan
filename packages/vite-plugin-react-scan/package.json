@@ -68,7 +68,7 @@
     "@types/cheerio": "^0.22.35",
     "@types/node": "^22.10.7",
     "typescript": "latest",
-    "vite": "^6.0.7"
+    "vite": "^6.3.0"
   },
   "publishConfig": {
     "access": "public"
