@@ -71,6 +71,7 @@ export type FiberRenders = Record<
     selfTime: number;
     totalTime: number;
     hasMemoCache: boolean;
+    wasFiberRenderMount: boolean;
     nodeInfo: Array<{
       selfTime: number;
       element: Element;
@@ -892,6 +893,7 @@ export const listenForRenders = (
       fiberRenders[displayName] = {
         renderCount: 1,
         hasMemoCache: hasMemoCache(fiber),
+        wasFiberRenderMount: wasFiberRenderMount(fiber),
         parents: parents,
         selfTime,
         totalTime,
@@ -927,6 +929,8 @@ export const listenForRenders = (
       changesCounts: new Map<string | number, number>(),
     };
 
+    existing.wasFiberRenderMount =
+      existing.wasFiberRenderMount || wasFiberRenderMount(fiber);
     existing.hasMemoCache = existing.hasMemoCache || hasMemoCache(fiber);
     existing.changes = {
       fiberProps: mergeSectionData(
@@ -987,4 +991,25 @@ const mergeSectionData = (
   }
 
   return mergedSection;
+};
+
+const wasFiberRenderMount = (fiber: Fiber) => {
+  if (!fiber.alternate) {
+    return true;
+  }
+
+  const prevFiber = fiber.alternate;
+
+  const wasMounted =
+    prevFiber &&
+    prevFiber.memoizedState != null &&
+    prevFiber.memoizedState.element != null &&
+    prevFiber.memoizedState.isDehydrated !== true;
+
+  const isMounted =
+    fiber.memoizedState != null &&
+    fiber.memoizedState.element != null &&
+    fiber.memoizedState.isDehydrated !== true;
+
+  return !wasMounted && isMounted;
 };

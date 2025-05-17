@@ -21,6 +21,7 @@ export type GroupedFiberRender = {
   deletedAll: boolean;
   parents: Set<string>;
   hasMemoCache: boolean;
+  wasFiberRenderMount: boolean;
 };
 export const getComponentName = (path: Array<string>) => {
   const filteredPath = path.filter((item) => item.length > 2);
@@ -78,7 +79,11 @@ export type InteractionTiming = {
 export const isRenderMemoizable = (
   groupedFiberRender: GroupedFiberRender,
 ): boolean => {
-  // this shouldn't be needed, it implies we either are tracking renders wrong, are tracking changes wrong, or are not tracking some other "state" that can cause re-renders
+  if (groupedFiberRender.wasFiberRenderMount) {
+    // no amount of memoization can prevent a mount render
+    return false;
+  }
+  // this shouldn't be needed, it implies we either are tracking renders wrong, are tracking changes wrong, or are not tracking some other "state" that can cause re-renders, but its a better fallback than failing
   if (groupedFiberRender.hasMemoCache) {
     return false;
   }
