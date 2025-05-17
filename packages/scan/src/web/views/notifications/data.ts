@@ -2,6 +2,8 @@ import { createContext } from 'preact';
 import { SetStateAction } from 'preact/compat';
 import { Dispatch, useContext } from 'preact/hooks';
 import { HIGH_SEVERITY_FPS_DROP_TIME } from '~core/notifications/event-tracking';
+import { getFiberFromElement } from '../inspector/utils';
+import { hasMemoCache } from 'bippy';
 
 export type GroupedFiberRender = {
   id: string;
@@ -18,6 +20,7 @@ export type GroupedFiberRender = {
   elements: Array<Element>; // can't do a weak set because need to iterate over them......
   deletedAll: boolean;
   parents: Set<string>;
+  hasMemoCache: boolean;
 };
 export const getComponentName = (path: Array<string>) => {
   const filteredPath = path.filter((item) => item.length > 2);
@@ -72,11 +75,18 @@ export type InteractionTiming = {
   frameDraw: number | null;
 };
 
-export const isRenderMemoizable = (gropedFiberRender: GroupedFiberRender) => {
+export const isRenderMemoizable = (
+  groupedFiberRender: GroupedFiberRender,
+): boolean => {
+  // this shouldn't be needed, it implies we either are tracking renders wrong, are tracking changes wrong, or are not tracking some other "state" that can cause re-renders
+  if (groupedFiberRender.hasMemoCache) {
+    return false;
+  }
+
   return (
-    gropedFiberRender.changes.context.length === 0 &&
-    gropedFiberRender.changes.props.length === 0 &&
-    gropedFiberRender.changes.state.length === 0
+    groupedFiberRender.changes.context.length === 0 &&
+    groupedFiberRender.changes.props.length === 0 &&
+    groupedFiberRender.changes.state.length === 0
   );
 };
 
