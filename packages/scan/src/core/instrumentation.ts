@@ -10,6 +10,7 @@ import {
   SimpleMemoComponentTag,
   didFiberCommit,
   getDisplayName,
+  getFiberId,
   getMutatedHostFibers,
   getTimings,
   getType,
@@ -185,31 +186,6 @@ export function fastSerialize(value: unknown, depth = 0): string {
   cache.set(value, str);
   return str;
 }
-
-export const getPropsChanges = (fiber: Fiber) => {
-  const changes: Array<Change> = [];
-
-  const prevProps = fiber.alternate?.memoizedProps || {};
-  const nextProps = fiber.memoizedProps || {};
-
-  const allKeys = new Set([
-    ...Object.keys(prevProps),
-    ...Object.keys(nextProps),
-  ]);
-  for (const propName in allKeys) {
-    // const prevValue = prevProps?.[propName];
-    const nextValue = nextProps?.[propName];
-
-    const change: Change = {
-      type: ChangeReason.Props,
-      name: propName,
-      value: nextValue,
-    };
-    changes.push(change);
-  }
-
-  return changes;
-};
 
 export const getStateChanges = (fiber: Fiber): StateChange[] => {
   if (!fiber) return [];
@@ -438,17 +414,45 @@ export interface OldRenderData {
 
 const RENDER_DEBOUNCE_MS = 16;
 
-export const renderDataMap = new WeakMap<object, RenderData>();
+export const renderDataMap = new WeakMap<object, Map<string, RenderData>>();
+
+function getFiberIdentifier(fiber: Fiber) {
+  return String(getFiberId(fiber));
+}
+
+export function getRenderData(fiber: Fiber) {
+  const id = getFiberIdentifier(fiber);
+  const keyMap = renderDataMap.get(getType(fiber) as object);
+
+  if (keyMap) {
+    return keyMap.get(id);
+  }
+
+  return undefined;
+}
+
+export function setRenderData(fiber: Fiber, value: RenderData) {
+  const type = getType(fiber.type);
+  const id = getFiberIdentifier(fiber);
+  let keyMap = renderDataMap.get(type as object);
+
+  if (!keyMap) {
+    keyMap = new Map();
+    renderDataMap.set(type as object, keyMap);
+  }
+
+  keyMap.set(id, value);
+}
 
 const trackRender = (
-  type: unknown,
+  fiber: Fiber,
   fiberSelfTime: number,
   fiberTotalTime: number,
   hasChanges: boolean,
   hasDomMutations: boolean,
 ) => {
   const currentTimestamp = Date.now();
-  const existingData = renderDataMap.get(type as object);
+  const existingData = getRenderData(fiber);
 
   if (
     (hasChanges || hasDomMutations) &&
@@ -468,7 +472,7 @@ const trackRender = (
     renderData.totalTime = fiberTotalTime || 0;
     renderData.lastRenderTimestamp = currentTimestamp;
 
-    renderDataMap.set(type as object, { ...renderData });
+    setRenderData(fiber, { ...renderData });
   }
 };
 
@@ -598,7 +602,7 @@ export const createInstrumentation = (
 
             if (phase === 'update') {
               trackRender(
-                type,
+                fiber,
                 fiberSelfTime,
                 fiberTotalTime,
                 hasChanges,

@@ -1,3 +1,4 @@
+import './polyfills';
 // Prioritize bippy side-effect
 import 'bippy';
 

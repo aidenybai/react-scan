@@ -36,11 +36,14 @@ This is a monorepo containing several packages:
    pnpm build
    ```
 
-3. **Development Mode**
+3. **Testing React Scan**
    ```bash
-   # Run all packages in dev mode
-   pnpm dev
+   cd packages/scan
+   pnpm build:copy
    ```
+   - This will build the package and then copy it to your clipboard as an IIFE (immedietely invoked function expression). This will allow you to paste it into the browser console to test it on any website
+
+https://github.com/user-attachments/assets/f279e664-479f-4e39-bff4-1bbfee30af22
 
 ## Contributing Guidelines
 

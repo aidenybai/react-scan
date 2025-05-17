@@ -19,6 +19,7 @@ interface ReactRootContainer {
       };
     };
   };
+  __reactContainer$?: unknown;
 }
 
 const ReactDetection = {
@@ -42,7 +43,8 @@ const ReactDetection = {
   reactMarkers: {
     root: '_reactRootContainer',
     fiber: '__reactFiber',
-    instance: '__reactInternalInstance$'
+    instance: '__reactInternalInstance$',
+    container: '__reactContainer$'
   }
 } as const;
 
@@ -77,7 +79,13 @@ export const hasReactFiber = (): boolean => {
     if (ReactDetection.reactMarkers.root in element) {
       const elementWithRoot = element as unknown as ReactRootContainer;
       const rootContainer = elementWithRoot._reactRootContainer;
-      return rootContainer?._internalRoot?.current?.child != null;
+
+      const hasLegacyRoot = rootContainer?._internalRoot?.current?.child != null;
+      const hasContainerRoot = Object.keys(elementWithRoot).some(key => 
+        key.startsWith(ReactDetection.reactMarkers.container)
+      );
+
+      return hasLegacyRoot || hasContainerRoot;
     }
 
     for (const key of props) {

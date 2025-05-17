@@ -2,6 +2,7 @@ import {
   Fiber,
   getDisplayName,
   getTimings,
+  hasMemoCache,
   isHostFiber,
   traverseFiber,
 } from 'bippy';
@@ -69,6 +70,8 @@ export type FiberRenders = Record<
     parents: Set<string>;
     selfTime: number;
     totalTime: number;
+    hasMemoCache: boolean;
+    wasFiberRenderMount: boolean;
     nodeInfo: Array<{
       selfTime: number;
       element: Element;
@@ -471,20 +474,11 @@ const getTargetInteractionDetails = (target: Element) => {
 
   const componentPath = getInteractionPath(associatedFiber);
 
-  // const childrenTree = collectFiberSubtree(associatedFiber, 20); // this can be expensive if not limited
-
-  // const firstChildSvg = Object.entries(childrenTree).find(([name, {isSvg  }]) => isSvg)
-
-  // const firstSvg =
-  //   associatedFiber.type === "svg"
-  //     ? getFirstNameFromAncestor(associatedFiber)
-  //     : Object.entries(childrenTree).find(([name, {isSvg  }]) => isSvg)
-
-  // lowkey i have an idea
   return {
     componentPath,
     childrenTree: {},
     componentName,
+    elementFiber: associatedFiber,
   };
 };
 
@@ -898,6 +892,8 @@ export const listenForRenders = (
       };
       fiberRenders[displayName] = {
         renderCount: 1,
+        hasMemoCache: hasMemoCache(fiber),
+        wasFiberRenderMount: wasFiberRenderMount(fiber),
         parents: parents,
         selfTime,
         totalTime,
@@ -933,6 +929,9 @@ export const listenForRenders = (
       changesCounts: new Map<string | number, number>(),
     };
 
+    existing.wasFiberRenderMount =
+      existing.wasFiberRenderMount || wasFiberRenderMount(fiber);
+    existing.hasMemoCache = existing.hasMemoCache || hasMemoCache(fiber);
     existing.changes = {
       fiberProps: mergeSectionData(
         existing.changes?.fiberProps || emptySection,
@@ -992,4 +991,25 @@ const mergeSectionData = (
   }
 
   return mergedSection;
+};
+
+const wasFiberRenderMount = (fiber: Fiber) => {
+  if (!fiber.alternate) {
+    return true;
+  }
+
+  const prevFiber = fiber.alternate;
+
+  const wasMounted =
+    prevFiber &&
+    prevFiber.memoizedState != null &&
+    prevFiber.memoizedState.element != null &&
+    prevFiber.memoizedState.isDehydrated !== true;
+
+  const isMounted =
+    fiber.memoizedState != null &&
+    fiber.memoizedState.element != null &&
+    fiber.memoizedState.isDehydrated !== true;
+
+  return !wasMounted && isMounted;
 };

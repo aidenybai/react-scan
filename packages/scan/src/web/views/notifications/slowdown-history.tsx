@@ -372,6 +372,7 @@ export const SlowdownHistory = () => {
           triggerContent={
             <button
               className={cn(['hover:bg-[#18181B] rounded-full p-2'])}
+              title="Clear all events"
               onClick={() => {
                 toolbarEventStore.getState().actions.clear();
                 setNotificationState((prev) => ({

@@ -169,7 +169,7 @@ export interface Options {
 
   /**
    * Allow React Scan to run inside iframes
-   * 
+   *
    * @default false
    */
   allowInIframe?: boolean;
@@ -454,48 +454,68 @@ export const getReport = (type?: ComponentType<unknown>) => {
 };
 
 export const setOptions = (userOptions: Partial<Options>) => {
-  const validOptions = validateOptions(userOptions);
-
-  if (Object.keys(validOptions).length === 0) {
-    return;
-  }
-
-  const shouldInitToolbar =
-    'showToolbar' in validOptions && validOptions.showToolbar !== undefined;
-
-  const newOptions = {
-    ...ReactScanInternals.options.value,
-    ...validOptions,
-  };
-
-  const { instrumentation } = ReactScanInternals;
-  if (instrumentation && 'enabled' in validOptions) {
-    instrumentation.isPaused.value = validOptions.enabled === false;
-  }
-
-  ReactScanInternals.options.value = newOptions;
-
-  // temp hack since defaults override stored local storage values
-  // we actually don't care about any other local storage option other than enabled, we should not be syncing those to local storage
   try {
-    const existing = readLocalStorage<undefined | Record<string, unknown>>(
-      'react-scan-options',
-    )?.enabled;
+    const validOptions = validateOptions(userOptions);
 
-    if (typeof existing === 'boolean') {
-      newOptions.enabled = existing;
+    if (Object.keys(validOptions).length === 0) {
+      return;
     }
-  } catch {
+
+    const shouldInitToolbar =
+      'showToolbar' in validOptions && validOptions.showToolbar !== undefined;
+
+    const newOptions = {
+      ...ReactScanInternals.options.value,
+      ...validOptions,
+    };
+
+    const { instrumentation } = ReactScanInternals;
+    if (instrumentation && 'enabled' in validOptions) {
+      instrumentation.isPaused.value = validOptions.enabled === false;
+    }
+
+    ReactScanInternals.options.value = newOptions;
+
+    // temp hack since defaults override stored local storage values
+    // we actually don't care about any other local storage option other than enabled, we should not be syncing those to local storage
+    try {
+      const existing = readLocalStorage<undefined | Record<string, unknown>>(
+        'react-scan-options',
+      )?.enabled;
+
+      if (typeof existing === 'boolean') {
+        newOptions.enabled = existing;
+      }
+    } catch (e) {
+      if (ReactScanInternals.options.value._debug === 'verbose') {
+        // biome-ignore lint/suspicious/noConsole: intended debug output
+        console.error(
+          '[React Scan Internal Error]',
+          'Failed to create notifications outline canvas',
+          e,
+        );
+      }
+      /** */
+    }
+
+    saveLocalStorage('react-scan-options', newOptions);
+
+    if (shouldInitToolbar) {
+      initToolbar(!!newOptions.showToolbar);
+    }
+
+    return newOptions;
+  } catch (e) {
+    if (ReactScanInternals.options.value._debug === 'verbose') {
+      // biome-ignore lint/suspicious/noConsole: intended debug output
+      console.error(
+        '[React Scan Internal Error]',
+        'Failed to create notifications outline canvas',
+        e,
+      );
+    }
     /** */
   }
-
-  saveLocalStorage('react-scan-options', newOptions);
-
-  if (shouldInitToolbar) {
-    initToolbar(!!newOptions.showToolbar);
-  }
-
-  return newOptions;
 };
 
 export const getOptions = () => ReactScanInternals.options;
