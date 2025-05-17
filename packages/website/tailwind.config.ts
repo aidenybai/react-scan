@@ -21,7 +21,7 @@ const config: Config = {
           700: 'oklch(41.78% 0.117 287.1 / <alpha-value>)',
           800: 'oklch(34.52% 0.047 290.52 / <alpha-value>)',
           900: 'oklch(24.54% 0.004 308.28 / <alpha-value>)',
-          950: 'oklch(18.22% 0 NaN / <alpha-value>)',
+          950: 'oklch(18.22% 0 308.28 / <alpha-value>)',
         },
       },
     },
