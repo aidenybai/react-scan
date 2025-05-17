@@ -120,7 +120,7 @@ export const RenderExplanation = ({
               No changes detected
             </div>
             <div className={cn(['px-3 pb-2 text-gray-400 text-xs'])}>
-              This component would not of rendered if it was memoized
+              This component would not have rendered if it was memoized
             </div>
           </div>
         </div>
