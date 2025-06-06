@@ -19,7 +19,6 @@
     "@biomejs/biome": "^1.9.4",
     "@changesets/cli": "^2.27.12",
     "@types/node": "^22.10.2",
-    "@vercel/style-guide": "^6.0.0",
     "autoprefixer": "^10.4.20",
     "boxen": "^8.0.1",
     "chalk": "^5.3.0",
