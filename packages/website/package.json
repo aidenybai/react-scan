@@ -16,7 +16,7 @@
     "next": "15.2.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-scan": "^0.0.48",
+    "react-scan": "^0.3.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {
