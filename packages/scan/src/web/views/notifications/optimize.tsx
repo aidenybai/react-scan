@@ -76,7 +76,7 @@ export const generateInteractionDataPrompt = ({
 	- things like prepaint, style recalculations, layerization, async web API's like observers may occur during this time
 - how long it took from the last request animation frame to when the dom was committed: ${commitTime.toFixed(0)}ms
 	- during this period you will see paint, commit, potential style recalcs, and other misc browser activity. Frequently high times here imply css that makes the browser do a lot of work, or mutating expensive dom properties during the event handler stage. This can be many things, but it narrows the problem scope significantly when this is high
-${framePresentTime && `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
+${framePresentTime === null ? '' : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
 
 ### Low level
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
@@ -140,7 +140,7 @@ We also provide you with a breakdown of what the browser spent time on during th
 	- things like prepaint, style recalculations, layerization, async web API's like observers may occur during this time
 - how long it took from the last request animation frame to when the dom was committed: ${commitTime.toFixed(0)}ms
 	- during this period you will see paint, commit, potential style recalcs, and other misc browser activity. Frequently high times here imply css that makes the browser do a lot of work, or mutating expensive dom properties during the event handler stage. This can be many things, but it narrows the problem scope significantly when this is high
-${framePresentTime && `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
+${framePresentTime === null ? '' : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
 
 
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
@@ -305,7 +305,7 @@ We also provide you with a breakdown of what the browser spent time on during th
 	- things like prepaint, style recalculations, layerization, async web API's like observers may occur during this time
 - how long it took from the last request animation frame to when the dom was committed: ${commitTime.toFixed(0)}ms
 	- during this period you will see paint, commit, potential style recalcs, and other misc browser activity. Frequently high times here imply css that makes the browser do a lot of work, or mutating expensive dom properties during the event handler stage. This can be many things, but it narrows the problem scope significantly when this is high
-${framePresentTime && `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
+${framePresentTime === null ? '' : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
 
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
 
