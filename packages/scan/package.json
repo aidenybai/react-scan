@@ -1,6 +1,6 @@
 {
   "name": "react-scan",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Scan your React app for renders",
   "keywords": ["react", "react-scan", "react scan", "render", "performance"],
   "homepage": "https://react-scan.million.dev",
@@ -70,14 +70,14 @@
     ".": {
       "production": {
         "import": {
-          "types": "./dist/rsc-shim.d.mts",
+          "types": "./dist/index.d.mts",
           "react-server": "./dist/rsc-shim.mjs",
-          "default": "./dist/rsc-shim.mjs"
+          "default": "./dist/index.mjs"
         },
         "require": {
-          "types": "./dist/rsc-shim.d.ts",
+          "types": "./dist/index.d.mts",
           "react-server": "./dist/rsc-shim.js",
-          "default": "./dist/rsc-shim.js"
+          "default": "./dist/index.mjs"
         }
       },
       "development": {
