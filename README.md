@@ -47,11 +47,11 @@ yarn add react-scan
 
 ## Usage
 
-- [CDN](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md)
+- [Script Tag](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md)
 - [NextJS App Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-app-router.md)
 - [NextJS Page Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-page-router.md)
-- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
 - [Vite](https://github.com/aidenybai/react-scan/blob/main/docs/installation/vite.md)
+- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
 - [Parcel](https://github.com/aidenybai/react-scan/blob/main/docs/installation/parcel.md)
 - [Remix](https://github.com/aidenybai/react-scan/blob/main/docs/installation/remix.md)
 - [React Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/react-router.md)
