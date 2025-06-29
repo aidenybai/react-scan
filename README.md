@@ -102,6 +102,81 @@ If you want to install the extension, follow the guide [here](https://github.com
 
 See [discussion](https://github.com/aidenybai/react-scan/pull/23)
 
+
+## After Setup
+
+### Toolbar
+All react scan features are exposed through the toolbar that you will see in the bottom right corner of your page:
+
+<img width="220" alt="image" src="https://github.com/user-attachments/assets/20b83531-7e06-48c2-92d4-07f398dcace4" />
+
+> You can drag this toolbar to any corner of the page
+
+### Render Outlines
+By default, react scan will show outlines over components when they render.
+> interact with your page to try it out!
+
+If you want to turn the outlines off, you can use the toggle to turn them off through the toolbar. This will persist across page loads and will only re-enable when you toggle it back on:
+
+<img width="211" alt="Pasted image 20250629130910" src="https://github.com/user-attachments/assets/d88852a1-0270-4d53-ad71-55a9f4b6c9ea" />
+
+
+###  Why did my component render
+If you want to find out why a component re-rendered, you can click the icon at the very left of the toolbar, and then click on the component you want to inspect
+<img width="1079" alt="Pasted image 20250629131113" src="https://github.com/user-attachments/assets/56d926f7-07f4-40cb-a025-14f48b81de81" />
+Anytime the component renders, React Scan will tell you what props, state, or context changed during the last render. If those values didn't change, and your component was wrapped in `React.memo`, it would not of rendered.
+
+To the right of the of the "Why did this component render" view, you will see the component tree of your app. When a component re-renders, the count will be updated in the tree. You can click on any item in the tree to see why it rendered.
+
+
+### Profiling slowdowns in your app
+
+Re-render outlines are good for getting a high level overview of what's slowing down your app, and the "Why did this render" inspector is great when you know which component you want to debug. But, what if you don't know which components are causing your app to slowdown?
+
+React Scan's profiler, accessible through the notification bell in the toolbar, is an always on profiler that alerts you when there is an FPS drop or slow interaction (click, type). Every slowdown and interaction has an easy to understand profile associated with it.
+
+
+https://github.com/user-attachments/assets/c7d72e57-d805-4f21-944b-2347b72b0304
+
+
+
+The profile has 3 parts:
+#### Ranked
+
+	- This ranks how long it took to render your components. If the components are the same, the time it took to render those components will be added (if you render 1000 `ListItem`'s , and they each take 1s to render, we will say `ListItem` took 1000s to render )
+  - <img width="438" alt="image" src="https://github.com/user-attachments/assets/9e8f4496-e975-4d4f-9519-4b5c653c4f94" />
+  
+  - If you click on any bar, it will tell you what caused those components to re-render. 
+	- <img width="424" alt="Pasted image 20250629132303" src="https://github.com/user-attachments/assets/79915809-64ae-4c32-abc8-89d83e775618" />
+	- this table is telling you that there were 4 of this type of component rendered, and all 4 of them had their close, style, and hide props change. If those didn't change, and the component was React.memo'd, it would not have rendered
+  - If you click the arrow on the side of each bar, it will show you which component rendered it, and how long that component took to render. This is great for giving context to what component you're looking for.
+  - <img width="425" alt="image" src="https://github.com/user-attachments/assets/7ad8f7f6-1514-4852-988a-63efb79c5cbf" />
+#### Overview
+	- The overview gives you a high level summary of what time was spent on during the slowdown or interaction.
+	- This breaks down if the time spent was on renders, react hooks (or other javascript not from react), or the browser spending time to update the dom and draw the next frame
+	- This is great to find out if React was really the problem, or if you should be optimizing other things, like CSS
+	- <img width="431" alt="Pasted image 20250629132429" src="https://github.com/user-attachments/assets/9552a802-eea4-4aa6-b46c-79318d4916ea" />
+#### Prompts
+	- The prompts section gives you 3 different kind of prompts that you can pass to an LLM based on what your goal is. These prompts
+	- automatically includes data about the profile.
+	- <img width="438" alt="Pasted image 20250629132608" src="https://github.com/user-attachments/assets/20be5326-5355-4a6e-b049-746ed93a05ce" />
+
+
+If you want to hear a sound every time a slowdown is collected, you can turn on audio alerts in this section
+<img width="637" alt="Pasted image 20250629132854" src="https://github.com/user-attachments/assets/7c6fa96d-56be-427a-bb09-078df4223378" />
+
+
+
+### Hiding the toolbar
+
+The react scan toolbar can be distracting when you're not using it. To hide the toolbar, you can drag/throw it into the side of the page. 
+
+https://github.com/user-attachments/assets/93d197c7-effc-469e-abce-cb0e0d630430
+
+The toolbar will stay collapsed into the side of the page until you drag it back out. This will persist across page load
+
+
+
 ## API Reference
 
 <details>
