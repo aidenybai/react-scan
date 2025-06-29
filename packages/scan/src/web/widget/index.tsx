@@ -415,6 +415,144 @@ export const Widget = () => {
     []
   );
 
+  const handleCollapsedDrag = useCallback(
+    (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+
+      if (!refWidget.current || !signalWidgetCollapsed.value) return;
+
+      const { corner: collapsedCorner, orientation = "horizontal" } =
+        signalWidgetCollapsed.value;
+
+      const initialMouseX = e.clientX;
+      const initialMouseY = e.clientY;
+
+      let rafId: number | null = null;
+      let hasExpanded = false;
+
+      const DRAG_THRESHOLD = 50;
+
+      const handlePointerMove = (e: globalThis.PointerEvent) => {
+        if (hasExpanded || rafId) return;
+
+        const deltaX = e.clientX - initialMouseX;
+        const deltaY = e.clientY - initialMouseY;
+
+        let shouldExpand = false;
+
+        if (orientation === "horizontal") {
+          if (collapsedCorner.endsWith("left") && deltaX > DRAG_THRESHOLD) {
+            shouldExpand = true;
+          } else if (
+            collapsedCorner.endsWith("right") &&
+            deltaX < -DRAG_THRESHOLD
+          ) {
+            shouldExpand = true;
+          }
+        } else {
+          if (collapsedCorner.startsWith("top") && deltaY > DRAG_THRESHOLD) {
+            shouldExpand = true;
+          } else if (
+            collapsedCorner.startsWith("bottom") &&
+            deltaY < -DRAG_THRESHOLD
+          ) {
+            shouldExpand = true;
+          }
+        }
+
+        if (shouldExpand) {
+          hasExpanded = true;
+
+          signalWidgetCollapsed.value = null;
+          saveLocalStorage(LOCALSTORAGE_COLLAPSED_KEY, null);
+
+          if (refInitialMinimizedWidth.current === 0 && refWidget.current) {
+            requestAnimationFrame(() => {
+              if (refWidget.current) {
+                refWidget.current.style.width = "min-content";
+                const naturalWidth = refWidget.current.offsetWidth;
+                refInitialMinimizedWidth.current = naturalWidth || 300;
+
+                const lastDims = signalWidget.value.lastDimensions;
+                const targetWidth = calculateBoundedSize(
+                  lastDims.width,
+                  0,
+                  true
+                );
+                const targetHeight = calculateBoundedSize(
+                  lastDims.height,
+                  0,
+                  false
+                );
+
+                let newX = e.clientX - targetWidth / 2;
+                let newY = e.clientY - targetHeight / 2;
+
+                newX = Math.max(
+                  SAFE_AREA,
+                  Math.min(newX, window.innerWidth - targetWidth - SAFE_AREA)
+                );
+                newY = Math.max(
+                  SAFE_AREA,
+                  Math.min(newY, window.innerHeight - targetHeight - SAFE_AREA)
+                );
+
+                signalWidget.value = {
+                  ...signalWidget.value,
+                  dimensions: {
+                    ...signalWidget.value.dimensions,
+                    position: { x: newX, y: newY },
+                  },
+                };
+
+                updateWidgetPosition(true);
+
+                const savedView = readLocalStorage<WidgetStates>(
+                  LOCALSTORAGE_LAST_VIEW_KEY
+                );
+                signalWidgetViews.value = savedView || { view: "none" };
+
+                setTimeout(() => {
+                  if (refWidget.current) {
+                    const dragEvent = new PointerEvent("pointerdown", {
+                      clientX: e.clientX,
+                      clientY: e.clientY,
+                      pointerId: e.pointerId,
+                      bubbles: true,
+                    });
+                    refWidget.current.dispatchEvent(dragEvent);
+                  }
+                }, 100);
+              }
+            });
+          } else {
+            updateWidgetPosition(true);
+            const savedView = readLocalStorage<WidgetStates>(
+              LOCALSTORAGE_LAST_VIEW_KEY
+            );
+            signalWidgetViews.value = savedView || { view: "none" };
+          }
+
+          document.removeEventListener("pointermove", handlePointerMove);
+          document.removeEventListener("pointerup", handlePointerEnd);
+        }
+      };
+
+      const handlePointerEnd = () => {
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        document.removeEventListener("pointermove", handlePointerMove);
+        document.removeEventListener("pointerup", handlePointerEnd);
+      };
+
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerEnd);
+    },
+    []
+  );
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     if (!refWidget.current) return;
@@ -537,7 +675,7 @@ export const Widget = () => {
           id="react-scan-toolbar"
           dir="ltr"
           ref={refWidget}
-          onPointerDown={!isCollapsed ? handleDrag : undefined}
+          onPointerDown={!isCollapsed ? handleDrag : handleCollapsedDrag}
           className={cn(
             "fixed inset-0",
             isCollapsed
