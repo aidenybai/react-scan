@@ -4,26 +4,33 @@ React Scan automatically detects performance issues in your React app.
 
 Previously, tools like:
 
-- [`<Profiler />`](https://react.dev/reference/react/Profiler) required lots of manual changes
+- [React Devtools](https://legacy.reactjs.org/blog/2018/09/10/introducing-the-react-profiler.html) is too complex to use and can be janky
 - [Why Did You Render?](https://github.com/welldone-software/why-did-you-render) lacked simple visual cues
-- [React Devtools](https://legacy.reactjs.org/blog/2018/09/10/introducing-the-react-profiler.html) didn't have a simple, portable, and programmatic API
 
 React Scan attempts to solve these problems:
 
 - It requires no code changes – just drop it in
 - It highlights exactly the components you need to optimize
-- Use it via script tag, npm, CLI, you name it!
+- No more having to use flame graphs when profiling
+- Always accessible through a toolbar on page
+
+### Try it in 5 seconds
+<pre>
+npx react-scan github.com # you can use any url
+</pre>
+
+> all installation options below
 
 Trusted by engineering teams at:
 
 Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"><img src="https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/shopify-logo.png" height="30" align="center" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://www.faire.com/"><img src="https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/faire-logo.svg" height="20" align="center" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://perplexity.com/"><img src="https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/perplexity-logo.png" height="30" align="center" /></a>
 
+
+
 ### [**Try it out! →**](https://react-scan.million.dev)
 
 ![React Scan in action](https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/demo.gif)
 
-> [!IMPORTANT]
-> Want to monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!
 
 ## Install
 
