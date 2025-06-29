@@ -151,7 +151,7 @@ If you click on any bar, it will tell you what caused those components to re-ren
 
 <img width="424" alt="Pasted image 20250629132303" src="https://github.com/user-attachments/assets/79915809-64ae-4c32-abc8-89d83e775618" />
 
-this table is telling you that there were 4 of this type of component rendered, and all 4 of them had their `close`, `style`, and `hide` props change. If those didn't change, and the component was React.memo'd, it would not have rendered
+This table is telling you that there were 4 of this type of component rendered, and all 4 of them had their `close`, `style`, and `hide` props change. If those didn't change, and the component was React.memo'd, it would not have rendered
 
 If you click the arrow on the side of each bar, it will show you which component rendered it, and how long that component took to render. This is great for giving context to what component you're looking for:
 
