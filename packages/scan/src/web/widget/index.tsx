@@ -430,7 +430,7 @@ export const Widget = () => {
       let rafId: number | null = null;
       let hasExpanded = false;
 
-      const DRAG_THRESHOLD = 50; 
+      const DRAG_THRESHOLD = 50;
 
       const handlePointerMove = (e: globalThis.PointerEvent) => {
         if (hasExpanded || rafId) return;
