@@ -124,7 +124,7 @@ If you want to turn the outlines off, you can use the toggle in the toolbar to t
 ###  Why did my component render
 If you want to find out why a component re-rendered, you can click the icon at the very left of the toolbar, and then click on the component you want to inspect
 <img width="1079" alt="Pasted image 20250629131113" src="https://github.com/user-attachments/assets/56d926f7-07f4-40cb-a025-14f48b81de81" />
-Anytime the component renders, React Scan will tell you what props, state, or context changed during the last render. If those values didn't change, and your component was wrapped in `React.memo`, they would not of rendered.
+Anytime the component renders, React Scan will tell you what props, state, or context changed during the last render. If those values didn't change, and your component was wrapped in `React.memo`, it would not of rendered.
 
 To the right of the of the "Why did this component render" view, you will see the component tree of your app. When a component re-renders, the count will be updated in the tree. You can click on any item in the tree to see why it rendered.
 
@@ -156,7 +156,7 @@ If you click on any bar, it will tell you what caused those components to re-ren
 
 <img width="424" alt="Pasted image 20250629132303" src="https://github.com/user-attachments/assets/79915809-64ae-4c32-abc8-89d83e775618" />
 
-This table is telling you that there were 4 instances of this component rendered, and all 4 of them had their `close`, `style`, and `hide` props change. If those didn't change, and the component was `React.memo`'d, it would not have rendered
+This table is telling you that there were 4 instances of this component rendered, and all 4 of them had their `close`, `style`, and `hide` props change. If those didn't change, and the component was `React.memo`'d, they would not have rendered
 
 If you click the arrow on the side of each bar, it will show you the ancestors of the components that rendered that component, along with how long it took to render that ancestor. This is great for giving context to understand what component you're looking at:
 
