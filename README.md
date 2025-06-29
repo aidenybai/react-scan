@@ -116,7 +116,7 @@ All react scan features are exposed through the toolbar that you will see in the
 By default, react scan will show outlines over components when they render.
 > interact with your page to try it out!
 
-If you want to turn the outlines off, you can use the toggle to turn them off through the toolbar. This will persist across page loads and will only re-enable when you toggle it back on:
+If you want to turn the outlines off, you can use the toggle in the toolbar to turn them off. This will persist across page loads and will only re-enable when you toggle it back on:
 
 <img width="211" alt="Pasted image 20250629130910" src="https://github.com/user-attachments/assets/d88852a1-0270-4d53-ad71-55a9f4b6c9ea" />
 
