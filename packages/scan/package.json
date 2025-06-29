@@ -105,6 +105,11 @@
         }
       }
     },
+    "./all-environments": {
+      "types": "./dist/core/all-environments.d.ts",
+      "import": "./dist/core/all-environments.mjs",
+      "require": "./dist/core/all-environments.js"
+    },
     "./install-hook": {
       "types": "./dist/install-hook.d.ts",
       "import": "./dist/install-hook.mjs",
