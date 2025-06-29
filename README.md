@@ -75,7 +75,7 @@ yarn add react-scan
 
 ### CLI
 
-If you don't have a local version of the site or you want to test a React app remotely, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+If you want to run react scan on any URL (including localhost) from the cli, you can run:
 
 ```bash
 npx react-scan@latest http://localhost:3000
