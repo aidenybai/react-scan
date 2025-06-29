@@ -148,7 +148,7 @@ https://github.com/user-attachments/assets/c7d72e57-d805-4f21-944b-2347b72b0304
 The profile has 3 parts:
 #### Ranked
 
-This ranks how long it took to render your components. If the components are the same, the time it took to render those components will be added (if you render 1000 `ListItem`'s , and they each take 1s to render, we will say `ListItem` took 1000s to render )
+This ranks how long it took to render your components. Every component instance that came from the same component will have its render time added together- if you render 1000 `ListItem`'s , and they each take 1s to render, we will say `ListItem` took 1000s to render )
 
 <img width="438" alt="image" src="https://github.com/user-attachments/assets/9e8f4496-e975-4d4f-9519-4b5c653c4f94" />
   
