@@ -16,7 +16,7 @@ React Scan attempts to solve these problems:
 
 ### Try it in 5 seconds
 <pre>
-npx react-scan apple.com/ipad # you can use any url
+npx react-scan airbnb.com # you can use any url
 </pre>
 
 or on your local website
