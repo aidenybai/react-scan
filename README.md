@@ -143,25 +143,34 @@ https://github.com/user-attachments/assets/c7d72e57-d805-4f21-944b-2347b72b0304
 The profile has 3 parts:
 #### Ranked
 
-	- This ranks how long it took to render your components. If the components are the same, the time it took to render those components will be added (if you render 1000 `ListItem`'s , and they each take 1s to render, we will say `ListItem` took 1000s to render )
-  - <img width="438" alt="image" src="https://github.com/user-attachments/assets/9e8f4496-e975-4d4f-9519-4b5c653c4f94" />
+This ranks how long it took to render your components. If the components are the same, the time it took to render those components will be added (if you render 1000 `ListItem`'s , and they each take 1s to render, we will say `ListItem` took 1000s to render )
+
+<img width="438" alt="image" src="https://github.com/user-attachments/assets/9e8f4496-e975-4d4f-9519-4b5c653c4f94" />
   
-  - If you click on any bar, it will tell you what caused those components to re-render. 
-	- <img width="424" alt="Pasted image 20250629132303" src="https://github.com/user-attachments/assets/79915809-64ae-4c32-abc8-89d83e775618" />
-	- this table is telling you that there were 4 of this type of component rendered, and all 4 of them had their close, style, and hide props change. If those didn't change, and the component was React.memo'd, it would not have rendered
-  - If you click the arrow on the side of each bar, it will show you which component rendered it, and how long that component took to render. This is great for giving context to what component you're looking for.
-  - <img width="425" alt="image" src="https://github.com/user-attachments/assets/7ad8f7f6-1514-4852-988a-63efb79c5cbf" />
+If you click on any bar, it will tell you what caused those components to re-render:
+<img width="424" alt="Pasted image 20250629132303" src="https://github.com/user-attachments/assets/79915809-64ae-4c32-abc8-89d83e775618" />
+
+this table is telling you that there were 4 of this type of component rendered, and all 4 of them had their close, style, and hide props change. If those didn't change, and the component was React.memo'd, it would not have rendered
+
+If you click the arrow on the side of each bar, it will show you which component rendered it, and how long that component took to render. This is great for giving context to what component you're looking for:
+<img width="425" alt="image" src="https://github.com/user-attachments/assets/7ad8f7f6-1514-4852-988a-63efb79c5cbf" />
+
 #### Overview
-	- The overview gives you a high level summary of what time was spent on during the slowdown or interaction.
-	- This breaks down if the time spent was on renders, react hooks (or other javascript not from react), or the browser spending time to update the dom and draw the next frame
-	- This is great to find out if React was really the problem, or if you should be optimizing other things, like CSS
-	- <img width="431" alt="Pasted image 20250629132429" src="https://github.com/user-attachments/assets/9552a802-eea4-4aa6-b46c-79318d4916ea" />
+The overview gives you a high level summary of what time was spent on during the slowdown or interaction.
+
+This breaks down if the time spent was on renders, react hooks (or other javascript not from react), or the browser spending time to update the dom and draw the next frame
+
+This is great to find out if React was really the problem, or if you should be optimizing other things, like CSS:
+<img width="431" alt="Pasted image 20250629132429" src="https://github.com/user-attachments/assets/9552a802-eea4-4aa6-b46c-79318d4916ea" />
+
 #### Prompts
-	- The prompts section gives you 3 different kind of prompts that you can pass to an LLM based on what your goal is. These prompts
-	- automatically includes data about the profile.
-	- <img width="438" alt="Pasted image 20250629132608" src="https://github.com/user-attachments/assets/20be5326-5355-4a6e-b049-746ed93a05ce" />
+The prompts section gives you 3 different kind of prompts that you can pass to an LLM based on what your goal is. These prompts automatically includes data about the profile:
+
+<img width="438" alt="Pasted image 20250629132608" src="https://github.com/user-attachments/assets/20be5326-5355-4a6e-b049-746ed93a05ce" />
 
 
+
+#### Misc
 If you want to hear a sound every time a slowdown is collected, you can turn on audio alerts in this section
 <img width="637" alt="Pasted image 20250629132854" src="https://github.com/user-attachments/assets/7c6fa96d-56be-427a-bb09-078df4223378" />
 
