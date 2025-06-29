@@ -107,6 +107,7 @@ See [discussion](https://github.com/aidenybai/react-scan/pull/23)
 
 <details>
 <summary><code>How to use/feature descriptions</code></summary>
+  
 ### Toolbar
 All react scan features are exposed through the toolbar that you will see in the bottom right corner of your page:
 
