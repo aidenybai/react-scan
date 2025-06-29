@@ -1,7 +1,7 @@
 # Browser Extension Installation Guide
 
 > [!NOTE]
-> The React Scan browser extension currently uses `react-scan@0.2.9`
+> The React Scan browser extension currently uses `react-scan@0.3.6`
 
 
 ## Chrome
