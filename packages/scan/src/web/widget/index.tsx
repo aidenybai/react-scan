@@ -702,6 +702,7 @@ export const Widget = () => {
             "will-change-transform",
             "[touch-action:none]"
           )}
+          style={{ WebkitAppRegion: "no-drag" }}
         >
           {/* this entire feature is vibe coded don't think too hard about the code its probably very non coherent */}
           {isCollapsed ? (
