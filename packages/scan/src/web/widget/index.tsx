@@ -87,32 +87,32 @@ export const Widget = () => {
         case "top-left":
           finalPosition =
             orientation === "horizontal"
-              ? { x: 0, y: SAFE_AREA }
-              : { x: SAFE_AREA, y: 0 };
+              ? { x: -1, y: SAFE_AREA }
+              : { x: SAFE_AREA, y: -1 };
           break;
         case "bottom-left":
           finalPosition =
             orientation === "horizontal"
-              ? { x: 0, y: window.innerHeight - size.height - SAFE_AREA }
-              : { x: SAFE_AREA, y: window.innerHeight - size.height };
+              ? { x: -1, y: window.innerHeight - size.height - SAFE_AREA }
+              : { x: SAFE_AREA, y: window.innerHeight - size.height + 1 };
           break;
         case "top-right":
           finalPosition =
             orientation === "horizontal"
-              ? { x: window.innerWidth - size.width, y: SAFE_AREA }
-              : { x: window.innerWidth - size.width - SAFE_AREA, y: 0 };
+              ? { x: window.innerWidth - size.width + 1, y: SAFE_AREA }
+              : { x: window.innerWidth - size.width - SAFE_AREA, y: -1 };
           break;
         case "bottom-right":
         default:
           finalPosition =
             orientation === "horizontal"
               ? {
-                  x: window.innerWidth - size.width,
+                  x: window.innerWidth - size.width + 1,
                   y: window.innerHeight - size.height - SAFE_AREA,
                 }
               : {
                   x: window.innerWidth - size.width - SAFE_AREA,
-                  y: window.innerHeight - size.height,
+                  y: window.innerHeight - size.height + 1,
                 };
           break;
       }
