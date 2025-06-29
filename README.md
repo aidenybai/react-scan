@@ -33,9 +33,11 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 
 ### [**Try it out! →**](https://react-scan.million.dev)
-
-![React Scan in action](https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/demo.gif)
-
+<img
+  src="https://github.com/user-attachments/assets/c21b3afd-c7e8-458a-a760-9a027be7dc02"
+  alt="React Scan in action"
+  width="600"
+/>
 
 ## Install
 
