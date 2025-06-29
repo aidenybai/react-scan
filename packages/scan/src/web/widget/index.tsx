@@ -572,6 +572,7 @@ export const Widget = () => {
             "[touch-action:none]"
           )}
         >
+          {/* this entire feature is vibe coded don't think too hard about the code its probably very non coherent */}
           {isCollapsed ? (
             <button
               type="button"
