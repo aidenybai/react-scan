@@ -175,7 +175,6 @@ export interface Options {
 
 - `scan(options: Options)`: Imperative API to start scanning
 - `useScan(options: Options)`: Hook API to start scanning
-- `getReport()`: Get a report of all the renders
 - `setOptions(options: Options): void`: Set options at runtime
 - `getOptions()`: Get the current options
 - `onRender(Component, onRender: (fiber: Fiber, render: Render) => void)`: Hook into a specific component's renders
@@ -198,23 +197,6 @@ React Scan helps you identify these issues by automatically detecting and highli
 
 > Want monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!
 
-### FAQ
-
-**Q: Why this instead of React Devtools?**
-
-React Devtools aims to be a general purpose tool for React. However, I deal with React performance issues every day, and React Devtools doesn't fix my problems well. There's a lot of noise (no obvious distinction between unnecessary and necessary renders), and there's no programmatic API. If it sounds like you have the same problems, then React Scan may be a better choice.
-
-Also, some personal complaints about React Devtools' highlight feature:
-
-- React Devtools "batches" paints, so if a component renders too fast, it will lag behind and only show 1 every second or so
-- When you scroll/resize the boxes don't update position
-- No count of how many renders there are
-- I don't know what the bad/slow renders are without inspecting
-- The menu is hidden away so it's annoying to turn on/off, user experience should be specifically tuned for debugging performance, instead of hidden behind a profiler/component tree
-- No programmatic API
-- It's stuck in a chrome extension, I want to run it anywhere on the web
-- It looks subjectively ugly (lines look fuzzy, feels sluggish)
-- I'm more ambitious with react-scan
 
 ## Resources & Contributing Back
 
