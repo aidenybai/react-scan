@@ -35,18 +35,10 @@ scan({
   enabled: true,
 });
 ```
-Or if you want react-scan to run in production
-
-```jsx
-// src/index
-
-// must be imported before React and React DOM
-import { scan } from "react-scan/all-environments";
-import React from "react";
-
-scan({
-  enabled: true,
-});
+If you want react-scan to also run in production, use the react-scan/all-environments import path
+```diff
+- import { scan } from "react-scan";
++ import { scan } from "react-scan/all-environments";
 ```
 
 > [!CAUTION]

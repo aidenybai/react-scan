@@ -34,17 +34,13 @@ scan({
 });
 ```
 
-Or if you want react-scan to run in production
+If you want react-scan to also run in production, use the react-scan/all-environments import path
 
-```jsx
-// src/index
-import { scan } from "react-scan/all-environments"; // must be imported before React and React DOM
-import React from "react";
-
-scan({
-  enabled: true,
-});
+```diff
+- import { scan } from "react-scan";
++ import { scan } from "react-scan/all-environments";
 ```
+
 
 > [!CAUTION]
 > React Scan must be imported before React (and other React renderers like React DOM) in your entire project, as it needs to hijack React DevTools before React gets to access it.
