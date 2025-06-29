@@ -419,14 +419,7 @@ export const Widget = () => {
   useEffect(() => {
     if (!refWidget.current) return;
 
-    if (!signalWidgetCollapsed.value) {
-      const savedView = readLocalStorage<WidgetStates>(
-        LOCALSTORAGE_LAST_VIEW_KEY
-      );
-      if (savedView && savedView.view !== "none") {
-        signalWidgetViews.value = savedView;
-      }
-    }
+    removeLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY);
 
     if (!signalWidgetCollapsed.value) {
       refWidget.current.style.width = "min-content";
