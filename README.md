@@ -192,7 +192,11 @@ If you want to hear a sound every time a slowdown is collected, you can turn on 
 
 The react scan toolbar can be distracting when you're not using it. To hide the toolbar, you can drag/throw it into the side of the page. 
 
-https://github.com/user-attachments/assets/93d197c7-effc-469e-abce-cb0e0d630430
+
+
+https://github.com/user-attachments/assets/358bbc63-d2e0-4e31-af85-2cece1f331b8
+
+
 
 The toolbar will stay collapsed into the side of the page until you drag it back out. This will persist across page load
 
