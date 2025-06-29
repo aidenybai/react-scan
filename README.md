@@ -105,6 +105,8 @@ See [discussion](https://github.com/aidenybai/react-scan/pull/23)
 
 ## After Setup
 
+<details>
+<summary><code>How to use/feature descriptions</code></summary>
 ### Toolbar
 All react scan features are exposed through the toolbar that you will see in the bottom right corner of your page:
 
@@ -190,12 +192,14 @@ If you want to hear a sound every time a slowdown is collected, you can turn on 
 
 The React Scan toolbar can be distracting when you're not using it. To hide the toolbar, you can drag/throw it into the side of the page.  
 
-<video src="https://github.com/user-attachments/assets/358bbc63-d2e0-4e31-af85-2cece1f331b8" width="300" controls />
+<video src="https://github.com/user-attachments/assets/358bbc63-d2e0-4e31-af85-2cece1f331b8" width="300" controls></video>
+
 
 
 The toolbar will stay collapsed into the side of the page until you drag it back out. This will persist across page load
 
 
+</details>
 
 ## API Reference
 
