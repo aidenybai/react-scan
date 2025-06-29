@@ -153,9 +153,14 @@ If you click on any bar, it will tell you what caused those components to re-ren
 
 This table is telling you that there were 4 of this type of component rendered, and all 4 of them had their `close`, `style`, and `hide` props change. If those didn't change, and the component was `React.memo`'d, it would not have rendered
 
-If you click the arrow on the side of each bar, it will show you the ancestors of the components that rendered that component, along with how long it took to render that ancestor. This is great for giving context to what component you're looking for:
+If you click the arrow on the side of each bar, it will show you the ancestors of the components that rendered that component, along with how long it took to render that ancestor. This is great for giving context to understand what component you're looking at:
 
 <img width="425" alt="image" src="https://github.com/user-attachments/assets/7ad8f7f6-1514-4852-988a-63efb79c5cbf" />
+
+If you hover your mouse over a bar, all instances of that component will be outlined in purple over the page:
+
+<img width="1197" alt="image" src="https://github.com/user-attachments/assets/b1c6e9f4-97a7-4405-90f4-537938c7a2cc" />
+
 
 #### Overview
 The overview gives you a high level summary of what time was spent on during the slowdown or interaction.
