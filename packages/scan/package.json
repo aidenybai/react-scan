@@ -1,8 +1,14 @@
 {
   "name": "react-scan",
-  "version": "0.4.0",
+  "version": "0.4.5",
   "description": "Scan your React app for renders",
-  "keywords": ["react", "react-scan", "react scan", "render", "performance"],
+  "keywords": [
+    "react",
+    "react-scan",
+    "react scan",
+    "render",
+    "performance"
+  ],
   "homepage": "https://react-scan.million.dev",
   "bugs": {
     "url": "https://github.com/aidenybai/react-scan/issues"
@@ -191,17 +197,27 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "monitoring": ["./dist/core/monitor/index.d.ts"],
-      "monitoring/next": ["./dist/core/monitor/params/next.d.ts"],
+      "monitoring": [
+        "./dist/core/monitor/index.d.ts"
+      ],
+      "monitoring/next": [
+        "./dist/core/monitor/params/next.d.ts"
+      ],
       "monitoring/react-router-legacy": [
         "./dist/core/monitor/params/react-router-v5.d.ts"
       ],
       "monitoring/react-router": [
         "./dist/core/monitor/params/react-router-v6.d.ts"
       ],
-      "monitoring/remix": ["./dist/core/monitor/params/remix.d.ts"],
-      "monitoring/astro": ["./dist/core/monitor/params/astro/index.ts"],
-      "react-component-name/vite": ["./dist/react-component-name/vite.d.ts"],
+      "monitoring/remix": [
+        "./dist/core/monitor/params/remix.d.ts"
+      ],
+      "monitoring/astro": [
+        "./dist/core/monitor/params/astro/index.ts"
+      ],
+      "react-component-name/vite": [
+        "./dist/react-component-name/vite.d.ts"
+      ],
       "react-component-name/webpack": [
         "./dist/react-component-name/webpack.d.ts"
       ],
@@ -217,13 +233,23 @@
       "react-component-name/rollup": [
         "./dist/react-component-name/rollup.d.ts"
       ],
-      "react-component-name/astro": ["./dist/react-component-name/astro.d.ts"],
-      "react-component-name/loader": ["./dist/react-component-name/loader.d.ts"]
+      "react-component-name/astro": [
+        "./dist/react-component-name/astro.d.ts"
+      ],
+      "react-component-name/loader": [
+        "./dist/react-component-name/loader.d.ts"
+      ]
     }
   },
   "bin": "bin/cli.js",
-  "files": ["dist", "bin", "package.json", "README.md", "LICENSE", "auto.d.ts"],
-
+  "files": [
+    "dist",
+    "bin",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "auto.d.ts"
+  ],
   "dependencies": {
     "@babel/core": "^7.26.0",
     "@babel/generator": "^7.26.2",

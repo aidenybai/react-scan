@@ -1,16 +1,28 @@
 import { createContext, type JSX } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import { Store } from "~core/index";
-import { cn, saveLocalStorage } from "~web/utils/helpers";
+import { Store, ReactScanInternals } from "~core/index";
+import {
+  cn,
+  saveLocalStorage,
+  removeLocalStorage,
+  readLocalStorage,
+} from "~web/utils/helpers";
 import { Content } from "~web/views";
 import { ScanOverlay } from "~web/views/inspector/overlay";
-import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from "../constants";
+import {
+  LOCALSTORAGE_KEY,
+  LOCALSTORAGE_COLLAPSED_KEY,
+  LOCALSTORAGE_LAST_VIEW_KEY,
+  MIN_SIZE,
+  SAFE_AREA,
+} from "../constants";
 import {
   defaultWidgetConfig,
   signalRefWidget,
   signalWidget,
   signalWidgetViews,
   updateDimensions,
+  WidgetStates,
 } from "../state";
 import {
   calculateBoundedSize,
@@ -19,7 +31,6 @@ import {
 } from "./helpers";
 import { ResizeHandle } from "./resize-handle";
 import { signalWidgetCollapsed } from "~web/state";
-import { LOCALSTORAGE_COLLAPSED_KEY } from "~web/constants";
 import { Icon } from "~web/components/icon";
 import { Corner } from "./types";
 import type { CollapsedPosition } from "./types";
@@ -35,7 +46,6 @@ export const Widget = () => {
 
   const refInitialMinimizedWidth = useRef<number>(0);
   const refInitialMinimizedHeight = useRef<number>(0);
-  const refExpandingFromCollapsed = useRef<boolean>(false);
 
   const updateWidgetPosition = useCallback((shouldSave = true) => {
     if (!refWidget.current) return;
@@ -50,17 +60,13 @@ export const Widget = () => {
       const size = COLLAPSED_SIZE[orientation];
       newWidth = size.width;
       newHeight = size.height;
-    } else if (refShouldOpen.current && !refExpandingFromCollapsed.current) {
+    } else if (refShouldOpen.current) {
       const lastDims = signalWidget.value.lastDimensions;
       newWidth = calculateBoundedSize(lastDims.width, 0, true);
       newHeight = calculateBoundedSize(lastDims.height, 0, false);
     } else {
       newWidth = refInitialMinimizedWidth.current;
       newHeight = refInitialMinimizedHeight.current;
-
-      if (refExpandingFromCollapsed.current) {
-        refExpandingFromCollapsed.current = false;
-      }
     }
 
     const newPosition = calculatePosition(corner, newWidth, newHeight);
@@ -233,7 +239,23 @@ export const Widget = () => {
             horizontalOutside * verticalOutside;
           const totalArea = dimensions.width * dimensions.height;
 
-          if (areaOutside > totalArea * 0.5) {
+          // todo: delete this doesn't do anything
+          let shouldCollapse = areaOutside > totalArea * 0.35;
+
+          if (!shouldCollapse && ReactScanInternals.options.value.showFPS) {
+            const fpsRight = currentX + dimensions.width;
+            const fpsLeft = fpsRight - 100;
+
+            const fpsFullyOutside =
+              fpsRight <= 0 ||
+              fpsLeft >= window.innerWidth ||
+              currentY + dimensions.height <= 0 ||
+              currentY >= window.innerHeight;
+
+            shouldCollapse = fpsFullyOutside;
+          }
+
+          if (shouldCollapse) {
             const widgetCenterX = currentX + dimensions.width / 2;
             const widgetCenterY = currentY + dimensions.height / 2;
             const screenCenterX = window.innerWidth / 2;
@@ -254,6 +276,13 @@ export const Widget = () => {
 
             orientation =
               horizontalOverflow > verticalOverflow ? "horizontal" : "vertical";
+
+            const currentViewState = signalWidgetViews.peek();
+            if (currentViewState.view !== "none") {
+              saveLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY, currentViewState);
+            } else {
+              removeLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY);
+            }
 
             signalWidget.value = {
               ...signalWidget.value,
@@ -506,15 +535,13 @@ export const Widget = () => {
               ? (() => {
                   const { orientation = "horizontal", corner } = isCollapsed;
                   if (orientation === "horizontal") {
-                    // Horizontal: rounded on the opposite side
                     return corner?.endsWith("right")
-                      ? "rounded-l-lg shadow-lg"
-                      : "rounded-r-lg shadow-lg";
+                      ? "rounded-tl-lg rounded-bl-lg shadow-lg"
+                      : "rounded-tr-lg rounded-br-lg shadow-lg";
                   } else {
-                    // Vertical: rounded on the opposite side
                     return corner?.startsWith("bottom")
-                      ? "rounded-t-lg shadow-lg"
-                      : "rounded-b-lg shadow-lg";
+                      ? "rounded-tl-lg rounded-tr-lg shadow-lg"
+                      : "rounded-bl-lg rounded-br-lg shadow-lg";
                   }
                 })()
               : "rounded-lg shadow-lg",
@@ -533,21 +560,21 @@ export const Widget = () => {
             <button
               type="button"
               onClick={() => {
-                refExpandingFromCollapsed.current = true;
+                const lastViewState = readLocalStorage<WidgetStates>(
+                  LOCALSTORAGE_LAST_VIEW_KEY
+                );
+
                 signalWidgetCollapsed.value = null;
                 saveLocalStorage(LOCALSTORAGE_COLLAPSED_KEY, null);
+                if (lastViewState) {
+                  removeLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY);
+                }
 
-                requestAnimationFrame(() => {
-                  if (refWidget.current) {
-                    refWidget.current.style.width = "min-content";
-                    const naturalWidth = refWidget.current.offsetWidth;
-                    refInitialMinimizedWidth.current = naturalWidth;
-                  }
-
-                  refShouldOpen.current = false;
+                if (lastViewState && lastViewState.view !== "none") {
+                  signalWidgetViews.value = lastViewState;
+                } else {
                   signalWidgetViews.value = { view: "none" };
-                  updateWidgetPosition(true);
-                });
+                }
               }}
               className="flex items-center justify-center w-full h-full text-white"
               title="Expand toolbar"

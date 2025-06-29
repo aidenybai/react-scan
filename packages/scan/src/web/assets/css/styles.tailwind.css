@@ -94,7 +94,7 @@ svg {
 #react-scan-toolbar {
   @apply fixed left-0 top-0;
   @apply flex flex-col;
-  @apply rounded-lg shadow-lg;
+  @apply shadow-lg;
   @apply font-mono text-[13px] text-white;
   @apply bg-black;
   @apply select-none;
