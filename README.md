@@ -183,19 +183,14 @@ The prompts section gives you 3 different kind of prompts that you can pass to a
 
 
 #### Misc
-If you want to hear a sound every time a slowdown is collected, you can turn on audio alerts in this section
-<img width="637" alt="Pasted image 20250629132854" src="https://github.com/user-attachments/assets/7c6fa96d-56be-427a-bb09-078df4223378" />
-
-
+If you want to hear a sound every time a slowdown is collected, you can turn on audio alerts in this section  
+<img src="https://github.com/user-attachments/assets/7c6fa96d-56be-427a-bb09-078df4223378" width="400" />
 
 ### Hiding the toolbar
 
-The react scan toolbar can be distracting when you're not using it. To hide the toolbar, you can drag/throw it into the side of the page. 
+The React Scan toolbar can be distracting when you're not using it. To hide the toolbar, you can drag/throw it into the side of the page.  
 
-
-
-https://github.com/user-attachments/assets/358bbc63-d2e0-4e31-af85-2cece1f331b8
-
+<video src="https://github.com/user-attachments/assets/358bbc63-d2e0-4e31-af85-2cece1f331b8" width="300" controls />
 
 
 The toolbar will stay collapsed into the side of the page until you drag it back out. This will persist across page load
