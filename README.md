@@ -133,7 +133,12 @@ To the right of the of the "Why did this component render" view, you will see th
 
 Re-render outlines are good for getting a high level overview of what's slowing down your app, and the "Why did this render" inspector is great when you know which component you want to debug. But, what if you don't know which components are causing your app to slowdown?
 
-React Scan's profiler, accessible through the notification bell in the toolbar, is an always on profiler that alerts you when there is an FPS drop or slow interaction (click, type). Every slowdown and interaction has an easy to understand profile associated with it.
+React Scan's profiler, accessible through the notification bell in the toolbar:
+
+<img width="524" alt="image" src="https://github.com/user-attachments/assets/435c1c42-e1a1-4478-9e40-d0ef52f00bce" />
+
+
+is an always on profiler that alerts you when there is an FPS drop or slow interaction (click, type). Every slowdown and interaction has an easy to understand profile associated with it.
 
 
 https://github.com/user-attachments/assets/c7d72e57-d805-4f21-944b-2347b72b0304
