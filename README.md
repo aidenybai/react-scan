@@ -124,7 +124,7 @@ If you want to turn the outlines off, you can use the toggle in the toolbar to t
 ###  Why did my component render
 If you want to find out why a component re-rendered, you can click the icon at the very left of the toolbar, and then click on the component you want to inspect
 <img width="1079" alt="Pasted image 20250629131113" src="https://github.com/user-attachments/assets/56d926f7-07f4-40cb-a025-14f48b81de81" />
-Anytime the component renders, React Scan will tell you what props, state, or context changed during the last render. If those values didn't change, and your component was wrapped in `React.memo`, it would not of rendered.
+Anytime the component renders, React Scan will tell you what props, state, or context changed during the last render. If those values didn't change, and your component was wrapped in `React.memo`, they would not of rendered.
 
 To the right of the of the "Why did this component render" view, you will see the component tree of your app. When a component re-renders, the count will be updated in the tree. You can click on any item in the tree to see why it rendered.
 
