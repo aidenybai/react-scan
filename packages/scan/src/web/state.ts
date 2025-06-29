@@ -52,15 +52,12 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
 
   return {
     corner: stored.corner ?? defaultWidgetConfig.corner,
-    dimensions: {
-      isFullWidth: false,
-      isFullHeight: false,
-      width: MIN_SIZE.width,
-      height: MIN_SIZE.height,
-      position:
-        stored.dimensions.position ?? defaultWidgetConfig.dimensions.position,
-    },
-    lastDimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+    dimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+
+    lastDimensions:
+      stored.lastDimensions ??
+      stored.dimensions ??
+      defaultWidgetConfig.lastDimensions,
     componentsTree: stored.componentsTree ?? defaultWidgetConfig.componentsTree,
   };
 };

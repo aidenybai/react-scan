@@ -12,9 +12,9 @@ import { ScanOverlay } from "~web/views/inspector/overlay";
 import {
   LOCALSTORAGE_KEY,
   LOCALSTORAGE_COLLAPSED_KEY,
-  LOCALSTORAGE_LAST_VIEW_KEY,
   MIN_SIZE,
   SAFE_AREA,
+  LOCALSTORAGE_LAST_VIEW_KEY,
 } from "../constants";
 import {
   defaultWidgetConfig,
@@ -22,7 +22,7 @@ import {
   signalWidget,
   signalWidgetViews,
   updateDimensions,
-  WidgetStates,
+  type WidgetStates,
 } from "../state";
 import {
   calculateBoundedSize,
@@ -46,6 +46,7 @@ export const Widget = () => {
 
   const refInitialMinimizedWidth = useRef<number>(0);
   const refInitialMinimizedHeight = useRef<number>(0);
+  const refExpandingFromCollapsed = useRef<boolean>(false);
 
   const updateWidgetPosition = useCallback((shouldSave = true) => {
     if (!refWidget.current) return;
@@ -64,6 +65,10 @@ export const Widget = () => {
       const lastDims = signalWidget.value.lastDimensions;
       newWidth = calculateBoundedSize(lastDims.width, 0, true);
       newHeight = calculateBoundedSize(lastDims.height, 0, false);
+
+      if (refExpandingFromCollapsed.current) {
+        refExpandingFromCollapsed.current = false;
+      }
     } else {
       newWidth = refInitialMinimizedWidth.current;
       newHeight = refInitialMinimizedHeight.current;
@@ -277,13 +282,6 @@ export const Widget = () => {
             orientation =
               horizontalOverflow > verticalOverflow ? "horizontal" : "vertical";
 
-            const currentViewState = signalWidgetViews.peek();
-            if (currentViewState.view !== "none") {
-              saveLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY, currentViewState);
-            } else {
-              removeLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY);
-            }
-
             signalWidget.value = {
               ...signalWidget.value,
               corner: targetCorner,
@@ -422,12 +420,21 @@ export const Widget = () => {
     if (!refWidget.current) return;
 
     if (!signalWidgetCollapsed.value) {
+      const savedView = readLocalStorage<WidgetStates>(
+        LOCALSTORAGE_LAST_VIEW_KEY
+      );
+      if (savedView && savedView.view !== "none") {
+        signalWidgetViews.value = savedView;
+      }
+    }
+
+    if (!signalWidgetCollapsed.value) {
       refWidget.current.style.width = "min-content";
       refInitialMinimizedHeight.current = 36; // height of the header
       refInitialMinimizedWidth.current = refWidget.current.offsetWidth;
     } else {
       refInitialMinimizedHeight.current = 36;
-      refInitialMinimizedWidth.current = 550;
+      refInitialMinimizedWidth.current = 0;
     }
 
     refWidget.current.style.maxWidth = `calc(100vw - ${SAFE_AREA * 2}px)`;
@@ -437,7 +444,8 @@ export const Widget = () => {
 
     if (
       Store.inspectState.value.kind !== "focused" &&
-      !signalWidgetCollapsed.value
+      !signalWidgetCollapsed.value &&
+      !refExpandingFromCollapsed.current
     ) {
       signalWidget.value = {
         ...signalWidget.value,
@@ -471,6 +479,14 @@ export const Widget = () => {
       (state) => {
         refShouldOpen.current = state.view !== "none";
         updateWidgetPosition();
+
+        if (!signalWidgetCollapsed.value) {
+          if (state.view !== "none") {
+            saveLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY, state);
+          } else {
+            removeLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY);
+          }
+        }
       }
     );
 
@@ -560,21 +576,27 @@ export const Widget = () => {
             <button
               type="button"
               onClick={() => {
-                const lastViewState = readLocalStorage<WidgetStates>(
-                  LOCALSTORAGE_LAST_VIEW_KEY
-                );
-
                 signalWidgetCollapsed.value = null;
                 saveLocalStorage(LOCALSTORAGE_COLLAPSED_KEY, null);
-                if (lastViewState) {
-                  removeLocalStorage(LOCALSTORAGE_LAST_VIEW_KEY);
+
+                if (
+                  refInitialMinimizedWidth.current === 0 &&
+                  refWidget.current
+                ) {
+                  requestAnimationFrame(() => {
+                    if (refWidget.current) {
+                      refWidget.current.style.width = "min-content";
+                      const naturalWidth = refWidget.current.offsetWidth;
+                      refInitialMinimizedWidth.current = naturalWidth || 300;
+                      updateWidgetPosition(true);
+                    }
+                  });
                 }
 
-                if (lastViewState && lastViewState.view !== "none") {
-                  signalWidgetViews.value = lastViewState;
-                } else {
-                  signalWidgetViews.value = { view: "none" };
-                }
+                const savedView = readLocalStorage<WidgetStates>(
+                  LOCALSTORAGE_LAST_VIEW_KEY
+                );
+                signalWidgetViews.value = savedView || { view: "none" };
               }}
               className="flex items-center justify-center w-full h-full text-white"
               title="Expand toolbar"
