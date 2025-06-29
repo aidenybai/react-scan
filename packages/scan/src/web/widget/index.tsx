@@ -1,23 +1,33 @@
-import { createContext, type JSX } from 'preact';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { Store } from '~core/index';
-import { cn, saveLocalStorage } from '~web/utils/helpers';
-import { Content } from '~web/views';
-import { ScanOverlay } from '~web/views/inspector/overlay';
-import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from '../constants';
+import { createContext, type JSX } from "preact";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { Store } from "~core/index";
+import { cn, saveLocalStorage } from "~web/utils/helpers";
+import { Content } from "~web/views";
+import { ScanOverlay } from "~web/views/inspector/overlay";
+import { LOCALSTORAGE_KEY, MIN_SIZE, SAFE_AREA } from "../constants";
 import {
   defaultWidgetConfig,
   signalRefWidget,
   signalWidget,
   signalWidgetViews,
   updateDimensions,
-} from '../state';
+} from "../state";
 import {
   calculateBoundedSize,
   calculatePosition,
   getBestCorner,
-} from './helpers';
-import { ResizeHandle } from './resize-handle';
+} from "./helpers";
+import { ResizeHandle } from "./resize-handle";
+import { signalWidgetCollapsed } from "~web/state";
+import { LOCALSTORAGE_COLLAPSED_KEY } from "~web/constants";
+import { Icon } from "~web/components/icon";
+import { Corner } from "./types";
+import type { CollapsedPosition } from "./types";
+
+const COLLAPSED_SIZE = {
+  horizontal: { width: 20, height: 48 },
+  vertical: { width: 48, height: 20 },
+} as const;
 
 export const Widget = () => {
   const refWidget = useRef<HTMLDivElement | null>(null);
@@ -25,6 +35,7 @@ export const Widget = () => {
 
   const refInitialMinimizedWidth = useRef<number>(0);
   const refInitialMinimizedHeight = useRef<number>(0);
+  const refExpandingFromCollapsed = useRef<boolean>(false);
 
   const updateWidgetPosition = useCallback((shouldSave = true) => {
     if (!refWidget.current) return;
@@ -33,29 +44,68 @@ export const Widget = () => {
     let newWidth: number;
     let newHeight: number;
 
-    if (refShouldOpen.current) {
+    if (signalWidgetCollapsed.value) {
+      const orientation =
+        signalWidgetCollapsed.value.orientation || "horizontal";
+      const size = COLLAPSED_SIZE[orientation];
+      newWidth = size.width;
+      newHeight = size.height;
+    } else if (refShouldOpen.current && !refExpandingFromCollapsed.current) {
       const lastDims = signalWidget.value.lastDimensions;
       newWidth = calculateBoundedSize(lastDims.width, 0, true);
       newHeight = calculateBoundedSize(lastDims.height, 0, false);
     } else {
-      const currentDims = signalWidget.value.dimensions;
-      if (currentDims.width > refInitialMinimizedWidth.current) {
-        signalWidget.value = {
-          ...signalWidget.value,
-          lastDimensions: {
-            isFullWidth: currentDims.isFullWidth,
-            isFullHeight: currentDims.isFullHeight,
-            width: currentDims.width,
-            height: currentDims.height,
-            position: currentDims.position,
-          },
-        };
-      }
       newWidth = refInitialMinimizedWidth.current;
       newHeight = refInitialMinimizedHeight.current;
+
+      if (refExpandingFromCollapsed.current) {
+        refExpandingFromCollapsed.current = false;
+      }
     }
 
     const newPosition = calculatePosition(corner, newWidth, newHeight);
+
+    // When collapsed, override position so arrow is flush against the viewport edge.
+    let finalPosition = newPosition;
+    if (signalWidgetCollapsed.value) {
+      const { corner: collapsedCorner, orientation = "horizontal" } =
+        signalWidgetCollapsed.value;
+      const size = COLLAPSED_SIZE[orientation];
+
+      switch (collapsedCorner) {
+        case "top-left":
+          finalPosition =
+            orientation === "horizontal"
+              ? { x: 0, y: SAFE_AREA }
+              : { x: SAFE_AREA, y: 0 };
+          break;
+        case "bottom-left":
+          finalPosition =
+            orientation === "horizontal"
+              ? { x: 0, y: window.innerHeight - size.height - SAFE_AREA }
+              : { x: SAFE_AREA, y: window.innerHeight - size.height };
+          break;
+        case "top-right":
+          finalPosition =
+            orientation === "horizontal"
+              ? { x: window.innerWidth - size.width, y: SAFE_AREA }
+              : { x: window.innerWidth - size.width - SAFE_AREA, y: 0 };
+          break;
+        case "bottom-right":
+        default:
+          finalPosition =
+            orientation === "horizontal"
+              ? {
+                  x: window.innerWidth - size.width,
+                  y: window.innerHeight - size.height - SAFE_AREA,
+                }
+              : {
+                  x: window.innerWidth - size.width - SAFE_AREA,
+                  y: window.innerHeight - size.height,
+                };
+          break;
+      }
+    }
 
     const isTooSmall =
       newWidth < MIN_SIZE.width || newHeight < MIN_SIZE.initialHeight;
@@ -67,20 +117,20 @@ export const Widget = () => {
     let rafId: number | null = null;
     const onTransitionEnd = () => {
       updateDimensions();
-      container.removeEventListener('transitionend', onTransitionEnd);
+      container.removeEventListener("transitionend", onTransitionEnd);
       if (rafId) {
         cancelAnimationFrame(rafId);
         rafId = null;
       }
     };
 
-    container.addEventListener('transitionend', onTransitionEnd);
-    containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    container.addEventListener("transitionend", onTransitionEnd);
+    containerStyle.transition = "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
 
     rafId = requestAnimationFrame(() => {
       containerStyle.width = `${newWidth}px`;
       containerStyle.height = `${newHeight}px`;
-      containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
+      containerStyle.transform = `translate3d(${finalPosition.x}px, ${finalPosition.y}px, 0)`;
       rafId = null;
     });
 
@@ -89,7 +139,7 @@ export const Widget = () => {
       isFullHeight: newHeight >= window.innerHeight - SAFE_AREA * 2,
       width: newWidth,
       height: newHeight,
-      position: newPosition,
+      position: finalPosition,
     };
 
     signalWidget.value = {
@@ -119,7 +169,7 @@ export const Widget = () => {
     (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
 
-      if (!refWidget.current || (e.target as HTMLElement).closest('button'))
+      if (!refWidget.current || (e.target as HTMLElement).closest("button"))
         return;
 
       const container = refWidget.current;
@@ -158,8 +208,84 @@ export const Widget = () => {
            * 1. transition: none - Prevents interpolation blur during drag
            * 2. translate3d - Forces GPU acceleration for crisp text
            */
-          containerStyle.transition = 'none';
+          containerStyle.transition = "none";
           containerStyle.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+
+          const widgetRight = currentX + dimensions.width;
+          const widgetBottom = currentY + dimensions.height;
+
+          const outsideLeft = Math.max(0, -currentX);
+          const outsideRight = Math.max(0, widgetRight - window.innerWidth);
+          const outsideTop = Math.max(0, -currentY);
+          const outsideBottom = Math.max(0, widgetBottom - window.innerHeight);
+
+          const horizontalOutside = Math.min(
+            dimensions.width,
+            outsideLeft + outsideRight
+          );
+          const verticalOutside = Math.min(
+            dimensions.height,
+            outsideTop + outsideBottom
+          );
+          const areaOutside =
+            horizontalOutside * dimensions.height +
+            verticalOutside * dimensions.width -
+            horizontalOutside * verticalOutside;
+          const totalArea = dimensions.width * dimensions.height;
+
+          if (areaOutside > totalArea * 0.5) {
+            const widgetCenterX = currentX + dimensions.width / 2;
+            const widgetCenterY = currentY + dimensions.height / 2;
+            const screenCenterX = window.innerWidth / 2;
+            const screenCenterY = window.innerHeight / 2;
+
+            let targetCorner: Corner;
+            if (widgetCenterX < screenCenterX) {
+              targetCorner =
+                widgetCenterY < screenCenterY ? "top-left" : "bottom-left";
+            } else {
+              targetCorner =
+                widgetCenterY < screenCenterY ? "top-right" : "bottom-right";
+            }
+
+            let orientation: "horizontal" | "vertical";
+            const horizontalOverflow = Math.max(outsideLeft, outsideRight);
+            const verticalOverflow = Math.max(outsideTop, outsideBottom);
+
+            orientation =
+              horizontalOverflow > verticalOverflow ? "horizontal" : "vertical";
+
+            signalWidget.value = {
+              ...signalWidget.value,
+              corner: targetCorner,
+              lastDimensions: {
+                ...dimensions,
+                position: calculatePosition(
+                  targetCorner,
+                  dimensions.width,
+                  dimensions.height
+                ),
+              },
+            };
+
+            const collapsedPosition: CollapsedPosition = {
+              corner: targetCorner,
+              orientation,
+            };
+
+            signalWidgetCollapsed.value = collapsedPosition;
+            saveLocalStorage(LOCALSTORAGE_COLLAPSED_KEY, collapsedPosition);
+            saveLocalStorage(LOCALSTORAGE_KEY, signalWidget.value);
+            updateWidgetPosition(false);
+
+            document.removeEventListener("pointermove", handlePointerMove);
+            document.removeEventListener("pointerup", handlePointerEnd);
+            if (rafId) {
+              cancelAnimationFrame(rafId);
+              rafId = null;
+            }
+          }
+
           rafId = null;
         });
       };
@@ -172,14 +298,14 @@ export const Widget = () => {
           rafId = null;
         }
 
-        document.removeEventListener('pointermove', handlePointerMove);
-        document.removeEventListener('pointerup', handlePointerEnd);
+        document.removeEventListener("pointermove", handlePointerMove);
+        document.removeEventListener("pointerup", handlePointerEnd);
 
         // Calculate total movement distance
         const totalDeltaX = Math.abs(lastMouseX - initialMouseX);
         const totalDeltaY = Math.abs(lastMouseY - initialMouseY);
         const totalMovement = Math.sqrt(
-          totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY,
+          totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY
         );
 
         // Only consider it a move if we moved more than 60 pixels
@@ -190,7 +316,7 @@ export const Widget = () => {
           lastMouseY,
           initialMouseX,
           initialMouseY,
-          Store.inspectState.value.kind === 'focused' ? 80 : 40,
+          Store.inspectState.value.kind === "focused" ? 80 : 40
         );
 
         if (newCorner === signalWidget.value.corner) {
@@ -200,7 +326,7 @@ export const Widget = () => {
            * causing text blur during animation
            */
           containerStyle.transition =
-            'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
           const currentPosition = signalWidget.value.dimensions.position;
           requestAnimationFrame(() => {
             containerStyle.transform = `translate3d(${currentPosition.x}px, ${currentPosition.y}px, 0)`;
@@ -212,24 +338,24 @@ export const Widget = () => {
         const snappedPosition = calculatePosition(
           newCorner,
           dimensions.width,
-          dimensions.height,
+          dimensions.height
         );
 
         if (currentX === initialX && currentY === initialY) return;
 
         const onTransitionEnd = () => {
-          containerStyle.transition = 'none';
+          containerStyle.transition = "none";
           updateDimensions();
-          container.removeEventListener('transitionend', onTransitionEnd);
+          container.removeEventListener("transitionend", onTransitionEnd);
           if (rafId) {
             cancelAnimationFrame(rafId);
             rafId = null;
           }
         };
 
-        container.addEventListener('transitionend', onTransitionEnd);
+        container.addEventListener("transitionend", onTransitionEnd);
         containerStyle.transition =
-          'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
 
         requestAnimationFrame(() => {
           containerStyle.transform = `translate3d(${snappedPosition.x}px, ${snappedPosition.y}px, 0)`;
@@ -256,24 +382,34 @@ export const Widget = () => {
         });
       };
 
-      document.addEventListener('pointermove', handlePointerMove);
-      document.addEventListener('pointerup', handlePointerEnd);
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerEnd);
     },
-    [],
+    []
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
   useEffect(() => {
     if (!refWidget.current) return;
 
-    refWidget.current.style.width = 'min-content';
-    refInitialMinimizedHeight.current = 36; // height of the header
-    refInitialMinimizedWidth.current = refWidget.current.offsetWidth;
+    if (!signalWidgetCollapsed.value) {
+      refWidget.current.style.width = "min-content";
+      refInitialMinimizedHeight.current = 36; // height of the header
+      refInitialMinimizedWidth.current = refWidget.current.offsetWidth;
+    } else {
+      refInitialMinimizedHeight.current = 36;
+      refInitialMinimizedWidth.current = 550;
+    }
 
     refWidget.current.style.maxWidth = `calc(100vw - ${SAFE_AREA * 2}px)`;
     refWidget.current.style.maxHeight = `calc(100vh - ${SAFE_AREA * 2}px)`;
 
-    if (Store.inspectState.value.kind !== 'focused') {
+    updateWidgetPosition();
+
+    if (
+      Store.inspectState.value.kind !== "focused" &&
+      !signalWidgetCollapsed.value
+    ) {
       signalWidget.value = {
         ...signalWidget.value,
         dimensions: {
@@ -304,26 +440,26 @@ export const Widget = () => {
 
     const unsubscribeSignalWidgetViews = signalWidgetViews.subscribe(
       (state) => {
-        refShouldOpen.current = state.view !== 'none';
+        refShouldOpen.current = state.view !== "none";
         updateWidgetPosition();
-      },
+      }
     );
 
     const unsubscribeStoreInspectState = Store.inspectState.subscribe(
       (state) => {
-        refShouldOpen.current = state.kind === 'focused';
+        refShouldOpen.current = state.kind === "focused";
         updateWidgetPosition();
-      },
+      }
     );
 
     const handleWindowResize = () => {
       updateWidgetPosition(true);
     };
 
-    window.addEventListener('resize', handleWindowResize, { passive: true });
+    window.addEventListener("resize", handleWindowResize, { passive: true });
 
     return () => {
-      window.removeEventListener('resize', handleWindowResize);
+      window.removeEventListener("resize", handleWindowResize);
       unsubscribeSignalWidgetViews();
       unsubscribeStoreInspectState();
       unsubscribeSignalWidget();
@@ -341,6 +477,20 @@ export const Widget = () => {
     setTriggerRender(true);
   }, []);
 
+  const isCollapsed = signalWidgetCollapsed.value;
+
+  let arrowRotationClass = "";
+  if (isCollapsed) {
+    const { orientation = "horizontal", corner } = isCollapsed;
+    if (orientation === "horizontal") {
+      arrowRotationClass = corner?.endsWith("right") ? "rotate-180" : "";
+    } else {
+      arrowRotationClass = corner?.startsWith("bottom")
+        ? "-rotate-90"
+        : "rotate-90";
+    }
+  }
+
   return (
     <>
       <ScanOverlay />
@@ -349,25 +499,74 @@ export const Widget = () => {
           id="react-scan-toolbar"
           dir="ltr"
           ref={refWidget}
-          onPointerDown={handleDrag}
+          onPointerDown={!isCollapsed ? handleDrag : undefined}
           className={cn(
-            'fixed inset-0 rounded-lg shadow-lg',
-            'flex flex-col',
-            'font-mono text-[13px]',
-            'user-select-none',
-            'opacity-0',
-            'cursor-move',
-            'z-[124124124124]',
-            'animate-fade-in animation-duration-300 animation-delay-300',
-            'will-change-transform',
-            '[touch-action:none]',
+            "fixed inset-0",
+            isCollapsed
+              ? (() => {
+                  const { orientation = "horizontal", corner } = isCollapsed;
+                  if (orientation === "horizontal") {
+                    // Horizontal: rounded on the opposite side
+                    return corner?.endsWith("right")
+                      ? "rounded-l-lg shadow-lg"
+                      : "rounded-r-lg shadow-lg";
+                  } else {
+                    // Vertical: rounded on the opposite side
+                    return corner?.startsWith("bottom")
+                      ? "rounded-t-lg shadow-lg"
+                      : "rounded-b-lg shadow-lg";
+                  }
+                })()
+              : "rounded-lg shadow-lg",
+            "flex flex-col",
+            "font-mono text-[13px]",
+            "user-select-none",
+            "opacity-0",
+            isCollapsed ? "cursor-pointer" : "cursor-move",
+            "z-[124124124124]",
+            "animate-fade-in animation-duration-300 animation-delay-300",
+            "will-change-transform",
+            "[touch-action:none]"
           )}
         >
-          <ResizeHandle position="top" />
-          <ResizeHandle position="bottom" />
-          <ResizeHandle position="left" />
-          <ResizeHandle position="right" />
-          <Content />
+          {isCollapsed ? (
+            <button
+              type="button"
+              onClick={() => {
+                refExpandingFromCollapsed.current = true;
+                signalWidgetCollapsed.value = null;
+                saveLocalStorage(LOCALSTORAGE_COLLAPSED_KEY, null);
+
+                requestAnimationFrame(() => {
+                  if (refWidget.current) {
+                    refWidget.current.style.width = "min-content";
+                    const naturalWidth = refWidget.current.offsetWidth;
+                    refInitialMinimizedWidth.current = naturalWidth;
+                  }
+
+                  refShouldOpen.current = false;
+                  signalWidgetViews.value = { view: "none" };
+                  updateWidgetPosition(true);
+                });
+              }}
+              className="flex items-center justify-center w-full h-full text-white"
+              title="Expand toolbar"
+            >
+              <Icon
+                name="icon-chevron-right"
+                size={16}
+                className={cn("transition-transform", arrowRotationClass)}
+              />
+            </button>
+          ) : (
+            <>
+              <ResizeHandle position="top" />
+              <ResizeHandle position="bottom" />
+              <ResizeHandle position="left" />
+              <ResizeHandle position="right" />
+              <Content />
+            </>
+          )}
         </div>
       </ToolbarElementContext.Provider>
     </>

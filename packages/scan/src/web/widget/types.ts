@@ -8,10 +8,15 @@ export interface Size {
   height: number;
 }
 
-export type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+export type CollapsedPosition = {
+  corner: Corner;
+  orientation: "horizontal" | "vertical";
+};
 
 export interface ResizeHandleProps {
-  position: Corner | 'top' | 'bottom' | 'left' | 'right';
+  position: Corner | "top" | "bottom" | "left" | "right";
 }
 
 export interface WidgetDimensions {

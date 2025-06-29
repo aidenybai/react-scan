@@ -7,4 +7,5 @@ export const MIN_SIZE = {
 
 export const MIN_CONTAINER_WIDTH = 240;
 
-export const LOCALSTORAGE_KEY = 'react-scan-widget-settings-v2';
+export const LOCALSTORAGE_KEY = "react-scan-widget-settings-v2";
+export const LOCALSTORAGE_COLLAPSED_KEY = "react-scan-widget-collapsed-v1";

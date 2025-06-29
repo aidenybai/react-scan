@@ -1,21 +1,23 @@
-import { signal } from '@preact/signals';
+import { signal } from "@preact/signals";
 import {
   LOCALSTORAGE_KEY,
   MIN_CONTAINER_WIDTH,
   MIN_SIZE,
   SAFE_AREA,
-} from './constants';
-import { IS_CLIENT } from './utils/constants';
-import { readLocalStorage, saveLocalStorage } from './utils/helpers';
-import type { Corner, WidgetConfig, WidgetSettings } from './widget/types';
+  LOCALSTORAGE_COLLAPSED_KEY,
+} from "./constants";
+import { IS_CLIENT } from "./utils/constants";
+import { readLocalStorage, saveLocalStorage } from "./utils/helpers";
+import type { Corner, WidgetConfig, WidgetSettings } from "./widget/types";
+import type { CollapsedPosition } from "./widget/types";
 
 export const signalIsSettingsOpen = /* @__PURE__ */ signal(false);
 export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(
-  null,
+  null
 );
 
 export const defaultWidgetConfig = {
-  corner: 'bottom-right' as Corner,
+  corner: "bottom-right" as Corner,
   dimensions: {
     isFullWidth: false,
     isFullHeight: false,
@@ -90,10 +92,10 @@ export interface SlowDowns {
 
 export type WidgetStates =
   | {
-      view: 'none';
+      view: "none";
     }
   | {
-      view: 'inspector';
+      view: "inspector";
       // extra params
     }
   // | {
@@ -101,7 +103,7 @@ export type WidgetStates =
   //     // extra params
   //   }
   | {
-      view: 'notifications';
+      view: "notifications";
       // extra params
     };
 // | {
@@ -109,5 +111,11 @@ export type WidgetStates =
 //     // extra params
 //   };
 export const signalWidgetViews = signal<WidgetStates>({
-  view: 'none',
+  view: "none",
 });
+
+const storedCollapsed = readLocalStorage<CollapsedPosition | null>(
+  LOCALSTORAGE_COLLAPSED_KEY
+);
+export const signalWidgetCollapsed =
+  /* @__PURE__ */ signal<CollapsedPosition | null>(storedCollapsed ?? null);

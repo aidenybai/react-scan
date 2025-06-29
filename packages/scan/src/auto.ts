@@ -6,7 +6,9 @@ import { IS_CLIENT } from '~web/utils/constants';
 import { scan } from './index';
 
 if (IS_CLIENT) {
-  scan();
+  scan({
+    dangerouslyForceRunInProduction: true
+  });
   window.reactScan = scan;
 }
 
