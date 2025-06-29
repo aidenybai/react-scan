@@ -104,7 +104,7 @@ export type SlowdownEvent = (InteractionEvent | LongRenderPipeline) & {
 
 type ToolbarEventStoreState = {
   state: {
-    events: Array<SlowdownEvent>;
+    events: BoundedArray<SlowdownEvent>;
   };
   actions: {
     addEvent: (event: SlowdownEvent) => void;
@@ -149,13 +149,15 @@ export const debugEventStore = createStore<{
   },
 }));
 
+const EVENT_STORE_CAPACITY = 200;
+
 export const toolbarEventStore = createStore<ToolbarEventStoreState>()(
   (set, get) => {
     const listeners = new Set<(event: SlowdownEvent) => void>();
 
     return {
       state: {
-        events: [],
+        events: new BoundedArray(EVENT_STORE_CAPACITY),
       },
 
       actions: {
@@ -240,7 +242,10 @@ export const toolbarEventStore = createStore<ToolbarEventStoreState>()(
 
           set(() => ({
             state: {
-              events: withRemovedEvents,
+              events: BoundedArray.fromArray(
+                withRemovedEvents,
+                EVENT_STORE_CAPACITY,
+              ),
             },
           }));
         },
@@ -255,7 +260,7 @@ export const toolbarEventStore = createStore<ToolbarEventStoreState>()(
         clear: () => {
           set({
             state: {
-              events: [],
+              events: new BoundedArray(EVENT_STORE_CAPACITY),
             },
           });
         },
