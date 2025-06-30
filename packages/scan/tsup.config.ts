@@ -59,8 +59,7 @@ void (async () => {
     names.push(exportItem.n);
   }
 
-  const createFn = (name: string) =>
-    `export let ${name}=()=>{console.error('Do not use ${name} directly in a Server Component module. It should only be used in a Client Component.');return undefined}`;
+  const createFn = (name: string) => `export let ${name}=()=>{}`;
   const createVar = (name: string) => `export let ${name}=undefined`;
 
   let script = '';
@@ -117,6 +116,7 @@ export default defineConfig([
     entry: [
       './src/index.ts',
       './src/install-hook.ts',
+      './src/core/all-environments.ts',
       './src/core/monitor/index.ts',
       './src/core/monitor/params/next.ts',
       './src/core/monitor/params/react-router-v5.ts',

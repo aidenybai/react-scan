@@ -63,3 +63,9 @@ export default function RootLayout({ children }) {
   );
 }
 ```
+
+If you want react-scan to also run in production, use the react-scan/all-environments import path
+```diff
+- import { scan } from "react-scan";
++ import { scan } from "react-scan/all-environments";
+```

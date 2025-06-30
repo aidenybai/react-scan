@@ -4,26 +4,40 @@ React Scan automatically detects performance issues in your React app.
 
 Previously, tools like:
 
-- [`<Profiler />`](https://react.dev/reference/react/Profiler) required lots of manual changes
+- [React Devtools](https://legacy.reactjs.org/blog/2018/09/10/introducing-the-react-profiler.html) is too complex to use and can be janky
 - [Why Did You Render?](https://github.com/welldone-software/why-did-you-render) lacked simple visual cues
-- [React Devtools](https://legacy.reactjs.org/blog/2018/09/10/introducing-the-react-profiler.html) didn't have a simple, portable, and programmatic API
 
 React Scan attempts to solve these problems:
 
 - It requires no code changes – just drop it in
 - It highlights exactly the components you need to optimize
-- Use it via script tag, npm, CLI, you name it!
+- No more having to use flame graphs when profiling
+- Always accessible through a toolbar on page
 
-Trusted by engineering teams at:
+### Try it in 5 seconds
+<pre>
+npx react-scan airbnb.com
+</pre>
+
+or on your local website
+<pre>
+npx react-scan localhost:3000
+</pre>
+
+> all installation options below
+
+### Trusted by engineering teams at:
 
 Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"><img src="https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/shopify-logo.png" height="30" align="center" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://www.faire.com/"><img src="https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/faire-logo.svg" height="20" align="center" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://perplexity.com/"><img src="https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/perplexity-logo.png" height="30" align="center" /></a>
 
-### [**Try it out! →**](https://react-scan.million.dev)
 
-![React Scan in action](https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/demo.gif)
 
-> [!IMPORTANT]
-> Want to monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!
+### [**Try out a demo! →**](https://react-scan.million.dev)
+<img
+  src="https://github.com/user-attachments/assets/c21b3afd-c7e8-458a-a760-9a027be7dc02"
+  alt="React Scan in action"
+  width="600"
+/>
 
 ## Install
 
@@ -47,11 +61,11 @@ yarn add react-scan
 
 ## Usage
 
-- [CDN](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md)
+- [Script Tag](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md)
 - [NextJS App Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-app-router.md)
 - [NextJS Page Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-page-router.md)
-- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
 - [Vite](https://github.com/aidenybai/react-scan/blob/main/docs/installation/vite.md)
+- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
 - [Parcel](https://github.com/aidenybai/react-scan/blob/main/docs/installation/parcel.md)
 - [Remix](https://github.com/aidenybai/react-scan/blob/main/docs/installation/remix.md)
 - [React Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/react-router.md)
@@ -61,7 +75,7 @@ yarn add react-scan
 
 ### CLI
 
-If you don't have a local version of the site or you want to test a React app remotely, you can use the CLI. This will spin up an isolated browser instance which you can interact or use React Scan with.
+If you want to run react scan on any URL (including localhost) from the cli, you can run:
 
 ```bash
 npx react-scan@latest http://localhost:3000
@@ -87,6 +101,106 @@ If you want to install the extension, follow the guide [here](https://github.com
 ### React Native
 
 See [discussion](https://github.com/aidenybai/react-scan/pull/23)
+
+
+## After Setup
+
+<details>
+<summary><code>How to use/feature descriptions</code></summary>
+  
+### Toolbar
+All react scan features are exposed through the toolbar that you will see in the bottom right corner of your page:
+
+<img width="220" alt="image" src="https://github.com/user-attachments/assets/20b83531-7e06-48c2-92d4-07f398dcace4" />
+
+> You can drag this toolbar to any corner of the page
+
+### Render Outlines
+By default, react scan will show outlines over components when they render.
+> interact with your page to try it out!
+
+If you want to turn the outlines off, you can use the toggle in the toolbar to turn them off. This will persist across page loads and will only re-enable when you toggle it back on:
+
+<img width="211" alt="Pasted image 20250629130910" src="https://github.com/user-attachments/assets/d88852a1-0270-4d53-ad71-55a9f4b6c9ea" />
+
+
+###  Why did my component render
+If you want to find out why a component re-rendered, you can click the icon at the very left of the toolbar, and then click on the component you want to inspect
+<img width="1079" alt="Pasted image 20250629131113" src="https://github.com/user-attachments/assets/56d926f7-07f4-40cb-a025-14f48b81de81" />
+Anytime the component renders, React Scan will tell you what props, state, or context changed during the last render. If those values didn't change, and your component was wrapped in `React.memo`, it would not of rendered.
+
+To the right of the of the "Why did this component render" view, you will see the component tree of your app. When a component re-renders, the count will be updated in the tree. You can click on any item in the tree to see why it rendered.
+
+
+### Profiling slowdowns in your app
+
+Re-render outlines are good for getting a high level overview of what's slowing down your app, and the "Why did this render" inspector is great when you know which component you want to debug. But, what if you don't know which components are causing your app to slowdown?
+
+React Scan's profiler, accessible through the notification bell in the toolbar:
+
+<img width="524" alt="image" src="https://github.com/user-attachments/assets/435c1c42-e1a1-4478-9e40-d0ef52f00bce" />
+
+
+is an always on profiler that alerts you when there is an FPS drop or slow interaction (click, type). Every slowdown and interaction has an easy to understand profile associated with it.
+
+
+https://github.com/user-attachments/assets/c7d72e57-d805-4f21-944b-2347b72b0304
+
+
+
+The profile has 3 parts:
+#### Ranked
+
+This ranks how long it took to render your components. Every component instance that came from the same component will have its render time added together- if you render 1000 `ListItem`'s , and they each take 1s to render, we will say `ListItem` took 1000s to render )
+
+<img width="438" alt="image" src="https://github.com/user-attachments/assets/9e8f4496-e975-4d4f-9519-4b5c653c4f94" />
+  
+If you click on any bar, it will tell you what caused those components to re-render:
+
+<img width="424" alt="Pasted image 20250629132303" src="https://github.com/user-attachments/assets/79915809-64ae-4c32-abc8-89d83e775618" />
+
+This table is telling you that there were 4 instances of this component rendered, and all 4 of them had their `close`, `style`, and `hide` props change. If those didn't change, and the component was `React.memo`'d, they would not have rendered
+
+If you click the arrow on the side of each bar, it will show you the ancestors of the components that rendered that component, along with how long it took to render that ancestor. This is great for giving context to understand what component you're looking at:
+
+<img width="425" alt="image" src="https://github.com/user-attachments/assets/7ad8f7f6-1514-4852-988a-63efb79c5cbf" />
+
+If you hover your mouse over a bar, all instances of that component will be outlined in purple over the page:
+
+<img width="1197" alt="image" src="https://github.com/user-attachments/assets/b1c6e9f4-97a7-4405-90f4-537938c7a2cc" />
+
+
+#### Overview
+The overview gives you a high level summary of what time was spent on during the slowdown or interaction.
+
+This breaks down if the time spent was on renders, react hooks (or other javascript not from react), or the browser spending time to update the dom and draw the next frame
+
+This is great to find out if React was really the problem, or if you should be optimizing other things, like CSS:
+<img width="431" alt="Pasted image 20250629132429" src="https://github.com/user-attachments/assets/9552a802-eea4-4aa6-b46c-79318d4916ea" />
+
+#### Prompts
+The prompts section gives you 3 different kind of prompts that you can pass to an LLM based on what your goal is. These prompts automatically includes data about the profile:
+
+<img width="438" alt="Pasted image 20250629132608" src="https://github.com/user-attachments/assets/20be5326-5355-4a6e-b049-746ed93a05ce" />
+
+
+
+#### Misc
+If you want to hear a sound every time a slowdown is collected, you can turn on audio alerts in this section  
+<img src="https://github.com/user-attachments/assets/7c6fa96d-56be-427a-bb09-078df4223378" width="400" />
+
+### Hiding the toolbar
+
+The React Scan toolbar can be distracting when you're not using it. To hide the toolbar, you can drag/throw it into the side of the page.  
+
+<video src="https://github.com/user-attachments/assets/358bbc63-d2e0-4e31-af85-2cece1f331b8" width="300" controls></video>
+
+
+
+The toolbar will stay collapsed into the side of the page until you drag it back out. This will persist across page load
+
+
+</details>
 
 ## API Reference
 
@@ -161,7 +275,6 @@ export interface Options {
 
 - `scan(options: Options)`: Imperative API to start scanning
 - `useScan(options: Options)`: Hook API to start scanning
-- `getReport()`: Get a report of all the renders
 - `setOptions(options: Options): void`: Set options at runtime
 - `getOptions()`: Get the current options
 - `onRender(Component, onRender: (fiber: Fiber, render: Render) => void)`: Hook into a specific component's renders
@@ -184,23 +297,6 @@ React Scan helps you identify these issues by automatically detecting and highli
 
 > Want monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!
 
-### FAQ
-
-**Q: Why this instead of React Devtools?**
-
-React Devtools aims to be a general purpose tool for React. However, I deal with React performance issues every day, and React Devtools doesn't fix my problems well. There's a lot of noise (no obvious distinction between unnecessary and necessary renders), and there's no programmatic API. If it sounds like you have the same problems, then React Scan may be a better choice.
-
-Also, some personal complaints about React Devtools' highlight feature:
-
-- React Devtools "batches" paints, so if a component renders too fast, it will lag behind and only show 1 every second or so
-- When you scroll/resize the boxes don't update position
-- No count of how many renders there are
-- I don't know what the bad/slow renders are without inspecting
-- The menu is hidden away so it's annoying to turn on/off, user experience should be specifically tuned for debugging performance, instead of hidden behind a profiler/component tree
-- No programmatic API
-- It's stuck in a chrome extension, I want to run it anywhere on the web
-- It looks subjectively ugly (lines look fuzzy, feels sluggish)
-- I'm more ambitious with react-scan
 
 ## Resources & Contributing Back
 

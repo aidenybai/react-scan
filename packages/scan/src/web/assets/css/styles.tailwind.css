@@ -26,7 +26,7 @@
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, .4);
+    background: rgba(255, 255, 255, 0.4);
   }
 
   &::-webkit-scrollbar-corner {
@@ -41,7 +41,6 @@
     scrollbar-width: 6px;
   }
 }
-
 
 button {
   @apply hover:bg-none;
@@ -95,7 +94,7 @@ svg {
 #react-scan-toolbar {
   @apply fixed left-0 top-0;
   @apply flex flex-col;
-  @apply rounded-lg shadow-lg;
+  @apply shadow-lg;
   @apply font-mono text-[13px] text-white;
   @apply bg-black;
   @apply select-none;
@@ -112,9 +111,13 @@ svg {
    * text rendering. The new properties work together to force proper
    * GPU acceleration without z-index side effects:
    */
-  transform: translate3d(0, 0, 0);      /* Forces GPU acceleration without causing stacking issues */
-  backface-visibility: hidden;          /* Prevents blurry text during transforms */
-  perspective: 1000;                    /* Creates proper 3D context for crisp text */
+  transform: translate3d(
+    0,
+    0,
+    0
+  ); /* Forces GPU acceleration without causing stacking issues */
+  backface-visibility: hidden; /* Prevents blurry text during transforms */
+  perspective: 1000; /* Creates proper 3D context for crisp text */
   -webkit-transform-style: preserve-3d; /* Ensures consistent text rendering across browsers */
   transform-style: preserve-3d;
 }
@@ -263,15 +266,17 @@ svg {
   }
 
   &:before {
-    content: '';
+    content: "";
     @apply absolute;
     @apply inset-0;
     @apply -translate-x-full;
     animation: shimmer 2s infinite;
-    background: linear-gradient(to right,
+    background: linear-gradient(
+      to right,
       transparent,
       rgba(142, 97, 227, 0.3),
-      transparent);
+      transparent
+    );
   }
 }
 
@@ -348,8 +353,12 @@ svg {
 }
 
 @keyframes blink {
-  from { @apply opacity-100; }
-  to { @apply opacity-0; }
+  from {
+    @apply opacity-100;
+  }
+  to {
+    @apply opacity-0;
+  }
 }
 
 .react-scan-arrow {
@@ -380,7 +389,7 @@ svg {
   @apply overflow-hidden;
 
   &:before {
-    content: '';
+    content: "";
     @apply absolute top-0 left-0;
     @apply w-[1px] h-full;
     @apply bg-gray-500/30;
@@ -393,7 +402,7 @@ svg {
   @apply py-2 px-4;
   @apply text-[#888];
 
-  >div {
+  > div {
     @apply flex items-center justify-between;
     @apply transition-colors duration-300;
   }
@@ -427,7 +436,7 @@ svg {
   }
 
   input:checked {
-    +div {
+    + div {
       @apply bg-[#5f3f9a];
 
       &::before {
@@ -438,7 +447,7 @@ svg {
     }
   }
 
-  >div {
+  > div {
     @apply absolute inset-1;
     @apply bg-neutral-700;
     @apply rounded-full;
@@ -602,7 +611,6 @@ svg {
   }
 }
 
-
 .tree-node-search-highlight {
   @apply truncate;
 
@@ -663,14 +671,12 @@ svg {
     &::before {
       @apply bottom-0 translate-y-full;
     }
-
   }
 
   &.is-open {
     @apply translate-y-0;
   }
 }
-
 
 .react-scan-header-item {
   @apply absolute inset-0 -translate-y-[200%];
@@ -681,11 +687,10 @@ svg {
   }
 }
 
-.react-scan-components-tree:has(.resize-v-line:hover, .resize-v-line:active) .tree {
+.react-scan-components-tree:has(.resize-v-line:hover, .resize-v-line:active)
+  .tree {
   overflow: hidden;
 }
-
-
 
 .react-scan-expandable {
   display: grid;
