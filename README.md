@@ -4,7 +4,7 @@ React Scan automatically detects performance issues in your React app.
 
 Previously, tools like:
 
-- [React Devtools](https://legacy.reactjs.org/blog/2018/09/10/introducing-the-react-profiler.html) is too complex to use and can be janky
+- [React Devtools](https://legacy.reactjs.org/blog/2018/09/10/introducing-the-react-profiler.html) can feel too complex and janky
 - [Why Did You Render?](https://github.com/welldone-software/why-did-you-render) lacked simple visual cues
 
 React Scan attempts to solve these problems:
