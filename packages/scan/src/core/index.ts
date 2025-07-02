@@ -342,18 +342,24 @@ export type LocalStorageOptions = Omit<
   | 'onPaintFinish'
 >;
 
-function isOptionKey(key: string): key is keyof Options {
-  return key in ReactScanInternals.options.value;
-}
+const filetLocalStorageOptions = (options: Options): LocalStorageOptions => {
+  const {
+    onCommitStart,
+    onRender,
+    onCommitFinish,
+    onPaintStart,
+    onPaintFinish,
+    ...rest
+  } = options;
+  return rest;
+};
 
 const validateOptions = (options: Partial<Options>): Partial<Options> => {
   const errors: Array<string> = [];
   const validOptions: Partial<Options> = {};
 
   for (const key in options) {
-    if (!isOptionKey(key)) continue;
-
-    const value = options[key];
+    const value = options[key as keyof Options];
     switch (key) {
       case 'enabled':
       // case 'includeChildren':
@@ -500,7 +506,10 @@ export const setOptions = (userOptions: Partial<Options>) => {
       /** */
     }
 
-    saveLocalStorage('react-scan-options', newOptions);
+    saveLocalStorage<LocalStorageOptions>(
+      'react-scan-options',
+      filetLocalStorageOptions(newOptions),
+    );
 
     if (shouldInitToolbar) {
       initToolbar(!!newOptions.showToolbar);
