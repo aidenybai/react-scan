@@ -342,7 +342,7 @@ export type LocalStorageOptions = Omit<
   | 'onPaintFinish'
 >;
 
-const filetLocalStorageOptions = (options: Options): LocalStorageOptions => {
+const applyLocalStorageOptions = (options: Options): LocalStorageOptions => {
   const {
     onCommitStart,
     onRender,
