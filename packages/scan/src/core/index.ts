@@ -508,7 +508,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
 
     saveLocalStorage<LocalStorageOptions>(
       'react-scan-options',
-      filetLocalStorageOptions(newOptions),
+      applyLocalStorageOptions(newOptions),
     );
 
     if (shouldInitToolbar) {
