@@ -111,7 +111,7 @@ export default defineConfig({
 | `scanOptions.showToolbar` | `boolean` | `process.env["NODE_ENV"] === "development"` | Show the in-page React Scan toolbar |
 | `scanOptions.trackUnnecessaryRenders` | `boolean` | `true` | Track and highlight unnecessary renders |
 
-- React scanOptions.options must be placed in an array under the scanOptions key.
+- React scanOptions.options must be placed in the object properties under the scanOptions key.
 
 ## Example Configuration
 
