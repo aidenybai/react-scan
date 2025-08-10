@@ -87,7 +87,7 @@ export default defineConfig({
         dangerouslyForceRunInProduction: false,
         enabled: process.env["NODE_ENV"] === "development",
         log: false,
-        showToolbar: process.env["NODE_ENV"] === "development"
+        showToolbar: process.env["NODE_ENV"] === "development",
         trackUnnecessaryRenders: true,
       },
     }),
