@@ -330,6 +330,7 @@ export const getCanvasEl = () => {
         URL.createObjectURL(
           new Blob([workerCode], { type: 'application/javascript' }),
         ),
+        { name: "ReactScanRenderer" }
       );
 
       const offscreenCanvas = canvasEl.transferControlToOffscreen();
