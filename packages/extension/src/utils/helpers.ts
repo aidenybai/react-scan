@@ -2,6 +2,8 @@ export const isIframe = window !== window.top;
 export const isPopup = window.opener !== null;
 export const canLoadReactScan = !isIframe && !isPopup;
 
+export const isHtmlPage = document.contentType === "text/html";
+
 export const IS_CLIENT = typeof window !== 'undefined';
 
 export const isInternalUrl = (url: string): boolean => {

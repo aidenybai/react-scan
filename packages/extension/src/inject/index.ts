@@ -11,6 +11,7 @@ import type { IEvents } from '~types/messages';
 import { EXTENSION_STORAGE_KEY, STORAGE_KEY } from '~utils/constants';
 import {
   canLoadReactScan,
+  isHtmlPage,
   hasReactFiber,
   readLocalStorage,
   saveLocalStorage,
@@ -91,6 +92,10 @@ const updateReactScanState = async (isEnabled: boolean | null) => {
 void initializeReactScan();
 
 window.addEventListener('DOMContentLoaded', async () => {
+  if (!isHtmlPage) {
+    return;
+  }
+
   if (!canLoadReactScan) {
     return;
   }
