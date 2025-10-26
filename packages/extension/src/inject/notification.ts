@@ -1,6 +1,6 @@
-import { busDispatch } from '@pivanov/utils';
 import noReactStyles from '~assets/css/no-react.css?inline';
 import type { IEvents } from '~types/messages';
+import { busDispatch } from '~utils/helpers';
 
 let backdrop: HTMLDivElement | null = null;
 let isAnimating = false;
@@ -16,9 +16,12 @@ export const createNotificationUI = ({
   busDispatch<IEvents['react-scan:send-to-background']>(
     'react-scan:send-to-background',
     {
-      type: 'react-scan:is-enabled',
-      data: {
-        state: false,
+      topic: 'react-scan:send-to-background',
+      message: {
+        type: 'react-scan:is-enabled',
+        data: {
+          state: false,
+        },
       },
     },
   );

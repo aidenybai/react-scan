@@ -1,10 +1,10 @@
-import { busDispatch, busSubscribe } from '@pivanov/utils';
 import browser from 'webextension-polyfill';
 import {
   type BroadcastMessage,
   BroadcastSchema,
   type IEvents,
 } from '~types/messages';
+import { busDispatch, busSubscribe } from '~utils/helpers';
 
 chrome.runtime.onMessage.addListener(
   async (message: unknown, _sender, sendResponse) => {
@@ -28,7 +28,10 @@ chrome.runtime.onMessage.addListener(
     if (data.type === 'react-scan:toggle-state') {
       busDispatch<IEvents['react-scan:toggle-state']>(
         'react-scan:toggle-state',
-        undefined,
+        {
+          topic: 'react-scan:toggle-state',
+          message: undefined,
+        },
       );
       return false;
     }
@@ -47,7 +50,7 @@ const sendMessageToBackground = ({ type, data }: BroadcastMessage) => {
 
 busSubscribe<IEvents['react-scan:send-to-background']>(
   'react-scan:send-to-background',
-  (message) => {
-    sendMessageToBackground(message);
+  (event) => {
+    sendMessageToBackground(event.message);
   },
 );

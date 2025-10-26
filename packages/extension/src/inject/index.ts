@@ -1,23 +1,21 @@
-import {
-  busDispatch,
-  busSubscribe,
-  sleep,
-  storageGetItem,
-  storageSetItem,
-} from '@pivanov/utils';
 import * as reactScan from 'react-scan';
 import { gt } from 'semver';
 import type { IEvents } from '~types/messages';
 import { EXTENSION_STORAGE_KEY, STORAGE_KEY } from '~utils/constants';
 import {
+  busDispatch,
+  busSubscribe,
   canLoadReactScan,
   hasReactFiber,
   readLocalStorage,
   saveLocalStorage,
+  sleep,
+  storageGetItem,
+  storageSetItem,
 } from '~utils/helpers';
 import { createNotificationUI, toggleNotification } from './notification';
 
-const reactScanExtensionVersion = reactScan.ReactScanInternals.version;
+const reactScanExtensionVersion = 'version' in reactScan.ReactScanInternals ? (reactScan.ReactScanInternals as any).version  : undefined;
 const isTargetPageAlreadyUsedReactScan = () => {
   const currentReactScanVersion = window.__REACT_SCAN_VERSION__;
 
@@ -110,9 +108,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     busDispatch<IEvents['react-scan:send-to-background']>(
       'react-scan:send-to-background',
       {
-        type: 'react-scan:is-enabled',
-        data: {
-          state: false,
+        topic: 'react-scan:send-to-background',
+        message: {
+          type: 'react-scan:is-enabled',
+          data: {
+            state: false,
+          },
         },
       },
     );
@@ -144,9 +145,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     busDispatch<IEvents['react-scan:send-to-background']>(
       'react-scan:send-to-background',
       {
-        type: 'react-scan:is-enabled',
-        data: {
-          state: false,
+        topic: 'react-scan:send-to-background',
+        message: {
+          type: 'react-scan:is-enabled',
+          data: {
+            state: false,
+          },
         },
       },
     );
@@ -166,9 +170,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     busDispatch<IEvents['react-scan:send-to-background']>(
       'react-scan:send-to-background',
       {
-        type: 'react-scan:is-enabled',
-        data: {
-          state: storedOptions.showToolbar,
+        topic: 'react-scan:send-to-background',
+        message: {
+          type: 'react-scan:is-enabled',
+          data: {
+            state: storedOptions.showToolbar,
+          },
         },
       },
     );
