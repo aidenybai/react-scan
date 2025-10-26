@@ -36,13 +36,6 @@
     "name": "Team React Scan",
     "url": "https://github.com/aidenybai/react-scan"
   },
-  "maintainers": [
-    {
-      "name": "Pavel Ivanov",
-      "email": "pafelka@gmail.com",
-      "url": "https://github.com/pivanov"
-    }
-  ],
   "license": "MIT",
   "homepage": "https://github.com/aidenybai/react-scan",
   "bugs": {
