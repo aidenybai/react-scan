@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.2.0(next@15.2.1(react@19.0.0))(react@19.0.0)
+        version: 1.2.0(next@15.2.1(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -44,7 +44,7 @@ importers:
         version: 5.8.3
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34))
+        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
 
   kitchen-sink:
     dependencies:
@@ -136,7 +136,7 @@ importers:
         version: 4.4.4(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34))
+        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
       webextension-polyfill:
         specifier: ^0.12.0
         version: 0.12.0
@@ -171,8 +171,8 @@ importers:
         specifier: ^20.17.9
         version: 20.19.2
       bippy:
-        specifier: ^0.3.8
-        version: 0.3.8(@types/react@18.3.23)(react@19.0.0)
+        specifier: ^0.3.33
+        version: 0.3.33(@types/react@18.3.23)(react@19.0.0)
       esbuild:
         specifier: ^0.25.0
         version: 0.25.5
@@ -298,7 +298,7 @@ importers:
         version: 1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.1(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.2.0(next@15.2.1(react@19.0.0))(react@19.0.0)
+        version: 1.2.0(next@15.2.1(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -1725,6 +1725,11 @@ packages:
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
+
+  bippy@0.3.33:
+    resolution: {integrity: sha512-nOU5YM0uYLNT+ItZldc4RrBDCreNHkdlw2FJb3AYugqMK1tIGzlee+1NXEBRyJ//PLZvJdgHekWREUlb//2jow==}
+    peerDependencies:
+      react: '>=17.0.1'
 
   bippy@0.3.8:
     resolution: {integrity: sha512-0ou8fJWxUXK/+eRjUz5unbtX8Mrn0OYRs6QQwwUJtU6hsFDTSmSeI1fJC/2nrPA4G6GWcxwT+O6TbHyGhl4fEg==}
@@ -5607,7 +5612,7 @@ snapshots:
       next: 15.2.1(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
-  '@vercel/speed-insights@1.2.0(next@15.2.1(react@19.0.0))(react@19.0.0)':
+  '@vercel/speed-insights@1.2.0(next@15.2.1(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)':
     optionalDependencies:
       next: 15.2.1(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
@@ -5887,17 +5892,17 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
+  bippy@0.3.33(@types/react@18.3.23)(react@19.0.0):
+    dependencies:
+      '@types/react-reconciler': 0.28.9(@types/react@18.3.23)
+      react: 19.0.0
+    transitivePeerDependencies:
+      - '@types/react'
+
   bippy@0.3.8(@types/react@18.3.23)(react@18.3.1):
     dependencies:
       '@types/react-reconciler': 0.28.9(@types/react@18.3.23)
       react: 18.3.1
-    transitivePeerDependencies:
-      - '@types/react'
-
-  bippy@0.3.8(@types/react@18.3.23)(react@19.0.0):
-    dependencies:
-      '@types/react-reconciler': 0.28.9(@types/react@18.3.23)
-      react: 19.0.0
     transitivePeerDependencies:
       - '@types/react'
 
@@ -8751,7 +8756,7 @@ snapshots:
       - tsx
       - utf-8-validate
 
-  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)):
+  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)):
     dependencies:
       debug: 4.4.1
       globrex: 0.1.2

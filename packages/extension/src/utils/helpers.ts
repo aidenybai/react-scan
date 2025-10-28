@@ -83,7 +83,7 @@ export const hasReactFiber = (): boolean => {
       const rootContainer = elementWithRoot._reactRootContainer;
 
       const hasLegacyRoot = rootContainer?._internalRoot?.current?.child != null;
-      const hasContainerRoot = Object.keys(elementWithRoot).some(key => 
+      const hasContainerRoot = Object.keys(elementWithRoot).some(key =>
         key.startsWith(ReactDetection.reactMarkers.container)
       );
 
@@ -186,4 +186,65 @@ export const debounce = <T extends (enabled: boolean | null) => Promise<void>>(
   };
 
   return debounced;
+};
+
+type EventCallback<T = unknown> = (data: T) => void;
+const eventBus = new Map<string, Set<EventCallback>>();
+
+export const busSubscribe = <T = unknown>(
+  event: string,
+  callback: EventCallback<T>,
+): (() => void) => {
+  if (!eventBus.has(event)) {
+    eventBus.set(event, new Set());
+  }
+  eventBus.get(event)!.add(callback as EventCallback);
+
+  return () => {
+    const callbacks = eventBus.get(event);
+    if (callbacks) {
+      callbacks.delete(callback as EventCallback);
+      if (callbacks.size === 0) {
+        eventBus.delete(event);
+      }
+    }
+  };
+};
+
+export const busDispatch = <T = unknown>(event: string, data: T): void => {
+  const callbacks = eventBus.get(event);
+  if (callbacks) {
+    callbacks.forEach((callback) => callback(data));
+  }
+};
+
+export const sleep = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+export const storageGetItem = async <T>(
+  storageKey: string,
+  key: string,
+): Promise<T | null> => {
+  try {
+    const result = await chrome.storage.local.get(storageKey);
+    const data = result[storageKey];
+    return data?.[key] ?? null;
+  } catch {
+    return null;
+  }
+};
+
+export const storageSetItem = async <T>(
+  storageKey: string,
+  key: string,
+  value: T,
+): Promise<void> => {
+  try {
+    const result = await chrome.storage.local.get(storageKey);
+    const data = result[storageKey] || {};
+    data[key] = value;
+    await chrome.storage.local.set({ [storageKey]: data });
+  } catch {
+  }
 };
