@@ -6,6 +6,7 @@ import {
   busDispatch,
   busSubscribe,
   canLoadReactScan,
+  isHtmlPage,
   hasReactFiber,
   readLocalStorage,
   saveLocalStorage,
@@ -89,6 +90,10 @@ const updateReactScanState = async (isEnabled: boolean | null) => {
 void initializeReactScan();
 
 window.addEventListener('DOMContentLoaded', async () => {
+  if (!isHtmlPage) {
+    return;
+  }
+
   if (!canLoadReactScan) {
     return;
   }
