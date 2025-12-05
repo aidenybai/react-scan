@@ -6,7 +6,7 @@ export interface TreeNode {
   label: string;
   title?: string;
   fiber: Fiber;
-  element?: HTMLElement;
+  element?: HTMLElement | null; // Can be null for components that don't render DOM elements
   children?: TreeNode[];
   renderData?: RenderData;
 }

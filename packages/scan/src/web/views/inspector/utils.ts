@@ -464,52 +464,83 @@ export const findComponentDOMNode = (
 };
 
 export interface InspectableElement {
-  element: HTMLElement;
+  element: HTMLElement | null; // Can be null for components that don't render DOM elements
   depth: number;
   name: string;
   fiber: Fiber;
 }
 
+// Get all fiber roots from the instrumentation
+const getAllFiberRoots = (): Fiber[] => {
+  const fiberRoots: Fiber[] = [];
+  if (!ReactScanInternals.instrumentation?.fiberRoots) return fiberRoots;
+
+  for (const fiberRoot of ReactScanInternals.instrumentation.fiberRoots) {
+    const current = fiberRoot.current;
+    if (current) {
+      fiberRoots.push(current);
+    }
+  }
+  return fiberRoots;
+};
+
+// Get children from fiber using linked list traversal
+const getFiberChildren = (fiber: Fiber): Fiber[] => {
+  const children: Fiber[] = [];
+  let child = fiber.child;
+  
+  while (child) {
+    children.push(child);
+    child = child.sibling;
+  }
+  
+  return children;
+};
+
 export const getInspectableElements = (
   root: HTMLElement = document.body,
 ): Array<InspectableElement> => {
   const result: Array<InspectableElement> = [];
-
-  const findInspectableFiber = (
-    element: HTMLElement | null,
-  ): HTMLElement | null => {
-    if (!element) return null;
-
-    const { parentCompositeFiber } = getCompositeComponentFromElement(element);
-    if (!parentCompositeFiber) return null;
-
-    const componentRoot = findComponentDOMNode(parentCompositeFiber);
-    return componentRoot === element ? element : null;
-  };
-
-  const traverse = (element: HTMLElement, depth = 0) => {
-    const inspectable = findInspectableFiber(element);
-    if (inspectable) {
-      const { parentCompositeFiber } =
-        getCompositeComponentFromElement(inspectable);
-
-      if (!parentCompositeFiber) return;
-
-      result.push({
-        element: inspectable,
-        depth,
-        name: getDisplayName(parentCompositeFiber.type) ?? 'Unknown',
-        fiber: parentCompositeFiber,
-      });
+  const visited = new Set<Fiber>();
+  
+  // Get all fiber roots and traverse them
+  const fiberRoots = getAllFiberRoots();
+  
+  const traverseFiber = (fiber: Fiber, depth = 0) => {
+    if (visited.has(fiber)) return;
+    visited.add(fiber);
+    
+    // Check if this is a composite component (not a host element like div, span, etc.)
+    if (isCompositeFiber(fiber) && fiber.type) {
+      const displayName = getDisplayName(fiber.type);
+      if (displayName) {
+        // Try to find associated DOM element, but don't require it
+        const domElement = findComponentDOMNode(fiber);
+        
+        result.push({
+          element: domElement, // This can be null for components that don't render DOM
+          depth,
+          name: displayName,
+          fiber,
+        });
+      }
     }
-
-    // Traverse children first (depth-first)
-    for (const child of Array.from(element.children)) {
-      traverse(child as HTMLElement, inspectable ? depth + 1 : depth);
+    
+    // Traverse children
+    const children = getFiberChildren(fiber);
+    for (const child of children) {
+      const nextDepth = isCompositeFiber(fiber) && fiber.type && getDisplayName(fiber.type) 
+        ? depth + 1 
+        : depth;
+      traverseFiber(child, nextDepth);
     }
   };
-
-  traverse(root);
+  
+  // Start traversal from all fiber roots
+  for (const fiberRoot of fiberRoots) {
+    traverseFiber(fiberRoot, 0);
+  }
+  
   return result;
 };
 
