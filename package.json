@@ -34,7 +34,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@jridgewell/gen-mapping": "0.3.2"
+      "@jridgewell/gen-mapping": "0.3.2",
+      "@jridgewell/sourcemap-codec": "1.4.15"
     }
   }
 }
