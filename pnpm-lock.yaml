@@ -14,7 +14,7 @@ importers:
     dependencies:
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.2.0(next@15.2.6(react@19.0.0))(react@19.0.0)
+        version: 1.2.0(next@15.2.6(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -48,7 +48,7 @@ importers:
         version: 5.8.3
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34))
+        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
 
   kitchen-sink:
     dependencies:
@@ -137,7 +137,7 @@ importers:
         version: 4.4.4(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34))
+        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
       webextension-polyfill:
         specifier: ^0.12.0
         version: 0.12.0
@@ -221,6 +221,9 @@ importers:
       postcss-cli:
         specifier: ^11.0.0
         version: 11.0.1(jiti@1.21.7)(postcss@8.5.6)(tsx@4.20.3)
+      postcss-nesting:
+        specifier: ^13.0.2
+        version: 13.0.2(postcss@8.5.6)
       prettier:
         specifier: ^3.3.3
         version: 3.6.2
@@ -296,7 +299,7 @@ importers:
         version: 1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.6(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.2.0(next@15.2.6(react@19.0.0))(react@19.0.0)
+        version: 1.2.0(next@15.2.6(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -603,6 +606,18 @@ packages:
 
   '@clack/prompts@0.8.2':
     resolution: {integrity: sha512-6b9Ab2UiZwJYA9iMyboYyW9yJvAO9V753ZhS+DHKEjZRKAxPPOb7MXXu84lsPFG+vZt6FRFniZ8rXi+zCIw4yQ==}
+
+  '@csstools/selector-resolve-nested@3.1.0':
+    resolution: {integrity: sha512-mf1LEW0tJLKfWyvn5KdDrhpxHyuxpbNwTIwOYLIvsTffeyOf85j5oIzfG0yosxDgx/sswlqBnESYUcQH0vgZ0g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      postcss-selector-parser: ^7.0.0
+
+  '@csstools/selector-specificity@5.0.0':
+    resolution: {integrity: sha512-PCqQV3c4CoVm3kdPhyeZ07VmBRdH2EpMFA/pd9OASpOEC3aXNGoqPDAZ80D0cLpMBxnmk0+yNhGsEx31hq7Gtw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      postcss-selector-parser: ^7.0.0
 
   '@devicefarmer/adbkit-logcat@2.1.3':
     resolution: {integrity: sha512-yeaGFjNBc/6+svbDeul1tNHtNChw6h8pSHAt5D+JsedUrMTN7tla7B15WLDyekxsuS2XlZHRxpuC6m92wiwCNw==}
@@ -3524,6 +3539,12 @@ packages:
     peerDependencies:
       postcss: ^8.2.14
 
+  postcss-nesting@13.0.2:
+    resolution: {integrity: sha512-1YCI290TX+VP0U/K/aFxzHzQWHWURL+CtHMSbex1lCdpXD1SoR2sYuxDu5aNI9lPoXpKTCggFZiDJbwylU0LEQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      postcss: ^8.4
+
   postcss-reporter@7.1.0:
     resolution: {integrity: sha512-/eoEylGWyy6/DOiMP5lmFRdmDKThqgn7D6hP2dXKJI/0rJSO1ADFNngZfDzxL0YAxFvws+Rtpuji1YIHj4mySA==}
     engines: {node: '>=10'}
@@ -3532,6 +3553,10 @@ packages:
 
   postcss-selector-parser@6.1.2:
     resolution: {integrity: sha512-Q8qQfPiZ+THO/3ZrOrO0cJJKfpYCagtMUkXbnEfmgUjwXg6z/WBeOyS9APBBPCTSiDV+s4SwQGu8yFsiMRIudg==}
+    engines: {node: '>=4'}
+
+  postcss-selector-parser@7.1.1:
+    resolution: {integrity: sha512-orRsuYpJVw8LdAwqqLykBj9ecS5/cRHlI5+nvTo8LcCKmzDmqVORXtOIYEEQuL9D4BxtA1lm5isAqzQZCoQ6Eg==}
     engines: {node: '>=4'}
 
   postcss-value-parser@4.2.0:
@@ -4958,6 +4983,14 @@ snapshots:
       picocolors: 1.1.1
       sisteransi: 1.0.5
 
+  '@csstools/selector-resolve-nested@3.1.0(postcss-selector-parser@7.1.1)':
+    dependencies:
+      postcss-selector-parser: 7.1.1
+
+  '@csstools/selector-specificity@5.0.0(postcss-selector-parser@7.1.1)':
+    dependencies:
+      postcss-selector-parser: 7.1.1
+
   '@devicefarmer/adbkit-logcat@2.1.3': {}
 
   '@devicefarmer/adbkit-monkey@1.2.1': {}
@@ -5712,7 +5745,7 @@ snapshots:
       next: 15.2.6(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
-  '@vercel/speed-insights@1.2.0(next@15.2.6(react@19.0.0))(react@19.0.0)':
+  '@vercel/speed-insights@1.2.0(next@15.2.6(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)':
     optionalDependencies:
       next: 15.2.6(@babel/core@7.27.7)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
@@ -7921,6 +7954,13 @@ snapshots:
       postcss: 8.5.6
       postcss-selector-parser: 6.1.2
 
+  postcss-nesting@13.0.2(postcss@8.5.6):
+    dependencies:
+      '@csstools/selector-resolve-nested': 3.1.0(postcss-selector-parser@7.1.1)
+      '@csstools/selector-specificity': 5.0.0(postcss-selector-parser@7.1.1)
+      postcss: 8.5.6
+      postcss-selector-parser: 7.1.1
+
   postcss-reporter@7.1.0(postcss@8.5.6):
     dependencies:
       picocolors: 1.1.1
@@ -7928,6 +7968,11 @@ snapshots:
       thenby: 1.3.4
 
   postcss-selector-parser@6.1.2:
+    dependencies:
+      cssesc: 3.0.0
+      util-deprecate: 1.0.2
+
+  postcss-selector-parser@7.1.1:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -8881,7 +8926,7 @@ snapshots:
       - tsx
       - utf-8-validate
 
-  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)):
+  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)):
     dependencies:
       debug: 4.4.1
       globrex: 0.1.2
