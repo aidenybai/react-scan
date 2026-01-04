@@ -277,6 +277,7 @@
     "es-module-lexer": "^1.5.4",
     "next": "*",
     "postcss-cli": "^11.0.0",
+    "postcss-nesting": "^13.0.2",
     "prettier": "^3.3.3",
     "publint": "^0.2.12",
     "react": "*",
