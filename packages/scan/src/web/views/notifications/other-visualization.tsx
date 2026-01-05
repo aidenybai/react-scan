@@ -2,6 +2,7 @@ import { ReactNode } from 'preact/compat';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { getIsProduction } from '~core/index';
 import { iife } from '~core/notifications/performance-utils';
+import { copyText } from '~web/utils/clipboard';
 import { cn } from '~web/utils/helpers';
 import {
   InteractionEvent,
@@ -394,7 +395,7 @@ const CopyPromptButton = () => {
           return;
         }
 
-        await navigator.clipboard.writeText(
+        await copyText(
           getLLMPrompt('explanation', notificationState.selectedEvent),
         );
         setCopying(true);

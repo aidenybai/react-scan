@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import { copyText } from "@/utils/clipboard";
+import React, { useState } from "react";
 
 const ClipboardIcon = ({ className }: { className: string }) => (
   <svg
@@ -38,7 +39,7 @@ export default function CLI({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(command);
+    await copyText(command);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -67,7 +68,7 @@ export default function CLI({ command }: { command: string }) {
             {copied ? (
               <CheckIcon className="size-4 text-green-500" />
             ) : (
-                <ClipboardIcon className="size-4 text-white" />
+              <ClipboardIcon className="size-4 text-white" />
             )}
           </button>
         </pre>

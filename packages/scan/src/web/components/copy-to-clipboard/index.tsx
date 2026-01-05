@@ -1,5 +1,6 @@
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useState } from 'preact/hooks';
+import { copyText } from '~web/utils/clipboard';
 import { cn } from '~web/utils/helpers';
 import { Icon } from '../icon';
 
@@ -38,15 +39,25 @@ export const CopyToClipboard = /* @__PURE__ */ memo(
         e.preventDefault();
         e.stopPropagation();
 
-        navigator.clipboard.writeText(text).then(
-          () => {
+        try {
+          const result = copyText(text);
+          if (result instanceof Promise) {
+            result.then(
+              () => {
+                setIsCopied(true);
+                onCopy?.(true, text);
+              },
+              () => {
+                onCopy?.(false, text);
+              },
+            );
+          } else {
             setIsCopied(true);
             onCopy?.(true, text);
-          },
-          () => {
-            onCopy?.(false, text);
-          },
-        );
+          }
+        } catch {
+          onCopy?.(false, text);
+        }
       },
       [text, onCopy],
     );
