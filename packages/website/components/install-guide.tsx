@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import { copyText } from "@/utils/clipboard";
+import hljs from "highlight.js";
+import "highlight.js/styles/github-dark.css";
 import Image from "next/image";
-import hljs from 'highlight.js';
-import 'highlight.js/styles/github-dark.css';
+import React, { useEffect, useState } from "react";
 
 const ClipboardIcon = ({ className }: { className: string }) => (
   <svg
@@ -37,13 +38,13 @@ const CheckIcon = ({ className }: { className: string }) => (
   </svg>
 );
 
-const Tabs = ['script', 'nextjs-app', 'nextjs-pages', 'vite', 'remix'] as const;
+const Tabs = ["script", "nextjs-app", "nextjs-pages", "vite", "remix"] as const;
 type Tab = (typeof Tabs)[number];
 
 export default function InstallGuide() {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('script');
-  const [height, setHeight] = useState('auto');
+  const [activeTab, setActiveTab] = useState<Tab>("script");
+  const [height, setHeight] = useState("auto");
   const contentRef = React.useRef<HTMLPreElement>(null);
 
   useEffect(() => {
@@ -61,21 +62,21 @@ export default function InstallGuide() {
   };
 
   const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(getCodeForTab(activeTab));
+    await copyText(getCodeForTab(activeTab));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const getCodeForTab = (tab: Tab) => {
     switch (tab) {
-      case 'script':
+      case "script":
         return `<!-- paste this BEFORE any scripts -->
 <script
   crossOrigin="anonymous"
   src="//unpkg.com/react-scan/dist/auto.global.js"
 ></script>
 `;
-      case 'nextjs-app':
+      case "nextjs-app":
         return `export default function RootLayout({
   children,
 }: {
@@ -94,7 +95,7 @@ export default function InstallGuide() {
     </html>
   )
 }`;
-      case 'nextjs-pages':
+      case "nextjs-pages":
         return `import { Html, Head, Main, NextScript } from 'next/document';
 
 export default function Document() {
@@ -114,7 +115,7 @@ export default function Document() {
     </Html>
   );
 }`;
-      case 'vite':
+      case "vite":
         return `<!doctype html>
 <html lang="en">
   <head>
@@ -128,7 +129,7 @@ export default function Document() {
     <!-- ... -->
   </body>
 </html>`;
-      case 'remix':
+      case "remix":
         return `import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
 export default function App() {
@@ -157,7 +158,9 @@ export default function App() {
     }
   };
 
-  const highlightedCode = hljs.highlight(getCodeForTab(activeTab), { language: 'javascript' }).value;
+  const highlightedCode = hljs.highlight(getCodeForTab(activeTab), {
+    language: "javascript",
+  }).value;
 
   return (
     <div className="mt-4">
@@ -171,7 +174,12 @@ export default function App() {
             <span className="size-2.5 rounded-full bg-[#28c840]/60"></span>
           </div>
           <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="react-scan-logo" width={16} height={16} />
+            <Image
+              src="/logo.svg"
+              alt="react-scan-logo"
+              width={16}
+              height={16}
+            />
             <span className="text-[#858585] text-sm">React Scan</span>
           </div>
         </div>
@@ -182,17 +190,23 @@ export default function App() {
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
-                className={`relative px-4 py-2 text-[15px] transition-colors ${activeTab === tab
-                  ? 'bg-[#1e1e1e] text-white before:absolute before:left-0 before:top-0 before:h-[1px] before:w-full before:bg-[#7a68e7]'
-                  : 'text-[#969696] hover:text-white'
-                  }`}
+                className={`relative px-4 py-2 text-[15px] transition-colors ${
+                  activeTab === tab
+                    ? "bg-[#1e1e1e] text-white before:absolute before:left-0 before:top-0 before:h-[1px] before:w-full before:bg-[#7a68e7]"
+                    : "text-[#969696] hover:text-white"
+                }`}
               >
-                {tab === 'script' ? 'Script Tag' :
-                  tab === 'nextjs-app' ? 'Next.js (App)' :
-                    tab === 'nextjs-pages' ? 'Next.js (Pages)' :
-                      tab === 'vite' ? 'Vite' :
-                        tab === 'remix' ? 'Remix' :
-                          ''}
+                {tab === "script"
+                  ? "Script Tag"
+                  : tab === "nextjs-app"
+                  ? "Next.js (App)"
+                  : tab === "nextjs-pages"
+                  ? "Next.js (Pages)"
+                  : tab === "vite"
+                  ? "Vite"
+                  : tab === "remix"
+                  ? "Remix"
+                  : ""}
               </button>
             ))}
           </div>
@@ -200,12 +214,17 @@ export default function App() {
           <div className="grid grid-rows-[auto_1fr_auto] bg-[#1e1e1e]">
             <div className="flex items-center gap-2 shadow-xl px-3 py-1.5">
               <span className="text-xs text-neutral-300/50">
-                {activeTab === 'script' ? 'index.html' :
-                  activeTab === 'nextjs-app' ? 'app/layout.tsx' :
-                    activeTab === 'nextjs-pages' ? 'pages/_document.tsx' :
-                      activeTab === 'vite' ? 'index.html' :
-                        activeTab === 'remix' ? 'app/root.tsx' :
-                          ''}
+                {activeTab === "script"
+                  ? "index.html"
+                  : activeTab === "nextjs-app"
+                  ? "app/layout.tsx"
+                  : activeTab === "nextjs-pages"
+                  ? "pages/_document.tsx"
+                  : activeTab === "vite"
+                  ? "index.html"
+                  : activeTab === "remix"
+                  ? "app/root.tsx"
+                  : ""}
               </span>
             </div>
 
@@ -213,9 +232,7 @@ export default function App() {
               className="overflow-hidden transition-[height] duration-150 ease-in-out"
               style={{ height }}
             >
-              <div
-                className="transform transition-all duration-500"
-              >
+              <div className="transform transition-all duration-500">
                 <pre
                   ref={contentRef}
                   className="text-neutral-300 group relative whitespace-pre font-mono text-xs py-4 px-3"
@@ -224,10 +241,12 @@ export default function App() {
                     className="language-javascript relative flex"
                     dangerouslySetInnerHTML={{
                       __html: `
-                        <div class="select-none min-w-8 max-w-8 pr-2.5 inline-block text-right text-[#858585] opacity-50">${highlightedCode.split('\n').map((_, i) => i + 1).join('\n')
-                        }</div>
+                        <div class="select-none min-w-8 max-w-8 pr-2.5 inline-block text-right text-[#858585] opacity-50">${highlightedCode
+                          .split("\n")
+                          .map((_, i) => i + 1)
+                          .join("\n")}</div>
                         <div class="flex-1">${highlightedCode}</div>
-                      `
+                      `,
                     }}
                   />
                   <button

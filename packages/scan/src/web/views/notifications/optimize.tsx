@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { iife } from '~core/notifications/performance-utils';
+import { copyText } from '~web/utils/clipboard';
 import { cn } from '~web/utils/helpers';
 import {
   GroupedFiberRender,
@@ -6,7 +8,6 @@ import {
   getComponentName,
   getTotalTime,
 } from './data';
-import { iife } from '~core/notifications/performance-utils';
 
 const formatReactData = (groupedFiberRenders: Array<GroupedFiberRender>) => {
   let text = '';
@@ -506,7 +507,7 @@ export const Optimize = ({
         onClick={async () => {
           const text = getLLMPrompt(activeTab, selectedEvent);
 
-          await navigator.clipboard.writeText(text);
+          await copyText(text);
           setCopying(true);
           setTimeout(() => setCopying(false), 1000);
         }}
