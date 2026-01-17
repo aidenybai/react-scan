@@ -31,5 +31,11 @@
   "packageManager": "pnpm@9.1.0",
   "dependencies": {
     "@vercel/speed-insights": "^1.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@jridgewell/gen-mapping": "0.3.2",
+      "@jridgewell/sourcemap-codec": "1.4.15"
+    }
   }
 }

@@ -1,3 +1,9 @@
+> I'm working on something new (still free + open source!)
+> 
+> React Grab allows you to select an element and copy its context (like HTML, React component, and file source)
+>
+> Check it out: [**react-grab.com**](https://react-grab.com)
+
 # <img src="https://github.com/aidenybai/react-scan/blob/main/.github/assets/logo.svg" width="30" height="30" align="center" /> React Scan
 
 React Scan automatically detects performance issues in your React app.

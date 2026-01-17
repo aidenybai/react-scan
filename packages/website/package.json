@@ -13,7 +13,7 @@
     "@vercel/analytics": "^1.4.1",
     "@vercel/speed-insights": "^1.1.0",
     "highlight.js": "^11.11.1",
-    "next": "15.2.1",
+    "next": "15.2.6",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-scan": "^0.3.4",
@@ -23,6 +23,6 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "eslint": "^8",
-    "eslint-config-next": "15.2.1"
+    "eslint-config-next": "15.2.6"
   }
 }

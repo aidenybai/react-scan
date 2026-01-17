@@ -2,15 +2,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -29,24 +27,6 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isMenuOpen]);
-
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
-
-  const linkClass = (path: string, isMobile = false) => {
-    const baseClass = isMobile 
-      ? "block px-4 py-2 hover:bg-gray-100" 
-      : "underline hover:text-black";
-    const activeClass = isMobile 
-      ? "bg-[#4B4DB3]/5 text-[#4B4DB3]" 
-      : "text-[#4B4DB3]";
-    const inactiveClass = isMobile 
-      ? "text-neutral-600" 
-      : "text-neutral-600";
-    
-    return `${baseClass} ${isActive(path) ? activeClass : inactiveClass}`;
-  };
 
   return (
     <nav className="relative flex items-center justify-between">
@@ -91,18 +71,6 @@ export default function Header() {
 
       <div className="hidden md:flex gap-4">
         <Link
-          href="/monitoring"
-          className={linkClass('/monitoring')}
-        >
-          monitoring
-        </Link>
-        <Link
-          href="/replay"
-          className={linkClass('/replay')}
-        >
-          replay
-        </Link>
-        <Link
           href="https://github.com/aidenybai/react-scan#readme"
           className="text-neutral-600 underline hover:text-black"
           target="_blank"
@@ -121,25 +89,11 @@ export default function Header() {
       </div>
 
       {isMenuOpen && (
-        <div 
+        <div
           ref={menuRef}
           className="absolute right-0 top-[calc(100%+0.5rem)] w-48 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden md:hidden z-[100]"
         >
           <div className="divide-y divide-gray-100">
-            <Link
-              href="/monitoring"
-              className={linkClass('/monitoring', true)}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              monitoring
-            </Link>
-            <Link
-              href="/replay"
-              className={linkClass('/replay', true)}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              replay
-            </Link>
             <Link
               href="https://github.com/aidenybai/react-scan#readme"
               className="block px-4 py-2 text-neutral-600 hover:bg-gray-100"

@@ -81,7 +81,7 @@ export default function Monitoring() {
                       behavior: "smooth",
                     });
                   }
-                } catch (e) {}
+                } catch {}
               }}
               src="https://dashboard.react-scan.com/project/demo"
               className="absolute inset-0 w-full h-full hidden md:block"
