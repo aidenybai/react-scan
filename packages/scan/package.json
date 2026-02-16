@@ -1,6 +1,6 @@
 {
   "name": "react-scan",
-  "version": "1.2.0",
+  "version": "0.5.0",
   "description": "Scan your React app for renders",
   "keywords": [
     "react",
