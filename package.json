@@ -9,9 +9,9 @@
     "pack:bump": "pnpm --filter scan pack:bump",
     "lint": "pnpm -r lint",
     "lint:all": "oxlint .",
-    "changeset:add": "changeset add",
-    "bump": "changset add",
-    "changeset:publish": "changeset publish",
+    "changeset": "changeset add",
+    "version": "changeset version",
+    "release": "changeset publish",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

@@ -2,10 +2,10 @@
   "$schema": "https://unpkg.com/@changesets/config@3.0.5/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["react-scan", "@react-scan/extension"]],
-  "linked": [],
+  "fixed": [],
+  "linked": [["react-scan", "@react-scan/extension"]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": ["@react-scan/website"]
 }
