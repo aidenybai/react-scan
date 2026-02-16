@@ -182,6 +182,12 @@ export default defineConfig([
     minify: false,
     env: {
       NODE_ENV: process.env.NODE_ENV ?? 'development',
+      NPM_PACKAGE_VERSION: JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, '../scan', 'package.json'),
+          'utf8',
+        ),
+      ).version,
     },
     watch: process.env.NODE_ENV === 'development',
   },

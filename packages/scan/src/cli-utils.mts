@@ -212,13 +212,12 @@ const transformNextAppRouter = (
 
   let newContent = originalContent;
 
-  const headMatch = newContent.match(/<head[^>]*>([\s\S]*?)<\/head>/);
-  if (headMatch) {
-    const headContent = headMatch[1];
+  const headOpenMatch = newContent.match(/<head[^>]*>/);
+  if (headOpenMatch) {
     const injection = `\n        ${NEXT_APP_ROUTER_SCRIPT}\n`;
     newContent = newContent.replace(
-      `<head${headMatch[0].slice(5)}`,
-      `<head${headMatch[0].slice(5, headMatch[0].indexOf('>') - 4)}>${injection}${headContent}</head>`,
+      headOpenMatch[0],
+      `${headOpenMatch[0]}${injection}`,
     );
   } else {
     const bodyMatch = newContent.match(/<body[\s\S]*?>/);
@@ -265,11 +264,28 @@ const transformNextPagesRouter = (
   }
 
   let newContent = originalContent;
+  const injection = `\n        ${NEXT_PAGES_ROUTER_SCRIPT}`;
 
   const headMatch = newContent.match(/<Head>([\s\S]*?)<\/Head>/);
   if (headMatch) {
-    const injection = `\n        ${NEXT_PAGES_ROUTER_SCRIPT}`;
     newContent = newContent.replace('<Head>', `<Head>${injection}`);
+  } else {
+    const selfClosingHeadMatch = newContent.match(/<Head\s*\/>/);
+    if (selfClosingHeadMatch) {
+      newContent = newContent.replace(
+        selfClosingHeadMatch[0],
+        `<Head>${injection}\n      </Head>`,
+      );
+    }
+  }
+
+  if (newContent === originalContent) {
+    return {
+      success: false,
+      filePath: documentPath,
+      message:
+        'Could not find <Head> component in _document file to inject React Scan script.',
+    };
   }
 
   return {
@@ -302,14 +318,19 @@ const transformVite = (projectRoot: string): TransformResult => {
     };
   }
 
-  let newContent = originalContent;
-  const headMatch = newContent.match(/<head>([\s\S]*?)<\/head>/);
-  if (headMatch) {
-    newContent = newContent.replace(
-      '<head>',
-      `<head>\n    ${VITE_SCRIPT}`,
-    );
+  const headOpenMatch = originalContent.match(/<head[^>]*>/);
+  if (!headOpenMatch) {
+    return {
+      success: false,
+      filePath: indexHtml,
+      message: 'Could not find <head> tag in index.html',
+    };
   }
+
+  const newContent = originalContent.replace(
+    headOpenMatch[0],
+    `${headOpenMatch[0]}\n    ${VITE_SCRIPT}`,
+  );
 
   return {
     success: true,
@@ -333,14 +354,19 @@ const transformWebpack = (projectRoot: string): TransformResult => {
       };
     }
 
-    let newContent = originalContent;
-    const headMatch = newContent.match(/<head>([\s\S]*?)<\/head>/);
-    if (headMatch) {
-      newContent = newContent.replace(
-        '<head>',
-        `<head>\n    ${REACT_SCAN_SCRIPT_TAG}`,
-      );
+    const headOpenMatch = originalContent.match(/<head[^>]*>/);
+    if (!headOpenMatch) {
+      return {
+        success: false,
+        filePath: indexHtml,
+        message: 'Could not find <head> tag in index.html',
+      };
     }
+
+    const newContent = originalContent.replace(
+      headOpenMatch[0],
+      `${headOpenMatch[0]}\n    ${REACT_SCAN_SCRIPT_TAG}`,
+    );
 
     return {
       success: true,
