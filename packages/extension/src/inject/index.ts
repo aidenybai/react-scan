@@ -129,18 +129,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (isTargetPageAlreadyUsedReactScan()) {
-    if (window.__REACT_SCAN__?.ReactScanInternals?.Store?.monitor?.value) {
-      createNotificationUI({
-        title: 'Outdated React Scan Monitoring',
-        content:
-          'If you are a developer of this website, please upgrade to the latest version of React Scan.',
-      });
-    } else {
-      createNotificationUI({
-        title: 'Already Initialized',
-        content: 'React Scan is already initialized on this page.',
-      });
-    }
+    createNotificationUI({
+      title: 'Already Initialized',
+      content: 'React Scan is already initialized on this page.',
+    });
 
     busDispatch<IEvents['react-scan:send-to-background']>(
       'react-scan:send-to-background',

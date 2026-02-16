@@ -49,7 +49,7 @@ export type StateCreator<
   store: Mutate<StoreApi<T>, Mis>,
 ) => U) & { $$storeMutators?: Mos };
 
-// biome-ignore lint/correctness/noUnusedVariables: <explanation>
+// oxlint-disable-next-line no-unused-vars
 export interface StoreMutators<S, A> {}
 export type StoreMutatorIdentifier = keyof StoreMutators<unknown, unknown>;
 
@@ -99,19 +99,19 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
   const subscribe: StoreApi<TState>['subscribe'] = (
     selectorOrListener:
       | ((state: TState, prevState: TState) => void)
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // oxlint-disable-next-line typescript/no-explicit-any
       | ((state: TState) => any),
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // oxlint-disable-next-line typescript/no-explicit-any
     listener?: (selectedState: any, prevSelectedState: any) => void,
   ) => {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // oxlint-disable-next-line typescript/no-explicit-any
     let selector: ((state: TState) => any) | undefined;
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // oxlint-disable-next-line typescript/no-explicit-any
     let actualListener: (state: any, prevState: any) => void;
 
     if (listener) {
       // Selector subscription case
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      // oxlint-disable-next-line typescript/no-explicit-any
       selector = selectorOrListener as (state: TState) => any;
       actualListener = listener;
     } else {
@@ -144,7 +144,7 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
 
   const api = { setState, getState, getInitialState, subscribe };
   const initialState = (state = createState(setState, getState, api));
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // oxlint-disable-next-line typescript/no-explicit-any
   return api as any;
 };
 

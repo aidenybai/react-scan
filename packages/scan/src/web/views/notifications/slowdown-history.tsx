@@ -335,7 +335,7 @@ export const useLaggedEvents = (lagMs = 150) => {
   const { notificationState } = useNotificationsContext();
   const [laggedEvents, setLaggedEvents] = useState(notificationState.events);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setTimeout(() => {
       setLaggedEvents(notificationState.events);

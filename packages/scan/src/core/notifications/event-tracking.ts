@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'preact/compat';
-import { not_globally_unique_generateId } from '~core/monitor/utils';
+import { not_globally_unique_generateId } from '~core/utils';
 import { MAX_INTERACTION_BATCH, interactionStore } from './interaction-store';
 import {
   FiberRenders,
@@ -123,7 +123,7 @@ export const debugEventStore = createStore<{
     events: Array<DebugEvent>;
   };
   actions: {
-    // biome-ignore lint/suspicious/noExplicitAny: debug only store
+    // oxlint-disable-next-line typescript/no-explicit-any
     addEvent: (event: any) => void;
     clear: () => void;
   };
@@ -374,7 +374,7 @@ export function startLongPipelineTracking() {
               endAt: endAt,
               startAt: startAt,
               meta: {
-                // biome-ignore lint/style/noNonNullAssertion: invariant: this will exist by this point
+                // oxlint-disable-next-line typescript/no-non-null-assertion
                 fiberRenders: accumulatedFiberRendersOverTask!,
                 latency: duration,
                 fps,

@@ -9,9 +9,7 @@
   "scripts": {
     "build": "rimraf dist && tsc",
     "postbuild": "node ../../scripts/version-warning.mjs",
-    "lint": "biome lint src && pnpm typecheck",
-    "format": "biome format . --write",
-    "check": "biome check . --write",
+    "lint": "oxlint src && pnpm typecheck",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "rimraf dist && npm run build"
   },

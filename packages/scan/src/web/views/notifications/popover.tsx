@@ -67,7 +67,7 @@ export const Popover = ({
     }
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: its not pure but fine
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     updateRect();
   }, [triggerRef.current]);
@@ -135,6 +135,8 @@ export const Popover = ({
     };
   };
 
+  const popoverPosition = getPopoverPosition();
+
   return (
     <>
       {portalEl &&
@@ -145,7 +147,7 @@ export const Popover = ({
             ref={popoverRef}
             className={cn([
               'absolute z-100 bg-white text-black rounded-lg px-3 py-2 shadow-lg',
-              'transform transition-all duration-120 ease-[cubic-bezier(0.23,1,0.32,1)]',
+              'transition-[opacity] duration-120 ease-out',
               'after:content-[""] after:absolute after:top-[100%]',
               'after:left-1/2 after:-translate-x-1/2',
               'after:w-[10px] after:h-[6px]',
@@ -154,14 +156,15 @@ export const Popover = ({
               'after:border-t-[6px] after:border-t-white',
               'pointer-events-none',
               popoverState === 'opening' || popoverState === 'closing'
-                ? 'opacity-0 translate-y-1'
-                : 'opacity-100 translate-y-0',
+                ? 'opacity-0'
+                : 'opacity-100',
             ])}
             style={{
-              top: getPopoverPosition().top + 'px',
-              left: getPopoverPosition().left + 'px',
-              transform: 'translate(-50%, -100%)',
+              top: popoverPosition.top + 'px',
+              left: popoverPosition.left + 'px',
+              transform: `translate(-50%, calc(-100% - 4px)) scale(${popoverState === 'open' ? 1 : 0.97})`,
               minWidth: '175px',
+              willChange: 'opacity, transform',
             }}
           >
             {children}

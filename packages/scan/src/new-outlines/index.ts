@@ -344,7 +344,7 @@ export const getCanvasEl = () => {
         [offscreenCanvas],
       );
     } catch (e) {
-      // biome-ignore lint/suspicious/noConsole: Intended debug output
+      // oxlint-disable-next-line no-console
       console.warn('Failed to initialize OffscreenCanvas worker:', e);
     }
   }

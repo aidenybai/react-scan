@@ -5,7 +5,7 @@ import { ReactScanInternals, Store } from '~core/index';
 import { signalIsSettingsOpen, signalWidgetViews } from '~web/state';
 import { IS_CLIENT } from '~web/utils/constants';
 import { cn, throttle } from '~web/utils/helpers';
-import { lerp } from '~web/utils/lerp';
+const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 import {
   type States,
   findComponentDOMNode,
@@ -660,7 +660,7 @@ export const ScanOverlay = () => {
     }
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const canvas = refCanvas.current;
     if (!canvas) return;

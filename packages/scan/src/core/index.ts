@@ -14,24 +14,18 @@ import styles from '~web/assets/css/styles.css';
 import { createToolbar } from '~web/toolbar';
 import { IS_CLIENT } from '~web/utils/constants';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import type { Outline } from '~web/utils/outline';
 import type { States } from '~web/views/inspector/utils';
 import type {
   ChangeReason,
   Render,
   createInstrumentation,
 } from './instrumentation';
-import type { InternalInteraction } from './monitor/types';
-import type { getSession } from './monitor/utils';
 import { startTimingTracking } from './notifications/event-tracking';
 import { createHighlightCanvas } from './notifications/outline-overlay';
 import packageJson from '../../package.json';
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
-
-// @TODO: @pivanov - add back in when options are implemented
-// const audioContext: AudioContext | null = null;
 
 interface RootContainer {
   rootContainer: HTMLDivElement;
@@ -57,48 +51,6 @@ const initRootContainer = (): RootContainer => {
 
   return { rootContainer, shadowRoot };
 };
-
-// export interface UnstableOptions {
-//   /**
-//    * Enable/disable scanning
-//    *
-//    * Please use the recommended way:
-//    * enabled: process.env.NODE_ENV === 'development',
-//    *
-//    * @default true
-//    */
-//   enabled?: boolean;
-
-//   /**
-//    * Force React Scan to run in production (not recommended)
-//    *
-//    * @default false
-//    */
-//   dangerouslyForceRunInProduction?: boolean;
-
-//   /**
-//    * Animation speed
-//    *
-//    * @default "fast"
-//    */
-//   animationSpeed?: 'slow' | 'fast' | 'off';
-
-//   /**
-//    * Smoothly animate the re-render outline when the element moves
-//    *
-//    * @default true
-//    */
-//   smoothlyAnimateOutlines?: boolean;
-
-//   /**
-//    * Show toolbar bar
-//    *
-//    * If you set this to true, and set {@link enabled} to false, the toolbar will still show, but scanning will be disabled.
-//    *
-//    * @default true
-//    */
-//   showToolbar?: boolean;
-// }
 
 export interface Options {
   /**
@@ -186,29 +138,6 @@ export interface Options {
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
   onCommitFinish?: () => void;
-  onPaintStart?: (outlines: Array<Outline>) => void;
-  onPaintFinish?: (outlines: Array<Outline>) => void;
-}
-
-export type MonitoringOptions = Pick<
-  Options,
-  | 'enabled'
-  | 'onCommitStart'
-  | 'onCommitFinish'
-  | 'onPaintStart'
-  | 'onPaintFinish'
-  | 'onRender'
->;
-
-interface Monitor {
-  pendingRequests: number;
-  interactions: Array<InternalInteraction>;
-  session: ReturnType<typeof getSession>;
-  url: string | null;
-  route: string | null;
-  apiKey: string | null;
-  commit: string | null;
-  branch: string | null;
 }
 
 export interface StoreType {
@@ -216,7 +145,6 @@ export interface StoreType {
   wasDetailsOpen: Signal<boolean>;
   lastReportTime: Signal<number>;
   isInIframe: Signal<boolean>;
-  monitor: Signal<Monitor | null>;
   fiberRoots: WeakSet<Fiber>;
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
@@ -232,9 +160,6 @@ export interface Internals {
   instrumentation: ReturnType<typeof createInstrumentation> | null;
   componentAllowList: WeakMap<ComponentType<unknown>, Options> | null;
   options: Signal<Options>;
-  scheduledOutlines: Map<Fiber, Outline>; // we clear t,his nearly immediately, so no concern of mem leak on the fiber
-  // outlines at the same coordinates always get merged together, so we pre-compute the merge ahead of time when aggregating in activeOutlines
-  activeOutlines: Map<OutlineKey, Outline>; // we re-use the outline object on the scheduled outline
   onRender: ((fiber: Fiber, renders: Array<Render>) => void) | null;
   Store: StoreType;
   version: string;
@@ -292,7 +217,6 @@ export const Store: StoreType = {
   inspectState: signal<States>({
     kind: 'uninitialized',
   }),
-  monitor: signal<Monitor | null>(null),
   fiberRoots: new Set<Fiber>(),
   reportData: new Map<number, RenderData>(),
   legacyReportData: new Map<string, RenderData>(),
@@ -306,25 +230,16 @@ export const ReactScanInternals: Internals = {
   componentAllowList: null,
   options: signal({
     enabled: true,
-    // includeChildren: true,
-    // playSound: false,
     log: false,
     showToolbar: true,
-    // renderCountThreshold: 0,
-    // report: undefined,
-    // alwaysShowLabels: false,
     animationSpeed: 'fast',
     dangerouslyForceRunInProduction: false,
     showFPS: true,
     showNotificationCount: true,
     allowInIframe: false,
-    // smoothlyAnimateOutlines: true,
-    // trackUnnecessaryRenders: false,
   }),
   runInAllEnvironments: false,
   onRender: null,
-  scheduledOutlines: new Map(),
-  activeOutlines: new Map(),
   Store,
   version: packageJson.version,
 };
@@ -335,11 +250,7 @@ if (IS_CLIENT && window.__REACT_SCAN_EXTENSION__) {
 
 export type LocalStorageOptions = Omit<
   Options,
-  | 'onCommitStart'
-  | 'onRender'
-  | 'onCommitFinish'
-  | 'onPaintStart'
-  | 'onPaintFinish'
+  'onCommitStart' | 'onRender' | 'onCommitFinish'
 >;
 
 const applyLocalStorageOptions = (options: Options): LocalStorageOptions => {
@@ -347,8 +258,6 @@ const applyLocalStorageOptions = (options: Options): LocalStorageOptions => {
     onCommitStart,
     onRender,
     onCommitFinish,
-    onPaintStart,
-    onPaintFinish,
     ...rest
   } = options;
   return rest;
@@ -362,11 +271,8 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
     const value = options[key as keyof Options];
     switch (key) {
       case 'enabled':
-      // case 'includeChildren':
       case 'log':
       case 'showToolbar':
-      // case 'report':
-      // case 'alwaysShowLabels':
       case 'showNotificationCount':
       case 'dangerouslyForceRunInProduction':
       case 'showFPS':
@@ -377,14 +283,6 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
           validOptions[key] = value;
         }
         break;
-      // case 'renderCountThreshold':
-      // case 'resetCountTimeout':
-      //   if (typeof value !== 'number' || value < 0) {
-      //     errors.push(`- ${key} must be a non-negative number. Got "${value}"`);
-      //   } else {
-      //     validOptions[key] = value as number;
-      //   }
-      //   break;
       case 'animationSpeed':
         if (!['slow', 'fast', 'off'].includes(value as string)) {
           errors.push(
@@ -418,31 +316,13 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
           ) => void;
         }
         break;
-      case 'onPaintStart':
-      case 'onPaintFinish':
-        if (typeof value !== 'function') {
-          errors.push(`- ${key} must be a function. Got "${value}"`);
-        } else {
-          validOptions[key] = value as (outlines: Array<Outline>) => void;
-        }
-        break;
-      // case 'trackUnnecessaryRenders': {
-      //   validOptions.trackUnnecessaryRenders =
-      //     typeof value === 'boolean' ? value : false;
-      //   break;
-      // }
-      // case 'smoothlyAnimateOutlines': {
-      //   validOptions.smoothlyAnimateOutlines =
-      //     typeof value === 'boolean' ? value : false;
-      //   break;
-      // }
       default:
         errors.push(`- Unknown option "${key}"`);
     }
   }
 
   if (errors.length > 0) {
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
   }
 
@@ -496,7 +376,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
       }
     } catch (e) {
       if (ReactScanInternals.options.value._debug === 'verbose') {
-        // biome-ignore lint/suspicious/noConsole: intended debug output
+        // oxlint-disable-next-line no-console
         console.error(
           '[React Scan Internal Error]',
           'Failed to create notifications outline canvas',
@@ -518,7 +398,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
     return newOptions;
   } catch (e) {
     if (ReactScanInternals.options.value._debug === 'verbose') {
-      // biome-ignore lint/suspicious/noConsole: intended debug output
+      // oxlint-disable-next-line no-console
       console.error(
         '[React Scan Internal Error]',
         'Failed to create notifications outline canvas',
@@ -582,10 +462,10 @@ export const start = () => {
       initToolbar(!!options.value.showToolbar);
     });
 
-    if (!Store.monitor.value && IS_CLIENT) {
+    if (IS_CLIENT) {
       setTimeout(() => {
         if (isInstrumentationActive()) return;
-        // biome-ignore lint/suspicious/noConsole: Intended debug output
+        // oxlint-disable-next-line no-console
         console.error(
           '[React Scan] Failed to load. Must import React Scan before React runs.',
         );
@@ -593,7 +473,7 @@ export const start = () => {
     }
   } catch (e) {
     if (ReactScanInternals.options.value._debug === 'verbose') {
-      // biome-ignore lint/suspicious/noConsole: intended debug output
+      // oxlint-disable-next-line no-console
       console.error(
         '[React Scan Internal Error]',
         'Failed to create notifications outline canvas',
@@ -632,7 +512,7 @@ const createNotificationsOutlineCanvas = () => {
     return createHighlightCanvas(highlightRoot);
   } catch (e) {
     if (ReactScanInternals.options.value._debug === 'verbose') {
-      // biome-ignore lint/suspicious/noConsole: intended debug output
+      // oxlint-disable-next-line no-console
       console.error(
         '[React Scan Internal Error]',
         'Failed to create notifications outline canvas',

@@ -1,319 +1,190 @@
-import { spawn } from 'node:child_process';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { cancel, confirm, intro, isCancel, spinner } from '@clack/prompts';
-import { bgMagenta, dim, red } from 'kleur';
-import mri from 'mri';
+import { execSync } from 'node:child_process';
+import { existsSync, writeFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
+import { Command } from 'commander';
+import pc from 'picocolors';
+import prompts from 'prompts';
 import {
-  type Browser,
-  type BrowserContext,
-  chromium,
-  devices,
-  firefox,
-  webkit,
-} from 'playwright';
+  type DiffLine,
+  type PackageManager,
+  FRAMEWORK_NAMES,
+  INSTALL_COMMANDS,
+  detectProject,
+  generateDiff,
+  previewTransform,
+} from './cli-utils.mjs';
 
-const truncateString = (str: string, maxLength: number) => {
-  let result = str
-    .replace('http://', '')
-    .replace('https://', '')
-    .replace('www.', '');
+const VERSION = process.env.NPM_PACKAGE_VERSION ?? '0.0.0';
 
-  if (result.endsWith('/')) {
-    result = result.slice(0, -1);
-  }
+// --- Diff ---
 
-  if (result.length > maxLength) {
-    const half = Math.floor(maxLength / 2);
-    const start = result.slice(0, half);
-    const end = result.slice(result.length - (maxLength - half));
-    return `${start}…${end}`;
-  }
-  return result;
-};
+const printDiff = (filePath: string, original: string, updated: string): void => {
+  const diff = generateDiff(original, updated);
+  const contextLines = 3;
+  const changedIndices = diff
+    .map((line: DiffLine, i: number) => (line.type !== 'unchanged' ? i : -1))
+    .filter((i: number) => i !== -1);
 
-const inferValidURL = (maybeURL: string) => {
-  try {
-    return new URL(maybeURL).href;
-  } catch {
-    try {
-      return new URL(`https://${maybeURL}`).href;
-    } catch {
-      return 'about:blank';
-    }
-  }
-};
-
-const getBrowserDetails = async (browserType: string) => {
-  switch (browserType) {
-    case 'firefox':
-      return { browserType: firefox, channel: undefined, name: 'firefox' };
-    case 'webkit':
-      return { browserType: webkit, channel: undefined, name: 'webkit' };
-    default:
-      return { browserType: chromium, channel: 'chrome', name: 'chrome' };
-  }
-};
-
-const userAgentStrings = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.2227.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.3497.92 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
-];
-
-const applyStealthScripts = async (context: BrowserContext) => {
-  await context.addInitScript(() => {
-    // Override the navigator.webdriver property
-    Object.defineProperty(navigator, 'webdriver', {
-      get: () => undefined,
-    });
-
-    // Mock languages and plugins to mimic a real browser
-    Object.defineProperty(navigator, 'languages', {
-      get: () => ['en-US', 'en'],
-    });
-
-    Object.defineProperty(navigator, 'plugins', {
-      get: () => [1, 2, 3, 4, 5],
-    });
-
-    // Remove Playwright-specific properties
-    interface PlaywrightWindow extends Window {
-      __playwright?: unknown;
-      __pw_manual?: unknown;
-      __PW_inspect?: unknown;
-    }
-
-    const win = window as PlaywrightWindow;
-    win.__playwright = undefined;
-    win.__pw_manual = undefined;
-    win.__PW_inspect = undefined;
-
-    // Redefine the headless property
-    Object.defineProperty(navigator, 'headless', {
-      get: () => false,
-    });
-
-    // Override the permissions API
-    const originalQuery = window.navigator.permissions.query;
-    window.navigator.permissions.query = (parameters) =>
-      parameters.name === 'notifications'
-        ? Promise.resolve({
-            state: Notification.permission,
-          } as PermissionStatus)
-        : originalQuery(parameters);
-  });
-};
-
-const init = async () => {
-  intro(`${bgMagenta('[·]')} React Scan`);
-  const args = mri(process.argv.slice(2));
-  let browser: Browser | undefined;
-
-  const device = devices[args.device];
-  const { browserType, channel } = await getBrowserDetails(args.browser);
-
-  const contextOptions = {
-    headless: false,
-    channel,
-    ...device,
-    acceptDownloads: true,
-    viewport: null,
-    locale: 'en-US',
-    timezoneId: 'America/New_York',
-    args: [
-      '--enable-webgl',
-      '--use-gl=swiftshader',
-      '--enable-accelerated-2d-canvas',
-      '--disable-blink-features=AutomationControlled',
-      '--disable-web-security',
-    ],
-    userAgent:
-      userAgentStrings[Math.floor(Math.random() * userAgentStrings.length)],
-    bypassCSP: true,
-    ignoreHTTPSErrors: true,
-  };
-
-  try {
-    browser = await browserType.launch({
-      headless: false,
-      channel,
-    });
-  } catch {
-    /**/
-  }
-
-  if (!browser) {
-    try {
-      browser = await browserType.launch({ headless: false });
-    } catch {
-      const installPromise = new Promise<void>((resolve, reject) => {
-        const runInstall = () => {
-          confirm({
-            message:
-              'No drivers found. Install Playwright Chromium driver to continue?',
-          }).then((shouldInstall) => {
-            if (isCancel(shouldInstall)) {
-              cancel('Operation cancelled.');
-              process.exit(0);
-            }
-            if (!shouldInstall) {
-              process.exit(0);
-            }
-
-            const installProcess = spawn(
-              'npx',
-              ['playwright@latest', 'install', 'chromium'],
-              { stdio: 'inherit' },
-            );
-
-            installProcess.on('close', (code) => {
-              if (!code) resolve();
-              else
-                reject(
-                  new Error(`Installation process exited with code ${code}`),
-                );
-            });
-
-            installProcess.on('error', reject);
-          });
-        };
-
-        runInstall();
-      });
-
-      await installPromise;
-
-      try {
-        browser = await chromium.launch({ headless: false });
-      } catch {
-        cancel(
-          'No browser could be launched. Please run `npx playwright install` to install browser drivers.',
-        );
-      }
-    }
-  }
-
-  if (!browser) {
-    cancel(
-      'No browser could be launched. Please run `npx playwright install` to install browser drivers.',
-    );
+  if (changedIndices.length === 0) {
+    console.log(pc.dim('  No changes'));
     return;
   }
 
-  const context = await browser.newContext(contextOptions);
-  await applyStealthScripts(context);
+  console.log(`\n${pc.bold(`File: ${filePath}`)}`);
+  console.log(pc.dim('─'.repeat(60)));
 
-  const scriptContent = await fs.readFile(
-    path.resolve(__dirname, './auto.global.js'),
-    'utf8',
-  );
+  let lastPrintedIdx = -1;
 
-  // Add React Scan script at context level so it's available for all pages
-  await context.addInitScript({
-    content: `window.hideIntro = true;${scriptContent}\n//# sourceURL=react-scan.js`,
-  });
+  for (const changedIdx of changedIndices) {
+    const start = Math.max(0, changedIdx - contextLines);
+    const end = Math.min(diff.length - 1, changedIdx + contextLines);
 
-  const page = await context.newPage();
+    if (start > lastPrintedIdx + 1 && lastPrintedIdx !== -1) {
+      console.log(pc.dim('  ...'));
+    }
 
-  const inputUrl = args._[0] || 'about:blank';
-
-  const urlString = inferValidURL(inputUrl);
-
-  await page.goto(urlString);
-
-  await page.waitForLoadState('load');
-  await page.waitForTimeout(500);
-
-  const pollReport = async () => {
-    if (page.url() !== currentURL) return;
-    await page.evaluate(() => {
-      const globalHook = globalThis.__REACT_SCAN__;
-      if (!globalHook) return;
-      let count = 0;
-      globalHook.ReactScanInternals.onRender = (_fiber, renders) => {
-        let localCount = 0;
-        for (const render of renders) {
-          localCount += render.count;
-        }
-        count = localCount;
-      };
-      const reportData = globalHook.ReactScanInternals.Store.reportData;
-      if (!Object.keys(reportData).length) return;
-
-      // biome-ignore lint/suspicious/noConsole: Intended debug output
-      console.log('REACT_SCAN_REPORT', count);
-    });
-  };
-
-  let count = 0;
-  let currentSpinner: ReturnType<typeof spinner> | undefined;
-  let currentURL = urlString;
-
-  let interval: ReturnType<typeof setInterval>;
-
-  const inject = async (url: string) => {
-    if (interval) clearInterval(interval);
-    currentURL = url;
-    const truncatedURL = truncateString(url, 35);
-
-    // biome-ignore lint/suspicious/noConsole: <explanation>
-    console.log(dim(`Scanning: ${truncatedURL}`));
-    count = 0;
-
-    try {
-      await page.waitForLoadState('load');
-      await page.waitForTimeout(500);
-
-      const hasReactScan = await page.evaluate(() => {
-        return Boolean(globalThis.__REACT_SCAN__);
-      });
-
-      if (!hasReactScan) {
-        // Script is already registered at context level, just reload
-        await page.reload();
-        return;
+    for (let i = Math.max(start, lastPrintedIdx + 1); i <= end; i++) {
+      const line = diff[i];
+      if (line.type === 'added') {
+        console.log(pc.green(`+ ${line.content}`));
+      } else if (line.type === 'removed') {
+        console.log(pc.red(`- ${line.content}`));
+      } else {
+        console.log(pc.dim(`  ${line.content}`));
       }
-
-      await page.waitForTimeout(100);
-
-      interval = setInterval(() => {
-        pollReport().catch(() => {});
-      }, 1000);
-    } catch {
-      // biome-ignore lint/suspicious/noConsole: <explanation>
-      console.log(red(`Error: ${truncatedURL}`));
+      lastPrintedIdx = i;
     }
-  };
+  }
 
-  await inject(urlString);
+  console.log(pc.dim('─'.repeat(60)));
+};
 
-  page.on('framenavigated', async (frame) => {
-    if (frame !== page.mainFrame()) return;
-    const url = frame.url();
-    inject(url);
-  });
+// --- Install ---
 
-  page.on('console', async (msg) => {
-    const text = msg.text();
-    if (!text.startsWith('REACT_SCAN_REPORT')) {
-      return;
-    }
-    const reportDataString = text.replace('REACT_SCAN_REPORT', '').trim();
-    try {
-      count = Number.parseInt(reportDataString, 10);
-    } catch {
-      return;
-    }
+const installPackages = (
+  packages: string[],
+  packageManager: PackageManager,
+  projectRoot: string,
+): void => {
+  if (packages.length === 0) return;
 
-    const truncatedURL = truncateString(currentURL, 50);
-    if (currentSpinner) {
-      currentSpinner.message(
-        dim(`Scanning: ${truncatedURL}${count ? ` (×${count})` : ''}`),
-      );
-    }
+  const command = `${INSTALL_COMMANDS[packageManager]} ${packages.join(' ')}`;
+  console.log(pc.dim(`  Running: ${command}\n`));
+
+  execSync(command, {
+    cwd: projectRoot,
+    stdio: 'inherit',
   });
 };
 
-void init();
+// --- Main ---
+
+const program = new Command()
+  .name('react-scan')
+  .description('React Scan CLI')
+  .version(VERSION);
+
+program
+  .command('init')
+  .description('Set up React Scan in your project')
+  .option('-y, --yes', 'skip confirmation prompts', false)
+  .option('-c, --cwd <cwd>', 'working directory', process.cwd())
+  .option('--skip-install', 'skip package installation', false)
+  .action(async (opts) => {
+    console.log(`\n${pc.magenta('[·]')} ${pc.bold('React Scan')} ${pc.dim(`v${VERSION}`)}\n`);
+
+    try {
+      const cwd = resolve(opts.cwd);
+
+      if (!existsSync(cwd)) {
+        console.error(pc.red(`Directory does not exist: ${cwd}`));
+        process.exit(1);
+      }
+
+      if (!existsSync(join(cwd, 'package.json'))) {
+        console.error(pc.red('No package.json found. Run this command from a project root.'));
+        process.exit(1);
+      }
+
+      console.log(pc.dim('  Detecting project...\n'));
+
+      const project = detectProject(cwd);
+
+      if (project.framework === 'unknown') {
+        console.error(pc.red('  Could not detect a supported framework.'));
+        console.log(pc.dim('  React Scan supports Next.js, Vite, and Webpack projects.'));
+        console.log(pc.dim('  Visit https://github.com/aidenybai/react-scan#install for manual setup.\n'));
+        process.exit(1);
+      }
+
+      console.log(`  Framework:       ${pc.cyan(FRAMEWORK_NAMES[project.framework])}`);
+      if (project.framework === 'next') {
+        console.log(`  Router:          ${pc.cyan(project.nextRouterType === 'app' ? 'App Router' : 'Pages Router')}`);
+      }
+      console.log(`  Package manager: ${pc.cyan(project.packageManager)}`);
+      console.log();
+
+      if (project.hasReactScan) {
+        console.log(pc.green('  React Scan is already installed in package.json.'));
+        console.log(pc.dim('  Checking if code setup is needed...\n'));
+      }
+
+      const result = previewTransform(cwd, project.framework, project.nextRouterType);
+
+      if (!result.success) {
+        console.error(pc.red(`  ${result.message}\n`));
+        process.exit(1);
+      }
+
+      if (result.noChanges) {
+        console.log(pc.green('  React Scan is already set up in your project.\n'));
+        process.exit(0);
+      }
+
+      if (result.originalContent && result.newContent) {
+        printDiff(
+          relative(cwd, result.filePath),
+          result.originalContent,
+          result.newContent,
+        );
+
+        console.log();
+        console.log(pc.yellow('  Auto-detection may not be 100% accurate.'));
+        console.log(pc.yellow('  Please verify the changes before committing.\n'));
+
+        if (!opts.yes) {
+          const { proceed } = await prompts({
+            type: 'confirm',
+            name: 'proceed',
+            message: 'Apply these changes?',
+            initial: true,
+          });
+
+          if (!proceed) {
+            console.log(pc.dim('\n  Changes cancelled.\n'));
+            process.exit(0);
+          }
+        }
+      }
+
+      if (!opts.skipInstall && !project.hasReactScan) {
+        console.log(pc.dim('\n  Installing react-scan...\n'));
+        installPackages(['react-scan'], project.packageManager, cwd);
+        console.log();
+      }
+
+      if (result.newContent) {
+        writeFileSync(result.filePath, result.newContent, 'utf-8');
+        console.log(pc.green(`  Updated ${relative(cwd, result.filePath)}`));
+      }
+
+      console.log();
+      console.log(`${pc.green('  Success!')} React Scan has been installed.`);
+      console.log(pc.dim('  You may now start your development server.\n'));
+    } catch (error) {
+      console.error(pc.red(`\n  Error: ${error instanceof Error ? error.message : String(error)}\n`));
+      process.exit(1);
+    }
+  });
+
+program.parse();

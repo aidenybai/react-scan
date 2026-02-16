@@ -16,5 +16,5 @@ scanPackage.version = newVersion;
 // Write back to package.json
 fs.writeFileSync(scanPackagePath, `${JSON.stringify(scanPackage, null, 2)}\n`);
 
-// biome-ignore lint/suspicious/noConsole: Intended debug output
+// oxlint-disable-next-line no-console
 console.log(`Bumped version to ${newVersion}`);

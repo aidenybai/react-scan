@@ -16,9 +16,7 @@
     "pack:firefox": "pnpm clean && BROWSER=firefox pnpm build && pnpm mkdir && cd dist && zip -r \"../build/firefox-extension-v$npm_package_version.zip\" .",
     "pack:brave": "pnpm clean && BROWSER=brave pnpm build && pnpm mkdir && cd dist && zip -r \"../build/brave-extension-v$npm_package_version.zip\" .",
     "pack:all": "rimraf build && pnpm pack:chrome && pnpm pack:firefox && pnpm pack:brave",
-    "lint": "biome lint src && pnpm typecheck",
-    "format": "biome format . --write",
-    "check": "biome check . --write",
+    "lint": "oxlint src && pnpm typecheck",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -10,7 +10,6 @@ import { Store } from '../..';
 
 import {
   BoundedArray,
-  createChildrenAdjacencyList,
   invariantError,
 } from '~core/notifications/performance-utils';
 import {
@@ -26,8 +25,120 @@ import type {
   PerformanceInteraction,
   PerformanceInteractionEntry,
 } from './types';
-import { not_globally_unique_generateId } from '~core/monitor/utils';
-import { getInteractionPath } from '~core/monitor/performance';
+import { not_globally_unique_generateId } from '~core/utils';
+
+interface PathFilters {
+  skipProviders: boolean;
+  skipHocs: boolean;
+  skipContainers: boolean;
+  skipMinified: boolean;
+  skipUtilities: boolean;
+  skipBoundaries: boolean;
+}
+
+const DEFAULT_PATH_FILTERS: PathFilters = {
+  skipProviders: true,
+  skipHocs: true,
+  skipContainers: true,
+  skipMinified: true,
+  skipUtilities: true,
+  skipBoundaries: true,
+};
+
+const PATH_FILTER_PATTERNS = {
+  providers: [/Provider$/, /^Provider$/, /^Context$/],
+  hocs: [/^with[A-Z]/, /^forward(?:Ref)?$/i, /^Forward(?:Ref)?\(/],
+  containers: [/^(?:App)?Container$/, /^Root$/, /^ReactDev/],
+  utilities: [
+    /^Fragment$/,
+    /^Suspense$/,
+    /^ErrorBoundary$/,
+    /^Portal$/,
+    /^Consumer$/,
+    /^Layout$/,
+    /^Router/,
+    /^Hydration/,
+  ],
+  boundaries: [/^Boundary$/, /Boundary$/, /^Provider$/, /Provider$/],
+};
+
+const shouldIncludeInPath = (
+  name: string,
+  filters: PathFilters = DEFAULT_PATH_FILTERS,
+): boolean => {
+  const patternsToCheck: Array<RegExp> = [];
+  if (filters.skipProviders) patternsToCheck.push(...PATH_FILTER_PATTERNS.providers);
+  if (filters.skipHocs) patternsToCheck.push(...PATH_FILTER_PATTERNS.hocs);
+  if (filters.skipContainers) patternsToCheck.push(...PATH_FILTER_PATTERNS.containers);
+  if (filters.skipUtilities) patternsToCheck.push(...PATH_FILTER_PATTERNS.utilities);
+  if (filters.skipBoundaries) patternsToCheck.push(...PATH_FILTER_PATTERNS.boundaries);
+  return !patternsToCheck.some((pattern) => pattern.test(name));
+};
+
+const minifiedPatterns = [
+  /^[a-z]$/,
+  /^[a-z][0-9]$/,
+  /^_+$/,
+  /^[A-Za-z][_$]$/,
+  /^[a-z]{1,2}$/,
+];
+
+const isMinified = (name: string): boolean => {
+  for (let i = 0; i < minifiedPatterns.length; i++) {
+    if (minifiedPatterns[i].test(name)) return true;
+  }
+  const hasNoVowels = !/[aeiou]/i.test(name);
+  const hasMostlyNumbers = (name.match(/\d/g)?.length ?? 0) > name.length / 2;
+  const isSingleWordLowerCase = /^[a-z]+$/.test(name);
+  const hasRandomLookingChars = /[$_]{2,}/.test(name);
+  return (
+    Number(hasNoVowels) +
+      Number(hasMostlyNumbers) +
+      Number(isSingleWordLowerCase) +
+      Number(hasRandomLookingChars) >=
+    2
+  );
+};
+
+interface FiberType {
+  displayName?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+const getCleanComponentName = (component: FiberType): string => {
+  const name = getDisplayName(component);
+  if (!name) return '';
+  return name.replace(
+    /^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/,
+    '$<inner>',
+  );
+};
+
+const getInteractionPath = (
+  initialFiber: Fiber | null,
+  filters: PathFilters = DEFAULT_PATH_FILTERS,
+): Array<string> => {
+  if (!initialFiber) return [];
+
+  const currentName = getDisplayName(initialFiber.type);
+  if (!currentName) return [];
+
+  const stack = new Array<string>();
+  let fiber = initialFiber;
+  while (fiber.return) {
+    const name = getCleanComponentName(fiber.type);
+    if (name && !isMinified(name) && shouldIncludeInPath(name, filters) && name.toLowerCase() !== name) {
+      stack.push(name);
+    }
+    fiber = fiber.return;
+  }
+  const fullPath = new Array<string>(stack.length);
+  for (let i = 0; i < stack.length; i++) {
+    fullPath[i] = stack[stack.length - i - 1];
+  }
+  return fullPath;
+};
 
 const getFirstNameFromAncestor = (
   fiber: Fiber,
@@ -176,15 +287,6 @@ type CurrentInteraction = {
 };
 
 export let currentInteractions: Array<CurrentInteraction> = [];
-export const fastHash = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return hash.toString(36);
-};
 const getInteractionType = (
   eventName: string,
 ): 'pointer' | 'keyboard' | null => {
@@ -199,17 +301,6 @@ const getInteractionType = (
   }
   return null;
 };
-// biome-ignore lint/suspicious/noExplicitAny: shut up biome
-export const getInteractionId = (interaction: any) => {
-  return `${interaction.performanceEntry.type}::${normalizePath(interaction.componentPath)}::${interaction.url}`;
-};
-export function normalizePath(path: string[]): string {
-  const cleaned = path.filter(Boolean);
-
-  const deduped = cleaned.filter((name, i) => name !== cleaned[i - 1]);
-
-  return deduped.join('.');
-}
 let onEntryAnimationId: number | null = null;
 const setupPerformanceListener = (
   onEntry: (interaction: PerformanceInteraction) => void,
@@ -299,7 +390,7 @@ const setupPerformanceListener = (
       if (!onEntryAnimationId) {
         onEntryAnimationId = requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            // biome-ignore lint/style/noNonNullAssertion: invariant
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             onEntry(interactionMap.get(interaction.id)!);
             onEntryAnimationId = null;
           });
@@ -598,7 +689,7 @@ export const setupDetailedPointerTimingListener = (
     };
 
     const event = getEvent({ phase: 'end', target: e.target as Element });
-    // biome-ignore lint/suspicious/noExplicitAny: shut up biome
+    // oxlint-disable-next-line typescript/no-explicit-any
     document.addEventListener(event, onLastJS as any, {
       once: true,
     });
@@ -608,14 +699,14 @@ export const setupDetailedPointerTimingListener = (
     // it causes the event handler to stay alive until a future interaction, which can break timing (looks super long)
     // or invariants (the start metadata was removed, so now its an end metadata with no start)
     requestAnimationFrame(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: shut up biome
+      // oxlint-disable-next-line typescript/no-explicit-any
       document.removeEventListener(event as any, onLastJS as any);
     });
   };
 
   document.addEventListener(
     getEvent({ phase: 'start' }),
-    // biome-ignore lint/suspicious/noExplicitAny: shut up biome
+    // oxlint-disable-next-line typescript/no-explicit-any
     onInteractionStart as any,
     {
       capture: true,
@@ -799,53 +890,22 @@ export const setupDetailedPointerTimingListener = (
   };
 
   if (kind === 'keyboard') {
-    // biome-ignore lint/suspicious/noExplicitAny: shut up biome
+    // oxlint-disable-next-line typescript/no-explicit-any
     document.addEventListener('keypress', onKeyPress as any);
   }
 
   return () => {
     document.removeEventListener(
       getEvent({ phase: 'start' }),
-      // biome-ignore lint/suspicious/noExplicitAny: shut up biome
+      // oxlint-disable-next-line typescript/no-explicit-any
       onInteractionStart as any,
       {
         capture: true,
       },
     );
-    // biome-ignore lint/suspicious/noExplicitAny: shut up biome
+    // oxlint-disable-next-line typescript/no-explicit-any
     document.removeEventListener('keypress', onKeyPress as any);
   };
-};
-
-// unused, but will be soon for monitoring
-export const collectFiberSubtree = (
-  fiber: Fiber,
-  limit: number,
-): Record<
-  string,
-  {
-    children: Array<string>;
-    firstNamedAncestor: string;
-    isRoot: boolean;
-    isSvg: boolean;
-  }
-> => {
-  const adjacencyList = createChildrenAdjacencyList(fiber, limit).entries();
-  const fiberToNames = Array.from(adjacencyList).map(
-    ([fiber, { children, parent, isRoot, isSVG }]) => [
-      getDisplayName(fiber.type) ?? 'N/A',
-      {
-        children: children.map((fiber) => getDisplayName(fiber.type) ?? 'N/A'),
-        firstNamedAncestor: parent
-          ? (getFirstNameFromAncestor(parent) ?? 'No Parent')
-          : 'No Parent',
-        isRoot,
-        isSVG,
-      },
-    ],
-  );
-
-  return Object.fromEntries(fiberToNames);
 };
 
 const getHostFromFiber = (fiber: Fiber) => {

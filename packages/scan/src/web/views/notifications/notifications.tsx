@@ -1,6 +1,6 @@
 import { forwardRef } from 'preact/compat';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { not_globally_unique_generateId } from '~core/monitor/utils';
+import { not_globally_unique_generateId } from '~core/utils';
 import { useToolbarEventLog } from '~core/notifications/event-tracking';
 import { FiberRenders } from '~core/notifications/performance';
 import { iife, invariantError } from '~core/notifications/performance-utils';
@@ -192,7 +192,7 @@ export const NotificationAudio = () => {
     (event) => getEventSeverity(event) === 'high',
   ).length;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // todo: sync with options
     const audioEnabledString = localStorage.getItem(
@@ -223,7 +223,7 @@ export const NotificationAudio = () => {
     }
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const { audioNotificationsOptions } = notificationState;
     if (!audioNotificationsOptions.enabled) {

@@ -24,7 +24,7 @@ const tarFilePath = path.join(__dirname, '..', tarFileName);
 // Copy to clipboard
 execSync(`echo "${tarFilePath}" | pbcopy`);
 
-// biome-ignore lint/suspicious/noConsole: Intended debug output
+// oxlint-disable-next-line no-console
 console.log(`Bumped version to ${newVersion}`);
-// biome-ignore lint/suspicious/noConsole: Intended debug output
+// oxlint-disable-next-line no-console
 console.log(`Tar file path copied to clipboard: ${tarFilePath}`);

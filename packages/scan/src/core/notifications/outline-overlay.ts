@@ -1,18 +1,12 @@
 import { signal } from '@preact/signals';
 import { iife } from './performance-utils';
 
-export interface HeatmapOverlay {
-  boundingRect: DOMRect;
-  ms: number;
-  name: string;
-}
-
 export let highlightCanvas: HTMLCanvasElement | null = null;
 export let highlightCtx: CanvasRenderingContext2D | null = null;
 
 let animationFrame: number | null = null;
 
-export type TransitionHighlightState = {
+type TransitionHighlightState = {
   kind: 'transition';
   transitionTo: {
     name: string;
@@ -49,14 +43,25 @@ export const HighlightStore = signal<HighlightState>({
 });
 
 let currFrame: ReturnType<typeof requestAnimationFrame> | null = null;
+let lastFrameTime = 0;
+const FADE_SPEED = 1.8;
+const MAX_DELTA = 0.05;
+const DEFAULT_DELTA = 1 / 60;
+
 export const drawHighlights = () => {
   if (currFrame) {
     cancelAnimationFrame(currFrame);
   }
-  currFrame = requestAnimationFrame(() => {
+  currFrame = requestAnimationFrame((timestamp) => {
     if (!highlightCanvas || !highlightCtx) {
       return;
     }
+
+    const dt = lastFrameTime
+      ? Math.min((timestamp - lastFrameTime) / 1000, MAX_DELTA)
+      : DEFAULT_DELTA;
+    lastFrameTime = timestamp;
+    const step = FADE_SPEED * dt;
 
     highlightCtx.clearRect(0, 0, highlightCanvas.width, highlightCanvas.height);
 
@@ -114,18 +119,19 @@ export const drawHighlights = () => {
             kind: 'idle',
             current: null,
           };
+          lastFrameTime = 0;
           return;
         }
         if (state.current.alpha <= 0.01) {
           state.current.alpha = 0;
         }
-        state.current.alpha = Math.max(0, state.current.alpha - 0.03);
+        state.current.alpha = Math.max(0, state.current.alpha - step);
         drawHighlights();
         return;
       }
       case 'transition': {
         if (state.current && state.current.alpha > 0) {
-          state.current.alpha = Math.max(0, state.current.alpha - 0.03);
+          state.current.alpha = Math.max(0, state.current.alpha - step);
           drawHighlights();
           return;
         }
@@ -136,16 +142,17 @@ export const drawHighlights = () => {
             kind: 'idle',
             current: state.transitionTo,
           };
+          lastFrameTime = 0;
           return;
         }
 
-        // intentionally linear
-        state.transitionTo.alpha = Math.min(state.transitionTo.alpha + 0.03, 1);
+        state.transitionTo.alpha = Math.min(state.transitionTo.alpha + step, 1);
 
         drawHighlights();
       }
       case 'idle': {
         // no-op
+        lastFrameTime = 0;
         return;
       }
     }

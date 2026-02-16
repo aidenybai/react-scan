@@ -42,12 +42,12 @@ export type AggregatedChanges = {
 };
 
 export type AllAggregatedChanges = {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // oxlint-disable-next-line typescript/no-explicit-any
   propsChanges: Map<any, AggregatedChanges>;
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // oxlint-disable-next-line typescript/no-explicit-any
   stateChanges: Map<any, AggregatedChanges>;
   contextChanges: Map<
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    // oxlint-disable-next-line typescript/no-explicit-any
     any,
     | { changes: AggregatedChanges; kind: 'initialized' }
     | {
@@ -79,7 +79,7 @@ const getContextChangesValue = (
 };
 const processChanges = (
   changes: Array<{ name: string; value: unknown; prevValue?: unknown }>,
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // oxlint-disable-next-line typescript/no-explicit-any
   targetMap: Map<any, AggregatedChanges>,
 ) => {
   for (const change of changes) {
@@ -374,7 +374,7 @@ export const useInspectedFiberChangeStore = (opts?: {
       : null;
   const fiberId = fiber ? getFiberId(fiber) : null;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const interval = setInterval(() => {
       // optimization to avoid unconditional renders
@@ -433,7 +433,7 @@ export const useInspectedFiberChangeStore = (opts?: {
   }, [fiberId]);
 
   // cleanup
-  // biome-ignore lint/correctness/useExhaustiveDependencies: component should really remount when fiber changes, but instead we just re-run effects (should fix)
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     return () => {
       setAggregatedChanges({

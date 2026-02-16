@@ -46,14 +46,14 @@ function getWorkspacePackages() {
           packages[pkg.name] = pkg.version;
         }
       } catch (err) {
-        // biome-ignore lint/suspicious/noConsole: Intended debug output
+        // oxlint-disable-next-line no-console
         console.error(`Error reading ${dir.name}/package.json:`, err);
       }
     }
 
     return packages;
   } catch (err) {
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.error('Error reading packages directory:', err);
     process.exit(1);
   }
@@ -97,7 +97,7 @@ const message = pkgInfo.versions
       .join('\n')}`
   : `${styles.text(MESSAGES.package.text)}\n\n${styles.dim(pkgInfo.name.padEnd(pEnd))}${styles.version(`v${pkgInfo.version}`)}`;
 
-// biome-ignore lint/suspicious/noConsole: Intended debug output
+// oxlint-disable-next-line no-console
 console.log(
   boxen(message, {
     padding: 1,

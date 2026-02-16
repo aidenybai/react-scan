@@ -32,7 +32,7 @@ export const Slider = ({
   }, [min, max]);
 
   /**
-   * biome-ignore lint/correctness/useExhaustiveDependencies:
+   * oxlint-disable-next-line react-hooks/exhaustive-deps
    * we rely on min, max and value to update the thumb position
    */
   useEffect(() => {

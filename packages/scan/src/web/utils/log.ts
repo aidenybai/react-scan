@@ -68,16 +68,16 @@ export const log = (renders: Array<Render>) => {
     logMap.set(labelText, changeLog);
   }
   for (const [name, changeLog] of Array.from(logMap.entries())) {
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.group(
       `%c${name}`,
       'background: hsla(0,0%,70%,.3); border-radius:3px; padding: 0 2px;',
     );
     for (const { type, prev, next, unstable } of changeLog) {
-      // biome-ignore lint/suspicious/noConsole: Intended debug output
+      // oxlint-disable-next-line no-console
       console.log(`${type}:`, unstable ? '⚠️' : '', prev, '!==', next);
     }
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.groupEnd();
   }
 };
@@ -87,14 +87,10 @@ export const logIntro = () => {
     window.hideIntro = undefined;
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: Intended debug output
+  // oxlint-disable-next-line no-console
   console.log(
     '%c[·] %cReact Scan',
     'font-weight:bold;color:#7a68e8;font-size:20px;',
     'font-weight:bold;font-size:14px;',
-  );
-  // biome-ignore lint/suspicious/noConsole: Intended debug output
-  console.log(
-    'Try React Scan Monitoring to target performance issues in production: https://react-scan.com/monitoring',
   );
 };

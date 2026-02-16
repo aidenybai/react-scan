@@ -20,7 +20,7 @@ export default defineConfig(({ mode }): UserConfig => {
 
   // Validate Brave binary
   if (env.NODE_ENV === 'development' && isBrave && !env.BRAVE_BINARY) {
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.error(`
     ⚛️  React Scan
     ==============

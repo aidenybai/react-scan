@@ -24,55 +24,22 @@
     "url": "https://million.dev"
   },
   "scripts": {
-    "dev:kitchen": "node dist/cli.js http://localhost:5173",
     "build": "npm run build:css && NODE_ENV=production tsup",
-    "postbuild": "pnpm copy-astro && node ../../scripts/version-warning.mjs",
+    "postbuild": "node ../../scripts/version-warning.mjs",
     "build:copy": "npm run build:css && NODE_ENV=production tsup && cat dist/auto.global.js | pbcopy",
-    "copy-astro": "cp -R src/core/monitor/params/astro dist/core/monitor/params",
     "dev:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css --watch",
     "dev:tsup": "NODE_ENV=development tsup --watch",
-    "dev": "pnpm copy-astro && pnpm run --parallel \"/^dev:(css|tsup)/\"",
+    "dev": "pnpm run --parallel \"/^dev:(css|tsup)/\"",
     "build:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css",
     "pack": "npm version patch && pnpm build && npm pack",
     "pack:bump": "bun scripts/bump-version.js && nr pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
-    "prettier": "prettier --config .prettierrc.mjs -w src",
     "publint": "publint",
     "test": "vitest",
-    "lint": "biome lint src && pnpm typecheck",
-    "format": "biome format . --write",
-    "check": "biome check . --write",
+    "lint": "oxlint src && pnpm typecheck",
     "typecheck": "tsc --noEmit"
   },
   "exports": {
     "./package.json": "./package.json",
-    "./monitoring": {
-      "types": "./dist/core/monitor/index.d.ts",
-      "import": "./dist/core/monitor/index.mjs",
-      "require": "./dist/core/monitor/index.js"
-    },
-    "./monitoring/next": {
-      "types": "./dist/core/monitor/params/next.d.ts",
-      "import": "./dist/core/monitor/params/next.mjs",
-      "require": "./dist/core/monitor/params/next.js"
-    },
-    "./monitoring/react-router-legacy": {
-      "types": "./dist/core/monitor/params/react-router-v5.d.ts",
-      "import": "./dist/core/monitor/params/react-router-v5.mjs",
-      "require": "./dist/core/monitor/params/react-router-v5.js"
-    },
-    "./monitoring/react-router": {
-      "types": "./dist/core/monitor/params/react-router-v6.d.ts",
-      "import": "./dist/core/monitor/params/react-router-v6.mjs",
-      "require": "./dist/core/monitor/params/react-router-v6.js"
-    },
-    "./monitoring/remix": {
-      "types": "./dist/core/monitor/params/remix.d.ts",
-      "import": "./dist/core/monitor/params/remix.mjs",
-      "require": "./dist/core/monitor/params/remix.js"
-    },
-    "./monitoring/astro": {
-      "import": "./dist/core/monitor/params/astro/index.ts"
-    },
     ".": {
       "production": {
         "import": {
@@ -197,24 +164,6 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "monitoring": [
-        "./dist/core/monitor/index.d.ts"
-      ],
-      "monitoring/next": [
-        "./dist/core/monitor/params/next.d.ts"
-      ],
-      "monitoring/react-router-legacy": [
-        "./dist/core/monitor/params/react-router-v5.d.ts"
-      ],
-      "monitoring/react-router": [
-        "./dist/core/monitor/params/react-router-v6.d.ts"
-      ],
-      "monitoring/remix": [
-        "./dist/core/monitor/params/remix.d.ts"
-      ],
-      "monitoring/astro": [
-        "./dist/core/monitor/params/astro/index.ts"
-      ],
       "react-component-name/vite": [
         "./dist/react-component-name/vite.d.ts"
       ],
@@ -254,21 +203,20 @@
     "@babel/core": "^7.26.0",
     "@babel/generator": "^7.26.2",
     "@babel/types": "^7.26.0",
-    "@clack/core": "^0.3.5",
-    "@clack/prompts": "^0.8.2",
     "@preact/signals": "^1.3.1",
     "@rollup/pluginutils": "^5.1.3",
     "@types/node": "^20.17.9",
     "bippy": "^0.3.33",
+    "commander": "^14.0.0",
     "esbuild": "^0.25.0",
     "estree-walker": "^3.0.3",
-    "kleur": "^4.1.5",
-    "mri": "^1.2.0",
-    "playwright": "^1.49.0",
-    "preact": "^10.25.1"
+    "picocolors": "^1.1.1",
+    "preact": "^10.25.1",
+    "prompts": "^2.4.2"
   },
   "devDependencies": {
     "@esbuild-plugins/tsconfig-paths": "^0.1.2",
+    "@types/prompts": "^2.4.9",
     "@remix-run/react": "*",
     "@types/babel__core": "^7.20.5",
     "@types/react": "^18.0.0",
@@ -277,7 +225,6 @@
     "es-module-lexer": "^1.5.4",
     "next": "*",
     "postcss-cli": "^11.0.0",
-    "prettier": "^3.3.3",
     "publint": "^0.2.12",
     "react": "*",
     "react-dom": "*",
@@ -289,26 +236,8 @@
     "vitest": "^3.0.0"
   },
   "peerDependencies": {
-    "@remix-run/react": ">=1.0.0",
-    "next": ">=13.0.0",
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
-    "react-router": "^5.0.0 || ^6.0.0 || ^7.0.0",
-    "react-router-dom": "^5.0.0 || ^6.0.0 || ^7.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@remix-run/react": {
-      "optional": true
-    },
-    "next": {
-      "optional": true
-    },
-    "react-router": {
-      "optional": true
-    },
-    "react-router-dom": {
-      "optional": true
-    }
+    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "optionalDependencies": {
     "unplugin": "2.1.0"

@@ -40,7 +40,7 @@ export const useDelayedValue = (
   const [delayedValue, setDelayedValue] = useState(value);
 
   /*
-   * biome-ignore lint/correctness/useExhaustiveDependencies:
+   * oxlint-disable-next-line react-hooks/exhaustive-deps
    * delayedValue is intentionally omitted to prevent unnecessary timeouts
    * and used only in the early return check
    */
