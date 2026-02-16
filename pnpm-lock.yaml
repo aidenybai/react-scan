@@ -14,7 +14,7 @@ importers:
     dependencies:
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.2.0(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        version: 1.2.0(next@15.2.6(@playwright/test@1.58.2)(react@19.0.0))(react@19.0.0)
     devDependencies:
       '@changesets/cli':
         specifier: ^2.27.12
@@ -51,7 +51,7 @@ importers:
         version: 5.8.3
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
+        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34))
 
   kitchen-sink:
     dependencies:
@@ -140,7 +140,7 @@ importers:
         version: 4.4.4(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
+        version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34))
       webextension-polyfill:
         specifier: ^0.12.0
         version: 0.12.0
@@ -267,7 +267,7 @@ importers:
         specifier: ^1.0.0
         version: 1.1.0
       react-scan:
-        specifier: '>=0.1.0'
+        specifier: '>=0.5.0'
         version: link:../scan
     devDependencies:
       '@types/babel__core':
@@ -293,7 +293,7 @@ importers:
         version: 1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       '@vercel/speed-insights':
         specifier: ^1.1.0
-        version: 1.2.0(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        version: 1.2.0(next@15.2.6(@playwright/test@1.58.2)(react@19.0.0))(react@19.0.0)
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -4689,7 +4689,7 @@ snapshots:
       next: 15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
-  '@vercel/speed-insights@1.2.0(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)':
+  '@vercel/speed-insights@1.2.0(next@15.2.6(@playwright/test@1.58.2)(react@19.0.0))(react@19.0.0)':
     optionalDependencies:
       next: 15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
@@ -6879,7 +6879,7 @@ snapshots:
       - tsx
       - utf-8-validate
 
-  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)):
+  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)):
     dependencies:
       debug: 4.4.1
       globrex: 0.1.2

@@ -21,7 +21,7 @@ npx -y react-scan@latest init
 
 ## Install
 
-The `init` command will automatically detect your framework and set up React Scan for you.
+The `init` command will automatically detect your framework, install `react-scan` via npm, and set up your project.
 
 ```bash
 npx -y react-scan@latest init
@@ -29,30 +29,122 @@ npx -y react-scan@latest init
 
 ### Manual Installation
 
-#### Package managers
+Install the package:
 
 ```bash
-npm i -D react-scan
+npm install -D react-scan
 ```
 
-#### Script tag
+Then add the script tag to your app. Pick the guide for your framework:
+
+#### Script Tag
+
+Paste this before any scripts in your `index.html`:
 
 ```html
-<script src="https://unpkg.com/react-scan/dist/auto.global.js" crossorigin="anonymous"></script>
+<!-- paste this BEFORE any scripts -->
+<script
+  crossOrigin="anonymous"
+  src="//unpkg.com/react-scan/dist/auto.global.js"
+></script>
 ```
 
-#### Framework guides
+#### Next.js (App Router)
 
-- [Script Tag](https://github.com/aidenybai/react-scan/blob/main/docs/installation/cdn.md)
-- [NextJS App Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-app-router.md)
-- [NextJS Page Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/next-js-page-router.md)
-- [Vite](https://github.com/aidenybai/react-scan/blob/main/docs/installation/vite.md)
-- [Create React App](https://github.com/aidenybai/react-scan/blob/main/docs/installation/create-react-app.md)
-- [Remix](https://github.com/aidenybai/react-scan/blob/main/docs/installation/remix.md)
-- [React Router](https://github.com/aidenybai/react-scan/blob/main/docs/installation/react-router.md)
-- [Astro](https://github.com/aidenybai/react-scan/blob/main/docs/installation/astro.md)
-- [TanStack Start](https://github.com/aidenybai/react-scan/blob/main/docs/installation/tanstack-start.md)
-- [Rsbuild](https://github.com/aidenybai/react-scan/blob/main/docs/installation/rsbuild.md)
+Add this inside of your `app/layout.tsx`:
+
+```tsx
+import Script from "next/script";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <head>
+        <Script
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+#### Next.js (Pages Router)
+
+Add this into your `pages/_document.tsx`:
+
+```tsx
+import { Html, Head, Main, NextScript } from "next/document";
+import Script from "next/script";
+
+export default function Document() {
+  return (
+    <Html lang="en">
+      <Head>
+        <Script
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
+      </Head>
+      <body>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  );
+}
+```
+
+#### Vite
+
+Example `index.html` with React Scan enabled:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <script
+      crossOrigin="anonymous"
+      src="//unpkg.com/react-scan/dist/auto.global.js"
+    ></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+#### Remix
+
+Add this inside your `app/root.tsx`:
+
+```tsx
+import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <Meta />
+        <script
+          crossOrigin="anonymous"
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+        />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+```
 
 ### Browser Extension
 

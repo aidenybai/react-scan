@@ -136,16 +136,13 @@ program
         process.exit(1);
       }
 
-      if (result.noChanges) {
-        console.log(pc.green('  React Scan is already set up in your project.\n'));
-        process.exit(0);
-      }
+      const hasCodeChanges = !result.noChanges && result.originalContent && result.newContent;
 
-      if (result.originalContent && result.newContent) {
+      if (hasCodeChanges) {
         printDiff(
           relative(cwd, result.filePath),
-          result.originalContent,
-          result.newContent,
+          result.originalContent!,
+          result.newContent!,
         );
 
         console.log();
@@ -173,9 +170,14 @@ program
         console.log();
       }
 
-      if (result.newContent) {
-        writeFileSync(result.filePath, result.newContent, 'utf-8');
+      if (hasCodeChanges) {
+        writeFileSync(result.filePath, result.newContent!, 'utf-8');
         console.log(pc.green(`  Updated ${relative(cwd, result.filePath)}`));
+      }
+
+      if (!hasCodeChanges && project.hasReactScan) {
+        console.log(pc.green('  React Scan is already set up in your project.\n'));
+        process.exit(0);
       }
 
       console.log();
