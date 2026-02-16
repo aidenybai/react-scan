@@ -20,7 +20,7 @@ const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
       }
     }
   } catch (err) {
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.error('Error:', err);
   }
 };
@@ -117,12 +117,6 @@ export default defineConfig([
       './src/index.ts',
       './src/install-hook.ts',
       './src/core/all-environments.ts',
-      './src/core/monitor/index.ts',
-      './src/core/monitor/params/next.ts',
-      './src/core/monitor/params/react-router-v5.ts',
-      './src/core/monitor/params/react-router-v6.ts',
-      './src/core/monitor/params/remix.ts',
-      './src/core/monitor/params/astro/component.ts',
     ],
     banner: {
       js: banner,
@@ -140,11 +134,7 @@ export default defineConfig([
     dts: true,
     watch: process.env.NODE_ENV === 'development',
     async onSuccess() {
-      await Promise.all([
-        addDirectivesToChunkFiles(DIST_PATH),
-        addDirectivesToChunkFiles(`${DIST_PATH}/core/monitor/params`),
-        addDirectivesToChunkFiles(`${DIST_PATH}/core/monitor`),
-      ]);
+      await addDirectivesToChunkFiles(DIST_PATH);
     },
     minify: false,
     env: {

@@ -11,7 +11,6 @@ import {
 import { type PropsChange, ReactScanInternals } from '~core/index';
 import { ChangeReason } from '~core/instrumentation';
 import { isEqual } from '~core/utils';
-import { batchGetBoundingRects } from '~web/utils/outline';
 import { globalInspectorState } from '.';
 import type { ExtendedReactRenderer } from '../../../types';
 import { TIMELINE_MAX_UPDATES } from './states';
@@ -198,8 +197,13 @@ export const getAssociatedFiberRect = async (element: Element) => {
   const stateNode = getFirstStateNode(associatedFiber);
   if (!stateNode) return null;
 
-  const rect = (await batchGetBoundingRects([stateNode])).get(stateNode);
-  if (!rect) return null;
+  const rect = await new Promise<DOMRect | null>((resolve) => {
+    const observer = new IntersectionObserver((entries) => {
+      observer.disconnect();
+      resolve(entries[0]?.boundingClientRect ?? null);
+    });
+    observer.observe(stateNode);
+  });
   return rect;
 };
 
@@ -1513,13 +1517,11 @@ export const safeGetValue = (
   if (typeof value === 'function') return { value };
   if (typeof value !== 'object') return { value };
 
-  if (value instanceof Promise) {
-    // Handle promises without accessing them
+  if (isPromise(value)) {
     return { value: 'Promise' };
   }
 
   try {
-    // Handle potential proxy traps or getter errors
     const proto = Object.getPrototypeOf(value);
     if (proto === Promise.prototype || proto?.constructor?.name === 'Promise') {
       return { value: 'Promise' };

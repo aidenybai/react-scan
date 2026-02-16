@@ -40,7 +40,7 @@ export const transform = async (
 
     return null;
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: Intended debug output
+    // oxlint-disable-next-line no-console
     console.error('Error processing file:', id, error);
     return null;
   }

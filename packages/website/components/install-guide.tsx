@@ -1,111 +1,92 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Image from "next/image";
-import hljs from 'highlight.js';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import hljs from 'highlight.js/lib/core';
+import xml from 'highlight.js/lib/languages/xml';
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import bash from 'highlight.js/lib/languages/bash';
 import 'highlight.js/styles/github-dark.css';
 
-const ClipboardIcon = ({ className }: { className: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-    />
-  </svg>
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('bash', bash);
+
+const COPY_FEEDBACK_DURATION_MS = 2000;
+
+const InlineCode = ({ children }: { children: React.ReactNode }) => (
+  <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs text-white/70">
+    {children}
+  </code>
 );
 
-const CheckIcon = ({ className }: { className: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M5 13l4 4L19 7"
-    />
-  </svg>
-);
+interface InstallTab {
+  id: string;
+  label: string;
+  description: React.ReactNode;
+  lang: string;
+  code: string;
+}
 
-const Tabs = ['script', 'nextjs-app', 'nextjs-pages', 'vite', 'remix'] as const;
-type Tab = (typeof Tabs)[number];
-
-export default function InstallGuide() {
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('script');
-  const [height, setHeight] = useState('auto');
-  const contentRef = React.useRef<HTMLPreElement>(null);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      const newHeight = contentRef.current.scrollHeight;
-      setHeight(`${newHeight}px`);
-    }
-  }, [activeTab]);
-
-  const handleTabChange = (tab: Tab) => {
-    if (contentRef.current) {
-      setHeight(`${contentRef.current.scrollHeight}px`);
-    }
-    setActiveTab(tab);
-  };
-
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(getCodeForTab(activeTab));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getCodeForTab = (tab: Tab) => {
-    switch (tab) {
-      case 'script':
-        return `<!-- paste this BEFORE any scripts -->
+const INSTALL_TABS: InstallTab[] = [
+  {
+    id: 'cli',
+    label: 'CLI',
+    description: '',
+    lang: 'bash',
+    code: `npx -y react-scan@latest init`,
+  },
+  {
+    id: 'script',
+    label: 'Script Tag',
+    description: <>Paste this before any scripts in your <InlineCode>index.html</InlineCode></>,
+    lang: 'xml',
+    code: `<!-- paste this BEFORE any scripts -->
 <script
   crossOrigin="anonymous"
   src="//unpkg.com/react-scan/dist/auto.global.js"
-></script>
-`;
-      case 'nextjs-app':
-        return `export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+></script>`,
+  },
+  {
+    id: 'nextjs-app',
+    label: 'Next.js (App)',
+    description: <>Add this inside of your <InlineCode>app/layout.tsx</InlineCode></>,
+    lang: 'typescript',
+    code: `import Script from "next/script";
+
+export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html>
       <head>
-        <script
-          crossOrigin="anonymous"
+        <Script
           src="//unpkg.com/react-scan/dist/auto.global.js"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
         />
-        {/* rest of your scripts go under */}
       </head>
       <body>{children}</body>
     </html>
-  )
-}`;
-      case 'nextjs-pages':
-        return `import { Html, Head, Main, NextScript } from 'next/document';
+  );
+}`,
+  },
+  {
+    id: 'nextjs-pages',
+    label: 'Next.js (Pages)',
+    description: <>Add this into your <InlineCode>pages/_document.tsx</InlineCode></>,
+    lang: 'typescript',
+    code: `import { Html, Head, Main, NextScript } from "next/document";
+import Script from "next/script";
 
 export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <script
-          crossOrigin="anonymous"
+        <Script
           src="//unpkg.com/react-scan/dist/auto.global.js"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
         />
-        {/* rest of your scripts go under */}
       </Head>
       <body>
         <Main />
@@ -113,32 +94,38 @@ export default function Document() {
       </body>
     </Html>
   );
-}`;
-      case 'vite':
-        return `<!doctype html>
+}`,
+  },
+  {
+    id: 'vite',
+    label: 'Vite',
+    description: <>Example <InlineCode>index.html</InlineCode> with React Scan enabled</>,
+    lang: 'xml',
+    code: `<!doctype html>
 <html lang="en">
   <head>
     <script
       crossOrigin="anonymous"
       src="//unpkg.com/react-scan/dist/auto.global.js"
-    />
-    <!-- rest of your scripts go under -->
+    ></script>
   </head>
   <body>
-    <!-- ... -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
-</html>`;
-      case 'remix':
-        return `import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+</html>`,
+  },
+  {
+    id: 'remix',
+    label: 'Remix',
+    description: <>Add this inside your <InlineCode>app/root.tsx</InlineCode></>,
+    lang: 'typescript',
+    code: `import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
 export default function App() {
   return (
     <html>
       <head>
-        <link
-          rel="icon"
-          href="data:image/x-icon;base64,AA"
-        />
         <Meta />
         <script
           crossOrigin="anonymous"
@@ -152,111 +139,160 @@ export default function App() {
       </body>
     </html>
   );
-}
-`;
+}`,
+  },
+];
+
+const CopyIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+export default function InstallGuide() {
+  const [activeTabId, setActiveTabId] = useState(INSTALL_TABS[0].id);
+  const [didCopy, setDidCopy] = useState(false);
+  const [height, setHeight] = useState('auto');
+  const contentRef = useRef<HTMLPreElement>(null);
+
+  const activeTab =
+    INSTALL_TABS.find((tab) => tab.id === activeTabId) ?? INSTALL_TABS[0];
+
+  const highlightedCode = hljs.highlight(activeTab.code, {
+    language: activeTab.lang,
+  }).value;
+
+  const syncHeight = useCallback(() => {
+    if (contentRef.current) {
+      setHeight(`${contentRef.current.scrollHeight}px`);
     }
+  }, []);
+
+  useEffect(syncHeight, [activeTabId, syncHeight]);
+
+  const handleTabChange = (tabId: string) => {
+    syncHeight();
+    setActiveTabId(tabId);
   };
 
-  const highlightedCode = hljs.highlight(getCodeForTab(activeTab), { language: 'javascript' }).value;
+  const handleCopy = () => {
+    navigator.clipboard
+      .writeText(activeTab.code)
+      .then(() => {
+        setDidCopy(true);
+        setTimeout(() => setDidCopy(false), COPY_FEEDBACK_DURATION_MS);
+      })
+      .catch(() => {});
+  };
+
+  const headingText =
+    activeTabId === 'cli'
+      ? 'Run this command to get started:'
+      : 'It takes 1 script tag to get started:';
 
   return (
-    <div className="mt-4">
-      {/* Window frame */}
-      <div className="overflow-hidden rounded-md border border-[#373737] bg-[#1e1e1e]">
-        {/* Window title bar */}
-        <div className="flex items-center justify-between border-b border-[#333] bg-[#1e1e1e] px-4 py-2">
-          <div className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-[#ff5f57]/60"></span>
-            <span className="size-2.5 rounded-full bg-[#febc2e]/60"></span>
-            <span className="size-2.5 rounded-full bg-[#28c840]/60"></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="react-scan-logo" width={16} height={16} />
-            <span className="text-[#858585] text-sm">React Scan</span>
-          </div>
-        </div>
-
-        <div>
-          <div className="flex bg-[#252526]">
-            {Tabs.map((tab) => (
+    <div>
+      <span className="hidden sm:inline text-white">
+        {headingText}
+        {activeTabId === 'cli' && (
+          <button
+            type="button"
+            onClick={() => handleTabChange('script')}
+            className="ml-3 text-xs italic text-white/40 hover:text-white/60 hover:underline transition-colors sm:text-sm"
+          >
+            Prefer manual install?
+          </button>
+        )}
+      </span>
+      <div className="mt-4 overflow-hidden rounded-lg border border-white/10 bg-white/5 text-white shadow-[0_8px_30px_rgb(0,0,0,0.3)]">
+        <div className="flex items-center gap-4 overflow-x-auto border-b border-white/10 px-4 pt-2">
+          {INSTALL_TABS.map((tab) => {
+            const isActive = tab.id === activeTab.id;
+            return (
               <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className={`relative px-4 py-2 text-[15px] transition-colors ${activeTab === tab
-                  ? 'bg-[#1e1e1e] text-white before:absolute before:left-0 before:top-0 before:h-[1px] before:w-full before:bg-[#7a68e7]'
-                  : 'text-[#969696] hover:text-white'
-                  }`}
+                key={tab.id}
+                type="button"
+                className={`shrink-0 whitespace-nowrap border-b pb-2 font-sans text-sm transition-colors sm:text-base ${
+                  isActive
+                    ? 'border-white text-white'
+                    : 'border-transparent text-white/60 hover:text-white'
+                }`}
+                onClick={() => handleTabChange(tab.id)}
               >
-                {tab === 'script' ? 'Script Tag' :
-                  tab === 'nextjs-app' ? 'Next.js (App)' :
-                    tab === 'nextjs-pages' ? 'Next.js (Pages)' :
-                      tab === 'vite' ? 'Vite' :
-                        tab === 'remix' ? 'Remix' :
-                          ''}
+                {tab.label}
               </button>
-            ))}
-          </div>
-
-          <div className="grid grid-rows-[auto_1fr_auto] bg-[#1e1e1e]">
-            <div className="flex items-center gap-2 shadow-xl px-3 py-1.5">
-              <span className="text-xs text-neutral-300/50">
-                {activeTab === 'script' ? 'index.html' :
-                  activeTab === 'nextjs-app' ? 'app/layout.tsx' :
-                    activeTab === 'nextjs-pages' ? 'pages/_document.tsx' :
-                      activeTab === 'vite' ? 'index.html' :
-                        activeTab === 'remix' ? 'app/root.tsx' :
-                          ''}
-              </span>
-            </div>
-
-            <div
-              className="overflow-hidden transition-[height] duration-150 ease-in-out"
-              style={{ height }}
+            );
+          })}
+        </div>
+        <div className="relative bg-black/60">
+          {activeTabId === 'cli' ? (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="group flex w-full items-center justify-between gap-4 px-4 py-6 transition-colors hover:bg-white/5"
             >
+              <pre className="overflow-x-auto font-mono text-base leading-relaxed text-white/80">
+                <code dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+              </pre>
+              <span className="shrink-0 text-white/50 transition-colors group-hover:text-white">
+                {didCopy ? <CheckIcon /> : <CopyIcon />}
+              </span>
+            </button>
+          ) : (
+            <div className="group relative">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="absolute right-4 top-4 z-10 text-white/50 opacity-0 transition-opacity hover:text-white group-hover:opacity-100"
+                aria-label="Copy code"
+              >
+                {didCopy ? <CheckIcon /> : <CopyIcon />}
+              </button>
               <div
-                className="transform transition-all duration-500"
+                className="overflow-hidden transition-[height] duration-200 ease-out"
+                style={{ height }}
               >
                 <pre
                   ref={contentRef}
-                  className="text-neutral-300 group relative whitespace-pre font-mono text-xs py-4 px-3"
+                  className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-white/80"
                 >
-                  <code
-                    className="language-javascript relative flex"
-                    dangerouslySetInnerHTML={{
-                      __html: `
-                        <div class="select-none min-w-8 max-w-8 pr-2.5 inline-block text-right text-[#858585] opacity-50">${highlightedCode.split('\n').map((_, i) => i + 1).join('\n')
-                        }</div>
-                        <div class="flex-1">${highlightedCode}</div>
-                      `
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      void copyToClipboard();
-                    }}
-                    className="absolute right-4 top-4 rounded bg-[#333] p-1.5 opacity-0 transition-opacity hover:bg-[#444] group-hover:opacity-100"
-                  >
-                    {copied ? (
-                      <CheckIcon className="size-4 text-green-500" />
-                    ) : (
-                      <ClipboardIcon className="size-4 text-white" />
-                    )}
-                  </button>
+                  <code dangerouslySetInnerHTML={{ __html: highlightedCode }} />
                 </pre>
               </div>
             </div>
-
-            <div className="border-t border-[#2d2d2d] bg-[#2d2d2d] px-3 py-1.5 text-xs text-[#8b949e]">
-              <a
-                className="hover:text-white"
-                href="https://github.com/aidenybai/react-scan#readme"
-              >
-                → Full installation guide
-              </a>
-            </div>
-          </div>
+          )}
         </div>
       </div>
+      {activeTab.id !== 'cli' && activeTab.description && (
+        <span className="mt-4 block text-sm text-white/50 sm:text-base">
+          {activeTab.description}
+        </span>
+      )}
     </div>
   );
 }

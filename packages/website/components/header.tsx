@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -7,7 +8,6 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -22,35 +22,25 @@ export default function Header() {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isMenuOpen]);
 
   return (
-    <nav className="relative flex items-center justify-between">
-      <Link
-        href="/"
-        className="flex items-center gap-3 text-inherit no-underline"
-      >
-        <Image src="/logo.svg" alt="react-scan-logo" width={30} height={30} />
-        <h3>
-          <strong className="text-xl">React Scan</strong>
-        </h3>
+    <nav className="relative flex items-center justify-between text-base sm:text-lg">
+      <Link href="/" className="flex items-center gap-3 text-inherit no-underline">
+        <Image src="/logo.svg" alt="React Scan" width={30} height={30} />
       </Link>
 
       <button
         ref={buttonRef}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="md:hidden p-2 hover:bg-gray-100 rounded-md"
+        className="md:hidden p-2 hover:bg-white/10 rounded-md text-white/60"
+        aria-label="Toggle menu"
       >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {isMenuOpen ? (
             <path
               strokeLinecap="round"
@@ -69,58 +59,48 @@ export default function Header() {
         </svg>
       </button>
 
-      <div className="hidden md:flex gap-4">
+      <div className="hidden md:flex gap-4 text-sm sm:text-base">
         <Link
           href="https://github.com/aidenybai/react-scan#readme"
-          className="text-neutral-600 underline hover:text-black"
+          className="text-white/50 underline hover:text-white transition-colors"
           target="_blank"
           rel="noopener noreferrer"
         >
-          docs ↗
+          docs
         </Link>
         <Link
           href="https://github.com/aidenybai/react-scan"
-          className="text-neutral-600 underline hover:text-black"
+          className="text-white/50 underline hover:text-white transition-colors"
           target="_blank"
           rel="noopener noreferrer"
         >
-          github ↗
+          github
         </Link>
       </div>
 
       {isMenuOpen && (
         <div
           ref={menuRef}
-          className="absolute right-0 top-[calc(100%+0.5rem)] w-48 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden md:hidden z-[100]"
+          className="absolute right-0 top-[calc(100%+0.5rem)] w-48 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl overflow-hidden md:hidden z-[100]"
         >
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-white/10">
             <Link
               href="https://github.com/aidenybai/react-scan#readme"
-              className="block px-4 py-2 text-neutral-600 hover:bg-gray-100"
+              className="block px-4 py-3 text-white/60 hover:bg-white/5 hover:text-white transition-colors"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setIsMenuOpen(false)}
             >
-              <div className="flex items-center justify-between">
-                <span>docs</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </div>
+              docs
             </Link>
             <Link
               href="https://github.com/aidenybai/react-scan"
-              className="block px-4 py-2 text-neutral-600 hover:bg-gray-100"
+              className="block px-4 py-3 text-white/60 hover:bg-white/5 hover:text-white transition-colors"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setIsMenuOpen(false)}
             >
-              <div className="flex items-center justify-between">
-                <span>github</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </div>
+              github
             </Link>
           </div>
         </div>

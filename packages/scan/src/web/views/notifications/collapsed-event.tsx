@@ -31,7 +31,7 @@ const useNestedFlash = ({
   const flashedFor = useRef(0);
   const lastFlashTime = useRef<number>(0);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (flashedFor.current >= totalEvents) {
       return;

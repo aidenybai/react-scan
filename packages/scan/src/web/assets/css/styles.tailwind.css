@@ -7,7 +7,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  backface-visibility: hidden;
 
   /* WebKit (Chrome, Safari, Edge) specific scrollbar styles */
   &::-webkit-scrollbar {
@@ -46,7 +45,7 @@ button {
   @apply hover:bg-none;
   @apply outline-none;
   @apply border-none;
-  @apply transition-colors ease-linear;
+  @apply transition-colors ease-out;
   @apply cursor-pointer;
 }
 
@@ -54,7 +53,6 @@ input {
   @apply outline-none;
   @apply border-none;
   @apply bg-none bg-transparent;
-  @apply outline-none;
   @apply placeholder:text-neutral-500 placeholder:italic placeholder:text-xs;
   @apply placeholder-shown:truncate;
 }
@@ -105,21 +103,8 @@ svg {
   @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
   @apply place-self-start;
 
-  /* [CURSOR GENERATED] Anti-blur fixes:
-   * We removed will-change-transform and replaced it with these properties
-   * because will-change was causing stacking context issues and inconsistent
-   * text rendering. The new properties work together to force proper
-   * GPU acceleration without z-index side effects:
-   */
-  transform: translate3d(
-    0,
-    0,
-    0
-  ); /* Forces GPU acceleration without causing stacking issues */
-  backface-visibility: hidden; /* Prevents blurry text during transforms */
-  perspective: 1000; /* Creates proper 3D context for crisp text */
-  -webkit-transform-style: preserve-3d; /* Ensures consistent text rendering across browsers */
-  transform-style: preserve-3d;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .button {
@@ -374,16 +359,6 @@ svg {
   }
 }
 
-.react-scan-expandable {
-  @apply grid grid-rows-[0fr];
-  @apply transition-all duration-75;
-
-  &.react-scan-expanded {
-    @apply grid-rows-[1fr];
-    @apply duration-100;
-  }
-}
-
 .react-scan-nested {
   @apply relative;
   @apply overflow-hidden;
@@ -476,7 +451,8 @@ svg {
 .react-scan-inspector-overlay {
   @apply flex flex-col;
   @apply opacity-0;
-  @apply transition-opacity duration-300;
+  @apply transition-opacity duration-200 ease-out;
+  will-change: opacity;
 
   &.fade-out {
     @apply opacity-0;
@@ -504,7 +480,7 @@ svg {
 .count-badge {
   @apply flex gap-x-2 items-center;
   @apply px-1.5 py-0.5;
-  @apply text-[#a855f7] text-xs font-medium tabular-nums rounded-[4px] origin-center;
+  @apply text-[#a855f7] text-xs font-medium tabular-nums rounded-[4px];
   @apply bg-[#a855f7]/10;
   @apply origin-center;
   @apply transition-all duration-300 delay-150;
@@ -526,7 +502,7 @@ svg {
 
   > div {
     @apply px-1.5 py-0.5;
-    @apply text-xs font-medium tabular-nums rounded-[4px] origin-center;
+    @apply text-xs font-medium tabular-nums rounded-[4px];
     @apply origin-center;
     @apply transition-all duration-300 delay-150;
 

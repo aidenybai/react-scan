@@ -1,4 +1,3 @@
-// import { signalNotificationsOpen, signalSettingsOpen } from '~web/state';
 import { cn } from '~web/utils/helpers';
 import {
   NotificationEvent,

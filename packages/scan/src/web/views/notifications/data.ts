@@ -29,7 +29,7 @@ export const getComponentName = (path: Array<string>) => {
   if (filteredPath.length === 0) {
     return path.at(-1) ?? 'Unknown';
   }
-  // biome-ignore lint/style/noNonNullAssertion: invariant
+  // oxlint-disable-next-line typescript/no-non-null-assertion
   return filteredPath.at(-1)!;
 };
 
@@ -219,5 +219,5 @@ export const NotificationStateContext = createContext<{
     route: NotificationsState['route'];
     routeMessage: NotificationsState['routeMessage'] | null;
   }) => void;
-  // biome-ignore lint/style/noNonNullAssertion: we do not use default context values
+  // oxlint-disable-next-line typescript/no-non-null-assertion
 }>(null!);

@@ -23,10 +23,6 @@ import {
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
 import {
-  RENDER_PHASE_STRING_TO_ENUM,
-  type RenderPhase,
-} from '~web/utils/outline';
-import {
   collectContextChanges,
   collectPropsChanges,
   collectStateChanges,
@@ -37,6 +33,38 @@ import {
   ReactScanInternals,
   type StateChange,
 } from './index';
+
+export enum RenderPhase {
+  Mount = 0b001,
+  Update = 0b010,
+  Unmount = 0b100,
+}
+
+export const RENDER_PHASE_STRING_TO_ENUM = {
+  mount: RenderPhase.Mount,
+  update: RenderPhase.Update,
+  unmount: RenderPhase.Unmount,
+} as const;
+
+export interface AggregatedChange {
+  type: number;
+  unstable: boolean;
+}
+
+export interface AggregatedRender {
+  name: string;
+  frame: number | null;
+  phase: number;
+  time: number | null;
+  aggregatedCount: number;
+  forget: boolean;
+  changes: AggregatedChange;
+  unnecessary: boolean | null;
+  didCommit: boolean;
+  fps: number;
+  computedKey: import('./index').OutlineKey | null;
+  computedCurrent: DOMRect | null;
+}
 
 let fps = 0;
 let lastTime = performance.now();
@@ -406,9 +434,9 @@ export interface OldRenderData {
   time: number;
   renders: Array<Render>;
   displayName: string | null;
-  // biome-ignore lint/suspicious/noExplicitAny: temporary type hack cause im lazy
+  // oxlint-disable-next-line typescript/no-explicit-any
   type: any;
-  // biome-ignore lint/suspicious/noExplicitAny: temporary type hack cause im lazy
+  // oxlint-disable-next-line typescript/no-explicit-any
   changes?: any;
 }
 

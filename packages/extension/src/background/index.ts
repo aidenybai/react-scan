@@ -16,7 +16,7 @@ const injectScripts = async (tabId: number) => {
       type: 'react-scan:page-reload',
     });
   } catch (e) {
-    // biome-ignore lint/suspicious/noConsole: log error
+    // oxlint-disable-next-line no-console
     console.error('Script injection error:', e);
   }
 };

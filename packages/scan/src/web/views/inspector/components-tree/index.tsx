@@ -762,7 +762,7 @@ export const ComponentsTree = () => {
     refIsHovering.current = false;
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let isInitialTreeBuild = true;
     const buildTreeFromElements = (elements: Array<InspectableElement>) => {
@@ -952,7 +952,7 @@ export const ComponentsTree = () => {
     return searchState.subscribe(setSearchValue);
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const unsubscribe = signalWidget.subscribe((state) => {
       refMainContainer.current?.style.setProperty('transition', 'width 0.1s');

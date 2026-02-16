@@ -16,7 +16,7 @@ import {
   formatFunctionPreview,
   formatPath,
   getObjectDiff,
-  isPromise,
+  safeGetValue,
 } from './utils';
 import {
   calculateTotalChanges,
@@ -26,27 +26,6 @@ import { getDisplayName, getType } from 'bippy';
 import { Store } from '~core/index';
 
 export type Setter<T> = Dispatch<StateUpdater<T>>;
-
-const safeGetValue = (value: unknown): { value: unknown; error?: string } => {
-  if (value === null || value === undefined) return { value };
-  if (typeof value === 'function') return { value };
-  if (typeof value !== 'object') return { value };
-
-  if (isPromise(value)) {
-    return { value: 'Promise' };
-  }
-
-  try {
-    const proto = Object.getPrototypeOf(value);
-    if (proto === Promise.prototype || proto?.constructor?.name === 'Promise') {
-      return { value: 'Promise' };
-    }
-
-    return { value };
-  } catch {
-    return { value: null, error: 'Error accessing value' };
-  }
-};
 
 export const WhatChanged = /* @__PURE__ */ memo(() => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -71,7 +50,7 @@ export const WhatChanged = /* @__PURE__ */ memo(() => {
       .filter(([, value]) => value.kind === 'initialized')
       .map(([key, value]) => [
         key,
-        // biome-ignore lint/style/noNonNullAssertion: <explanation>
+        // oxlint-disable-next-line typescript/no-non-null-assertion
         value.kind === 'partially-initialized' ? null! : value.changes,
       ]),
   );
@@ -283,7 +262,7 @@ const WhatsChangedHeader = memo(() => {
 interface SectionProps {
   title: string;
   isExpanded: boolean;
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  // oxlint-disable-next-line typescript/no-explicit-any
   changes: Map<any, AggregatedChanges>;
   renderName?: (name: string) => ReactNode;
 }

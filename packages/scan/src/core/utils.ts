@@ -1,9 +1,8 @@
 // @ts-nocheck
 import { type Fiber, getType } from 'bippy';
-// import type { ComponentType } from 'preact';
 import { ReactScanInternals } from '~core/index';
-import type { AggregatedRender } from '~web/utils/outline';
-import type { AggregatedChange, Render } from './instrumentation';
+import type { AggregatedChange, AggregatedRender, Render } from './instrumentation';
+import { IS_CLIENT } from '~web/utils/constants';
 
 export const aggregateChanges = (
   changes: Array<Change>,
@@ -19,25 +18,6 @@ export const aggregateChanges = (
   }
 
   return newChange;
-};
-
-export const joinAggregations = ({
-  from,
-  to,
-}: {
-  from: AggregatedRender;
-  to: AggregatedRender;
-}) => {
-  to.changes.type |= from.changes.type;
-  to.changes.unstable = to.changes.unstable || from.changes.unstable;
-  to.aggregatedCount += 1;
-  to.didCommit = to.didCommit || from.didCommit;
-  to.forget = to.forget || from.forget;
-  to.fps = to.fps + from.fps;
-  to.phase |= from.phase;
-  to.time = (to.time ?? 0) + (from.time ?? 0);
-
-  to.unnecessary = to.unnecessary || from.unnecessary;
 };
 
 export const aggregateRender = (
@@ -195,6 +175,20 @@ export interface RenderData {
 export function isEqual(a: unknown, b: unknown): boolean {
   return a === b || (a !== a && b !== b);
 }
+
+export const not_globally_unique_generateId = () => {
+  if (!IS_CLIENT) {
+    return '0';
+  }
+
+  // @ts-expect-error
+  if (window.reactScanIdCounter === undefined) {
+    // @ts-expect-error
+    window.reactScanIdCounter = 0;
+  }
+  // @ts-expect-error
+  return `${++window.reactScanIdCounter}`;
+};
 
 export const playNotificationSound = (audioContext: AudioContext) => {
   const oscillator = audioContext.createOscillator();

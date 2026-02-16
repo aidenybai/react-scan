@@ -30,7 +30,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
   const prevHeight = useRef<number | null>(null);
   const prevCorner = useRef<Corner | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const container = refContainer.current;
     if (!container) return;
@@ -92,7 +92,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     };
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   const handleResize = useCallback(
     (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -236,7 +236,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
     [],
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: no deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   const handleDoubleClick = useCallback(
     (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -323,7 +323,7 @@ export const ResizeHandle = ({ position }: ResizeHandleProps) => {
           },
         };
 
-        containerStyle.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        containerStyle.transition = 'all 0.25s cubic-bezier(0, 0, 0.2, 1)';
         containerStyle.width = `${newWidth}px`;
         containerStyle.height = `${newHeight}px`;
         containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;

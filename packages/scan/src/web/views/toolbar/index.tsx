@@ -123,7 +123,7 @@ export const Toolbar = constant(() => {
     inspectColor = '#999';
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (signalWidgetViews.value.view !== 'notifications') {
       return;

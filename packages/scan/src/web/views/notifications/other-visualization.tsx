@@ -113,7 +113,7 @@ export const OtherVisualization = ({
   const root = useContext(ToolbarElementContext);
 
   // for when a user clicks a bar of a non render, and gets sent to the other visualization and passes a route message on the way
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (notificationState.routeMessage?.name) {
       const container = root?.querySelector('#overview-scroll-container');
@@ -130,7 +130,7 @@ export const OtherVisualization = ({
     }
   }, [notificationState.route]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (notificationState.route === 'other-visualization') {
       setExpandedItems((prev) =>

@@ -79,15 +79,6 @@ export const removeLocalStorage = (storageKey: string): void => {
   } catch {}
 };
 
-export const toggleMultipleClasses = (
-  element: HTMLElement,
-  classes: Array<string>,
-) => {
-  for (const cls of classes) {
-    element.classList.toggle(cls);
-  }
-};
-
 interface WrapperBadge {
   type: 'memo' | 'forwardRef' | 'lazy' | 'suspense' | 'profiler' | 'strict';
   title: string;

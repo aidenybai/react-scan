@@ -4,9 +4,12 @@ export const OUTLINE_ARRAY_SIZE = 7;
 const MONO_FONT =
   'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
 
-const INTERPOLATION_SPEED = 0.1;
+const INTERPOLATION_SPEED = 0.2;
+const SNAP_THRESHOLD = 0.5;
 const lerp = (start: number, end: number) => {
-  return Math.floor(start + (end - start) * INTERPOLATION_SPEED);
+  const delta = end - start;
+  if (Math.abs(delta) < SNAP_THRESHOLD) return end;
+  return start + delta * INTERPOLATION_SPEED;
 };
 
 const MAX_PARTS_LENGTH = 4;
@@ -14,7 +17,6 @@ const MAX_LABEL_LENGTH = 40;
 const TOTAL_FRAMES = 45;
 
 const PRIMARY_COLOR = '115,97,230';
-// const SECONDARY_COLOR = '128,128,128';
 
 function sortEntry(prev: [number, string[]], next: [number, string[]]): number {
   return next[0] - prev[0];
@@ -212,8 +214,14 @@ export const drawCanvas = (
     ctx.strokeStyle = `rgba(${PRIMARY_COLOR},${alpha})`;
     ctx.lineWidth = 1;
 
+    // Offset by 0.5px for crisp 1px strokes on pixel boundaries
+    const rx = Math.round(x) + 0.5;
+    const ry = Math.round(y) + 0.5;
+    const rw = Math.round(width);
+    const rh = Math.round(height);
+
     ctx.beginPath();
-    ctx.rect(x, y, width, height);
+    ctx.rect(rx, ry, rw, rh);
     ctx.stroke();
     ctx.fillStyle = `rgba(${PRIMARY_COLOR},${alpha * 0.1})`;
     ctx.fill();

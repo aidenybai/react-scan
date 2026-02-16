@@ -2,109 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body {
+  background-color: #000;
+  color: #fff;
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+}
+
+::-moz-selection {
+  background: rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+}
+
+/* Dark scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #404040 #0d0d0d;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #404040;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #525252;
+}
+
+/* Shimmer text animation */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #818181 0%,
+    #818181 35%,
+    #ffffff 50%,
+    #818181 65%,
+    #818181 100%
+  );
+  background-size: 150% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Logo shimmer */
+@keyframes logo-shimmer {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(139, 92, 246, 0.9));
+    transform: scale(1.04);
+  }
+  100% {
+    filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0));
+    transform: scale(1);
+  }
+}
+
+.logo-shimmer-once {
+  animation: logo-shimmer 0.9s ease-out;
+  will-change: transform, filter;
+  transform-origin: center;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .logo-shimmer-once:hover {
+    animation: logo-shimmer 0.9s ease-out;
+  }
+}
+
+/* Highlighted code lines */
+.highlighted-code .line-changed {
+  background-color: rgba(139, 92, 246, 0.15);
+  border-left: 2px solid rgba(139, 92, 246, 0.75);
+  padding-left: 0.5rem;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Fade animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes modalIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.98) translateY(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes modalOut {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.98);
+    transform: translateY(0);
   }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.animate-fade-out {
-  animation: fadeOut 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.animate-modal-in {
-  animation: modalIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.animate-modal-out {
-  animation: modalOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.custom-video-player {
-  --video-progress-color: #4B4DB3;
-}
-
-.custom-video-player video::-webkit-media-controls-panel {
-  display: none !important;
-}
-
-.custom-video-player video::-webkit-media-controls {
-  display: none !important;
-}
-
-.custom-video-player .progress-bar {
-  @apply absolute bottom-0 left-0 right-0 h-1.5 bg-white/10 cursor-pointer transition-all duration-300;
-  transform-origin: bottom;
-  user-select: none;
-}
-
-.custom-video-player:hover .progress-bar {
-  @apply h-2.5;
-}
-
-.custom-video-player .progress-fill {
-  @apply h-full bg-[var(--video-progress-color)] origin-left transition-transform duration-100;
-  position: relative;
-}
-
-.custom-video-player .progress-fill::after {
-  content: '';
-  position: absolute;
-  right: -4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--video-progress-color);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.custom-video-player:hover .progress-fill::after {
-  opacity: 1;
-}
-
-.custom-video-player .progress-bar:active .progress-fill::after {
-  width: 12px;
-  height: 12px;
-  opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

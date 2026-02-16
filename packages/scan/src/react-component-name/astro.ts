@@ -4,7 +4,7 @@ import vite from './vite';
 export default (options: Options = {}) => ({
   name: 'react-component-name',
   hooks: {
-    // biome-ignore lint/suspicious/noExplicitAny: should be { config: AstroConfig }
+    // oxlint-disable-next-line typescript/no-explicit-any
     'astro:config:setup': (astro: any) => {
       astro.config.vite.plugins ||= [];
       astro.config.vite.plugins.push(vite(options));

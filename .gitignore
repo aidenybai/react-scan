@@ -10,3 +10,7 @@ playgrounds
 # SSL Certificates
 bin/certs/*.pem
 bin/certs/*.key
+.cursor
+# Playwright
+test-results/
+playwright-report/

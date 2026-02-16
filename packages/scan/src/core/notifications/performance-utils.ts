@@ -36,7 +36,7 @@ export const createChildrenAdjacencyList = (root: Fiber, limit: number) => {
     if (traversed >= limit) {
       return tree;
     }
-    // biome-ignore lint/style/noNonNullAssertion: invariant
+    // oxlint-disable-next-line typescript/no-non-null-assertion
     const [node, parent] = queue.pop()!;
     const children = getChildrenFromFiberLL(node);
 
@@ -60,29 +60,6 @@ export const createChildrenAdjacencyList = (root: Fiber, limit: number) => {
   }
   return tree;
 };
-
-const isProduction: boolean = process.env.NODE_ENV === 'production';
-const prefix: string = 'Invariant failed';
-
-// FIX ME THIS IS PRODUCTION INVARIANT LOL
-export function devInvariant(
-  condition: unknown,
-  message?: string | (() => string),
-): asserts condition {
-  if (condition) {
-    return;
-  }
-
-  if (isProduction) {
-    throw new Error(prefix);
-  }
-
-  const provided: string | undefined =
-    typeof message === 'function' ? message() : message;
-
-  const value: string = provided ? `${prefix}: ${provided}` : prefix;
-  throw new Error(value);
-}
 
 const THROW_INVARIANTS = false;
 
