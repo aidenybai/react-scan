@@ -1,5 +1,13 @@
 # @react-scan/extension
 
+## 0.5.2
+
+### Patch Changes
+
+- fix
+- Updated dependencies
+  - react-scan@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes

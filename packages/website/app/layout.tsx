@@ -49,8 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#000000" />
         <link rel="canonical" href="https://react-scan.com" />
         <Script
-          src="//unpkg.com/react-scan@0.5.1/dist/auto.global.js"
-          crossOrigin="anonymous"
+          src="/auto.global.js"
           strategy="beforeInteractive"
         />
         {process.env.NODE_ENV === "development" && (
