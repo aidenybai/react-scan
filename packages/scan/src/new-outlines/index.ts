@@ -561,18 +561,23 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
-    onActive: () => {
-      if (hasStopped()) return;
+    onActive: (() => {
+      let didActivate = false;
+      return () => {
+        if (hasStopped()) return;
+        if (didActivate) return;
+        didActivate = true;
 
-      scheduleSetup();
-      if (!window.__REACT_SCAN_EXTENSION__) {
-        globalThis.__REACT_SCAN__ = {
-          ReactScanInternals,
-        };
-      }
-      startReportInterval();
-      logIntro();
-    },
+        scheduleSetup();
+        if (!window.__REACT_SCAN_EXTENSION__) {
+          globalThis.__REACT_SCAN__ = {
+            ReactScanInternals,
+          };
+        }
+        startReportInterval();
+        logIntro();
+      };
+    })(),
     onError: () => {
       // todo: ingest errors without accidentally collecting data about user
     },
