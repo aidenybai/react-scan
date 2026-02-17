@@ -530,8 +530,12 @@ export const isValidFiber = (fiber: Fiber) => {
 
   return true;
 };
+let isInstrumentationInitialized = false;
+
 export const initReactScanInstrumentation = (setupToolbar: () => void) => {
   if (hasStopped()) return;
+  if (isInstrumentationInitialized) return;
+  isInstrumentationInitialized = true;
   // todo: don't hardcode string getting weird ref error in iife when using process.env
   let schedule: ReturnType<typeof requestAnimationFrame>;
   let mounted = false;
