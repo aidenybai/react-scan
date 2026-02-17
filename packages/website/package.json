@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "pnpm --filter react-scan build && next build",
+    "presync": "cp ../scan/dist/auto.global.js ./public/auto.global.js",
+    "dev": "pnpm presync && next dev --turbopack",
+    "build": "pnpm --filter react-scan build && pnpm presync && next build",
     "postbuild": "node ../../scripts/version-warning.mjs",
     "start": "next start",
     "lint": "oxlint ."
