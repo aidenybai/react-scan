@@ -18,7 +18,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-grab": "^0.1.15",
-    "react-scan": "^0.5.2",
+    "react-scan": "^0.5.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
