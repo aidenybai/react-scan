@@ -267,7 +267,7 @@ importers:
         specifier: ^1.0.0
         version: 1.1.0
       react-scan:
-        specifier: '>=0.5.0'
+        specifier: '>=0.5.1'
         version: link:../scan
     devDependencies:
       '@types/babel__core':
@@ -290,7 +290,7 @@ importers:
     dependencies:
       '@vercel/analytics':
         specifier: ^1.4.1
-        version: 1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        version: 1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.6(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       '@vercel/speed-insights':
         specifier: ^1.1.0
         version: 1.2.0(next@15.2.6(@playwright/test@1.58.2)(react@19.0.0))(react@19.0.0)
@@ -299,7 +299,7 @@ importers:
         version: 11.11.1
       next:
         specifier: 15.2.6
-        version: 15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+        version: 15.2.6(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react:
         specifier: 19.0.0
         version: 19.0.0
@@ -310,8 +310,8 @@ importers:
         specifier: ^0.1.15
         version: 0.1.15(@types/react@19.1.8)(react@19.0.0)
       react-scan:
-        specifier: ^0.3.4
-        version: 0.3.6(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(@types/react@19.1.8)(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react-router-dom@7.6.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-router@7.6.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(rollup@4.44.1)
+        specifier: ^0.5.1
+        version: link:../scan
       zod:
         specifier: ^3.23.8
         version: 3.25.67
@@ -538,12 +538,6 @@ packages:
 
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
-
-  '@clack/core@0.3.5':
-    resolution: {integrity: sha512-5cfhQNH+1VQ2xLQlmzXMqUoiaH0lRBq9/CLW9lTyMbuKLC3+xEK01tHVvyut++mLOn5urSHmkm6I0Lg9MaJSTQ==}
-
-  '@clack/prompts@0.8.2':
-    resolution: {integrity: sha512-6b9Ab2UiZwJYA9iMyboYyW9yJvAO9V753ZhS+DHKEjZRKAxPPOb7MXXu84lsPFG+vZt6FRFniZ8rXi+zCIw4yQ==}
 
   '@devicefarmer/adbkit-logcat@2.1.3':
     resolution: {integrity: sha512-yeaGFjNBc/6+svbDeul1tNHtNChw6h8pSHAt5D+JsedUrMTN7tla7B15WLDyekxsuS2XlZHRxpuC6m92wiwCNw==}
@@ -1088,12 +1082,6 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
-
-  '@pivanov/utils@0.0.2':
-    resolution: {integrity: sha512-q9CN0bFWxWgMY5hVVYyBgez1jGiLBa6I+LkG37ycylPhFvEGOOeaADGtUSu46CaZasPnlY8fCdVJZmrgKb1EPA==}
-    peerDependencies:
-      react: '>=18'
-      react-dom: '>=18'
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -2349,10 +2337,6 @@ packages:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
 
-  kleur@4.1.5:
-    resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
-    engines: {node: '>=6'}
-
   ky@1.8.1:
     resolution: {integrity: sha512-7Bp3TpsE+L+TARSnnDpk3xg8Idi8RwSLdj6CMbNWoOARIrGrbuLGusV0dYwbZOm4bB3jHNxSw8Wk/ByDqJEnDw==}
     engines: {node: '>=18'}
@@ -2748,18 +2732,8 @@ packages:
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
 
-  playwright-core@1.53.1:
-    resolution: {integrity: sha512-Z46Oq7tLAyT0lGoFx4DOuB1IA9D1TPj0QkYxpPVUnGDqHHvDpCftu1J2hM2PiWsNMoZh8+LQaarAWcDfPBc6zg==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   playwright-core@1.58.2:
     resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  playwright@1.53.1:
-    resolution: {integrity: sha512-LJ13YLr/ocweuwxyGf1XNFWIU4M2zUSo149Qbp+A4cpwDjsxRPj7k6H25LBrEHiEwxvRbD8HdwvQmRMSvquhYw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2975,26 +2949,6 @@ packages:
       react-dom: '>=18'
     peerDependenciesMeta:
       react-dom:
-        optional: true
-
-  react-scan@0.3.6:
-    resolution: {integrity: sha512-HCXRaP/zirXbNoI+mm11AibURYxkz4vCCnP64bzPRln3T8W9J2UGI1nxBygQIoKqrGz9W++rOROPvyNB+FpvXA==}
-    hasBin: true
-    peerDependencies:
-      '@remix-run/react': '>=1.0.0'
-      next: '>=13.0.0'
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-router: ^5.0.0 || ^6.0.0 || ^7.0.0
-      react-router-dom: ^5.0.0 || ^6.0.0 || ^7.0.0
-    peerDependenciesMeta:
-      '@remix-run/react':
-        optional: true
-      next:
-        optional: true
-      react-router:
-        optional: true
-      react-router-dom:
         optional: true
 
   react@18.3.1:
@@ -4081,17 +4035,6 @@ snapshots:
       human-id: 4.1.1
       prettier: 2.8.8
 
-  '@clack/core@0.3.5':
-    dependencies:
-      picocolors: 1.1.1
-      sisteransi: 1.0.5
-
-  '@clack/prompts@0.8.2':
-    dependencies:
-      '@clack/core': 0.3.5
-      picocolors: 1.1.1
-      sisteransi: 1.0.5
-
   '@devicefarmer/adbkit-logcat@2.1.3': {}
 
   '@devicefarmer/adbkit-monkey@1.2.1': {}
@@ -4447,11 +4390,6 @@ snapshots:
   '@oxlint/binding-win32-x64-msvc@1.48.0':
     optional: true
 
-  '@pivanov/utils@0.0.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
-    dependencies:
-      react: 19.0.0
-      react-dom: 19.0.0(react@19.0.0)
-
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
@@ -4683,15 +4621,15 @@ snapshots:
 
   '@types/webextension-polyfill@0.12.3': {}
 
-  '@vercel/analytics@1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)':
+  '@vercel/analytics@1.5.0(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(next@15.2.6(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)':
     optionalDependencies:
       '@remix-run/react': 2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3)
-      next: 15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      next: 15.2.6(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
   '@vercel/speed-insights@1.2.0(next@15.2.6(@playwright/test@1.58.2)(react@19.0.0))(react@19.0.0)':
     optionalDependencies:
-      next: 15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      next: 15.2.6(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
   '@vitejs/plugin-react@4.6.0(vite@6.3.5(@types/node@22.15.34)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))':
@@ -4886,13 +4824,6 @@ snapshots:
     dependencies:
       '@types/react-reconciler': 0.28.9(@types/react@18.3.23)
       react: 18.3.1
-    transitivePeerDependencies:
-      - '@types/react'
-
-  bippy@0.3.8(@types/react@19.1.8)(react@19.0.0):
-    dependencies:
-      '@types/react-reconciler': 0.28.9(@types/react@19.1.8)
-      react: 19.0.0
     transitivePeerDependencies:
       - '@types/react'
 
@@ -5413,6 +5344,7 @@ snapshots:
   get-tsconfig@4.10.1:
     dependencies:
       resolve-pkg-maps: 1.0.0
+    optional: true
 
   glob-parent@5.1.2:
     dependencies:
@@ -5672,8 +5604,6 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  kleur@4.1.5: {}
-
   ky@1.8.1: {}
 
   latest-version@9.0.0:
@@ -5846,7 +5776,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+  next@15.2.6(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
       '@next/env': 15.2.6
       '@swc/counter': 0.1.3
@@ -6070,15 +6000,7 @@ snapshots:
       mlly: 1.7.4
       pathe: 2.0.3
 
-  playwright-core@1.53.1: {}
-
   playwright-core@1.58.2: {}
-
-  playwright@1.53.1:
-    dependencies:
-      playwright-core: 1.53.1
-    optionalDependencies:
-      fsevents: 2.3.2
 
   playwright@1.58.2:
     dependencies:
@@ -6286,38 +6208,6 @@ snapshots:
     optionalDependencies:
       react-dom: 19.0.0(react@19.0.0)
 
-  react-scan@0.3.6(@remix-run/react@2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3))(@types/react@19.1.8)(next@15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react-router-dom@7.6.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-router@7.6.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(rollup@4.44.1):
-    dependencies:
-      '@babel/core': 7.27.7
-      '@babel/generator': 7.27.5
-      '@babel/types': 7.27.7
-      '@clack/core': 0.3.5
-      '@clack/prompts': 0.8.2
-      '@pivanov/utils': 0.0.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@preact/signals': 1.3.2(preact@10.26.9)
-      '@rollup/pluginutils': 5.2.0(rollup@4.44.1)
-      '@types/node': 20.19.2
-      bippy: 0.3.8(@types/react@19.1.8)(react@19.0.0)
-      esbuild: 0.25.5
-      estree-walker: 3.0.3
-      kleur: 4.1.5
-      mri: 1.2.0
-      playwright: 1.53.1
-      preact: 10.26.9
-      react: 19.0.0
-      react-dom: 19.0.0(react@19.0.0)
-      tsx: 4.20.3
-    optionalDependencies:
-      '@remix-run/react': 2.16.8(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3)
-      next: 15.2.6(@babel/core@7.27.7)(@playwright/test@1.58.2)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      react-router: 7.6.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      react-router-dom: 7.6.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      unplugin: 2.1.0
-    transitivePeerDependencies:
-      - '@types/react'
-      - rollup
-      - supports-color
-
   react@18.3.1:
     dependencies:
       loose-envify: 1.4.0
@@ -6381,7 +6271,8 @@ snapshots:
 
   resolve-pathname@3.0.0: {}
 
-  resolve-pkg-maps@1.0.0: {}
+  resolve-pkg-maps@1.0.0:
+    optional: true
 
   resolve@1.22.10:
     dependencies:
@@ -6774,6 +6665,7 @@ snapshots:
       get-tsconfig: 4.10.1
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   turbo-stream@2.4.1: {}
 
