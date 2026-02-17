@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "pnpm --filter react-scan build && next build",
     "postbuild": "node ../../scripts/version-warning.mjs",
     "start": "next start",
     "lint": "oxlint ."
