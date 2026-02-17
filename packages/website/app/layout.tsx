@@ -1,5 +1,4 @@
 import "./globals.css";
-import ReactScanInit from "./react-scan";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
@@ -49,6 +48,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="theme-color" content="#000000" />
         <link rel="canonical" href="https://react-scan.com" />
+        <Script
+          src="//unpkg.com/react-scan@0.5.1/dist/auto.global.js"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab@latest/dist/index.global.js"
@@ -66,7 +70,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <div className="pt-4 sm:pt-8">{children}</div>
         </main>
-        <ReactScanInit />
         <Analytics />
         <SpeedInsights />
       </body>
