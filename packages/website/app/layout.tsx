@@ -1,5 +1,5 @@
 import "./globals.css";
-import "./react-scan";
+import ReactScanInit from "./react-scan";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
@@ -66,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <div className="pt-4 sm:pt-8">{children}</div>
         </main>
+        <ReactScanInit />
         <Analytics />
         <SpeedInsights />
       </body>
