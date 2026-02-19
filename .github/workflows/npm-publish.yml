@@ -1,0 +1,95 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    defaults:
+      run:
+        working-directory: ./packages/scan
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit message
+        id: check
+        run: |
+          # Print the commit message for debugging
+          echo "Commit message: ${{ github.event.head_commit.message }}"
+
+          # Check if commit message contains [publish]
+          # This allows us to control when we want to publish to npm
+          # Example commit message: "feat: add new feature [publish]"
+          if [[ "${{ github.event.head_commit.message }}" == *"[publish]"* ]]; then
+            echo "Found [publish] in commit message"
+            # Set output variable for other steps to use
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "No [publish] tag found, skipping..."
+            # Exit successfully but skip further steps
+            exit 0
+          fi
+
+      - name: Setup Node.js
+        if: steps.check.outputs.should_publish == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup PNPM
+        if: steps.check.outputs.should_publish == 'true'
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.x
+
+      - name: Install dependencies
+        if: steps.check.outputs.should_publish == 'true'
+        run: pnpm install
+
+      - name: Configure Git
+        if: steps.check.outputs.should_publish == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Copy README
+        if: steps.check.outputs.should_publish == 'true'
+        run: cp ../../README.md ./README.md
+
+      - name: Build and Publish
+        if: steps.check.outputs.should_publish == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Stage all changes first
+          git add package.json README.md
+
+          # Stash any changes
+          git stash
+
+          # Get latest changes
+          git pull --rebase origin main
+
+          # Pop stashed changes
+          git stash pop
+
+          # Version bump and build
+          npm version patch
+          pnpm build
+
+          # Commit and push
+          git add package.json README.md
+          git diff --staged --quiet || (git commit -m "chore: bump version [skip ci]" && git push)
+
+          # Publish
+          pnpm publish --access public --no-git-checks
