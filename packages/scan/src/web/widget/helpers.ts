@@ -93,6 +93,8 @@ export const calculatePosition = (
   corner: Corner,
   width: number,
   height: number,
+  offsetX = 0,
+  offsetY = 0,
 ): Position => {
   const isRTL = getComputedStyle(document.body).direction === 'rtl';
 
@@ -136,32 +138,40 @@ export const calculatePosition = (
       x = isRTL ? -rightBound : leftBound;
       y = topBound;
       break;
+    case 'top-center':
+      x = Math.round((windowWidth - effectiveWidth) / 2);
+      y = topBound;
+      break;
+    case 'bottom-center':
+      x = Math.round((windowWidth - effectiveWidth) / 2);
+      y = bottomBound;
+      break;
     default:
       x = leftBound;
       y = topBound;
       break;
   }
 
-  // Only ensure positions are within bounds if minimized
-  if (isMinimized) {
-    if (isRTL) {
-      // For RTL
-      x = Math.min(
-        -leftBound,
-        Math.max(x, -rightBound)
-      );
-    } else {
-      // For LTR
-      x = Math.max(
-        leftBound,
-        Math.min(x, rightBound),
-      );
-    }
-    y = Math.max(
-      topBound,
-      Math.min(y, bottomBound),
+  // Apply user-defined offsets
+  x += offsetX;
+  y += offsetY;
+
+  // Clamp to viewport bounds
+  if (isRTL) {
+    x = Math.min(
+      -leftBound,
+      Math.max(x, -rightBound)
+    );
+  } else {
+    x = Math.max(
+      leftBound,
+      Math.min(x, rightBound),
     );
   }
+  y = Math.max(
+    topBound,
+    Math.min(y, bottomBound),
+  );
 
   return { x, y };
 };
@@ -331,6 +341,8 @@ export const getClosestCorner = (position: Position): Corner => {
       windowDims.maxWidth - position.x,
       windowDims.maxHeight - position.y,
     ),
+    'top-center': Math.hypot(windowDims.maxWidth / 2 - position.x, position.y),
+    'bottom-center': Math.hypot(windowDims.maxWidth / 2 - position.x, windowDims.maxHeight - position.y),
   };
 
   let closest: Corner = 'top-left';

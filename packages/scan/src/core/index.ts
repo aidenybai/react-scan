@@ -12,9 +12,11 @@ import type { RenderData } from 'src/core/utils';
 import { initReactScanInstrumentation } from 'src/new-outlines';
 import styles from '~web/assets/css/styles.css';
 import { createToolbar } from '~web/toolbar';
+import { applyToolbarPosition } from '~web/state';
 import { IS_CLIENT } from '~web/utils/constants';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
 import type { States } from '~web/views/inspector/utils';
+import type { ToolbarPosition, Corner } from '~web/widget/types';
 import type {
   ChangeReason,
   Render,
@@ -93,6 +95,21 @@ export interface Options {
    * @default "fast"
    */
   animationSpeed?: 'slow' | 'fast' | 'off';
+
+  /**
+   * Configure the initial position and offset of the toolbar.
+   *
+   * @example
+   * // Place toolbar at bottom-center
+   * toolbarPosition: { corner: 'bottom-center' }
+   *
+   * @example
+   * // Place toolbar at bottom-right with a 100px upward offset (avoids Next.js dev icon)
+   * toolbarPosition: { corner: 'bottom-right', y: -100 }
+   *
+   * @default { corner: 'bottom-right' }
+   */
+  toolbarPosition?: ToolbarPosition;
 
   /**
    * Track unnecessary renders, and mark their outlines gray when detected
@@ -263,6 +280,11 @@ const applyLocalStorageOptions = (options: Options): LocalStorageOptions => {
   return rest;
 };
 
+const VALID_CORNERS: Array<Corner> = [
+  'top-left', 'top-right', 'bottom-left', 'bottom-right',
+  'top-center', 'bottom-center',
+];
+
 const validateOptions = (options: Partial<Options>): Partial<Options> => {
   const errors: Array<string> = [];
   const validOptions: Partial<Options> = {};
@@ -292,6 +314,25 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
           validOptions[key] = value as 'slow' | 'fast' | 'off';
         }
         break;
+      case 'toolbarPosition': {
+        const pos = value as ToolbarPosition | undefined;
+        if (pos && typeof pos === 'object') {
+          if (pos.corner && !VALID_CORNERS.includes(pos.corner)) {
+            errors.push(
+              `- Invalid toolbar position corner "${pos.corner}". Valid values: ${VALID_CORNERS.join(', ')}`,
+            );
+          } else if (pos.x !== undefined && typeof pos.x !== 'number') {
+            errors.push(`- toolbarPosition.x must be a number. Got "${pos.x}"`);
+          } else if (pos.y !== undefined && typeof pos.y !== 'number') {
+            errors.push(`- toolbarPosition.y must be a number. Got "${pos.y}"`);
+          } else {
+            validOptions.toolbarPosition = pos;
+          }
+        } else if (pos !== undefined) {
+          errors.push(`- toolbarPosition must be an object. Got "${pos}"`);
+        }
+        break;
+      }
       case 'onCommitStart':
         if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
@@ -390,6 +431,16 @@ export const setOptions = (userOptions: Partial<Options>) => {
       'react-scan-options',
       applyLocalStorageOptions(newOptions),
     );
+
+    // Apply toolbar position if configured
+    if ('toolbarPosition' in validOptions && validOptions.toolbarPosition) {
+      const { corner, x, y } = validOptions.toolbarPosition;
+      applyToolbarPosition(
+        corner ?? 'bottom-right',
+        x ?? 0,
+        y ?? 0,
+      );
+    }
 
     if (shouldInitToolbar) {
       initToolbar(!!newOptions.showToolbar);

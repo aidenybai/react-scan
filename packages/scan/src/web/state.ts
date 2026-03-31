@@ -10,6 +10,7 @@ import { IS_CLIENT } from "./utils/constants";
 import { readLocalStorage, saveLocalStorage } from "./utils/helpers";
 import type { Corner, WidgetConfig, WidgetSettings } from "./widget/types";
 import type { CollapsedPosition } from "./widget/types";
+import { calculatePosition } from "./widget/helpers";
 
 export const signalIsSettingsOpen = /* @__PURE__ */ signal(false);
 export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(
@@ -39,27 +40,62 @@ export const defaultWidgetConfig = {
 
 export const getInitialWidgetConfig = (): WidgetConfig => {
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
-  if (!stored) {
-    saveLocalStorage(LOCALSTORAGE_KEY, {
-      corner: defaultWidgetConfig.corner,
-      dimensions: defaultWidgetConfig.dimensions,
-      lastDimensions: defaultWidgetConfig.lastDimensions,
-      componentsTree: defaultWidgetConfig.componentsTree,
-    });
 
-    return defaultWidgetConfig;
+  // If user has previously moved the toolbar, respect their saved position
+  if (stored) {
+    return {
+      corner: stored.corner ?? defaultWidgetConfig.corner,
+      dimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+      lastDimensions:
+        stored.lastDimensions ??
+        stored.dimensions ??
+        defaultWidgetConfig.lastDimensions,
+      componentsTree: stored.componentsTree ?? defaultWidgetConfig.componentsTree,
+    };
   }
 
-  return {
-    corner: stored.corner ?? defaultWidgetConfig.corner,
-    dimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+  // No saved position — check if a programmatic toolbarPosition was set
+  // We need to defer reading from ReactScanInternals here because at module
+  // load time the options may not be set yet. The actual position application
+  // happens in applyToolbarPosition() which is called after options are set.
+  saveLocalStorage(LOCALSTORAGE_KEY, {
+    corner: defaultWidgetConfig.corner,
+    dimensions: defaultWidgetConfig.dimensions,
+    lastDimensions: defaultWidgetConfig.lastDimensions,
+    componentsTree: defaultWidgetConfig.componentsTree,
+  });
 
-    lastDimensions:
-      stored.lastDimensions ??
-      stored.dimensions ??
-      defaultWidgetConfig.lastDimensions,
-    componentsTree: stored.componentsTree ?? defaultWidgetConfig.componentsTree,
+  return defaultWidgetConfig;
+};
+
+/**
+ * Called after options are set to apply toolbarPosition config.
+ * Only applies if the user hasn't manually moved the toolbar (no localStorage).
+ */
+export const applyToolbarPosition = (corner: Corner, offsetX = 0, offsetY = 0): void => {
+  const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
+  // Only override if the stored corner is still the default (user hasn't dragged)
+  if (stored && stored.corner !== defaultWidgetConfig.corner) {
+    return;
+  }
+
+  const position = calculatePosition(corner, MIN_SIZE.width, MIN_SIZE.height, offsetX, offsetY);
+
+  const newConfig: WidgetConfig = {
+    corner,
+    dimensions: {
+      ...defaultWidgetConfig.dimensions,
+      position,
+    },
+    lastDimensions: {
+      ...defaultWidgetConfig.lastDimensions,
+      position,
+    },
+    componentsTree: defaultWidgetConfig.componentsTree,
   };
+
+  signalWidget.value = newConfig;
+  saveLocalStorage(LOCALSTORAGE_KEY, newConfig);
 };
 
 export const signalWidget = signal<WidgetConfig>(getInitialWidgetConfig());
