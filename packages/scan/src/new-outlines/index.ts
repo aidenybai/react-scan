@@ -321,19 +321,24 @@ export const getCanvasEl = () => {
   canvasEl.width = width;
   canvasEl.height = height;
 
+  // Users on a strict CSP without `worker-src blob:` (see #372) can opt out;
+  // we still render outlines on the main thread via `initCanvas` below.
+  const workerOptOut =
+    ReactScanInternals.options.value.useOffscreenCanvasWorker === false;
+
   if (
     IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED &&
-    !window.__REACT_SCAN_EXTENSION__
+    !window.__REACT_SCAN_EXTENSION__ &&
+    !workerOptOut
   ) {
     try {
-      worker = new Worker(
-        URL.createObjectURL(
-          new Blob([workerCode], { type: 'application/javascript' }),
-        ),
+      const blobUrl = URL.createObjectURL(
+        new Blob([workerCode], { type: 'application/javascript' }),
       );
+      worker = new Worker(blobUrl);
 
       const offscreenCanvas = canvasEl.transferControlToOffscreen();
-      worker?.postMessage(
+      worker.postMessage(
         {
           type: 'init',
           canvas: offscreenCanvas,
@@ -343,10 +348,20 @@ export const getCanvasEl = () => {
         },
         [offscreenCanvas],
       );
-    } catch (e) {
-      // oxlint-disable-next-line no-console
-      console.warn('Failed to initialize OffscreenCanvas worker:', e);
+    } catch (error) {
+      // The common failure here is a strict CSP rejecting `blob:` workers.
+      // The fallback below renders fine on the main thread, so log only when
+      // the user explicitly asked for verbose diagnostics.
+      worker = null;
+      if (ReactScanInternals.options.value._debug === 'verbose') {
+        // oxlint-disable-next-line no-console
+        console.warn('Failed to initialize OffscreenCanvas worker:', error);
+      }
     }
+    // The blob URL stays alive until the worker is GC'd. Revoking
+    // synchronously after `new Worker(url)` has historically broken some
+    // browser versions before the worker actually fetched the URL — leave
+    // the (single, tiny) URL in place rather than risking that race.
   }
 
   if (!worker) {
