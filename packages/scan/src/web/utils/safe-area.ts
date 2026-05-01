@@ -1,6 +1,6 @@
 import { ReactScanInternals } from '~core/index';
 import { SAFE_AREA } from '~web/constants';
-import { isFinitePositive } from '~web/utils/is-finite-positive';
+import { isFiniteNonNegative } from '~web/utils/is-finite-non-negative';
 import { isPlainObject } from '~web/utils/is-plain-object';
 
 export interface SafeAreaInsets {
@@ -13,7 +13,7 @@ export interface SafeAreaInsets {
 export const getSafeArea = (): SafeAreaInsets => {
   const value = ReactScanInternals.options.value.safeArea;
 
-  if (isFinitePositive(value)) {
+  if (isFiniteNonNegative(value)) {
     return { top: value, right: value, bottom: value, left: value };
   }
 
@@ -23,10 +23,10 @@ export const getSafeArea = (): SafeAreaInsets => {
     const bottom = value.bottom;
     const left = value.left;
     return {
-      top: isFinitePositive(top) ? top : SAFE_AREA,
-      right: isFinitePositive(right) ? right : SAFE_AREA,
-      bottom: isFinitePositive(bottom) ? bottom : SAFE_AREA,
-      left: isFinitePositive(left) ? left : SAFE_AREA,
+      top: isFiniteNonNegative(top) ? top : SAFE_AREA,
+      right: isFiniteNonNegative(right) ? right : SAFE_AREA,
+      bottom: isFiniteNonNegative(bottom) ? bottom : SAFE_AREA,
+      left: isFiniteNonNegative(left) ? left : SAFE_AREA,
     };
   }
 

@@ -1,5 +1,5 @@
 import type { Options } from '~core/index';
-import { isFinitePositive } from '~web/utils/is-finite-positive';
+import { isFiniteNonNegative } from '~web/utils/is-finite-non-negative';
 import { isPlainObject } from '~web/utils/is-plain-object';
 
 type SafeAreaOption = NonNullable<Options['safeArea']>;
@@ -11,7 +11,7 @@ export type ParsedSafeAreaOption =
 const SAFE_AREA_EDGES = ['top', 'right', 'bottom', 'left'] as const;
 
 export const parseSafeAreaOption = (value: unknown): ParsedSafeAreaOption => {
-  if (isFinitePositive(value)) {
+  if (isFiniteNonNegative(value)) {
     return { ok: true, value };
   }
 
@@ -26,7 +26,7 @@ export const parseSafeAreaOption = (value: unknown): ParsedSafeAreaOption => {
   for (const edge of SAFE_AREA_EDGES) {
     const edgeValue = value[edge];
     if (edgeValue === undefined) continue;
-    if (!isFinitePositive(edgeValue)) {
+    if (!isFiniteNonNegative(edgeValue)) {
       return {
         ok: false,
         error: `- safeArea.${edge} must be a non-negative number. Got "${JSON.stringify(edgeValue)}"`,
