@@ -5,7 +5,7 @@
   "scripts": {
     "presync": "cp ../scan/dist/auto.global.js ./public/auto.global.js",
     "dev": "pnpm presync && next dev --turbopack",
-    "build": "pnpm presync && next build",
+    "build": "pnpm --filter react-scan build && pnpm presync && next build",
     "start": "next start",
     "lint": "vp lint",
     "format": "vp fmt"
