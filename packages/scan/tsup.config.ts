@@ -92,7 +92,10 @@ export default defineConfig([
     clean: false,
     sourcemap: false,
     format: ['iife'],
-    target: 'esnext',
+    // Target ES2019 (no `?.`, no `??`) so older babel-loader configs without
+    // `@babel/preset-env` for optional chaining can still parse the bundle
+    // (#287, #336).
+    target: 'es2019',
     platform: 'browser',
     treeshake: true,
     dts: true,
@@ -130,7 +133,7 @@ export default defineConfig([
     clean: false,
     sourcemap: false,
     format: ['cjs', 'esm'],
-    target: 'esnext',
+    target: 'es2019',
     platform: 'browser',
     // FIXME: tree shaking removes use client directive
     // Info: vercel analytics does the same thing- https://github.com/vercel/analytics/blob/main/packages/web/tsup.config.js
