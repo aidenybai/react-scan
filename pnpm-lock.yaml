@@ -5,8 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  vite: npm:@voidzero-dev/vite-plus-core
-  vitest: npm:@voidzero-dev/vite-plus-test
+  vite: npm:@voidzero-dev/vite-plus-core@^0.1.12
+  vitest: npm:@voidzero-dev/vite-plus-test@^0.1.12
 
 importers:
 
@@ -68,7 +68,7 @@ importers:
         specifier: ^5.7.3
         version: 5.8.3
       vite:
-        specifier: npm:@voidzero-dev/vite-plus-core
+        specifier: npm:@voidzero-dev/vite-plus-core@^0.1.12
         version: '@voidzero-dev/vite-plus-core@0.1.20(@types/node@22.15.34)(esbuild@0.25.5)(jiti@2.6.1)(publint@0.2.12)(terser@5.43.1)(tsx@4.20.3)(typescript@5.8.3)(yaml@2.8.3)'
 
   packages/extension:
@@ -114,7 +114,7 @@ importers:
         specifier: ^7.7.1
         version: 7.7.2
       vite:
-        specifier: npm:@voidzero-dev/vite-plus-core
+        specifier: npm:@voidzero-dev/vite-plus-core@^0.1.12
         version: '@voidzero-dev/vite-plus-core@0.1.20(@types/node@22.15.34)(jiti@2.6.1)(terser@5.43.1)(tsx@4.20.3)(typescript@5.8.3)(yaml@2.8.0)'
       vite-plugin-web-extension:
         specifier: ^4.4.3
@@ -217,7 +217,7 @@ importers:
         specifier: ^8.0.0
         version: 8.5.0(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.3)(typescript@5.8.3)(yaml@2.8.3)
       vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test
+        specifier: npm:@voidzero-dev/vite-plus-test@^0.1.12
         version: '@voidzero-dev/vite-plus-test@0.1.20(@types/node@22.15.34)(esbuild@0.25.5)(jiti@2.6.1)(publint@0.2.12)(terser@5.43.1)(tsx@4.20.3)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.34)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.3))(yaml@2.8.3)'
     optionalDependencies:
       unplugin:
@@ -242,10 +242,10 @@ importers:
         specifier: ^1.0.0
         version: 1.1.0
       react-scan:
-        specifier: '>=0.5.3'
+        specifier: '>=0.5.4'
         version: link:../scan
       vite:
-        specifier: npm:@voidzero-dev/vite-plus-core
+        specifier: npm:@voidzero-dev/vite-plus-core@^0.1.12
         version: '@voidzero-dev/vite-plus-core@0.1.20(@types/node@22.15.34)(esbuild@0.25.5)(jiti@2.6.1)(publint@0.2.12)(terser@5.43.1)(tsx@4.20.3)(typescript@5.8.3)(yaml@2.8.3)'
     devDependencies:
       '@types/babel__core':

@@ -1,6 +1,6 @@
 {
   "name": "@react-scan/vite-plugin-react-scan",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A Vite plugin for React Scan - detects performance issues in your React app.",
   "type": "module",
   "main": "dist/index.cjs",
@@ -64,7 +64,7 @@
     "cheerio": "^1.0.0"
   },
   "peerDependencies": {
-    "react-scan": ">=0.5.3",
+    "react-scan": ">=0.5.4",
     "vite": "^2 || ^3 || ^4 || ^5 || ^6"
   },
   "devDependencies": {
