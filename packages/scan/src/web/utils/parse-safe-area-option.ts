@@ -1,4 +1,6 @@
 import type { Options } from '~core/index';
+import { isFinitePositive } from '~web/utils/is-finite-positive';
+import { isPlainObject } from '~web/utils/is-plain-object';
 
 type SafeAreaOption = NonNullable<Options['safeArea']>;
 
@@ -7,12 +9,6 @@ export type ParsedSafeAreaOption =
   | { ok: false; error: string };
 
 const SAFE_AREA_EDGES = ['top', 'right', 'bottom', 'left'] as const;
-
-const isFinitePositive = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && value >= 0;
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 export const parseSafeAreaOption = (value: unknown): ParsedSafeAreaOption => {
   if (isFinitePositive(value)) {

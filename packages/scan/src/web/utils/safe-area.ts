@@ -1,5 +1,7 @@
 import { ReactScanInternals } from '~core/index';
 import { SAFE_AREA } from '~web/constants';
+import { isFinitePositive } from '~web/utils/is-finite-positive';
+import { isPlainObject } from '~web/utils/is-plain-object';
 
 export interface SafeAreaInsets {
   top: number;
@@ -7,12 +9,6 @@ export interface SafeAreaInsets {
   bottom: number;
   left: number;
 }
-
-const isFinitePositive = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && value >= 0;
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 export const getSafeArea = (): SafeAreaInsets => {
   const value = ReactScanInternals.options.value.safeArea;
