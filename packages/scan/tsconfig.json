@@ -4,6 +4,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "types": [
       "node"
     ],

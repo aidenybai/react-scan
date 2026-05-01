@@ -22,9 +22,6 @@ Airbnb&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://polaris.shopify.com/"
 
 ![React Scan in action](https://raw.githubusercontent.com/aidenybai/react-scan/refs/heads/main/.github/assets/demo.gif)
 
-> [!IMPORTANT]
-> Want to monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!
-
 ## Install
 
 ### Package managers
@@ -88,6 +85,62 @@ If you want to install the extension, follow the guide [here](https://github.com
 ### React Native
 
 See [discussion](https://github.com/aidenybai/react-scan/pull/23)
+
+## `react-scan/lite`: headless instrumentation
+
+A tiny, UI-less entry point that taps into the same React DevTools profiling channel the Timeline Profiler uses. No toolbar, no canvas, no styles. Just a stream of commit / render / state-update events you can pipe to a callback or POST to an endpoint. Pairs naturally with a `long-animation-frame` `PerformanceObserver` so you can attribute a slow LoAF to a specific component subtree.
+
+```ts
+import { instrument } from "react-scan/lite";
+
+const handle = instrument({
+  onEvent: (event) => console.log(event),
+
+  // optional: POST every event to an ingest endpoint
+  endpoint: "http://127.0.0.1:54321/ingest/abc123",
+  sessionId: "abc123",
+
+  // optional: enrich each fiber summary
+  recordChangeDescriptions: true, // why did this re-render? (props/state/context/hooks/parent)
+  includeFiberSource: true,       // file:line of each fiber's JSX call site
+  includeFiberIdentity: true,     // stable id across commits, for cascade histograms
+});
+
+handle.subscribe((event) => {
+  if (event.kind === "commit") {
+    // event.tree[] = per-fiber { name, fiberId, depth, actualDuration,
+    //                            source, ownerName, changeDescription }
+    // event.priorityName = "UserBlocking" | "Normal" | ...
+  }
+  if (event.kind === "profiling-hooks-status" && !event.available) {
+    // React 19.2+ prod or non-__PROFILE__ build: mark* hooks won't fire.
+    // Fall back to LoAF-only attribution.
+  }
+});
+
+handle.stop(); // idempotent
+```
+
+`instrument` must run before `react-dom` mounts (top of your entry, or as the first script in `<head>`). It's SSR-safe: calling `instrument()` in Node returns a noop handle whose `isActive()` is `false`.
+
+### Per-fiber enrichment
+
+| Option                       | Default | What you get                                                                                                        |
+| ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `recordChangeDescriptions`   | `false` | `changeDescription: { isFirstMount, props[], state, context, hooks[], parent }` per fiber. Answers "why this re-rendered" in a single event. |
+| `includeFiberSource`         | `false` | `source: { fileName, lineNumber, columnNumber }` + `ownerName`, read from `_debugSource` (R16/17/18) or `_debugStack` (R19+). Sync, no symbolication. |
+| `includeFiberIdentity`       | `false` | `fiberId: number`, stable monotonic id per logical fiber (alternate-aware), so the agent can build cross-commit histograms. |
+| `includeLaneLabels`          | `true`  | `laneLabels: string[]` (translated via `renderer.getLaneLabelMap()`) and `priorityName` (e.g. `"UserBlocking"`)     |
+| `maxFibersPerCommit`         | `5000`  | Cap on tree size per commit to bound payload size                                                                   |
+| `minFiberActualDurationMs`   | `0`     | Skip fibers below this threshold                                                                                    |
+
+### Build profile
+
+`actualDuration` and the `mark*` profiling hooks only populate in `__PROFILE__` builds. In development that's the default; in production you can opt in by aliasing `react-dom` to `react-dom/profiling` in your bundler (`resolve.alias` in webpack/vite). Otherwise `onCommitFiberRoot` still fires but every fiber's `actualDuration` is `0`. The `profiling-hooks-status` event makes this explicit: `available: false` with `reason: "no-inject-method"` means React 19.2+ in prod or a non-`__PROFILE__` build, so the agent should fall back to LoAF-only attribution rather than concluding "idle".
+
+### Coexistence with React DevTools
+
+If React DevTools is also attached, `instrument()` logs a one-time warning: the `injectProfilingHooks` channel is a hard replace, so DevTools' Timeline Profiler stops receiving events while this instrumentation is active. Call `handle.stop()` to restore.
 
 ## API Reference
 
@@ -182,8 +235,6 @@ This often comes down to props that update in reference, like callbacks or objec
 ```
 
 React Scan helps you identify these issues by automatically detecting and highlighting renders that cause performance issues. Now, instead of guessing, you can see exactly which components you need to fix.
-
-> Want monitor issues in production? Check out [React Scan Monitoring](https://react-scan.com/monitoring)!
 
 ### FAQ
 

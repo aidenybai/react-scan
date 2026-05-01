@@ -88,6 +88,11 @@
       "import": "./dist/install-hook.mjs",
       "require": "./dist/install-hook.js"
     },
+    "./lite": {
+      "types": "./dist/lite/index.d.ts",
+      "import": "./dist/lite/index.mjs",
+      "require": "./dist/lite/index.js"
+    },
     "./auto": {
       "production": {
         "import": {
@@ -206,7 +211,7 @@
     "@preact/signals": "^1.3.1",
     "@rollup/pluginutils": "^5.1.3",
     "@types/node": "^20.17.9",
-    "bippy": "^0.5.30",
+    "bippy": "^0.5.39",
     "commander": "^14.0.0",
     "estree-walker": "^3.0.3",
     "picocolors": "^1.1.1",

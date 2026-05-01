@@ -8,15 +8,18 @@ import { workerPlugin } from './worker-plugin';
 
 const DIST_PATH = './dist';
 
+const USE_CLIENT_DIRECTIVE = `'use client';\n`;
+
 const addDirectivesToChunkFiles = async (readPath: string): Promise<void> => {
   try {
+    if (!fs.existsSync(readPath)) return;
     const files = await fsPromise.readdir(readPath);
     for (const file of files) {
       if (file.endsWith('.mjs') || file.endsWith('.js')) {
         const filePath = path.join(readPath, file);
         const data = await fsPromise.readFile(filePath, 'utf8');
-        const updatedContent = `'use client';\n${data}`;
-        await fsPromise.writeFile(filePath, updatedContent, 'utf8');
+        if (data.startsWith(USE_CLIENT_DIRECTIVE)) continue;
+        await fsPromise.writeFile(filePath, `${USE_CLIENT_DIRECTIVE}${data}`, 'utf8');
       }
     }
   } catch (err) {
@@ -117,6 +120,7 @@ export default defineConfig([
       './src/index.ts',
       './src/install-hook.ts',
       './src/core/all-environments.ts',
+      './src/lite/index.ts',
     ],
     banner: {
       js: banner,
@@ -135,6 +139,8 @@ export default defineConfig([
     watch: process.env.NODE_ENV === 'development',
     async onSuccess() {
       await addDirectivesToChunkFiles(DIST_PATH);
+      await addDirectivesToChunkFiles(path.join(DIST_PATH, 'lite'));
+      await addDirectivesToChunkFiles(path.join(DIST_PATH, 'core'));
     },
     minify: false,
     env: {
