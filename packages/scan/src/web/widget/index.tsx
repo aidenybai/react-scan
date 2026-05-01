@@ -178,10 +178,21 @@ export const Widget = () => {
 
   const handleDrag = useCallback(
     (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
+      if (!refWidget.current) return;
 
-      if (!refWidget.current || (e.target as HTMLElement).closest("button"))
+      const eventTarget = e.target;
+      if (!(eventTarget instanceof HTMLElement)) return;
+
+      if (
+        eventTarget.closest("button") ||
+        eventTarget.closest(
+          'input, textarea, select, option, label, [contenteditable="true"]',
+        )
+      ) {
         return;
+      }
+
+      e.preventDefault();
 
       const container = refWidget.current;
       const containerStyle = container.style;

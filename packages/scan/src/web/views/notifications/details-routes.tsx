@@ -138,7 +138,10 @@ export const DetailsRoutes = () => {
     case 'render-visualization': {
       return (
         <TabLayout>
-          <RenderBarChart selectedEvent={notificationState.selectedEvent} />
+          <RenderBarChart
+            key={notificationState.selectedEvent.id}
+            selectedEvent={notificationState.selectedEvent}
+          />
         </TabLayout>
       );
     }
@@ -194,12 +197,14 @@ const TabLayout = ({ children }: { children: ReactNode }) => {
     );
   }
   return (
-    <div className={cn([`w-full h-full flex flex-col gap-y-2`])}>
-      <div className={cn(['h-[50px] w-full'])}>
+    <div className={cn(['flex h-full min-h-0 w-full flex-col'])}>
+      <div className={cn(['w-full shrink-0'])}>
         <NotificationTabs selectedEvent={notificationState.selectedEvent} />
       </div>
       <div
-        className={cn(['h-calc(100%-50px) flex flex-col overflow-y-auto px-3'])}
+        className={cn([
+          'flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pt-2',
+        ])}
       >
         {children}
       </div>
