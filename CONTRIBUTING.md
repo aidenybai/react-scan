@@ -20,7 +20,7 @@ This is a monorepo containing several packages:
 
 - `packages/scan` - Core React Scan package
 - `packages/vite-plugin-react-scan` - Vite plugin for React Scan
-- `packages/extension` - VS Code extension
+- `packages/extension` - Browser extension
 
 ## Development Setup
 
