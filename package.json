@@ -11,8 +11,6 @@
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "check": "vp check",
-    "deadcode": "fallow dead-code",
-    "deadcode:fix": "fallow fix",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "changeset": "changeset add",
@@ -24,7 +22,6 @@
     "@playwright/test": "^1.58.2",
     "@types/node": "^22.10.2",
     "@voidzero-dev/vite-plus-core": "^0.1.12",
-    "fallow": "^2.58.0",
     "turbo": "^2.9.3",
     "typescript": "latest",
     "vite-plus": "^0.1.12"

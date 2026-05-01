@@ -7,9 +7,8 @@ dist
 build
 !packages/extension/build/
 playgrounds
-# Turbo / Fallow caches
+# Turbo cache
 .turbo/
-.fallow/
 # Playwright
 test-results/
 playwright-report/

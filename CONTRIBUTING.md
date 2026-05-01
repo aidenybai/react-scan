@@ -54,7 +54,6 @@ pnpm format          # write
 pnpm format:check    # verify
 pnpm check           # lint + format:check + typecheck
 pnpm typecheck
-pnpm deadcode        # fallow dead-code analysis
 ```
 
 Highlights:

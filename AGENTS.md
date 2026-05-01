@@ -88,8 +88,6 @@ The root [`package.json`](package.json) declares `pnpm.onlyBuiltDependencies` fo
 | Format check   | `pnpm format:check`                          |
 | Typecheck      | `pnpm typecheck`                             |
 | Combined       | `pnpm check` (lint + fmt check + typecheck)  |
-| Dead code      | `pnpm deadcode` (fallow analysis)            |
-| Dead code fix  | `pnpm deadcode:fix`                          |
 
 ## Testing
 
