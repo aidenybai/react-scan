@@ -6,9 +6,9 @@
     "access": "restricted"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "dev": "vp dev",
+    "build": "vp build",
+    "serve": "vp preview"
   },
   "dependencies": {
     "react": "^19.0.0",
