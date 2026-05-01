@@ -147,7 +147,7 @@ We also have lower level information about react components, such as their rende
 
 ${formattedReactData}
 
-You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could of been memoized to avoid computation
+You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could have been memoized to avoid computation
 
 It's also important to remember if a component had no props/state/context change, and it was memoized, it would not render. So the flow should be:
 - find the most expensive components
@@ -197,7 +197,7 @@ We also have lower level information about react components, such as their rende
 
 ${formattedReactData}
 
-You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could of been memoized to avoid computation
+You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could have been memoized to avoid computation
 
 It's also important to remember if a component had no props/state/context change, and it was memoized, it would not render. So the flow should be:
 - find the most expensive components
@@ -235,7 +235,7 @@ We also have lower level information about react components, such as their rende
 
 ${formattedReactData}
 
-You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could of been memoized to avoid computation
+You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could have been memoized to avoid computation
 
 It's also important to remember if a component had no props/state/context change, and it was memoized, it would not render. So a flow we can go through is:
 - find the most expensive components
@@ -312,7 +312,7 @@ We also have lower level information about react components, such as their rende
 ${formattedReactData}
 
 
-You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could of been memoized to avoid computation
+You may notice components have many renders, but much fewer props/state/context changes. This normally implies most of the components could have been memoized to avoid computation
 
 It's also important to remember if a component had no props/state/context change, and it was memoized, it would not render. So a flow we can go through is:
 - find the most expensive components
