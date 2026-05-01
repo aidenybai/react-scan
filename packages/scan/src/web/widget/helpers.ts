@@ -134,21 +134,32 @@ export const calculatePosition = (
   let topBound = safeArea.top;
   let bottomBound = windowHeight - effectiveHeight - safeArea.bottom;
 
+  // In RTL the toolbar's containing block resolves to the right viewport
+  // edge (position: fixed with both left:0 and right:0 plus an explicit
+  // width pins to inline-end). translateX(negative) moves it leftward
+  // from that right anchor, so the *physical* right inset is `-safeArea.right`
+  // and the physical left inset is `-(windowWidth - width - safeArea.left)`.
+  // With symmetric SAFE_AREA these collapse to the original `-leftBound` /
+  // `-rightBound` values; asymmetric `safeArea` would otherwise apply the
+  // wrong edge to the wrong physical side.
+  const rtlRightCornerX = -safeArea.right;
+  const rtlLeftCornerX = -(windowWidth - effectiveWidth - safeArea.left);
+
   switch (corner) {
     case 'top-right':
-      x = isRTL ? -leftBound : rightBound;
+      x = isRTL ? rtlRightCornerX : rightBound;
       y = topBound;
       break;
     case 'bottom-right':
-      x = isRTL ? -leftBound : rightBound;
+      x = isRTL ? rtlRightCornerX : rightBound;
       y = bottomBound;
       break;
     case 'bottom-left':
-      x = isRTL ? -rightBound : leftBound;
+      x = isRTL ? rtlLeftCornerX : leftBound;
       y = bottomBound;
       break;
     case 'top-left':
-      x = isRTL ? -rightBound : leftBound;
+      x = isRTL ? rtlLeftCornerX : leftBound;
       y = topBound;
       break;
     default:
@@ -160,13 +171,11 @@ export const calculatePosition = (
   // Only ensure positions are within bounds if minimized
   if (isMinimized) {
     if (isRTL) {
-      // For RTL
       x = Math.min(
-        -leftBound,
-        Math.max(x, -rightBound)
+        rtlRightCornerX,
+        Math.max(x, rtlLeftCornerX),
       );
     } else {
-      // For LTR
       x = Math.max(
         leftBound,
         Math.min(x, rightBound),
@@ -310,15 +319,19 @@ export const calculateNewSizeAndPosition = (
   let topBound = safeArea.top;
   let bottomBound = window.innerHeight - safeArea.bottom - newHeight;
 
+  // See `calculatePosition` for why RTL uses these values: the toolbar is
+  // right-anchored in RTL, so physical-edge insets need different bounds
+  // than the LTR `[leftBound, rightBound]` clamp.
+  const rtlRightCornerX = -safeArea.right;
+  const rtlLeftCornerX = -(window.innerWidth - newWidth - safeArea.left);
+
   // Ensure position stays within bounds
   if (isRTL) {
-    // for RTL
     newX = Math.min(
-      -leftBound,
-      Math.max(newX, -rightBound)
+      rtlRightCornerX,
+      Math.max(newX, rtlLeftCornerX),
     );
   } else {
-    // for LTR
     newX = Math.max(
       leftBound,
       Math.min(newX, rightBound),
