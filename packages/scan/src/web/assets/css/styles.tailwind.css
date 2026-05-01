@@ -107,6 +107,17 @@ svg {
   backface-visibility: hidden;
 }
 
+/* The toolbar uses select-none for drag UX, so re-enable text selection on
+ * content elements (e.g. AI prompt <pre>, search inputs). See #415. */
+#react-scan-toolbar pre,
+#react-scan-toolbar textarea,
+#react-scan-toolbar input[type='text'],
+#react-scan-toolbar input[type='search'],
+#react-scan-toolbar [data-react-scan-selectable] {
+  @apply select-text;
+  cursor: text;
+}
+
 .button {
   &:hover {
     background: rgba(255, 255, 255, 0.1);

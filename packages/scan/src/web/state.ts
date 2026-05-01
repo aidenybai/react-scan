@@ -8,6 +8,7 @@ import {
 } from "./constants";
 import { IS_CLIENT } from "./utils/constants";
 import { readLocalStorage, saveLocalStorage } from "./utils/helpers";
+import { getSafeArea } from "./utils/safe-area";
 import type { Corner, WidgetConfig, WidgetSettings } from "./widget/types";
 import type { CollapsedPosition } from "./widget/types";
 
@@ -16,8 +17,10 @@ export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(
   null
 );
 
-export const defaultWidgetConfig = {
-  corner: "bottom-right" as Corner,
+// Use the raw SAFE_AREA constant (not getSafeArea()) here: this runs at
+// module-init time, before any user has called scan() with options.
+export const getDefaultWidgetConfig = (): WidgetConfig => ({
+  corner: "bottom-right" satisfies Corner,
   dimensions: {
     isFullWidth: false,
     isFullHeight: false,
@@ -35,30 +38,36 @@ export const defaultWidgetConfig = {
   componentsTree: {
     width: MIN_CONTAINER_WIDTH,
   },
-} as WidgetConfig;
+});
+
+// Deprecated alias kept for one minor version to avoid breaking downstream
+// imports of the pre-refactor `defaultWidgetConfig` const.
+/** @deprecated use {@link getDefaultWidgetConfig} */
+export const defaultWidgetConfig: WidgetConfig = getDefaultWidgetConfig();
 
 export const getInitialWidgetConfig = (): WidgetConfig => {
+  const defaults = getDefaultWidgetConfig();
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
   if (!stored) {
     saveLocalStorage(LOCALSTORAGE_KEY, {
-      corner: defaultWidgetConfig.corner,
-      dimensions: defaultWidgetConfig.dimensions,
-      lastDimensions: defaultWidgetConfig.lastDimensions,
-      componentsTree: defaultWidgetConfig.componentsTree,
+      corner: defaults.corner,
+      dimensions: defaults.dimensions,
+      lastDimensions: defaults.lastDimensions,
+      componentsTree: defaults.componentsTree,
     });
 
-    return defaultWidgetConfig;
+    return defaults;
   }
 
   return {
-    corner: stored.corner ?? defaultWidgetConfig.corner,
-    dimensions: stored.dimensions ?? defaultWidgetConfig.dimensions,
+    corner: stored.corner ?? defaults.corner,
+    dimensions: stored.dimensions ?? defaults.dimensions,
 
     lastDimensions:
       stored.lastDimensions ??
       stored.dimensions ??
-      defaultWidgetConfig.lastDimensions,
-    componentsTree: stored.componentsTree ?? defaultWidgetConfig.componentsTree,
+      defaults.lastDimensions,
+    componentsTree: stored.componentsTree ?? defaults.componentsTree,
   };
 };
 
@@ -69,12 +78,13 @@ export const updateDimensions = (): void => {
 
   const { dimensions } = signalWidget.value;
   const { width, height, position } = dimensions;
+  const safeArea = getSafeArea();
 
   signalWidget.value = {
     ...signalWidget.value,
     dimensions: {
-      isFullWidth: width >= window.innerWidth - SAFE_AREA * 2,
-      isFullHeight: height >= window.innerHeight - SAFE_AREA * 2,
+      isFullWidth: width >= window.innerWidth - safeArea.left - safeArea.right,
+      isFullHeight: height >= window.innerHeight - safeArea.top - safeArea.bottom,
       width,
       height,
       position,

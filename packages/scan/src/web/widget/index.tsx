@@ -13,17 +13,18 @@ import {
   LOCALSTORAGE_KEY,
   LOCALSTORAGE_COLLAPSED_KEY,
   MIN_SIZE,
-  SAFE_AREA,
   LOCALSTORAGE_LAST_VIEW_KEY,
+  TOOLBAR_INTERACTIVE_SELECTOR,
 } from "../constants";
 import {
-  defaultWidgetConfig,
+  getDefaultWidgetConfig,
   signalRefWidget,
   signalWidget,
   signalWidgetViews,
   updateDimensions,
   type WidgetStates,
 } from "../state";
+import { getSafeArea } from "../utils/safe-area";
 import {
   calculateBoundedSize,
   calculatePosition,
@@ -82,25 +83,26 @@ export const Widget = () => {
       const { corner: collapsedCorner, orientation = "horizontal" } =
         signalWidgetCollapsed.value;
       const size = COLLAPSED_SIZE[orientation];
+      const safeArea = getSafeArea();
 
       switch (collapsedCorner) {
         case "top-left":
           finalPosition =
             orientation === "horizontal"
-              ? { x: -1, y: SAFE_AREA }
-              : { x: SAFE_AREA, y: -1 };
+              ? { x: -1, y: safeArea.top }
+              : { x: safeArea.left, y: -1 };
           break;
         case "bottom-left":
           finalPosition =
             orientation === "horizontal"
-              ? { x: -1, y: window.innerHeight - size.height - SAFE_AREA }
-              : { x: SAFE_AREA, y: window.innerHeight - size.height + 1 };
+              ? { x: -1, y: window.innerHeight - size.height - safeArea.bottom }
+              : { x: safeArea.left, y: window.innerHeight - size.height + 1 };
           break;
         case "top-right":
           finalPosition =
             orientation === "horizontal"
-              ? { x: window.innerWidth - size.width + 1, y: SAFE_AREA }
-              : { x: window.innerWidth - size.width - SAFE_AREA, y: -1 };
+              ? { x: window.innerWidth - size.width + 1, y: safeArea.top }
+              : { x: window.innerWidth - size.width - safeArea.right, y: -1 };
           break;
         case "bottom-right":
         default:
@@ -108,10 +110,10 @@ export const Widget = () => {
             orientation === "horizontal"
               ? {
                   x: window.innerWidth - size.width + 1,
-                  y: window.innerHeight - size.height - SAFE_AREA,
+                  y: window.innerHeight - size.height - safeArea.bottom,
                 }
               : {
-                  x: window.innerWidth - size.width - SAFE_AREA,
+                  x: window.innerWidth - size.width - safeArea.right,
                   y: window.innerHeight - size.height + 1,
                 };
           break;
@@ -145,9 +147,10 @@ export const Widget = () => {
       rafId = null;
     });
 
+    const safeArea = getSafeArea();
     const newDimensions = {
-      isFullWidth: newWidth >= window.innerWidth - SAFE_AREA * 2,
-      isFullHeight: newHeight >= window.innerHeight - SAFE_AREA * 2,
+      isFullWidth: newWidth >= window.innerWidth - safeArea.left - safeArea.right,
+      isFullHeight: newHeight >= window.innerHeight - safeArea.top - safeArea.bottom,
       width: newWidth,
       height: newHeight,
       position: finalPosition,
@@ -178,10 +181,17 @@ export const Widget = () => {
 
   const handleDrag = useCallback(
     (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+
+      // Skip drag on interactive/text-selectable surfaces so users can select
+      // prompt text, focus inputs, and click buttons normally.
+      if (target.closest(TOOLBAR_INTERACTIVE_SELECTOR)) {
+        return;
+      }
+
       e.preventDefault();
 
-      if (!refWidget.current || (e.target as HTMLElement).closest("button"))
-        return;
+      if (!refWidget.current) return;
 
       const container = refWidget.current;
       const containerStyle = container.style;
@@ -478,13 +488,14 @@ export const Widget = () => {
                 let newX = e.clientX - targetWidth / 2;
                 let newY = e.clientY - targetHeight / 2;
 
+                const safeArea = getSafeArea();
                 newX = Math.max(
-                  SAFE_AREA,
-                  Math.min(newX, window.innerWidth - targetWidth - SAFE_AREA)
+                  safeArea.left,
+                  Math.min(newX, window.innerWidth - targetWidth - safeArea.right)
                 );
                 newY = Math.max(
-                  SAFE_AREA,
-                  Math.min(newY, window.innerHeight - targetHeight - SAFE_AREA)
+                  safeArea.top,
+                  Math.min(newY, window.innerHeight - targetHeight - safeArea.bottom)
                 );
 
                 signalWidget.value = {
@@ -558,8 +569,9 @@ export const Widget = () => {
       refInitialMinimizedWidth.current = 0;
     }
 
-    refWidget.current.style.maxWidth = `calc(100vw - ${SAFE_AREA * 2}px)`;
-    refWidget.current.style.maxHeight = `calc(100vh - ${SAFE_AREA * 2}px)`;
+    const safeArea = getSafeArea();
+    refWidget.current.style.maxWidth = `calc(100vw - ${safeArea.left + safeArea.right}px)`;
+    refWidget.current.style.maxHeight = `calc(100vh - ${safeArea.top + safeArea.bottom}px)`;
 
     updateWidgetPosition();
 
@@ -631,7 +643,7 @@ export const Widget = () => {
       unsubscribeSignalWidget();
 
       saveLocalStorage(LOCALSTORAGE_KEY, {
-        ...defaultWidgetConfig,
+        ...getDefaultWidgetConfig(),
         corner: signalWidget.value.corner,
       });
     };
