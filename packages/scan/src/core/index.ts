@@ -14,6 +14,7 @@ import styles from '~web/assets/css/styles.css';
 import { createToolbar } from '~web/toolbar';
 import { IS_CLIENT } from '~web/utils/constants';
 import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
+import { parseSafeAreaOption } from '~web/utils/parse-safe-area-option';
 import type { States } from '~web/views/inspector/utils';
 import type {
   ChangeReason,
@@ -125,6 +126,33 @@ export interface Options {
    * @default false
    */
   allowInIframe?: boolean;
+
+  /**
+   * Distance (in pixels) the toolbar keeps from the viewport edges. Useful
+   * when other dev overlays (e.g. the Next.js dev indicator) sit in the same
+   * corner. Pass a single number to inset all edges, or an object to inset
+   * edges individually.
+   *
+   * @default 24
+   */
+  safeArea?:
+    | number
+    | {
+        top?: number;
+        right?: number;
+        bottom?: number;
+        left?: number;
+      };
+
+  /**
+   * Render outline overlays via an OffscreenCanvas + Web Worker. Disable when
+   * a strict Content-Security-Policy without `worker-src blob:` would
+   * otherwise reject the blob worker — React Scan automatically falls back
+   * to main-thread rendering.
+   *
+   * @default true
+   */
+  useOffscreenCanvasWorker?: boolean;
 
   /**
    * Should react scan log internal errors to the console.
@@ -277,6 +305,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
       case 'dangerouslyForceRunInProduction':
       case 'showFPS':
       case 'allowInIframe':
+      case 'useOffscreenCanvasWorker':
         if (typeof value !== 'boolean') {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
@@ -292,6 +321,15 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
           validOptions[key] = value as 'slow' | 'fast' | 'off';
         }
         break;
+      case 'safeArea': {
+        const parsed = parseSafeAreaOption(value);
+        if (parsed.ok) {
+          validOptions.safeArea = parsed.value;
+        } else {
+          errors.push(parsed.error);
+        }
+        break;
+      }
       case 'onCommitStart':
         if (typeof value !== 'function') {
           errors.push(`- ${key} must be a function. Got "${value}"`);
@@ -411,21 +449,30 @@ export const setOptions = (userOptions: Partial<Options>) => {
 
 export const getOptions = () => ReactScanInternals.options;
 
-// we only need to run this check once and will read the value in hot path
 let isProduction: boolean | null = null;
 let rdtHook: ReturnType<typeof getRDTHook>;
 export const getIsProduction = () => {
-  if (isProduction !== null) {
-    return isProduction;
+  // Once we've definitively seen a non-production renderer, the app is "dev"
+  // forever — cache that and short-circuit. We deliberately do NOT cache the
+  // `true` result: tools like the Next.js dev overlay register a production
+  // React renderer alongside the user's dev React, and the dev renderer may
+  // arrive on a later tick. Caching `true` would lock out that flip.
+  if (isProduction === false) {
+    return false;
   }
   rdtHook ??= getRDTHook();
-  for (const renderer of rdtHook.renderers.values()) {
+  const renderers = Array.from(rdtHook.renderers.values());
+  if (renderers.length === 0) {
+    return null;
+  }
+  for (const renderer of renderers) {
     const buildType = detectReactBuildType(renderer);
-    if (buildType === 'production') {
-      isProduction = true;
+    if (buildType !== 'production') {
+      isProduction = false;
+      return false;
     }
   }
-  return isProduction;
+  return true;
 };
 
 export const start = () => {
