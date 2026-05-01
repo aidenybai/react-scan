@@ -1,17 +1,30 @@
 {
   "name": "@react-scan/vite-plugin-react-scan",
-  "version": "0.2.4",
+  "version": "0.2.3",
   "description": "A Vite plugin for React Scan - detects performance issues in your React app.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
   "scripts": {
-    "build": "rimraf dist && tsc",
-    "postbuild": "node ../../scripts/version-warning.mjs",
-    "lint": "oxlint src && pnpm typecheck",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "rimraf dist && npm run build"
+    "build": "rm -rf dist && NODE_ENV=production vp pack",
+    "dev": "vp pack --watch",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "typecheck": "tsc --noEmit"
   },
   "peerDependenciesMeta": {
     "react-scan": {
@@ -45,21 +58,18 @@
   },
   "dependencies": {
     "@babel/core": "^7.26.0",
-    "@babel/plugin-transform-react-jsx": "^7.25.9",
-    "@babel/preset-typescript": "^7.23.3",
     "babel-plugin-add-react-displayname": "^0.0.5",
     "cheerio": "^1.0.0"
   },
   "peerDependencies": {
-    "react-scan": ">=0.5.4",
+    "react-scan": ">=0.5.3",
     "vite": "^2 || ^3 || ^4 || ^5 || ^6"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",
     "@types/cheerio": "^0.22.35",
     "@types/node": "^22.10.7",
-    "typescript": "latest",
-    "vite": "^6.3.0"
+    "typescript": "latest"
   },
   "publishConfig": {
     "access": "public"

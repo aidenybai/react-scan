@@ -1,3 +1,4 @@
+import type { JSX } from 'preact';
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { cn } from '~web/utils/helpers';

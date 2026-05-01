@@ -6,30 +6,17 @@
     "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": [
-      "node"
-    ],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "types": ["node"],
     "paths": {
-      "~web/*": [
-        "src/web/*"
-      ],
-      "~core/*": [
-        "src/core/*"
-      ],
-      "~monitor/*": [
-        "src/monitor/*"
-      ],
-      "~instrumentation/*": [
-        "src/instrumentation/*"
-      ]
+      "~web/*": ["src/web/*"],
+      "~core/*": ["src/core/*"]
     }
   },
-  "include": [
-    "src",
-    "global.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src", "global.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

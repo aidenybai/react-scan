@@ -1,28 +1,19 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
-    "target": "ES2018",
+    "module": "ESNext",
+    "target": "ES2022",
     "lib": ["ESNext", "DOM"],
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "packages",
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["packages"],
+  "exclude": ["node_modules"]
 }

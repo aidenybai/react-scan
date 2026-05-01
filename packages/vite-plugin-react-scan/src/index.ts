@@ -234,7 +234,7 @@ const reactScanPlugin = (options: ReactScanPluginOptions = {}): Plugin => {
 
         // Remove any existing React Scan script to avoid duplicates
         let removedCount = 0;
-        $('script').each((_index: number, element: cheerio.Element) => {
+        $('script').each((_index, element) => {
           const content = $(element).html() || '';
           if (content.includes(REACT_SCAN_IDENTIFIER)) {
             $(element).remove();

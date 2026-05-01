@@ -5,10 +5,10 @@
   "scripts": {
     "presync": "cp ../scan/dist/auto.global.js ./public/auto.global.js",
     "dev": "pnpm presync && next dev --turbopack",
-    "build": "pnpm --filter react-scan build && pnpm presync && next build",
-    "postbuild": "node ../../scripts/version-warning.mjs",
+    "build": "pnpm presync && next build",
     "start": "next start",
-    "lint": "oxlint ."
+    "lint": "vp lint",
+    "format": "vp fmt"
   },
   "dependencies": {
     "@vercel/analytics": "^1.4.1",
@@ -18,11 +18,15 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-grab": "^0.1.15",
-    "react-scan": "^0.5.4",
+    "react-scan": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4"
+    "@types/react-dom": "^19.0.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.3",
+    "postcss-load-config": "^6.0.1",
+    "tailwindcss": "^3.4.17"
   }
 }

@@ -1,4 +1,7 @@
 packages:
-  - 'packages/*'
-  - 'kitchen-sink'
-  
+  - "packages/*"
+  - "kitchen-sink"
+
+overrides:
+  vite: npm:@voidzero-dev/vite-plus-core@^0.1.12
+  vitest: npm:@voidzero-dev/vite-plus-test@^0.1.12

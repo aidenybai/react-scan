@@ -1,27 +1,16 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES6",
-    "module": "ES6",
-    "lib": [
-      "es2016"
-    ],
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "declaration": true,
     "isolatedModules": true,
-    "resolveJsonModule": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "jsx": "preserve"
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

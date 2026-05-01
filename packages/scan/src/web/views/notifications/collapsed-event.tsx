@@ -1,3 +1,4 @@
+import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   DroppedFramesEvent,

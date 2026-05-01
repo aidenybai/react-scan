@@ -1,95 +1,106 @@
 # Contributing to React Scan
 
-First off, thanks for taking the time to contribute! ❤️
-
-## Table of Contents
-
-- [Contributing to React Scan](#contributing-to-react-scan)
-  - [Table of Contents](#table-of-contents)
-  - [Project Structure](#project-structure)
-  - [Development Setup](#development-setup)
-  - [Contributing Guidelines](#contributing-guidelines)
-    - [Commits](#commits)
-    - [Pull Request Process](#pull-request-process)
-    - [Development Workflow](#development-workflow)
-  - [Getting Help](#getting-help)
+Thanks for your interest in contributing to React Scan! This document covers the project layout, dev setup, and the workflow for getting your change merged.
 
 ## Project Structure
 
-This is a monorepo containing several packages:
+This is a pnpm 10 monorepo orchestrated by [turbo](https://turbo.build) and built on [Vite+](https://viteplus.dev) (oxlint, oxfmt, tsdown).
 
-- `packages/scan` - Core React Scan package
-- `packages/vite-plugin-react-scan` - Vite plugin for React Scan
-- `packages/extension` - VS Code extension
+```
+packages/
+├── scan/                    # Core React Scan library + CLI
+├── extension/               # Browser extension (Chrome / Firefox / Brave)
+├── vite-plugin-react-scan/  # Vite plugin wrapper
+└── website/                 # Marketing site (Next.js, react-scan.com)
+
+kitchen-sink/                # Playwright target app (Vite, port 5173)
+e2e/                         # Playwright specs
+docs/installation/           # Per-framework install guides
+```
 
 ## Development Setup
 
-1. **Clone and Install**
+### Prerequisites
+
+- Node.js >= 22
+- pnpm >= 10
+
+### Setup
+
+```bash
+git clone https://github.com/aidenybai/react-scan.git
+cd react-scan
+pnpm install
+pnpm build
+```
+
+### Dev workflow
+
+```bash
+pnpm dev                                    # watches react-scan + kitchen-sink in parallel
+pnpm --filter react-scan build:copy         # build and copy IIFE to clipboard for ad-hoc testing
+pnpm --filter @react-scan/extension dev     # extension in Chrome
+pnpm --filter @react-scan/website dev       # marketing site
+```
+
+## Code Style
+
+We use [Vite+](https://viteplus.dev) which bundles oxlint and oxfmt. See [`AGENTS.md`](AGENTS.md) for the full rule set.
+
+```bash
+pnpm lint            # check
+pnpm lint:fix        # auto-fix
+pnpm format          # write
+pnpm format:check    # verify
+pnpm check           # lint + format:check + typecheck
+pnpm typecheck
+pnpm deadcode        # fallow dead-code analysis
+```
+
+Highlights:
+
+- TypeScript everywhere; avoid `any`.
+- Interfaces over types; kebab-case filenames.
+- Arrow functions over function declarations.
+- No comments unless the "why" is non-obvious. Hacks must be prefixed with `// HACK: …`.
+- Magic numbers in `constants.ts` with `_MS` / `_PX` unit suffixes.
+- One utility per file under `utils/`.
+
+## Tests
+
+```bash
+pnpm test              # vitest in each package
+pnpm test:e2e          # Playwright against kitchen-sink (auto-started on :5173)
+pnpm test:e2e:ui       # Playwright UI mode
+```
+
+## Pull Requests
+
+1. Fork and create a branch (`git checkout -b feat/your-feature`).
+2. Make your changes; run `pnpm check` and `pnpm test:e2e` before pushing.
+3. If your change affects a published package, add a changeset:
    ```bash
-   git clone https://github.com/aidenybai/react-scan.git
-   cd react-scan
-   pnpm install
+   pnpm changeset
    ```
+4. Open a PR against `main`. Tag [@aidenybai](https://github.com/aidenybai) for review.
 
-2. **Build all packages**
-   ```bash
-   pnpm build
-   ```
+### Commit Convention
 
-3. **Testing React Scan**
-   ```bash
-   cd packages/scan
-   pnpm build:copy
-   ```
-   - This will build the package and then copy it to your clipboard as an IIFE (immedietely invoked function expression). This will allow you to paste it into the browser console to test it on any website
-
-https://github.com/user-attachments/assets/f279e664-479f-4e39-bff4-1bbfee30af22
-
-## Contributing Guidelines
-
-### Commits
-
-We use conventional commits to ensure consistent commit messages:
+We use conventional commits:
 
 - `feat:` New features
 - `fix:` Bug fixes
-- `docs:` Documentation changes
-- `chore:` Maintenance tasks
-- `test:` Adding or updating tests
+- `docs:` Documentation
+- `chore:` Maintenance
 - `refactor:` Code changes that neither fix bugs nor add features
+- `test:` Tests
 
-Example: `fix(scan): fix a typo`
-
-### Pull Request Process
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes using conventional commits
-4. Push to your branch
-5. Open a Pull Request
-6. Ask for reviews (@pivanov, @RobPruzan are your friends in this journey)
-
-### Development Workflow
-
-1. **TypeScript**
-   - All code must be written in TypeScript
-   - Ensure strict type checking passes
-   - No `any` types unless absolutely necessary
-
-2. **Code Style**
-   - We use Biome for formatting and linting
-   - Run `pnpm format` to format code
-   - Run `pnpm lint` to check for issues
-
-3. **Documentation**
-   - Update relevant documentation
-   - Add JSDoc comments for public APIs
-   - Update README if needed
+Example: `fix(scan): handle null fiber in flash overlay`
 
 ## Getting Help
-- Check existing issues
-- Create a new issue
 
-<br />
+- Check existing [issues](https://github.com/aidenybai/react-scan/issues)
+- Open a new issue with a minimal repro
+- Join our [Discord](https://discord.gg/KV3FhDq7FA)
 
-⚛️ Happy coding! 🚀
+Happy contributing!
