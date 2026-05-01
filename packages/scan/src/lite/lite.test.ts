@@ -770,6 +770,42 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }
   });
 
+  it('invalid endpoint does NOT trigger fetch on every emitted event', () => {
+    // Bugbot regression on PR #435: previously the URL validator only logged
+    // a warning, but `canPostToEndpoint` still saw the bad endpoint and
+    // fired `fetch()` per event. Now `instrument()` clears the endpoint when
+    // invalid before forwarding to `createEmitter`.
+    const fetchCalls: Array<unknown> = [];
+    const originalFetch = (globalThis as { fetch?: unknown }).fetch;
+    (globalThis as { fetch: (url: unknown) => Promise<unknown> }).fetch = (
+      url,
+    ) => {
+      fetchCalls.push(url);
+      return Promise.resolve({});
+    };
+    // oxlint-disable-next-line no-console
+    const originalError = console.error;
+    // oxlint-disable-next-line no-console
+    console.error = () => {};
+    try {
+      const handle = instrument({
+        endpoint: 'javascript:alert(1)',
+        sessionId: 'abc',
+      });
+      fakeHook.onCommitFiberRoot?.(1, buildFakeFiberTree(), 0);
+      expect(fetchCalls).toEqual([]);
+      handle.stop();
+    } finally {
+      // oxlint-disable-next-line no-console
+      console.error = originalError;
+      if (originalFetch === undefined) {
+        delete (globalThis as { fetch?: unknown }).fetch;
+      } else {
+        (globalThis as { fetch: unknown }).fetch = originalFetch;
+      }
+    }
+  });
+
   it('emit fast-path skips translator + listener work when nothing is listening', () => {
     // L5: when no onEvent + no endpoint + no subscribe, emit short-circuits.
     let translatorCalls = 0;

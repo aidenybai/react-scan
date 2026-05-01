@@ -78,11 +78,17 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
     );
   }
 
-  if (options.endpoint && !isValidEndpointUrl(options.endpoint)) {
+  // Validate the endpoint URL once at instrument() time and DROP it on failure
+  // so `createEmitter`'s `canPostToEndpoint` calculation sees the disablement.
+  // Without this, every emit would `fetch()` to the invalid URL and fail
+  // silently per-event (caught Bugbot review on PR #435).
+  let effectiveEndpoint = options.endpoint;
+  if (effectiveEndpoint && !isValidEndpointUrl(effectiveEndpoint)) {
     // oxlint-disable-next-line no-console
     console.error(
       '[react-scan/lite] `endpoint` is not a valid http(s) URL; events will not be POSTed.',
     );
+    effectiveEndpoint = undefined;
   }
 
   if (
@@ -97,7 +103,10 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
     );
   }
 
-  const { emitter, control: emitterControl } = createEmitter(options);
+  const { emitter, control: emitterControl } = createEmitter({
+    ...options,
+    endpoint: effectiveEndpoint,
+  });
   const profilingHooks = createProfilingHooks(emitter);
   const includeFiberTree = options.includeFiberTree !== false;
   const includeProfilingHooks = options.includeProfilingHooks !== false;
