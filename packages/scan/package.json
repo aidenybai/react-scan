@@ -31,9 +31,10 @@
     "dev:tsup": "NODE_ENV=development tsup --watch",
     "dev": "pnpm run --parallel \"/^dev:(css|tsup)/\"",
     "pack": "npm version patch && pnpm build && npm pack",
-    "pack:bump": "node scripts/bump-version.js && pnpm pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
+    "pack:bump": "node scripts/bump-version.mjs && pnpm pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
     "publint": "publint",
-    "test": "vitest",
+    "test": "vp test run",
+    "test:watch": "vp test",
     "lint": "vp lint",
     "format": "vp fmt",
     "typecheck": "tsc --noEmit"

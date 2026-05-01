@@ -58,6 +58,8 @@
   },
   "dependencies": {
     "@babel/core": "^7.26.0",
+    "@babel/plugin-transform-react-jsx": "^7.25.9",
+    "@babel/preset-typescript": "^7.23.3",
     "babel-plugin-add-react-displayname": "^0.0.5",
     "cheerio": "^1.0.0"
   },

@@ -15,10 +15,14 @@
   // react-doctor + react-grab loaded dynamically via runtime <Script>.
   // react-dom listed in scan devDeps for the kitchen-sink workspace.
   // @voidzero-dev/vite-plus-test is the vitest pnpm override target.
+  // @babel/preset-typescript + @babel/plugin-transform-react-jsx are
+  // string-loaded by @babel/core inside vite-plugin-react-scan.
   "ignoreDependencies": [
     "react-doctor",
     "react-grab",
     "react-dom",
-    "@voidzero-dev/vite-plus-test"
+    "@voidzero-dev/vite-plus-test",
+    "@babel/preset-typescript",
+    "@babel/plugin-transform-react-jsx"
   ]
 }
