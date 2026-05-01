@@ -19,15 +19,14 @@ jobs:
           fetch-depth: 0
           ref: main
 
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.x
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install
