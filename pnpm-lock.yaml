@@ -242,7 +242,7 @@ importers:
         specifier: ^1.0.0
         version: 1.1.0
       react-scan:
-        specifier: '>=0.5.4'
+        specifier: '>=0.5.5'
         version: link:../scan
       vite:
         specifier: npm:@voidzero-dev/vite-plus-core@^0.1.12
