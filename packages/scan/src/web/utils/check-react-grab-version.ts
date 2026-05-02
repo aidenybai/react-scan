@@ -24,8 +24,9 @@ export const checkReactGrabVersion = (): void => {
       fetchOptions,
     )
       .then((response) => (response.ok ? response.text() : null))
-      .then((latestVersion) => {
-        if (!latestVersion) return;
+      .then((rawLatestVersion) => {
+        if (!rawLatestVersion) return;
+        const latestVersion = rawLatestVersion.trim();
         if (!/^\d+\.\d+\.\d+/.test(latestVersion)) return;
         if (latestVersion === REACT_GRAB_VERSION) return;
         // oxlint-disable-next-line no-console

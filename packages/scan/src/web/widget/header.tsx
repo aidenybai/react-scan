@@ -47,6 +47,7 @@ export const Header = () => {
       if (state.kind !== "focused" || !state.focusedDomElement) return;
       if (isUserReactGrabActive()) return;
       if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.shiftKey || event.altKey) return;
       if (event.key !== "c" && event.code !== "KeyC") return;
       if (isInputLikeFocused() || hasNonEmptyTextSelection()) return;
 
