@@ -1,4 +1,5 @@
 export const SAFE_AREA = 24;
+export const COPY_FEEDBACK_DURATION_MS = 600;
 export const MIN_SIZE = {
   width: 550,
   height: 350,

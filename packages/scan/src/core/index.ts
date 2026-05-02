@@ -1,29 +1,26 @@
-import { type Signal, signal } from '@preact/signals';
+import { type Signal, signal } from "@preact/signals";
 import {
   type Fiber,
   detectReactBuildType,
   getRDTHook,
   getType,
   isInstrumentationActive,
-} from 'bippy';
-import type { ComponentType } from 'preact';
-import type { ReactNode } from 'preact/compat';
-import type { RenderData } from 'src/core/utils';
-import { initReactScanInstrumentation } from 'src/new-outlines';
-import styles from '~web/assets/css/styles.css';
-import { createToolbar } from '~web/toolbar';
-import { IS_CLIENT } from '~web/utils/constants';
-import { readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import { parseSafeAreaOption } from '~web/utils/parse-safe-area-option';
-import type { States } from '~web/views/inspector/utils';
-import type {
-  ChangeReason,
-  Render,
-  createInstrumentation,
-} from './instrumentation';
-import { startTimingTracking } from './notifications/event-tracking';
-import { createHighlightCanvas } from './notifications/outline-overlay';
-import packageJson from '../../package.json';
+} from "bippy";
+import type { ComponentType } from "preact";
+import type { ReactNode } from "preact/compat";
+import type { RenderData } from "src/core/utils";
+import { initReactScanInstrumentation } from "src/new-outlines";
+import styles from "~web/assets/css/styles.css";
+import { createToolbar } from "~web/toolbar";
+import { IS_CLIENT } from "~web/utils/constants";
+import { checkReactGrabVersion } from "~web/utils/check-react-grab-version";
+import { readLocalStorage, saveLocalStorage } from "~web/utils/helpers";
+import { parseSafeAreaOption } from "~web/utils/parse-safe-area-option";
+import type { States } from "~web/views/inspector/utils";
+import type { ChangeReason, Render, createInstrumentation } from "./instrumentation";
+import { startTimingTracking } from "./notifications/event-tracking";
+import { createHighlightCanvas } from "./notifications/outline-overlay";
+import packageJson from "../../package.json";
 
 let rootContainer: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
@@ -38,12 +35,12 @@ const initRootContainer = (): RootContainer => {
     return { rootContainer, shadowRoot };
   }
 
-  rootContainer = document.createElement('div');
-  rootContainer.id = 'react-scan-root';
+  rootContainer = document.createElement("div");
+  rootContainer.id = "react-scan-root";
 
-  shadowRoot = rootContainer.attachShadow({ mode: 'open' });
+  shadowRoot = rootContainer.attachShadow({ mode: "open" });
 
-  const cssStyles = document.createElement('style');
+  const cssStyles = document.createElement("style");
   cssStyles.textContent = styles;
 
   shadowRoot.appendChild(cssStyles);
@@ -93,7 +90,7 @@ export interface Options {
    *
    * @default "fast"
    */
-  animationSpeed?: 'slow' | 'fast' | 'off';
+  animationSpeed?: "slow" | "fast" | "off";
 
   /**
    * Track unnecessary renders, and mark their outlines gray when detected
@@ -161,7 +158,7 @@ export interface Options {
    *
    *  @default false
    */
-  _debug?: 'verbose' | false;
+  _debug?: "verbose" | false;
 
   onCommitStart?: () => void;
   onRender?: (fiber: Fiber, renders: Array<Render>) => void;
@@ -177,9 +174,7 @@ export interface StoreType {
   reportData: Map<number, RenderData>;
   legacyReportData: Map<string, RenderData>;
   changesListeners: Map<number, Array<ChangesListener>>;
-  interactionListeningForRenders:
-    | ((fiber: Fiber, renders: Array<Render>) => void)
-    | null;
+  interactionListeningForRenders: ((fiber: Fiber, renders: Array<Render>) => void) | null;
 }
 
 export type OutlineKey = `${string}-${string}`;
@@ -206,12 +201,10 @@ export type ClassComponentStateChange = {
   value: unknown;
   prevValue?: unknown;
   count?: number | undefined;
-  name: 'state';
+  name: "state";
 };
 
-export type StateChange =
-  | FunctionalComponentStateChange
-  | ClassComponentStateChange;
+export type StateChange = FunctionalComponentStateChange | ClassComponentStateChange;
 export type PropsChange = {
   type: ChangeReason.Props;
   name: string;
@@ -232,9 +225,7 @@ export type Change = StateChange | PropsChange | ContextChange;
 
 export type ChangesPayload = {
   propsChanges: Array<PropsChange>;
-  stateChanges: Array<
-    FunctionalComponentStateChange | ClassComponentStateChange
-  >;
+  stateChanges: Array<FunctionalComponentStateChange | ClassComponentStateChange>;
   contextChanges: Array<ContextChange>;
 };
 export type ChangesListener = (changes: ChangesPayload) => void;
@@ -243,7 +234,7 @@ export const Store: StoreType = {
   wasDetailsOpen: signal(true),
   isInIframe: signal(IS_CLIENT && window.self !== window.top),
   inspectState: signal<States>({
-    kind: 'uninitialized',
+    kind: "uninitialized",
   }),
   fiberRoots: new Set<Fiber>(),
   reportData: new Map<number, RenderData>(),
@@ -260,7 +251,7 @@ export const ReactScanInternals: Internals = {
     enabled: true,
     log: false,
     showToolbar: true,
-    animationSpeed: 'fast',
+    animationSpeed: "fast",
     dangerouslyForceRunInProduction: false,
     showFPS: true,
     showNotificationCount: true,
@@ -276,18 +267,10 @@ if (IS_CLIENT && window.__REACT_SCAN_EXTENSION__) {
   window.__REACT_SCAN_VERSION__ = ReactScanInternals.version;
 }
 
-export type LocalStorageOptions = Omit<
-  Options,
-  'onCommitStart' | 'onRender' | 'onCommitFinish'
->;
+export type LocalStorageOptions = Omit<Options, "onCommitStart" | "onRender" | "onCommitFinish">;
 
 const applyLocalStorageOptions = (options: Options): LocalStorageOptions => {
-  const {
-    onCommitStart,
-    onRender,
-    onCommitFinish,
-    ...rest
-  } = options;
+  const { onCommitStart, onRender, onCommitFinish, ...rest } = options;
   return rest;
 };
 
@@ -298,30 +281,28 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
   for (const key in options) {
     const value = options[key as keyof Options];
     switch (key) {
-      case 'enabled':
-      case 'log':
-      case 'showToolbar':
-      case 'showNotificationCount':
-      case 'dangerouslyForceRunInProduction':
-      case 'showFPS':
-      case 'allowInIframe':
-      case 'useOffscreenCanvasWorker':
-        if (typeof value !== 'boolean') {
+      case "enabled":
+      case "log":
+      case "showToolbar":
+      case "showNotificationCount":
+      case "dangerouslyForceRunInProduction":
+      case "showFPS":
+      case "allowInIframe":
+      case "useOffscreenCanvasWorker":
+        if (typeof value !== "boolean") {
           errors.push(`- ${key} must be a boolean. Got "${value}"`);
         } else {
           validOptions[key] = value;
         }
         break;
-      case 'animationSpeed':
-        if (!['slow', 'fast', 'off'].includes(value as string)) {
-          errors.push(
-            `- Invalid animation speed "${value}". Using default "fast"`,
-          );
+      case "animationSpeed":
+        if (!["slow", "fast", "off"].includes(value as string)) {
+          errors.push(`- Invalid animation speed "${value}". Using default "fast"`);
         } else {
-          validOptions[key] = value as 'slow' | 'fast' | 'off';
+          validOptions[key] = value as "slow" | "fast" | "off";
         }
         break;
-      case 'safeArea': {
+      case "safeArea": {
         const parsed = parseSafeAreaOption(value);
         if (parsed.ok) {
           validOptions.safeArea = parsed.value;
@@ -330,28 +311,25 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
         }
         break;
       }
-      case 'onCommitStart':
-        if (typeof value !== 'function') {
+      case "onCommitStart":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onCommitStart = value as () => void;
         }
         break;
-      case 'onCommitFinish':
-        if (typeof value !== 'function') {
+      case "onCommitFinish":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
           validOptions.onCommitFinish = value as () => void;
         }
         break;
-      case 'onRender':
-        if (typeof value !== 'function') {
+      case "onRender":
+        if (typeof value !== "function") {
           errors.push(`- ${key} must be a function. Got "${value}"`);
         } else {
-          validOptions.onRender = value as (
-            fiber: Fiber,
-            renders: Array<Render>,
-          ) => void;
+          validOptions.onRender = value as (fiber: Fiber, renders: Array<Render>) => void;
         }
         break;
       default:
@@ -361,7 +339,7 @@ const validateOptions = (options: Partial<Options>): Partial<Options> => {
 
   if (errors.length > 0) {
     // oxlint-disable-next-line no-console
-    console.warn(`[React Scan] Invalid options:\n${errors.join('\n')}`);
+    console.warn(`[React Scan] Invalid options:\n${errors.join("\n")}`);
   }
 
   return validOptions;
@@ -388,7 +366,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
     }
 
     const shouldInitToolbar =
-      'showToolbar' in validOptions && validOptions.showToolbar !== undefined;
+      "showToolbar" in validOptions && validOptions.showToolbar !== undefined;
 
     const newOptions = {
       ...ReactScanInternals.options.value,
@@ -396,7 +374,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
     };
 
     const { instrumentation } = ReactScanInternals;
-    if (instrumentation && 'enabled' in validOptions) {
+    if (instrumentation && "enabled" in validOptions) {
       instrumentation.isPaused.value = validOptions.enabled === false;
     }
 
@@ -406,18 +384,18 @@ export const setOptions = (userOptions: Partial<Options>) => {
     // we actually don't care about any other local storage option other than enabled, we should not be syncing those to local storage
     try {
       const existing = readLocalStorage<undefined | Record<string, unknown>>(
-        'react-scan-options',
+        "react-scan-options",
       )?.enabled;
 
-      if (typeof existing === 'boolean') {
+      if (typeof existing === "boolean") {
         newOptions.enabled = existing;
       }
     } catch (e) {
-      if (ReactScanInternals.options.value._debug === 'verbose') {
+      if (ReactScanInternals.options.value._debug === "verbose") {
         // oxlint-disable-next-line no-console
         console.error(
-          '[React Scan Internal Error]',
-          'Failed to create notifications outline canvas',
+          "[React Scan Internal Error]",
+          "Failed to create notifications outline canvas",
           e,
         );
       }
@@ -425,7 +403,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
     }
 
     saveLocalStorage<LocalStorageOptions>(
-      'react-scan-options',
+      "react-scan-options",
       applyLocalStorageOptions(newOptions),
     );
 
@@ -435,11 +413,11 @@ export const setOptions = (userOptions: Partial<Options>) => {
 
     return newOptions;
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === 'verbose') {
+    if (ReactScanInternals.options.value._debug === "verbose") {
       // oxlint-disable-next-line no-console
       console.error(
-        '[React Scan Internal Error]',
-        'Failed to create notifications outline canvas',
+        "[React Scan Internal Error]",
+        "Failed to create notifications outline canvas",
         e,
       );
     }
@@ -467,7 +445,7 @@ export const getIsProduction = () => {
   }
   for (const renderer of renderers) {
     const buildType = detectReactBuildType(renderer);
-    if (buildType !== 'production') {
+    if (buildType !== "production") {
       isProduction = false;
       return false;
     }
@@ -489,8 +467,9 @@ export const start = () => {
       return;
     }
 
-    const localStorageOptions =
-      readLocalStorage<LocalStorageOptions>('react-scan-options');
+    checkReactGrabVersion();
+
+    const localStorageOptions = readLocalStorage<LocalStorageOptions>("react-scan-options");
 
     if (localStorageOptions) {
       const validLocalOptions = validateOptions(localStorageOptions);
@@ -513,17 +492,15 @@ export const start = () => {
       setTimeout(() => {
         if (isInstrumentationActive()) return;
         // oxlint-disable-next-line no-console
-        console.error(
-          '[React Scan] Failed to load. Must import React Scan before React runs.',
-        );
+        console.error("[React Scan] Failed to load. Must import React Scan before React runs.");
       }, 5000);
     }
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === 'verbose') {
+    if (ReactScanInternals.options.value._debug === "verbose") {
       // oxlint-disable-next-line no-console
       console.error(
-        '[React Scan Internal Error]',
-        'Failed to create notifications outline canvas',
+        "[React Scan Internal Error]",
+        "Failed to create notifications outline canvas",
         e,
       );
     }
@@ -558,11 +535,11 @@ const createNotificationsOutlineCanvas = () => {
     const highlightRoot = document.documentElement;
     return createHighlightCanvas(highlightRoot);
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === 'verbose') {
+    if (ReactScanInternals.options.value._debug === "verbose") {
       // oxlint-disable-next-line no-console
       console.error(
-        '[React Scan Internal Error]',
-        'Failed to create notifications outline canvas',
+        "[React Scan Internal Error]",
+        "Failed to create notifications outline canvas",
         e,
       );
     }
@@ -611,7 +588,7 @@ export const ignoredProps = new WeakSet<
 >();
 
 export const ignoreScan = (node: ReactNode) => {
-  if (node && typeof node === 'object') {
+  if (node && typeof node === "object") {
     ignoredProps.add(node);
   }
 };
