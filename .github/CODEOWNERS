@@ -1,0 +1,3 @@
+# Require review for workflow changes to prevent supply chain attacks
+.github/workflows/ @aidenybai
+.github/actions/ @aidenybai
