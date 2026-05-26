@@ -372,13 +372,13 @@ function isRenderUnnecessaryTraversal(
   _propsName: string,
   prevValue: unknown,
   nextValue: unknown,
-): void {
-  if (
-    !isEqual(prevValue, nextValue) &&
-    !isValueUnstable(prevValue, nextValue)
-  ) {
-    this.isRequiredChange = true;
-  }
+): boolean {
+  const isRquiredChange =
+    !isEqual(prevValue, nextValue) && !isValueUnstable(prevValue, nextValue);
+  this.isRequiredChange = isRquiredChange;
+  // no need to continue traversal if found a prop change necessary 
+  // returning true to tell bippy to stop traversing the props list
+  return isRquiredChange;
 }
 
 // FIXME: calculation is slow
