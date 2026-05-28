@@ -218,6 +218,7 @@
     "picocolors": "^1.1.1",
     "preact": "^10.29.1",
     "prompts": "^2.4.2",
+    "react-doctor": "latest",
     "react-grab": "latest"
   },
   "devDependencies": {
