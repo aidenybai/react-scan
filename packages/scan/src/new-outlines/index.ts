@@ -8,6 +8,7 @@ import {
   getType,
   isCompositeFiber,
 } from 'bippy';
+import { getFiberName } from '~core/utils';
 import {
   Change,
   ContextChange,
@@ -50,8 +51,12 @@ const blueprintMapKeys = new Set<Fiber>();
 
 export const outlineFiber = (fiber: Fiber) => {
   if (!isCompositeFiber(fiber)) return;
+  // Use getFiberName to correctly resolve names for React.memo, React.forwardRef,
+  // and HOC-wrapped components. getDisplayName(fiber) returns null for wrapper
+  // objects (MemoComponent/ForwardRef fiber.type is not a plain function), causing
+  // these components to be silently dropped by the `if (!name) return` guard below.
   const name =
-    typeof fiber.type === 'string' ? fiber.type : getDisplayName(fiber);
+    typeof fiber.type === 'string' ? fiber.type : getFiberName(fiber);
   if (!name) return;
   const blueprint = blueprintMap.get(fiber);
   const nearestFibers = getNearestHostFibers(fiber);

@@ -1,8 +1,89 @@
 // @ts-nocheck
-import { type Fiber, getType } from 'bippy';
+import {
+  type Fiber,
+  ForwardRefTag,
+  MemoComponentTag,
+  SimpleMemoComponentTag,
+  getDisplayName,
+  getType,
+} from 'bippy';
 import { ReactScanInternals } from '~core/index';
 import type { AggregatedChange, AggregatedRender, Render } from './instrumentation';
 import { IS_CLIENT } from '~web/utils/constants';
+
+/**
+ * Resolves a display name from a Fiber node, correctly handling:
+ *  - React.memo   (MemoComponentTag=10, SimpleMemoComponentTag=15):
+ *      fiber.type = { $$typeof, type: ActualComponent, compare }
+ *  - React.forwardRef (ForwardRefTag=11):
+ *      fiber.type = { $$typeof, render: ActualComponent }
+ *  - Higher-Order Components: fiber.type.displayName e.g. "connect(Foo)"
+ *
+ * Why bippy's getDisplayName(fiber) alone fails for these cases:
+ *   For memo/forwardRef, fiber.type is a wrapper *object*, not a function.
+ *   bippy checks .displayName and .name on that object — but those are not
+ *   set for anonymous wrappers, so it returns null and the fiber gets dropped
+ *   by the `if (!name) return` guard in outlineFiber().
+ */
+export function getFiberName(fiber: Fiber): string | null {
+  const { tag, type } = fiber;
+  if (!type) return null;
+
+  // Fast path: plain function / class components
+  if (typeof type === 'function') {
+    return (type as { displayName?: string; name?: string }).displayName ||
+           (type as { name?: string }).name ||
+           null;
+  }
+
+  // React.memo — tag 10 (MemoComponent) or tag 15 (SimpleMemoComponent)
+  if (tag === MemoComponentTag || tag === SimpleMemoComponentTag) {
+    const inner = (type as { type?: unknown }).type;
+    if (inner && typeof inner === 'function') {
+      return (
+        (inner as { displayName?: string }).displayName ||
+        (inner as { name?: string }).name ||
+        null
+      );
+    }
+    // devtools may set displayName on the wrapper object itself
+    return (type as { displayName?: string }).displayName || null;
+  }
+
+  // React.forwardRef — tag 11
+  if (tag === ForwardRefTag) {
+    const render = (type as { render?: unknown }).render;
+    // type.displayName is set by forwardRef(fn) when fn is named
+    const wrapperName = (type as { displayName?: string }).displayName;
+    if (wrapperName) return wrapperName;
+    if (render && typeof render === 'function') {
+      return (
+        (render as { displayName?: string }).displayName ||
+        (render as { name?: string }).name ||
+        null
+      );
+    }
+    return null;
+  }
+
+  // Generic HOC or other wrapper — bippy may resolve "connect(MyComponent)"
+  const bippyName = getDisplayName(type);
+  if (bippyName) return bippyName;
+
+  // Last resort: walk one level into .type or .render
+  const innerFallback =
+    (type as { type?: unknown }).type ||
+    (type as { render?: unknown }).render;
+  if (innerFallback && typeof innerFallback === 'function') {
+    return (
+      (innerFallback as { displayName?: string }).displayName ||
+      (innerFallback as { name?: string }).name ||
+      null
+    );
+  }
+
+  return null;
+}
 
 export const aggregateChanges = (
   changes: Array<Change>,

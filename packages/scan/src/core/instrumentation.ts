@@ -22,6 +22,7 @@ import {
 } from 'bippy';
 import { isValidElement } from 'preact';
 import { isEqual } from '~core/utils';
+import { getFiberName } from '~core/utils';
 import {
   collectContextChanges,
   collectPropsChanges,
@@ -543,7 +544,15 @@ export const createInstrumentation = (
         traverseRenderedFibers(
           root.current,
           (fiber: Fiber, phase: 'mount' | 'update' | 'unmount') => {
-            const type = getType(fiber.type);
+            // getType() unwraps memo/forwardRef wrappers to the underlying
+            // component function. For anonymous HOCs it may return null, so we
+            // fall back to fiber.type itself (if it's an object) to preserve
+            // the fiber and still extract a name from the wrapper.
+            const type =
+              getType(fiber.type) ??
+              (fiber.type && typeof fiber.type === 'object'
+                ? fiber.type
+                : null);
             if (!type) return null;
 
             const allInstances = getAllInstances();
@@ -610,7 +619,9 @@ export const createInstrumentation = (
             const fps = getFPS();
             const render: Render = {
               phase: RENDER_PHASE_STRING_TO_ENUM[phase],
-              componentName: getDisplayName(type),
+              // getFiberName traverses memo/forwardRef/HOC wrappers that
+              // getDisplayName(type) would return null for after getType unwraps.
+              componentName: getFiberName(fiber) ?? getDisplayName(type),
               count: 1,
               changes,
               time: fiberSelfTime,
