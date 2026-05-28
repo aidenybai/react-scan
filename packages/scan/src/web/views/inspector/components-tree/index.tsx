@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from 'preact/hooks';
+import type { Fiber } from 'bippy';
 import { Store } from '~core/index';
 import { getRenderData } from '~core/instrumentation';
 import { Icon } from '~web/components/icon';
@@ -94,8 +95,8 @@ interface TreeNodeItemProps {
   nodeIndex: number;
   hasChildren: boolean;
   isCollapsed: boolean;
-  handleTreeNodeClick: (e: Event) => void;
-  handleTreeNodeToggle: (e: Event) => void;
+  handleTreeNodeClick: (e: React.MouseEvent) => void;
+  handleTreeNodeToggle: (e: React.MouseEvent) => void;
   searchValue: typeof searchState.value;
 }
 
@@ -388,7 +389,6 @@ export const ComponentsTree = () => {
   const refMainContainer = useRef<HTMLDivElement>(null);
   const refSearchInputContainer = useRef<HTMLDivElement>(null);
   const refSearchInput = useRef<HTMLInputElement>(null);
-  const refSelectedElement = useRef<HTMLElement | null>(null);
   const refMaxTreeDepth = useRef(0);
   const refIsHovering = useRef(false);
   const refIsResizing = useRef(false);
@@ -481,15 +481,43 @@ export const ComponentsTree = () => {
   );
 
   const handleTreeNodeClick = useCallback(
-    (e: Event) => {
+    (e: React.MouseEvent) => {
       const target = e.currentTarget as HTMLElement;
       const index = Number(target.dataset.index);
       if (Number.isNaN(index)) return;
-      const element = visibleNodes[index].element;
-      if (!element) return;
-      handleElementClick(element);
+      const node = visibleNodes[index];
+      if (!node) return;
+      
+      refIsHovering.current = true;
+      refSearchInput.current?.blur();
+      signalSkipTreeUpdate.value = true;
+
+      // Set inspect state directly using the fiber node
+      Store.inspectState.value = {
+        kind: 'focused',
+        focusedDomElement: node.element, // Can be null
+        fiber: node.fiber,
+      };
+
+      setSelectedIndex(index);
+      const itemTop = index * ITEM_HEIGHT;
+      const container = refContainer.current;
+      if (container) {
+        const containerHeight = container.clientHeight;
+        const scrollTop = container.scrollTop;
+
+        if (
+          itemTop < scrollTop ||
+          itemTop + ITEM_HEIGHT > scrollTop + containerHeight
+        ) {
+          container.scrollTo({
+            top: Math.max(0, itemTop - containerHeight / 2),
+            behavior: 'instant',
+          });
+        }
+      }
     },
-    [visibleNodes, handleElementClick],
+    [visibleNodes],
   );
 
   const handleToggle = useCallback((nodeId: string) => {
@@ -505,7 +533,7 @@ export const ComponentsTree = () => {
   }, []);
 
   const handleTreeNodeToggle = useCallback(
-    (e: Event) => {
+    (e: React.MouseEvent) => {
       e.stopPropagation();
       const target = e.target as HTMLElement;
       const index = Number(target.dataset.index);
@@ -766,11 +794,13 @@ export const ComponentsTree = () => {
   useEffect(() => {
     let isInitialTreeBuild = true;
     const buildTreeFromElements = (elements: Array<InspectableElement>) => {
-      const nodeMap = new Map<HTMLElement, TreeNode>();
+      const fiberToNodeMap = new Map<Fiber, TreeNode>();
+      const fiberToElementMap = new Map<Fiber, InspectableElement>();
       const rootNodes: TreeNode[] = [];
 
-      for (const { element, name, fiber } of elements) {
-        if (!element) continue;
+      // First pass: create nodes and build lookup maps
+      for (const inspectableElement of elements) {
+        const { element, name, fiber } = inspectableElement;
 
         let title = name;
         const { name: componentName, wrappers } = getExtendedDisplayName(fiber);
@@ -782,33 +812,37 @@ export const ComponentsTree = () => {
           }
         }
 
-        nodeMap.set(element, {
+        const node: TreeNode = {
           label: componentName || name,
           title,
           children: [],
           element,
           fiber,
-        });
+        };
+
+        fiberToNodeMap.set(fiber, node);
+        fiberToElementMap.set(fiber, inspectableElement);
       }
 
-      for (const { element, depth } of elements) {
-        if (!element) continue;
-        const node = nodeMap.get(element);
-        if (!node) continue;
+      // Second pass: build parent-child relationships using fiber tree structure
+      for (const [fiber, node] of fiberToNodeMap) {
+        let parentFiber = fiber.return;
+        let parentNode: TreeNode | undefined;
 
-        if (depth === 0) {
-          rootNodes.push(node);
-        } else {
-          let parent = element.parentElement;
-          while (parent) {
-            const parentNode = nodeMap.get(parent);
-            if (parentNode) {
-              parentNode.children = parentNode.children || [];
-              parentNode.children.push(node);
-              break;
-            }
-            parent = parent.parentElement;
+        // Walk up the fiber tree to find the nearest parent that's in our components tree
+        while (parentFiber && !parentNode) {
+          parentNode = fiberToNodeMap.get(parentFiber);
+          if (!parentNode) {
+            parentFiber = parentFiber.return;
           }
+        }
+
+        if (parentNode) {
+          parentNode.children = parentNode.children || [];
+          parentNode.children.push(node);
+        } else {
+          // No parent found, this is a root node
+          rootNodes.push(node);
         }
       }
 
@@ -816,9 +850,6 @@ export const ComponentsTree = () => {
     };
 
     const updateTree = () => {
-      const element = refSelectedElement.current;
-      if (!element) return;
-
       const inspectableElements = getInspectableElements();
       const tree = buildTreeFromElements(inspectableElements);
 
@@ -832,19 +863,22 @@ export const ComponentsTree = () => {
 
         if (isInitialTreeBuild) {
           isInitialTreeBuild = false;
-          const focusedIndex = flattened.findIndex(
-            (node) => node.element === element,
-          );
-          if (focusedIndex !== -1) {
-            const itemTop = focusedIndex * ITEM_HEIGHT;
-            const container = refContainer.current;
-            if (container) {
-              setTimeout(() => {
-                container.scrollTo({
-                  top: itemTop,
-                  behavior: 'instant',
-                });
-              }, 96);
+          const currentInspectState = Store.inspectState.value;
+          if (currentInspectState.kind === 'focused') {
+            const focusedIndex = flattened.findIndex(
+              (node) => node.fiber === currentInspectState.fiber,
+            );
+            if (focusedIndex !== -1) {
+              const itemTop = focusedIndex * ITEM_HEIGHT;
+              const container = refContainer.current;
+              if (container) {
+                setTimeout(() => {
+                  container.scrollTo({
+                    top: itemTop,
+                    behavior: 'instant',
+                  });
+                }, 96);
+              }
             }
           }
         }
@@ -858,7 +892,6 @@ export const ComponentsTree = () => {
         }
 
         handleOnChangeSearch('');
-        refSelectedElement.current = state.focusedDomElement as HTMLElement;
         updateTree();
       }
     });
@@ -1131,7 +1164,7 @@ export const ComponentsTree = () => {
 
                 const isSelected =
                   Store.inspectState.value.kind === 'focused' &&
-                  node.element === Store.inspectState.value.focusedDomElement;
+                  node.fiber === Store.inspectState.value.fiber;
                 const isKeyboardSelected = virtualItem.index === selectedIndex;
 
                 return (
