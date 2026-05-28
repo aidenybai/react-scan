@@ -94,6 +94,11 @@
       "import": "./dist/lite/index.mjs",
       "require": "./dist/lite/index.js"
     },
+    "./tanstack-plugin": {
+      "types": "./dist/tanstack-plugin/index.d.ts",
+      "import": "./dist/tanstack-plugin/index.mjs",
+      "require": "./dist/tanstack-plugin/index.js"
+    },
     "./auto": {
       "production": {
         "import": {
@@ -193,6 +198,9 @@
       ],
       "react-component-name/loader": [
         "./dist/react-component-name/loader.d.ts"
+      ],
+      "tanstack-plugin": [
+        "./dist/tanstack-plugin/index.d.ts"
       ]
     }
   },

@@ -1,4 +1,5 @@
-import { createContext, type JSX } from "preact";
+import type { JSX } from "preact";
+import { ToolbarElementContext } from '~web/toolbar-context';
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { Store, ReactScanInternals } from "~core/index";
 import {
@@ -757,4 +758,4 @@ export const Widget = () => {
   );
 };
 
-export const ToolbarElementContext = createContext<HTMLElement | null>(null);
+export { ToolbarElementContext } from '~web/toolbar-context';

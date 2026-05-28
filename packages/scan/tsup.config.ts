@@ -124,6 +124,7 @@ export default defineConfig([
       './src/install-hook.ts',
       './src/core/all-environments.ts',
       './src/lite/index.ts',
+      './src/tanstack-plugin/index.tsx',
     ],
     banner: {
       js: banner,
@@ -144,6 +145,7 @@ export default defineConfig([
       await addDirectivesToChunkFiles(DIST_PATH);
       await addDirectivesToChunkFiles(path.join(DIST_PATH, 'lite'));
       await addDirectivesToChunkFiles(path.join(DIST_PATH, 'core'));
+      await addDirectivesToChunkFiles(path.join(DIST_PATH, 'tanstack-plugin'));
     },
     minify: false,
     env: {
