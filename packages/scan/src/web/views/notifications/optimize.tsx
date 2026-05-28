@@ -1,15 +1,10 @@
-import { useState } from 'preact/hooks';
-import { cn } from '~web/utils/helpers';
-import {
-  GroupedFiberRender,
-  NotificationEvent,
-  getComponentName,
-  getTotalTime,
-} from './data';
-import { iife } from '~core/notifications/performance-utils';
+import { useState } from "preact/hooks";
+import { cn } from "~web/utils/helpers";
+import { GroupedFiberRender, NotificationEvent, getComponentName, getTotalTime } from "./data";
+import { iife } from "~core/notifications/performance-utils";
 
 const formatReactData = (groupedFiberRenders: Array<GroupedFiberRender>) => {
-  let text = '';
+  let text = "";
 
   const filteredFibers = groupedFiberRenders
     .toSorted((a, b) => b.totalTime - a.totalTime)
@@ -17,11 +12,11 @@ const formatReactData = (groupedFiberRenders: Array<GroupedFiberRender>) => {
     .filter((fiber) => fiber.totalTime > 5);
 
   filteredFibers.forEach((fiberRender) => {
-    let localText = '';
+    let localText = "";
 
-    localText += 'Component Name:';
+    localText += "Component Name:";
     localText += fiberRender.name;
-    localText += '\n';
+    localText += "\n";
 
     localText += `Rendered: ${fiberRender.count} times\n`;
     localText += `Sum of self times for ${fiberRender.name} is ${fiberRender.totalTime.toFixed(0)}ms\n`;
@@ -47,13 +42,13 @@ const formatReactData = (groupedFiberRenders: Array<GroupedFiberRender>) => {
     }
 
     text += localText;
-    text += '\n';
+    text += "\n";
   });
 
   return text;
 };
 
-export const generateInteractionDataPrompt = ({
+const generateInteractionDataPrompt = ({
   renderTime,
   eHandlerTimeExcludingRenders,
   toRafTime,
@@ -76,7 +71,7 @@ export const generateInteractionDataPrompt = ({
 	- things like prepaint, style recalculations, layerization, async web API's like observers may occur during this time
 - how long it took from the last request animation frame to when the dom was committed: ${commitTime.toFixed(0)}ms
 	- during this period you will see paint, commit, potential style recalcs, and other misc browser activity. Frequently high times here imply css that makes the browser do a lot of work, or mutating expensive dom properties during the event handler stage. This can be many things, but it narrows the problem scope significantly when this is high
-${framePresentTime === null ? '' : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
+${framePresentTime === null ? "" : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
 
 ### Low level
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
@@ -140,7 +135,7 @@ We also provide you with a breakdown of what the browser spent time on during th
 	- things like prepaint, style recalculations, layerization, async web API's like observers may occur during this time
 - how long it took from the last request animation frame to when the dom was committed: ${commitTime.toFixed(0)}ms
 	- during this period you will see paint, commit, potential style recalcs, and other misc browser activity. Frequently high times here imply css that makes the browser do a lot of work, or mutating expensive dom properties during the event handler stage. This can be many things, but it narrows the problem scope significantly when this is high
-${framePresentTime === null ? '' : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
+${framePresentTime === null ? "" : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
 
 
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
@@ -214,7 +209,7 @@ If a node_module is the component with high renders, you can experiment to see i
 If renders don't seem to be the problem, see if there are any expensive CSS properties being added/mutated, or any expensive DOM Element mutations/new elements being created that could cause this slowdown. 
 `;
 
-export const generateFrameDropExplanationPrompt = ({
+const generateFrameDropExplanationPrompt = ({
   renderTime,
   otherTime,
   formattedReactData,
@@ -269,7 +264,7 @@ const generateFrameDropDataPrompt = ({
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
 ${formattedReactData}`;
 
-export const generateInteractionExplanationPrompt = ({
+const generateInteractionExplanationPrompt = ({
   interactionType,
   name,
   time,
@@ -305,7 +300,7 @@ We also provide you with a breakdown of what the browser spent time on during th
 	- things like prepaint, style recalculations, layerization, async web API's like observers may occur during this time
 - how long it took from the last request animation frame to when the dom was committed: ${commitTime.toFixed(0)}ms
 	- during this period you will see paint, commit, potential style recalcs, and other misc browser activity. Frequently high times here imply css that makes the browser do a lot of work, or mutating expensive dom properties during the event handler stage. This can be many things, but it narrows the problem scope significantly when this is high
-${framePresentTime === null ? '' : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
+${framePresentTime === null ? "" : `- how long it took from dom commit for the frame to be presented: ${framePresentTime.toFixed(0)}ms. This is when information about how to paint the next frame is sent to the compositor threads, and when the GPU does work. If this is high, look for issues that may be a bottleneck for operations occurring during this time`}
 
 We also have lower level information about react components, such as their render time, and which props/state/context changed when they re-rendered.
 
@@ -328,18 +323,16 @@ It's also good to note that react profiles hook times in development, and if man
 If it's not possible to explain the root problem from this data, please ask me for more data explicitly, and what we would need to know to find the source of the performance problem.
 `;
 export const getLLMPrompt = (
-  activeTab: 'fix' | 'data' | 'explanation',
+  activeTab: "fix" | "data" | "explanation",
   selectedEvent: NotificationEvent,
 ) =>
   iife(() => {
     switch (activeTab) {
-      case 'data': {
+      case "data": {
         switch (selectedEvent.kind) {
-          case 'dropped-frames': {
+          case "dropped-frames": {
             return generateFrameDropDataPrompt({
-              formattedReactData: formatReactData(
-                selectedEvent.groupedFiberRenders,
-              ),
+              formattedReactData: formatReactData(selectedEvent.groupedFiberRenders),
               renderTime: selectedEvent.groupedFiberRenders.reduce(
                 (prev, curr) => prev + curr.totalTime,
                 0,
@@ -347,13 +340,11 @@ export const getLLMPrompt = (
               otherTime: selectedEvent.timing.otherTime,
             });
           }
-          case 'interaction': {
+          case "interaction": {
             return generateInteractionDataPrompt({
               commitTime: selectedEvent.timing.frameConstruction,
               eHandlerTimeExcludingRenders: selectedEvent.timing.otherJSTime,
-              formattedReactData: formatReactData(
-                selectedEvent.groupedFiberRenders,
-              ),
+              formattedReactData: formatReactData(selectedEvent.groupedFiberRenders),
               framePresentTime: selectedEvent.timing.frameDraw,
               renderTime: selectedEvent.groupedFiberRenders.reduce(
                 (prev, curr) => prev + curr.totalTime,
@@ -364,13 +355,11 @@ export const getLLMPrompt = (
           }
         }
       }
-      case 'explanation': {
+      case "explanation": {
         switch (selectedEvent.kind) {
-          case 'dropped-frames': {
+          case "dropped-frames": {
             return generateFrameDropExplanationPrompt({
-              formattedReactData: formatReactData(
-                selectedEvent.groupedFiberRenders,
-              ),
+              formattedReactData: formatReactData(selectedEvent.groupedFiberRenders),
               renderTime: selectedEvent.groupedFiberRenders.reduce(
                 (prev, curr) => prev + curr.totalTime,
                 0,
@@ -378,13 +367,11 @@ export const getLLMPrompt = (
               otherTime: selectedEvent.timing.otherTime,
             });
           }
-          case 'interaction': {
+          case "interaction": {
             return generateInteractionExplanationPrompt({
               commitTime: selectedEvent.timing.frameConstruction,
               eHandlerTimeExcludingRenders: selectedEvent.timing.otherJSTime,
-              formattedReactData: formatReactData(
-                selectedEvent.groupedFiberRenders,
-              ),
+              formattedReactData: formatReactData(selectedEvent.groupedFiberRenders),
               framePresentTime: selectedEvent.timing.frameDraw,
               interactionType: selectedEvent.type,
               name: getComponentName(selectedEvent.componentPath),
@@ -398,13 +385,11 @@ export const getLLMPrompt = (
           }
         }
       }
-      case 'fix': {
+      case "fix": {
         switch (selectedEvent.kind) {
-          case 'dropped-frames': {
+          case "dropped-frames": {
             return generateFrameDropOptimizationPrompt({
-              formattedReactData: formatReactData(
-                selectedEvent.groupedFiberRenders,
-              ),
+              formattedReactData: formatReactData(selectedEvent.groupedFiberRenders),
 
               renderTime: selectedEvent.groupedFiberRenders.reduce(
                 (prev, curr) => prev + curr.totalTime,
@@ -413,14 +398,12 @@ export const getLLMPrompt = (
               otherTime: selectedEvent.timing.otherTime,
             });
           }
-          case 'interaction': {
+          case "interaction": {
             return generateInteractionOptimizationPrompt({
               commitTime: selectedEvent.timing.frameConstruction,
-              componentPath: selectedEvent.componentPath.join('>'),
+              componentPath: selectedEvent.componentPath.join(">"),
               eHandlerTimeExcludingRenders: selectedEvent.timing.otherJSTime,
-              formattedReactData: formatReactData(
-                selectedEvent.groupedFiberRenders,
-              ),
+              formattedReactData: formatReactData(selectedEvent.groupedFiberRenders),
               framePresentTime: selectedEvent.timing.frameDraw,
               interactionType: selectedEvent.type,
               name: getComponentName(selectedEvent.componentPath),
@@ -437,65 +420,55 @@ export const getLLMPrompt = (
     }
   });
 
-export const Optimize = ({
-  selectedEvent,
-}: { selectedEvent: NotificationEvent }) => {
-  const [activeTab, setActiveTab] = useState<'fix' | 'explanation' | 'data'>(
-    'fix',
-  );
+export const Optimize = ({ selectedEvent }: { selectedEvent: NotificationEvent }) => {
+  const [activeTab, setActiveTab] = useState<"fix" | "explanation" | "data">("fix");
   const [copying, setCopying] = useState(false);
 
   return (
-    <div className={cn(['w-full h-full'])}>
-      <div
-        className={cn([
-          'border border-[#27272A] rounded-sm h-4/5 text-xs overflow-hidden',
-        ])}
-      >
-        <div className={cn(['bg-[#18181B] p-1 rounded-t-sm'])}>
-          <div className={cn(['flex items-center gap-x-1'])}>
+    <div className={cn(["w-full h-full"])}>
+      <div className={cn(["border border-[#27272A] rounded-sm h-4/5 text-xs overflow-hidden"])}>
+        <div className={cn(["bg-[#18181B] p-1 rounded-t-sm"])}>
+          <div className={cn(["flex items-center gap-x-1"])}>
             <button
-              onClick={() => setActiveTab('fix')}
+              onClick={() => setActiveTab("fix")}
               className={cn([
-                'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
-                activeTab === 'fix'
-                  ? 'text-white bg-[#7521c8]'
-                  : 'text-[#6E6E77] hover:text-white',
+                "flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm",
+                activeTab === "fix" ? "text-white bg-[#7521c8]" : "text-[#6E6E77] hover:text-white",
               ])}
             >
               Fix
             </button>
 
             <button
-              onClick={() => setActiveTab('explanation')}
+              onClick={() => setActiveTab("explanation")}
               className={cn([
-                'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
-                activeTab === 'explanation'
-                  ? 'text-white bg-[#7521c8]'
-                  : 'text-[#6E6E77] hover:text-white',
+                "flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm",
+                activeTab === "explanation"
+                  ? "text-white bg-[#7521c8]"
+                  : "text-[#6E6E77] hover:text-white",
               ])}
             >
               Explanation
             </button>
             <button
-              onClick={() => setActiveTab('data')}
+              onClick={() => setActiveTab("data")}
               className={cn([
-                'flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm',
-                activeTab === 'data'
-                  ? 'text-white bg-[#7521c8]'
-                  : 'text-[#6E6E77] hover:text-white',
+                "flex items-center justify-center whitespace-nowrap py-1.5 px-3 rounded-sm",
+                activeTab === "data"
+                  ? "text-white bg-[#7521c8]"
+                  : "text-[#6E6E77] hover:text-white",
               ])}
             >
               Data
             </button>
           </div>
         </div>
-        <div className={cn(['overflow-y-auto h-full'])}>
+        <div className={cn(["overflow-y-auto h-full"])}>
           <pre
             className={cn([
-              'p-2 h-full',
-              'whitespace-pre-wrap break-words',
-              'text-gray-300 font-mono ',
+              "p-2 h-full",
+              "whitespace-pre-wrap break-words",
+              "text-gray-300 font-mono ",
             ])}
           >
             {getLLMPrompt(activeTab, selectedEvent)}
@@ -511,12 +484,12 @@ export const Optimize = ({
           setTimeout(() => setCopying(false), 1000);
         }}
         className={cn([
-          'mt-4 px-4 py-2 bg-[#18181B] text-[#6E6E77] rounded-sm',
-          'hover:text-white transition-colors duration-200',
-          'flex items-center justify-center gap-x-2 text-xs',
+          "mt-4 px-4 py-2 bg-[#18181B] text-[#6E6E77] rounded-sm",
+          "hover:text-white transition-colors duration-200",
+          "flex items-center justify-center gap-x-2 text-xs",
         ])}
       >
-        <span>{copying ? 'Copied!' : 'Copy Prompt'}</span>
+        <span>{copying ? "Copied!" : "Copy Prompt"}</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -527,10 +500,7 @@ export const Optimize = ({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={cn([
-            'transition-transform duration-200',
-            copying && 'scale-110',
-          ])}
+          className={cn(["transition-transform duration-200", copying && "scale-110"])}
         >
           {copying ? (
             <path d="M20 6L9 17l-5-5" />

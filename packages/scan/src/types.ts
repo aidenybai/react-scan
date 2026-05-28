@@ -19,9 +19,6 @@ declare global {
   };
   var reactScanCleanupListeners: (() => void) | undefined;
   var reactScan: Scan;
-  var scheduler: {
-    postTask: (cb: unknown, options: { priority: string }) => void;
-  };
 
   type TTimer = NodeJS.Timeout;
 

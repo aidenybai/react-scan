@@ -6,12 +6,9 @@
  * Do not modify unless you know what you are doing
  */
 type SetStateInternal<T> = {
-  _(
-    partial: T | Partial<T> | { _(state: T): T | Partial<T> }['_'],
-    replace?: false,
-  ): void;
-  _(state: T | { _(state: T): T }['_'], replace: true): void;
-}['_'];
+  _(partial: T | Partial<T> | { _(state: T): T | Partial<T> }["_"], replace?: false): void;
+  _(state: T | { _(state: T): T }["_"], replace: true): void;
+}["_"];
 
 export interface StoreApi<T> {
   setState: SetStateInternal<T>;
@@ -26,11 +23,9 @@ export interface StoreApi<T> {
   };
 }
 
-export type ExtractState<S> = S extends { getState: () => infer T } ? T : never;
-
 type Get<T, K, F> = K extends keyof T ? T[K] : F;
 
-export type Mutate<S, Ms> = number extends Ms['length' & keyof Ms]
+export type Mutate<S, Ms> = number extends Ms["length" & keyof Ms]
   ? S
   : Ms extends []
     ? S
@@ -44,8 +39,8 @@ export type StateCreator<
   Mos extends [StoreMutatorIdentifier, unknown][] = [],
   U = T,
 > = ((
-  setState: Get<Mutate<StoreApi<T>, Mis>, 'setState', never>,
-  getState: Get<Mutate<StoreApi<T>, Mis>, 'getState', never>,
+  setState: Get<Mutate<StoreApi<T>, Mis>, "setState", never>,
+  getState: Get<Mutate<StoreApi<T>, Mis>, "getState", never>,
   store: Mutate<StoreApi<T>, Mis>,
 ) => U) & { $$storeMutators?: Mos };
 
@@ -63,10 +58,7 @@ type CreateStore = {
   ) => Mutate<StoreApi<T>, Mos>;
 };
 
-type CreateStoreImpl = <
-  T,
-  Mos extends [StoreMutatorIdentifier, unknown][] = [],
->(
+type CreateStoreImpl = <T, Mos extends [StoreMutatorIdentifier, unknown][] = []>(
   initializer: StateCreator<T, [], Mos>,
 ) => Mutate<StoreApi<T>, Mos>;
 
@@ -76,27 +68,24 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
   let state: TState;
   const listeners: Set<Listener> = new Set();
 
-  const setState: StoreApi<TState>['setState'] = (partial, replace) => {
+  const setState: StoreApi<TState>["setState"] = (partial, replace) => {
     const nextState =
-      typeof partial === 'function'
-        ? (partial as (state: TState) => TState)(state)
-        : partial;
+      typeof partial === "function" ? (partial as (state: TState) => TState)(state) : partial;
     if (!Object.is(nextState, state)) {
       const previousState = state;
       state =
-        (replace ?? (typeof nextState !== 'object' || nextState === null))
+        (replace ?? (typeof nextState !== "object" || nextState === null))
           ? (nextState as TState)
           : Object.assign({}, state, nextState);
       listeners.forEach((listener) => listener(state, previousState));
     }
   };
 
-  const getState: StoreApi<TState>['getState'] = () => state;
+  const getState: StoreApi<TState>["getState"] = () => state;
 
-  const getInitialState: StoreApi<TState>['getInitialState'] = () =>
-    initialState;
+  const getInitialState: StoreApi<TState>["getInitialState"] = () => initialState;
 
-  const subscribe: StoreApi<TState>['subscribe'] = (
+  const subscribe: StoreApi<TState>["subscribe"] = (
     selectorOrListener:
       | ((state: TState, prevState: TState) => void)
       // oxlint-disable-next-line typescript/no-explicit-any
@@ -116,10 +105,7 @@ const createStoreImpl: CreateStoreImpl = (createState) => {
       actualListener = listener;
     } else {
       // Regular subscription case
-      actualListener = selectorOrListener as (
-        state: TState,
-        prevState: TState,
-      ) => void;
+      actualListener = selectorOrListener as (state: TState, prevState: TState) => void;
     }
 
     let currentSlice = selector ? selector(state) : undefined;

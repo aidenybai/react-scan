@@ -1,13 +1,7 @@
-import { ReactScanInternals } from '~core/index';
-import { cn } from '~web/utils/helpers';
+import { ReactScanInternals } from "~core/index";
+import { cn } from "~web/utils/helpers";
 
-export const ChevronRight = ({
-  size = 24,
-  className,
-}: {
-  size?: number;
-  className?: string;
-}) => (
+export const ChevronRight = ({ size = 24, className }: { size?: number; className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -18,39 +12,14 @@ export const ChevronRight = ({
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={cn(['lucide lucide-chevron-right', className])}
+    className={cn(["lucide lucide-chevron-right", className])}
   >
     <path d="m9 18 6-6-6-6" />
   </svg>
 );
-export const CopyX = ({
-  size = 24,
-  className,
-}: {
-  size?: number;
-  className?: string;
-}) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={cn(['lucide lucide-copy-x', className])}
-  >
-    <line x1="12" x2="18" y1="12" y2="18" />
-    <line x1="12" x2="18" y1="18" y2="12" />
-    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-  </svg>
-);
 
 export const Notification = ({
-  className = '',
+  className = "",
   size = 24,
   events = [],
 }: {
@@ -60,11 +29,8 @@ export const Notification = ({
 }) => {
   const hasHighSeverity = events.includes(true);
   const totalSevere = events.filter((e) => e).length;
-  const displayCount = totalSevere > 99 ? '>99' : totalSevere;
-  const badgeSize = hasHighSeverity
-    ? Math.max(size * 0.6, 14)
-    : Math.max(size * 0.4, 6);
-
+  const displayCount = totalSevere > 99 ? ">99" : totalSevere;
+  const badgeSize = hasHighSeverity ? Math.max(size * 0.6, 14) : Math.max(size * 0.4, 6);
 
   return (
     <div className="relative">
@@ -88,18 +54,18 @@ export const Notification = ({
         ReactScanInternals.options.value.showNotificationCount && (
           <div
             className={cn([
-              'absolute',
-              hasHighSeverity ? '-top-2.5 -right-2.5' : '-top-1 -right-1',
-              'rounded-full',
-              'flex items-center justify-center',
-              'text-[8px] font-medium text-white',
-              'aspect-square',
-              hasHighSeverity ? 'bg-red-500/90' : 'bg-purple-500/90',
+              "absolute",
+              hasHighSeverity ? "-top-2.5 -right-2.5" : "-top-1 -right-1",
+              "rounded-full",
+              "flex items-center justify-center",
+              "text-[8px] font-medium text-white",
+              "aspect-square",
+              hasHighSeverity ? "bg-red-500/90" : "bg-purple-500/90",
             ])}
             style={{
               width: `${badgeSize}px`,
               height: `${badgeSize}px`,
-              padding: hasHighSeverity ? '0.5px' : '0',
+              padding: hasHighSeverity ? "0.5px" : "0",
             }}
           >
             {hasHighSeverity && displayCount}
@@ -109,10 +75,7 @@ export const Notification = ({
   );
 };
 
-export const CloseIcon = ({
-  className = '',
-  size = 24,
-}: { className?: string; size?: number }) => (
+export const CloseIcon = ({ className = "", size = 24 }: { className?: string; size?: number }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -130,9 +93,12 @@ export const CloseIcon = ({
   </svg>
 );
 export const VolumeOnIcon = ({
-  className = '',
+  className = "",
   size = 24,
-}: { className?: string; size?: number }) => (
+}: {
+  className?: string;
+  size?: number;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -152,9 +118,12 @@ export const VolumeOnIcon = ({
 );
 
 export const VolumeOffIcon = ({
-  className = '',
+  className = "",
   size = 24,
-}: { className?: string; size?: number }) => (
+}: {
+  className?: string;
+  size?: number;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -175,13 +144,7 @@ export const VolumeOffIcon = ({
   </svg>
 );
 
-export const ArrowLeft = ({
-  size = 24,
-  className,
-}: {
-  size?: number;
-  className?: string;
-}) => (
+export const ArrowLeft = ({ size = 24, className }: { size?: number; className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -192,7 +155,7 @@ export const ArrowLeft = ({
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={cn(['lucide lucide-arrow-left', className])}
+    className={cn(["lucide lucide-arrow-left", className])}
   >
     <path d="m12 19-7-7 7-7" />
     <path d="M19 12H5" />
@@ -200,9 +163,12 @@ export const ArrowLeft = ({
 );
 
 export const PointerIcon = ({
-  className = '',
+  className = "",
   size = 24,
-}: { className?: string; size?: number }) => (
+}: {
+  className?: string;
+  size?: number;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -224,9 +190,12 @@ export const PointerIcon = ({
 );
 
 export const KeyboardIcon = ({
-  className = '',
+  className = "",
   size = 24,
-}: { className?: string; size?: number }) => (
+}: {
+  className?: string;
+  size?: number;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -250,10 +219,7 @@ export const KeyboardIcon = ({
     <rect width="20" height="16" x="2" y="4" rx="2" />
   </svg>
 );
-export const ClearIcon = ({
-  className = '',
-  size = 24,
-}: { className?: string; size?: number }) => {
+export const ClearIcon = ({ className = "", size = 24 }: { className?: string; size?: number }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -266,7 +232,7 @@ export const ClearIcon = ({
       stroke-linecap="round"
       stroke-linejoin="round"
       className={className}
-      style={{ transform: 'rotate(180deg)' }}
+      style={{ transform: "rotate(180deg)" }}
     >
       <circle cx="12" cy="12" r="10" />
       <path d="m4.9 4.9 14.2 14.2" />
@@ -274,9 +240,12 @@ export const ClearIcon = ({
   );
 };
 export const TrendingDownIcon = ({
-  className = '',
+  className = "",
   size = 24,
-}: { className?: string; size?: number }) => (
+}: {
+  className?: string;
+  size?: number;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}

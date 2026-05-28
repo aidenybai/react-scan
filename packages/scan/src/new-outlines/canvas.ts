@@ -1,8 +1,7 @@
-import type { ActiveOutline, OutlineData } from './types';
+import type { ActiveOutline, OutlineData } from "./types";
 
 export const OUTLINE_ARRAY_SIZE = 7;
-const MONO_FONT =
-  'Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace';
+const MONO_FONT = "Menlo,Consolas,Monaco,Liberation Mono,Lucida Console,monospace";
 
 const INTERPOLATION_SPEED = 0.2;
 const SNAP_THRESHOLD = 0.5;
@@ -16,28 +15,26 @@ const MAX_PARTS_LENGTH = 4;
 const MAX_LABEL_LENGTH = 40;
 const TOTAL_FRAMES = 45;
 
-const PRIMARY_COLOR = '115,97,230';
+const PRIMARY_COLOR = "115,97,230";
 
 function sortEntry(prev: [number, string[]], next: [number, string[]]): number {
   return next[0] - prev[0];
 }
 
-function getSortedEntries(
-  countByNames: Map<number, string[]>,
-): [number, string[]][] {
+function getSortedEntries(countByNames: Map<number, string[]>): [number, string[]][] {
   const entries = [...countByNames.entries()];
   return entries.sort(sortEntry);
 }
 
 function getLabelTextPart([count, names]: [number, string[]]): string {
-  let part = `${names.slice(0, MAX_PARTS_LENGTH).join(', ')} ×${count}`;
+  let part = `${names.slice(0, MAX_PARTS_LENGTH).join(", ")} ×${count}`;
   if (part.length > MAX_LABEL_LENGTH) {
     part = `${part.slice(0, MAX_LABEL_LENGTH)}…`;
   }
   return part;
 }
 
-export const getLabelText = (outlines: ActiveOutline[]): string => {
+const getLabelText = (outlines: ActiveOutline[]): string => {
   const nameByCount = new Map<string, number>();
   for (const { name, count } of outlines) {
     nameByCount.set(name, (nameByCount.get(name) || 0) + count);
@@ -57,7 +54,7 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   const partsEntries = getSortedEntries(countByNames);
   let labelText = getLabelTextPart(partsEntries[0]);
   for (let i = 1, len = partsEntries.length; i < len; i++) {
-    labelText += ', ' + getLabelTextPart(partsEntries[i]);
+    labelText += ", " + getLabelTextPart(partsEntries[i]);
   }
 
   if (labelText.length > MAX_LABEL_LENGTH) {
@@ -67,7 +64,7 @@ export const getLabelText = (outlines: ActiveOutline[]): string => {
   return labelText;
 };
 
-export const getAreaFromOutlines = (outlines: ActiveOutline[]) => {
+const getAreaFromOutlines = (outlines: ActiveOutline[]) => {
   let area = 0;
   for (const outline of outlines) {
     area += outline.width * outline.height;
@@ -125,11 +122,8 @@ export const updateScroll = (
   }
 };
 
-export const initCanvas = (
-  canvas: HTMLCanvasElement | OffscreenCanvas,
-  dpr: number,
-) => {
-  const ctx = canvas.getContext('2d', { alpha: true }) as
+export const initCanvas = (canvas: HTMLCanvasElement | OffscreenCanvas, dpr: number) => {
+  const ctx = canvas.getContext("2d", { alpha: true }) as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
   if (ctx) {
@@ -159,17 +153,7 @@ export const drawCanvas = (
   >();
 
   for (const outline of activeOutlines.values()) {
-    const {
-      x,
-      y,
-      width,
-      height,
-      targetX,
-      targetY,
-      targetWidth,
-      targetHeight,
-      frame,
-    } = outline;
+    const { x, y, width, height, targetX, targetY, targetWidth, targetHeight, frame } = outline;
     if (targetX !== x) {
       outline.x = lerp(x, targetX);
     }
@@ -242,7 +226,7 @@ export const drawCanvas = (
     }
   >();
 
-  ctx.textRendering = 'optimizeSpeed';
+  ctx.textRendering = "optimizeSpeed";
 
   // TODO(Alexis): optimizable?
   for (const outlines of groupedOutlinesMap.values()) {
@@ -276,11 +260,9 @@ export const drawCanvas = (
   }
 
   // TODO(Alexis): optimize
-  const sortedLabels = Array.from(labelMap.entries()).sort(
-    ([_, a], [__, b]) => {
-      return getAreaFromOutlines(b.outlines) - getAreaFromOutlines(a.outlines);
-    },
-  );
+  const sortedLabels = Array.from(labelMap.entries()).sort(([_, a], [__, b]) => {
+    return getAreaFromOutlines(b.outlines) - getAreaFromOutlines(a.outlines);
+  });
 
   for (const [labelKey, label] of sortedLabels) {
     if (!labelMap.has(labelKey)) continue;
@@ -289,12 +271,7 @@ export const drawCanvas = (
       if (labelKey === otherKey) continue;
 
       const { x, y, width, height } = label;
-      const {
-        x: otherX,
-        y: otherY,
-        width: otherWidth,
-        height: otherHeight,
-      } = otherLabel;
+      const { x: otherX, y: otherY, width: otherWidth, height: otherHeight } = otherLabel;
 
       if (
         x + width > otherX &&

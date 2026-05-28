@@ -1,31 +1,15 @@
-import {
-  Fiber,
-  getDisplayName,
-  getTimings,
-  hasMemoCache,
-  isHostFiber,
-  traverseFiber,
-} from 'bippy';
-import { Store } from '../..';
+import { Fiber, getDisplayName, getTimings, hasMemoCache, isHostFiber, traverseFiber } from "bippy";
+import { Store } from "../..";
 
-import {
-  BoundedArray,
-  invariantError,
-} from '~core/notifications/performance-utils';
+import { BoundedArray, invariantError } from "~core/notifications/performance-utils";
 import {
   SectionData,
   collectInspectorDataWithoutCounts,
-} from '~web/views/inspector/timeline/utils';
-import {
-  getFiberFromElement,
-  getParentCompositeFiber,
-} from '~web/views/inspector/utils';
-import { performanceEntryChannels } from './performance-store';
-import type {
-  PerformanceInteraction,
-  PerformanceInteractionEntry,
-} from './types';
-import { not_globally_unique_generateId } from '~core/utils';
+} from "~web/views/inspector/timeline/utils";
+import { getFiberFromElement, getParentCompositeFiber } from "~web/views/inspector/utils";
+import { performanceEntryChannels } from "./performance-store";
+import type { PerformanceInteraction, PerformanceInteractionEntry } from "./types";
+import { not_globally_unique_generateId } from "~core/utils";
 
 interface PathFilters {
   skipProviders: boolean;
@@ -75,13 +59,7 @@ const shouldIncludeInPath = (
   return !patternsToCheck.some((pattern) => pattern.test(name));
 };
 
-const minifiedPatterns = [
-  /^[a-z]$/,
-  /^[a-z][0-9]$/,
-  /^_+$/,
-  /^[A-Za-z][_$]$/,
-  /^[a-z]{1,2}$/,
-];
+const minifiedPatterns = [/^[a-z]$/, /^[a-z][0-9]$/, /^_+$/, /^[A-Za-z][_$]$/, /^[a-z]{1,2}$/];
 
 const isMinified = (name: string): boolean => {
   for (let i = 0; i < minifiedPatterns.length; i++) {
@@ -108,11 +86,8 @@ interface FiberType {
 
 const getCleanComponentName = (component: FiberType): string => {
   const name = getDisplayName(component);
-  if (!name) return '';
-  return name.replace(
-    /^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/,
-    '$<inner>',
-  );
+  if (!name) return "";
+  return name.replace(/^(?:Memo|Forward(?:Ref)?|With.*?)\((?<inner>.*?)\)$/, "$<inner>");
 };
 
 const getInteractionPath = (
@@ -128,7 +103,12 @@ const getInteractionPath = (
   let fiber = initialFiber;
   while (fiber.return) {
     const name = getCleanComponentName(fiber.type);
-    if (name && !isMinified(name) && shouldIncludeInPath(name, filters) && name.toLowerCase() !== name) {
+    if (
+      name &&
+      !isMinified(name) &&
+      shouldIncludeInPath(name, filters) &&
+      name.toLowerCase() !== name
+    ) {
       stack.push(name);
     }
     fiber = fiber.return;
@@ -140,10 +120,7 @@ const getInteractionPath = (
   return fullPath;
 };
 
-const getFirstNameFromAncestor = (
-  fiber: Fiber,
-  accept: (name: string) => boolean = () => true,
-) => {
+const getFirstNameFromAncestor = (fiber: Fiber, accept: (name: string) => boolean = () => true) => {
   let curr: Fiber | null = fiber;
 
   while (curr) {
@@ -159,7 +136,7 @@ const getFirstNameFromAncestor = (
 
 let unsubscribeTrackVisibilityChange: (() => void) | undefined;
 // fixme: compress me if this stays here for bad interaction time checks
-let lastVisibilityHiddenAt: number | 'never-hidden' = 'never-hidden';
+let lastVisibilityHiddenAt: number | "never-hidden" = "never-hidden";
 
 const trackVisibilityChange = () => {
   unsubscribeTrackVisibilityChange?.();
@@ -168,10 +145,10 @@ const trackVisibilityChange = () => {
       lastVisibilityHiddenAt = Date.now();
     }
   };
-  document.addEventListener('visibilitychange', onVisibilityChange);
+  document.addEventListener("visibilitychange", onVisibilityChange);
 
   unsubscribeTrackVisibilityChange = () => {
-    document.removeEventListener('visibilitychange', onVisibilityChange);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
   };
 };
 export type FiberRenders = Record<
@@ -200,8 +177,8 @@ export type FiberRenders = Record<
  */
 
 type InteractionStartStage = {
-  kind: 'interaction-start';
-  interactionType: 'pointer' | 'keyboard';
+  kind: "interaction-start";
+  interactionType: "pointer" | "keyboard";
   interactionUUID: string;
   interactionStartDetail: number;
   blockingTimeStart: number;
@@ -215,29 +192,29 @@ type InteractionStartStage = {
   stopListeningForRenders: () => void;
 };
 
-type JSEndStage = Omit<InteractionStartStage, 'kind'> & {
-  kind: 'js-end-stage';
+type JSEndStage = Omit<InteractionStartStage, "kind"> & {
+  kind: "js-end-stage";
   jsEndDetail: number;
 };
 
-type RAFStage = Omit<JSEndStage, 'kind'> & {
-  kind: 'raf-stage';
+type RAFStage = Omit<JSEndStage, "kind"> & {
+  kind: "raf-stage";
   rafStart: number;
 };
 
-export type TimeoutStage = Omit<RAFStage, 'kind'> & {
-  kind: 'timeout-stage';
+export type TimeoutStage = Omit<RAFStage, "kind"> & {
+  kind: "timeout-stage";
   commitEnd: number;
   blockingTimeEnd: number;
 };
 
 export type PerformanceEntryChannelEvent =
   | {
-      kind: 'entry-received';
+      kind: "entry-received";
       entry: PerformanceInteraction;
     }
   | {
-      kind: 'auto-complete-race';
+      kind: "auto-complete-race";
       interactionUUID: string;
       detailedTiming: TimeoutStage;
     };
@@ -250,61 +227,26 @@ export type CompletedInteraction = {
 };
 
 type UnInitializedStage = {
-  kind: 'uninitialized-stage';
+  kind: "uninitialized-stage";
   // todo: no longer a uuid
   interactionUUID: string;
-  interactionType: 'pointer' | 'keyboard';
+  interactionType: "pointer" | "keyboard";
 };
 
-type CurrentInteraction = {
-  kind: 'pointer' | 'keyboard';
-  interactionUUID: string;
-  pointerUpStart: number;
-  // needed for when inputs that can be clicked and trigger on change (like checkboxes)
-  clickChangeStart: number | null;
-  clickHandlerMicroTaskEnd: number | null;
-  rafStart: number | null;
-  commmitEnd: number | null;
-  timeorigin: number;
-
-  // for now i don't trust performance now timing for UTC time...
-  blockingTimeStart: number;
-  blockingTimeEnd: number | null;
-  fiberRenders: Map<
-    string,
-    {
-      renderCount: number;
-      parents: Set<string>;
-      selfTime: number;
-    }
-  >;
-  componentPath: Array<string>;
-  componentName: string;
-  childrenTree: Record<
-    string,
-    { children: Array<string>; firstNamedAncestor: string; isRoot: boolean }
-  >;
-};
-
-export let currentInteractions: Array<CurrentInteraction> = [];
-const getInteractionType = (
-  eventName: string,
-): 'pointer' | 'keyboard' | null => {
+const getInteractionType = (eventName: string): "pointer" | "keyboard" | null => {
   // todo: track pointer down, but tends to not house expensive logic so not very high priority
-  if (['pointerup', 'click'].includes(eventName)) {
-    return 'pointer';
+  if (["pointerup", "click"].includes(eventName)) {
+    return "pointer";
   }
-  if (eventName.includes('key')) {
+  if (eventName.includes("key")) {
   }
-  if (['keydown', 'keyup'].includes(eventName)) {
-    return 'keyboard';
+  if (["keydown", "keyup"].includes(eventName)) {
+    return "keyboard";
   }
   return null;
 };
 let onEntryAnimationId: number | null = null;
-const setupPerformanceListener = (
-  onEntry: (interaction: PerformanceInteraction) => void,
-) => {
+const setupPerformanceListener = (onEntry: (interaction: PerformanceInteraction) => void) => {
   trackVisibilityChange();
   const interactionMap = new Map<string, PerformanceInteraction>();
   const interactionTargetMap = new Map<string, Element>();
@@ -312,20 +254,13 @@ const setupPerformanceListener = (
   const processInteractionEntry = (entry: PerformanceInteractionEntry) => {
     if (!entry.interactionId) return;
 
-    if (
-      entry.interactionId &&
-      entry.target &&
-      !interactionTargetMap.has(entry.interactionId)
-    ) {
+    if (entry.interactionId && entry.target && !interactionTargetMap.has(entry.interactionId)) {
       interactionTargetMap.set(entry.interactionId, entry.target);
     }
     if (entry.target) {
       let current: Element | null = entry.target;
       while (current) {
-        if (
-          current.id === 'react-scan-toolbar-root' ||
-          current.id === 'react-scan-root'
-        ) {
+        if (current.id === "react-scan-toolbar-root" || current.id === "react-scan-root") {
           return;
         }
         current = current.parentElement;
@@ -363,13 +298,12 @@ const setupPerformanceListener = (
         duration: entry.duration,
         inputDelay: entry.processingStart - entry.startTime,
         processingDuration: entry.processingEnd - entry.processingStart,
-        presentationDelay:
-          entry.duration - (entry.processingEnd - entry.startTime),
+        presentationDelay: entry.duration - (entry.processingEnd - entry.startTime),
         // componentPath:
         timestamp: Date.now(),
         timeSinceTabInactive:
-          lastVisibilityHiddenAt === 'never-hidden'
-            ? 'never-hidden'
+          lastVisibilityHiddenAt === "never-hidden"
+            ? "never-hidden"
             : Date.now() - lastVisibilityHiddenAt,
         visibilityState: document.visibilityState,
         timeOrigin: performance.timeOrigin,
@@ -409,12 +343,12 @@ const setupPerformanceListener = (
 
   try {
     po.observe({
-      type: 'event',
+      type: "event",
       buffered: true,
       durationThreshold: 16,
     } as PerformanceObserverInit);
     po.observe({
-      type: 'first-input',
+      type: "first-input",
       buffered: true,
     });
   } catch {
@@ -428,22 +362,20 @@ export const setupPerformancePublisher = () => {
   return setupPerformanceListener((entry) => {
     performanceEntryChannels.publish(
       {
-        kind: 'entry-received',
+        kind: "entry-received",
         entry,
       },
-      'recording',
+      "recording",
     );
   });
 };
 
 // we should actually only feed it the information it needs to complete so we can support safari
 type Task = {
-  completeInteraction: (
-    entry: PerformanceEntryChannelEvent,
-  ) => CompletedInteraction;
+  completeInteraction: (entry: PerformanceEntryChannelEvent) => CompletedInteraction;
   startDateTime: number;
   endDateTime: number;
-  type: 'keyboard' | 'pointer';
+  type: "keyboard" | "pointer";
   interactionUUID: string;
 };
 export const MAX_INTERACTION_TASKS = 25;
@@ -481,26 +413,22 @@ export const listenForPerformanceEntryInteractions = (
   onComplete: (completedInteraction: CompletedInteraction) => void,
 ) => {
   // we make the assumption that the detailed timing will be ready before the performance timing
-  const unsubscribe = performanceEntryChannels.subscribe(
-    'recording',
-    (event) => {
-      const associatedDetailedInteraction =
-        event.kind === 'auto-complete-race'
-          ? tasks.find((task) => task.interactionUUID === event.interactionUUID)
-          : getAssociatedDetailedTimingInteraction(event.entry, tasks);
+  const unsubscribe = performanceEntryChannels.subscribe("recording", (event) => {
+    const associatedDetailedInteraction =
+      event.kind === "auto-complete-race"
+        ? tasks.find((task) => task.interactionUUID === event.interactionUUID)
+        : getAssociatedDetailedTimingInteraction(event.entry, tasks);
 
-      // REMINDME: this likely means we clicked a non interactable thing but our handler still ran
-      // so we shouldn't treat this as an invariant, but instead use it to verify if we clicked
-      // something interactable
-      if (!associatedDetailedInteraction) {
-        return;
-      }
+    // REMINDME: this likely means we clicked a non interactable thing but our handler still ran
+    // so we shouldn't treat this as an invariant, but instead use it to verify if we clicked
+    // something interactable
+    if (!associatedDetailedInteraction) {
+      return;
+    }
 
-      const completedInteraction =
-        associatedDetailedInteraction.completeInteraction(event);
-      onComplete(completedInteraction);
-    },
-  );
+    const completedInteraction = associatedDetailedInteraction.completeInteraction(event);
+    onComplete(completedInteraction);
+  });
 
   return unsubscribe;
 };
@@ -549,14 +477,10 @@ const getTargetInteractionDetails = (target: Element) => {
   }
 
   // TODO: if element is minified, squash upwards till first non minified ancestor, and set name as ChildOf(<parent-name>)
-  let componentName = associatedFiber
-    ? getDisplayName(associatedFiber?.type)
-    : 'N/A';
+  let componentName = associatedFiber ? getDisplayName(associatedFiber?.type) : "N/A";
 
   if (!componentName) {
-    componentName =
-      getFirstNameFromAncestor(associatedFiber, (name) => name.length > 2) ??
-      'N/A';
+    componentName = getFirstNameFromAncestor(associatedFiber, (name) => name.length > 2) ?? "N/A";
   }
 
   if (!componentName) {
@@ -574,13 +498,9 @@ const getTargetInteractionDetails = (target: Element) => {
 };
 
 type LastInteractionRef = {
-  current: (
-    | InteractionStartStage
-    | JSEndStage
-    | RAFStage
-    | TimeoutStage
-    | UnInitializedStage
-  ) & { stageStart: number };
+  current: (InteractionStartStage | JSEndStage | RAFStage | TimeoutStage | UnInitializedStage) & {
+    stageStart: number;
+  };
 };
 
 /**
@@ -588,7 +508,7 @@ type LastInteractionRef = {
  * handles tracking event timings for arbitrarily overlapping handlers with cancel logic
  */
 export const setupDetailedPointerTimingListener = (
-  kind: 'pointer' | 'keyboard',
+  kind: "pointer" | "keyboard",
   options: {
     onStart?: (interactionUUID: string) => void;
     onComplete?: (
@@ -606,35 +526,30 @@ export const setupDetailedPointerTimingListener = (
 ) => {
   let instrumentationIdInControl: string | null = null;
 
-  const getEvent = (
-    info: { phase: 'start' } | { phase: 'end'; target: Element },
-  ) => {
+  const getEvent = (info: { phase: "start" } | { phase: "end"; target: Element }) => {
     switch (kind) {
-      case 'pointer': {
-        if (info.phase === 'start') {
-          return 'pointerup';
+      case "pointer": {
+        if (info.phase === "start") {
+          return "pointerup";
         }
-        if (
-          info.target instanceof HTMLInputElement ||
-          info.target instanceof HTMLSelectElement
-        ) {
-          return 'change';
+        if (info.target instanceof HTMLInputElement || info.target instanceof HTMLSelectElement) {
+          return "change";
         }
-        return 'click';
+        return "click";
       }
-      case 'keyboard': {
-        if (info.phase === 'start') {
-          return 'keydown';
+      case "keyboard": {
+        if (info.phase === "start") {
+          return "keydown";
         }
 
-        return 'change';
+        return "change";
       }
     }
   };
 
   const lastInteractionRef: LastInteractionRef = {
     current: {
-      kind: 'uninitialized-stage',
+      kind: "uninitialized-stage",
       interactionUUID: not_globally_unique_generateId(), // the first interaction uses this
       stageStart: Date.now(),
       interactionType: kind,
@@ -643,23 +558,19 @@ export const setupDetailedPointerTimingListener = (
 
   const onInteractionStart = (e: Event) => {
     const path = e.composedPath();
-    if (
-      path.some(
-        (el) => el instanceof Element && el.id === 'react-scan-toolbar-root',
-      )
-    ) {
+    if (path.some((el) => el instanceof Element && el.id === "react-scan-toolbar-root")) {
       return;
     }
     if (Date.now() - lastInteractionRef.current.stageStart > 2000) {
       lastInteractionRef.current = {
-        kind: 'uninitialized-stage',
+        kind: "uninitialized-stage",
         interactionUUID: not_globally_unique_generateId(),
         stageStart: Date.now(),
         interactionType: kind,
       };
     }
 
-    if (lastInteractionRef.current.kind !== 'uninitialized-stage') {
+    if (lastInteractionRef.current.kind !== "uninitialized-stage") {
       return;
     }
 
@@ -673,7 +584,7 @@ export const setupDetailedPointerTimingListener = (
       return;
     }
 
-    const fiberRenders: InteractionStartStage['fiberRenders'] = {};
+    const fiberRenders: InteractionStartStage["fiberRenders"] = {};
     const stopListeningForRenders = listenForRenders(fiberRenders);
     lastInteractionRef.current = {
       ...lastInteractionRef.current,
@@ -683,12 +594,12 @@ export const setupDetailedPointerTimingListener = (
       componentName: details.componentName,
       componentPath: details.componentPath,
       fiberRenders,
-      kind: 'interaction-start',
+      kind: "interaction-start",
       interactionStartDetail: pointerUpStart,
       stopListeningForRenders,
     };
 
-    const event = getEvent({ phase: 'end', target: e.target as Element });
+    const event = getEvent({ phase: "end", target: e.target as Element });
     // oxlint-disable-next-line typescript/no-explicit-any
     document.addEventListener(event, onLastJS as any, {
       once: true,
@@ -705,7 +616,7 @@ export const setupDetailedPointerTimingListener = (
   };
 
   document.addEventListener(
-    getEvent({ phase: 'start' }),
+    getEvent({ phase: "start" }),
     // oxlint-disable-next-line typescript/no-explicit-any
     onInteractionStart as any,
     {
@@ -717,18 +628,14 @@ export const setupDetailedPointerTimingListener = (
    *
    * TODO: IF WE DETECT RENDERS DURING THIS PERIOD WE CAN INCLUDE THAT IN THE RESULT AND THEN BACK THAT OUT OF COMPUTED STYLE TIME AND ADD IT BACK INTO JS TIME
    */
-  const onLastJS = (
-    e: { target: Element },
-    instrumentationId: string,
-    abort: () => boolean,
-  ) => {
+  const onLastJS = (e: { target: Element }, instrumentationId: string, abort: () => boolean) => {
     if (
-      lastInteractionRef.current.kind !== 'interaction-start' &&
+      lastInteractionRef.current.kind !== "interaction-start" &&
       instrumentationId === instrumentationIdInControl
     ) {
-      if (kind === 'pointer' && e.target instanceof HTMLSelectElement) {
+      if (kind === "pointer" && e.target instanceof HTMLSelectElement) {
         lastInteractionRef.current = {
-          kind: 'uninitialized-stage',
+          kind: "uninitialized-stage",
           interactionUUID: not_globally_unique_generateId(),
           stageStart: Date.now(),
           interactionType: kind,
@@ -738,12 +645,12 @@ export const setupDetailedPointerTimingListener = (
 
       options?.onError?.(lastInteractionRef.current.interactionUUID);
       lastInteractionRef.current = {
-        kind: 'uninitialized-stage',
+        kind: "uninitialized-stage",
         interactionUUID: not_globally_unique_generateId(),
         stageStart: Date.now(),
         interactionType: kind,
       };
-      invariantError('pointer -> click');
+      invariantError("pointer -> click");
       return;
     }
 
@@ -752,26 +659,26 @@ export const setupDetailedPointerTimingListener = (
     trackDetailedTiming({
       abort,
       onMicroTask: () => {
-        if (lastInteractionRef.current.kind === 'uninitialized-stage') {
+        if (lastInteractionRef.current.kind === "uninitialized-stage") {
           return false;
         }
 
         lastInteractionRef.current = {
           ...lastInteractionRef.current,
-          kind: 'js-end-stage',
+          kind: "js-end-stage",
           jsEndDetail: performance.now(),
         };
         return true;
       },
       onRAF: () => {
         if (
-          lastInteractionRef.current.kind !== 'js-end-stage' &&
-          lastInteractionRef.current.kind !== 'raf-stage'
+          lastInteractionRef.current.kind !== "js-end-stage" &&
+          lastInteractionRef.current.kind !== "raf-stage"
         ) {
           options?.onError?.(lastInteractionRef.current.interactionUUID);
-          invariantError('bad transition to raf');
+          invariantError("bad transition to raf");
           lastInteractionRef.current = {
-            kind: 'uninitialized-stage',
+            kind: "uninitialized-stage",
             interactionUUID: not_globally_unique_generateId(),
             stageStart: Date.now(),
             interactionType: kind,
@@ -781,34 +688,34 @@ export const setupDetailedPointerTimingListener = (
 
         lastInteractionRef.current = {
           ...lastInteractionRef.current,
-          kind: 'raf-stage',
+          kind: "raf-stage",
           rafStart: performance.now(),
         };
 
         return true;
       },
       onTimeout: () => {
-        if (lastInteractionRef.current.kind !== 'raf-stage') {
+        if (lastInteractionRef.current.kind !== "raf-stage") {
           options?.onError?.(lastInteractionRef.current.interactionUUID);
           lastInteractionRef.current = {
-            kind: 'uninitialized-stage',
+            kind: "uninitialized-stage",
             interactionUUID: not_globally_unique_generateId(),
             stageStart: Date.now(),
             interactionType: kind,
           };
-          invariantError('raf->timeout');
+          invariantError("raf->timeout");
           return;
         }
         const now = Date.now();
         const timeoutStage: TimeoutStage = Object.freeze({
           ...lastInteractionRef.current,
-          kind: 'timeout-stage',
+          kind: "timeout-stage",
           blockingTimeEnd: now,
           commitEnd: performance.now(),
         });
 
         lastInteractionRef.current = {
-          kind: 'uninitialized-stage',
+          kind: "uninitialized-stage",
           interactionUUID: not_globally_unique_generateId(),
           stageStart: now,
           interactionType: kind,
@@ -818,9 +725,8 @@ export const setupDetailedPointerTimingListener = (
           completed = true;
 
           const latency =
-            event.kind === 'auto-complete-race'
-              ? event.detailedTiming.commitEnd -
-                event.detailedTiming.interactionStartDetail
+            event.kind === "auto-complete-race"
+              ? event.detailedTiming.commitEnd - event.detailedTiming.interactionStartDetail
               : event.entry.latency;
           const finalInteraction = {
             detailedTiming: timeoutStage,
@@ -829,11 +735,7 @@ export const setupDetailedPointerTimingListener = (
             flushNeeded: true,
           };
 
-          options?.onComplete?.(
-            timeoutStage.interactionUUID,
-            finalInteraction,
-            event,
-          );
+          options?.onComplete?.(timeoutStage.interactionUUID, finalInteraction, event);
           const newTasks = tasks.filter(
             (task) => task.interactionUUID !== timeoutStage.interactionUUID,
           );
@@ -857,7 +759,7 @@ export const setupDetailedPointerTimingListener = (
           );
           tasks = BoundedArray.fromArray(newTasks, MAX_INTERACTION_TASKS);
           completeInteraction({
-            kind: 'auto-complete-race',
+            kind: "auto-complete-race",
             // redundant
             detailedTiming: timeoutStage,
             interactionUUID: timeoutStage.interactionUUID,
@@ -868,7 +770,7 @@ export const setupDetailedPointerTimingListener = (
               return;
             }
             completeInteraction({
-              kind: 'auto-complete-race',
+              kind: "auto-complete-race",
               // redundant
               detailedTiming: timeoutStage,
               interactionUUID: timeoutStage.interactionUUID,
@@ -889,14 +791,14 @@ export const setupDetailedPointerTimingListener = (
     onLastJS(e, id, () => id !== instrumentationIdInControl);
   };
 
-  if (kind === 'keyboard') {
+  if (kind === "keyboard") {
     // oxlint-disable-next-line typescript/no-explicit-any
-    document.addEventListener('keypress', onKeyPress as any);
+    document.addEventListener("keypress", onKeyPress as any);
   }
 
   return () => {
     document.removeEventListener(
-      getEvent({ phase: 'start' }),
+      getEvent({ phase: "start" }),
       // oxlint-disable-next-line typescript/no-explicit-any
       onInteractionStart as any,
       {
@@ -904,7 +806,7 @@ export const setupDetailedPointerTimingListener = (
       },
     );
     // oxlint-disable-next-line typescript/no-explicit-any
-    document.removeEventListener('keypress', onKeyPress as any);
+    document.removeEventListener("keypress", onKeyPress as any);
   };
 };
 
@@ -918,12 +820,10 @@ const getHostFromFiber = (fiber: Fiber) => {
 };
 
 const isPerformanceEventAvailable = () => {
-  return 'PerformanceEventTiming' in globalThis;
+  return "PerformanceEventTiming" in globalThis;
 };
 
-export const listenForRenders = (
-  fiberRenders: InteractionStartStage['fiberRenders'],
-) => {
+export const listenForRenders = (fiberRenders: InteractionStartStage["fiberRenders"]) => {
   const listener = (fiber: Fiber) => {
     const displayName = getDisplayName(fiber.type);
     if (!displayName) {
@@ -960,7 +860,7 @@ export const listenForRenders = (
         nodeInfo: [
           {
             element: getHostFromFiber(fiber),
-            name: getDisplayName(fiber.type) ?? 'Unknown',
+            name: getDisplayName(fiber.type) ?? "Unknown",
             selfTime: getTimings(fiber).selfTime,
           },
         ],
@@ -989,8 +889,7 @@ export const listenForRenders = (
       changesCounts: new Map<string | number, number>(),
     };
 
-    existing.wasFiberRenderMount =
-      existing.wasFiberRenderMount || wasFiberRenderMount(fiber);
+    existing.wasFiberRenderMount = existing.wasFiberRenderMount || wasFiberRenderMount(fiber);
     existing.hasMemoCache = existing.hasMemoCache || hasMemoCache(fiber);
     existing.changes = {
       fiberProps: mergeSectionData(
@@ -1012,7 +911,7 @@ export const listenForRenders = (
     existing.totalTime += totalTime;
     existing.nodeInfo.push({
       element: getHostFromFiber(fiber),
-      name: getDisplayName(fiber.type) ?? 'Unknown',
+      name: getDisplayName(fiber.type) ?? "Unknown",
       selfTime: getTimings(fiber).selfTime,
     });
   };
@@ -1025,10 +924,7 @@ export const listenForRenders = (
   };
 };
 
-const mergeSectionData = (
-  existing: SectionData,
-  newData: SectionData,
-): SectionData => {
+const mergeSectionData = (existing: SectionData, newData: SectionData): SectionData => {
   const mergedSection: SectionData = {
     current: [...existing.current],
     changes: new Set<string | number>(),
@@ -1042,7 +938,7 @@ const mergeSectionData = (
   }
 
   for (const change of newData.changes) {
-    if (typeof change === 'string' || typeof change === 'number') {
+    if (typeof change === "string" || typeof change === "number") {
       mergedSection.changes.add(change);
       const existingCount = existing.changesCounts.get(change) || 0;
       const newCount = newData.changesCounts.get(change) || 0;

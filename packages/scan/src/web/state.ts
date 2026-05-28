@@ -1,21 +1,18 @@
 import { signal } from "@preact/signals";
 import {
   LOCALSTORAGE_KEY,
+  LOCALSTORAGE_COLLAPSED_KEY,
   MIN_CONTAINER_WIDTH,
   MIN_SIZE,
   SAFE_AREA,
-  LOCALSTORAGE_COLLAPSED_KEY,
 } from "./constants";
 import { IS_CLIENT } from "./utils/constants";
 import { readLocalStorage, saveLocalStorage } from "./utils/helpers";
 import { getSafeArea } from "./utils/safe-area";
-import type { Corner, WidgetConfig, WidgetSettings } from "./widget/types";
-import type { CollapsedPosition } from "./widget/types";
+import type { CollapsedPosition, Corner, WidgetConfig, WidgetSettings } from "./widget/types";
 
 export const signalIsSettingsOpen = /* @__PURE__ */ signal(false);
-export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(
-  null
-);
+export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(null);
 
 // Use the raw SAFE_AREA constant (not getSafeArea()) here: this runs at
 // module-init time, before any user has called scan() with options.
@@ -45,7 +42,7 @@ export const getDefaultWidgetConfig = (): WidgetConfig => ({
 /** @deprecated use {@link getDefaultWidgetConfig} */
 export const defaultWidgetConfig: WidgetConfig = getDefaultWidgetConfig();
 
-export const getInitialWidgetConfig = (): WidgetConfig => {
+const getInitialWidgetConfig = (): WidgetConfig => {
   const defaults = getDefaultWidgetConfig();
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
   if (!stored) {
@@ -63,10 +60,7 @@ export const getInitialWidgetConfig = (): WidgetConfig => {
     corner: stored.corner ?? defaults.corner,
     dimensions: stored.dimensions ?? defaults.dimensions,
 
-    lastDimensions:
-      stored.lastDimensions ??
-      stored.dimensions ??
-      defaults.lastDimensions,
+    lastDimensions: stored.lastDimensions ?? stored.dimensions ?? defaults.lastDimensions,
     componentsTree: stored.componentsTree ?? defaults.componentsTree,
   };
 };
@@ -92,11 +86,6 @@ export const updateDimensions = (): void => {
   };
 };
 
-export interface SlowDowns {
-  slowDowns: number;
-  hideNotification: boolean;
-}
-
 export type WidgetStates =
   | {
       view: "none";
@@ -121,8 +110,6 @@ export const signalWidgetViews = signal<WidgetStates>({
   view: "none",
 });
 
-const storedCollapsed = readLocalStorage<CollapsedPosition | null>(
-  LOCALSTORAGE_COLLAPSED_KEY
-);
+const storedCollapsed = readLocalStorage<CollapsedPosition | null>(LOCALSTORAGE_COLLAPSED_KEY);
 export const signalWidgetCollapsed =
   /* @__PURE__ */ signal<CollapsedPosition | null>(storedCollapsed ?? null);

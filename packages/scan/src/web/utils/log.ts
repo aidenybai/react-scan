@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { ChangeReason, type Render } from '~core/instrumentation';
-import { getLabelText } from '~core/utils';
+import { ChangeReason, type Render } from "~core/instrumentation";
+import { getLabelText } from "~core/utils";
 
 export const log = (renders: Array<Render>) => {
   const logMap = new Map<
@@ -13,7 +13,6 @@ export const log = (renders: Array<Render>) => {
     if (!render.componentName) continue;
 
     const changeLog = logMap.get(render.componentName) ?? [];
-    renders;
     const labelText = getLabelText([
       {
         aggregatedCount: 1,
@@ -38,18 +37,17 @@ export const log = (renders: Array<Render>) => {
 
     if (render.changes) {
       for (let i = 0, len = render.changes.length; i < len; i++) {
-        const { name, prevValue, nextValue, unstable, type } =
-          render.changes[i];
+        const { name, prevValue, nextValue, unstable, type } = render.changes[i];
         if (type === ChangeReason.Props) {
           prevChangedProps ??= {};
           nextChangedProps ??= {};
-          prevChangedProps[`${unstable ? '⚠️' : ''}${name} (prev)`] = prevValue;
-          nextChangedProps[`${unstable ? '⚠️' : ''}${name} (next)`] = nextValue;
+          prevChangedProps[`${unstable ? "⚠️" : ""}${name} (prev)`] = prevValue;
+          nextChangedProps[`${unstable ? "⚠️" : ""}${name} (next)`] = nextValue;
         } else {
           changeLog.push({
             prev: prevValue,
             next: nextValue,
-            type: type === ChangeReason.Context ? 'context' : 'state',
+            type: type === ChangeReason.Context ? "context" : "state",
             unstable: unstable ?? false,
           });
         }
@@ -60,7 +58,7 @@ export const log = (renders: Array<Render>) => {
       changeLog.push({
         prev: prevChangedProps,
         next: nextChangedProps,
-        type: 'props',
+        type: "props",
         unstable: false,
       });
     }
@@ -69,13 +67,10 @@ export const log = (renders: Array<Render>) => {
   }
   for (const [name, changeLog] of Array.from(logMap.entries())) {
     // oxlint-disable-next-line no-console
-    console.group(
-      `%c${name}`,
-      'background: hsla(0,0%,70%,.3); border-radius:3px; padding: 0 2px;',
-    );
+    console.group(`%c${name}`, "background: hsla(0,0%,70%,.3); border-radius:3px; padding: 0 2px;");
     for (const { type, prev, next, unstable } of changeLog) {
       // oxlint-disable-next-line no-console
-      console.log(`${type}:`, unstable ? '⚠️' : '', prev, '!==', next);
+      console.log(`${type}:`, unstable ? "⚠️" : "", prev, "!==", next);
     }
     // oxlint-disable-next-line no-console
     console.groupEnd();
@@ -89,8 +84,8 @@ export const logIntro = () => {
   }
   // oxlint-disable-next-line no-console
   console.log(
-    '%c[·] %cReact Scan',
-    'font-weight:bold;color:#7a68e8;font-size:20px;',
-    'font-weight:bold;font-size:14px;',
+    "%c[·] %cReact Scan",
+    "font-weight:bold;color:#7a68e8;font-size:20px;",
+    "font-weight:bold;font-size:14px;",
   );
 };

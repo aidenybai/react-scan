@@ -9,16 +9,6 @@ export interface OutlineData {
   didCommit: 0 | 1;
 }
 
-export type InlineOutlineData = [
-  id: number,
-  count: number,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  didCommit: 0 | 1,
-];
-
 export interface ActiveOutline {
   id: number;
   name: string;
@@ -46,7 +36,6 @@ declare global {
   var __REACT_SCAN_STOP__: boolean;
   var ReactScan: {
     hasStopped: () => boolean;
-    stop: () => void;
     cleanup: () => void;
     init: () => void;
     flushOutlines: () => void;

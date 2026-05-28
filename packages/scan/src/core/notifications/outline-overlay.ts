@@ -1,13 +1,13 @@
-import { signal } from '@preact/signals';
-import { iife } from './performance-utils';
+import { signal } from "@preact/signals";
+import { iife } from "./performance-utils";
 
-export let highlightCanvas: HTMLCanvasElement | null = null;
-export let highlightCtx: CanvasRenderingContext2D | null = null;
+let highlightCanvas: HTMLCanvasElement | null = null;
+let highlightCtx: CanvasRenderingContext2D | null = null;
 
 let animationFrame: number | null = null;
 
 type TransitionHighlightState = {
-  kind: 'transition';
+  kind: "transition";
   transitionTo: {
     name: string;
     rects: Array<DOMRect>;
@@ -22,7 +22,7 @@ type TransitionHighlightState = {
 type HighlightState =
   | TransitionHighlightState
   | {
-      kind: 'move-out';
+      kind: "move-out";
       current: {
         name: string;
         rects: Array<DOMRect>;
@@ -30,7 +30,7 @@ type HighlightState =
       };
     }
   | {
-      kind: 'idle';
+      kind: "idle";
       current: {
         name: string;
         rects: Array<DOMRect>;
@@ -38,7 +38,7 @@ type HighlightState =
     };
 
 export const HighlightStore = signal<HighlightState>({
-  kind: 'idle',
+  kind: "idle",
   current: null,
 });
 
@@ -65,24 +65,22 @@ export const drawHighlights = () => {
 
     highlightCtx.clearRect(0, 0, highlightCanvas.width, highlightCanvas.height);
 
-    const color = 'hsl(271, 76%, 53%)';
+    const color = "hsl(271, 76%, 53%)";
     const state = HighlightStore.value;
     const { alpha, current } = iife(() => {
       switch (state.kind) {
-        case 'transition': {
+        case "transition": {
           const current =
-            state.current?.alpha && state.current.alpha > 0
-              ? state.current
-              : state.transitionTo;
+            state.current?.alpha && state.current.alpha > 0 ? state.current : state.transitionTo;
           return {
             alpha: current ? current.alpha : 0,
             current,
           };
         }
-        case 'move-out': {
+        case "move-out": {
           return { alpha: state.current?.alpha ?? 0, current: state.current };
         }
-        case 'idle': {
+        case "idle": {
           return { alpha: 1, current: state.current };
         }
       }
@@ -113,10 +111,10 @@ export const drawHighlights = () => {
     });
 
     switch (state.kind) {
-      case 'move-out': {
+      case "move-out": {
         if (state.current.alpha === 0) {
           HighlightStore.value = {
-            kind: 'idle',
+            kind: "idle",
             current: null,
           };
           lastFrameTime = 0;
@@ -129,7 +127,7 @@ export const drawHighlights = () => {
         drawHighlights();
         return;
       }
-      case 'transition': {
+      case "transition": {
         if (state.current && state.current.alpha > 0) {
           state.current.alpha = Math.max(0, state.current.alpha - step);
           drawHighlights();
@@ -139,7 +137,7 @@ export const drawHighlights = () => {
         // invariant, state.current.alpha === 0
         if (state.transitionTo.alpha === 1) {
           HighlightStore.value = {
-            kind: 'idle',
+            kind: "idle",
             current: state.transitionTo,
           };
           lastFrameTime = 0;
@@ -150,7 +148,7 @@ export const drawHighlights = () => {
 
         drawHighlights();
       }
-      case 'idle': {
+      case "idle": {
         // no-op
         lastFrameTime = 0;
         return;
@@ -161,8 +159,8 @@ export const drawHighlights = () => {
 
 let handleResizeListener: (() => void) | null = null;
 export const createHighlightCanvas = (root: HTMLElement) => {
-  highlightCanvas = document.createElement('canvas');
-  highlightCtx = highlightCanvas.getContext('2d', { alpha: true });
+  highlightCanvas = document.createElement("canvas");
+  highlightCtx = highlightCanvas.getContext("2d", { alpha: true });
   if (!highlightCtx) return null;
 
   const dpr = window.devicePixelRatio || 1;
@@ -172,18 +170,18 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   highlightCanvas.style.height = `${innerHeight}px`;
   highlightCanvas.width = innerWidth * dpr;
   highlightCanvas.height = innerHeight * dpr;
-  highlightCanvas.style.position = 'fixed';
-  highlightCanvas.style.left = '0';
-  highlightCanvas.style.top = '0';
-  highlightCanvas.style.pointerEvents = 'none';
-  highlightCanvas.style.zIndex = '2147483600';
+  highlightCanvas.style.position = "fixed";
+  highlightCanvas.style.left = "0";
+  highlightCanvas.style.top = "0";
+  highlightCanvas.style.pointerEvents = "none";
+  highlightCanvas.style.zIndex = "2147483600";
 
   highlightCtx.scale(dpr, dpr);
 
   root.appendChild(highlightCanvas);
 
   if (handleResizeListener) {
-    window.removeEventListener('resize', handleResizeListener);
+    window.removeEventListener("resize", handleResizeListener);
   }
 
   const handleResize = () => {
@@ -201,7 +199,7 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   };
   handleResizeListener = handleResize;
 
-  window.addEventListener('resize', handleResize);
+  window.addEventListener("resize", handleResize);
 
   HighlightStore.subscribe(() => {
     requestAnimationFrame(() => {
@@ -212,7 +210,7 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   return cleanup;
 };
 
-export function cleanup() {
+function cleanup() {
   if (animationFrame) {
     cancelAnimationFrame(animationFrame);
     animationFrame = null;

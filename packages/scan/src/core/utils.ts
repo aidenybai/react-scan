@@ -1,43 +1,6 @@
 // @ts-nocheck
-import { type Fiber, getType } from 'bippy';
-import { ReactScanInternals } from '~core/index';
-import type { AggregatedChange, AggregatedRender, Render } from './instrumentation';
-import { IS_CLIENT } from '~web/utils/constants';
-
-export const aggregateChanges = (
-  changes: Array<Change>,
-  prevAggregatedChange?: AggregatedChange,
-) => {
-  const newChange = {
-    type: prevAggregatedChange?.type ?? 0,
-    unstable: prevAggregatedChange?.unstable ?? false,
-  };
-  for (const change of changes) {
-    newChange.type |= change.type;
-    newChange.unstable = newChange.unstable || (change.unstable ?? false);
-  }
-
-  return newChange;
-};
-
-export const aggregateRender = (
-  newRender: Render,
-  prevAggregated: AggregatedRender,
-) => {
-  prevAggregated.changes = aggregateChanges(
-    newRender.changes,
-    prevAggregated.changes,
-  );
-  prevAggregated.aggregatedCount += 1;
-  prevAggregated.didCommit = prevAggregated.didCommit || newRender.didCommit;
-  prevAggregated.forget = prevAggregated.forget || newRender.forget;
-  prevAggregated.fps = prevAggregated.fps + newRender.fps;
-  prevAggregated.phase |= newRender.phase;
-  prevAggregated.time = (prevAggregated.time ?? 0) + (newRender.time ?? 0);
-
-  prevAggregated.unnecessary =
-    prevAggregated.unnecessary || newRender.unnecessary;
-};
+import type { AggregatedRender, Render } from "./instrumentation";
+import { IS_CLIENT } from "~web/utils/constants";
 
 function descending(a: number, b: number): number {
   return b - a;
@@ -81,10 +44,8 @@ function componentGroupHasForget(group: ComponentData[]): boolean {
   return false;
 }
 
-export const getLabelText = (
-  groupedAggregatedRenders: Array<AggregatedRender>,
-) => {
-  let labelText = '';
+export const getLabelText = (groupedAggregatedRenders: Array<AggregatedRender>) => {
+  let labelText = "";
 
   const componentsByCount = new Map<
     number,
@@ -117,7 +78,7 @@ export const getLabelText = (
     cumulativeTime += totalTime;
 
     if (componentGroup.length > 4) {
-      text += '…';
+      text += "…";
     }
 
     if (count > 1) {
@@ -131,7 +92,7 @@ export const getLabelText = (
     parts.push(text);
   }
 
-  labelText = parts.join(', ');
+  labelText = parts.join(", ");
 
   if (!labelText.length) return null;
 
@@ -144,23 +105,6 @@ export const getLabelText = (
   }
 
   return labelText;
-};
-
-export const updateFiberRenderData = (fiber: Fiber, renders: Array<Render>) => {
-  ReactScanInternals.options.value.onRender?.(fiber, renders);
-  const type = getType(fiber.type) || fiber.type;
-  if (type && (typeof type === 'function' || typeof type === 'object')) {
-    const renderData = (type.renderData || {
-      count: 0,
-      time: 0,
-      renders: [],
-    }) as RenderData;
-    const firstRender = renders[0];
-    renderData.count += firstRender.count;
-    renderData.time += firstRender.time ?? 0;
-    renderData.renders.push(firstRender);
-    type.renderData = renderData;
-  }
 };
 
 export interface RenderData {
@@ -178,7 +122,7 @@ export function isEqual(a: unknown, b: unknown): boolean {
 
 export const not_globally_unique_generateId = () => {
   if (!IS_CLIENT) {
-    return '0';
+    return "0";
   }
 
   // @ts-expect-error
@@ -198,7 +142,7 @@ export const playNotificationSound = (audioContext: AudioContext) => {
   gainNode.connect(audioContext.destination);
 
   const options = {
-    type: 'sine' as OscillatorType,
+    type: "sine" as OscillatorType,
     freq: [
       392,
       //  523.25,
@@ -213,20 +157,13 @@ export const playNotificationSound = (audioContext: AudioContext) => {
   const timePerNote = options.duration / frequencies.length;
 
   frequencies.forEach((freq, i) => {
-    oscillator.frequency.setValueAtTime(
-      freq,
-      audioContext.currentTime + i * timePerNote,
-    );
+    oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + i * timePerNote);
   });
 
   oscillator.type = options.type;
   gainNode.gain.setValueAtTime(options.gain, audioContext.currentTime);
 
-  gainNode.gain.setTargetAtTime(
-    0,
-    audioContext.currentTime + options.duration * 0.7,
-    0.05,
-  );
+  gainNode.gain.setTargetAtTime(0, audioContext.currentTime + options.duration * 0.7, 0.05);
 
   oscillator.start();
   oscillator.stop(audioContext.currentTime + options.duration);

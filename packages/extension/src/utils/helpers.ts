@@ -1,13 +1,13 @@
-export const isIframe = window !== window.top;
-export const isPopup = window.opener !== null;
+const isIframe = window !== window.top;
+const isPopup = window.opener !== null;
 export const canLoadReactScan = !isIframe && !isPopup;
 
-export const IS_CLIENT = typeof window !== 'undefined';
+const IS_CLIENT = typeof window !== "undefined";
 
 export const isInternalUrl = (url: string): boolean => {
   if (!url) return false;
 
-  const allowedProtocols = ['http:', 'https:', 'file:'];
+  const allowedProtocols = ["http:", "https:", "file:"];
   return !allowedProtocols.includes(new URL(url).protocol);
 };
 
@@ -26,26 +26,42 @@ const ReactDetection = {
   limits: {
     MAX_DEPTH: 10,
     MAX_ELEMENTS: 30,
-    ELEMENTS_PER_LEVEL: 5
+    ELEMENTS_PER_LEVEL: 5,
   },
   nonVisualTags: new Set([
     // Document level
-    'HTML', 'HEAD', 'META', 'TITLE', 'BASE',
+    "HTML",
+    "HEAD",
+    "META",
+    "TITLE",
+    "BASE",
     // Scripts and styles
-    'SCRIPT', 'STYLE', 'LINK', 'NOSCRIPT',
+    "SCRIPT",
+    "STYLE",
+    "LINK",
+    "NOSCRIPT",
     // Media and embeds
-    'SOURCE', 'TRACK', 'EMBED', 'OBJECT', 'PARAM',
+    "SOURCE",
+    "TRACK",
+    "EMBED",
+    "OBJECT",
+    "PARAM",
     // Special elements
-    'TEMPLATE', 'PORTAL', 'SLOT',
+    "TEMPLATE",
+    "PORTAL",
+    "SLOT",
     // Others
-    'AREA', 'XML', 'DOCTYPE', 'COMMENT'
+    "AREA",
+    "XML",
+    "DOCTYPE",
+    "COMMENT",
   ]),
   reactMarkers: {
-    root: '_reactRootContainer',
-    fiber: '__reactFiber',
-    instance: '__reactInternalInstance$',
-    container: '__reactContainer$'
-  }
+    root: "_reactRootContainer",
+    fiber: "__reactFiber",
+    instance: "__reactInternalInstance$",
+    container: "__reactContainer$",
+  },
 } as const;
 
 const childrenCache = new WeakMap<Element, Element[]>();
@@ -81,8 +97,8 @@ export const hasReactFiber = (): boolean => {
       const rootContainer = elementWithRoot._reactRootContainer;
 
       const hasLegacyRoot = rootContainer?._internalRoot?.current?.child != null;
-      const hasContainerRoot = Object.keys(elementWithRoot).some(key =>
-        key.startsWith(ReactDetection.reactMarkers.container)
+      const hasContainerRoot = Object.keys(elementWithRoot).some((key) =>
+        key.startsWith(ReactDetection.reactMarkers.container),
       );
 
       return hasLegacyRoot || hasContainerRoot;
@@ -133,59 +149,6 @@ export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
   } catch {}
 };
 
-export const removeLocalStorage = (storageKey: string): void => {
-  if (!IS_CLIENT) return;
-
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch {}
-};
-
-export const debounce = <T extends (enabled: boolean | null) => Promise<void>>(
-  fn: T,
-  wait: number,
-  options: { leading?: boolean; trailing?: boolean } = {},
-) => {
-  let timeoutId: number | undefined;
-  let lastArg: boolean | null | undefined;
-  let isLeadingInvoked = false;
-
-  const debounced = (enabled: boolean | null) => {
-    lastArg = enabled;
-
-    if (options.leading && !isLeadingInvoked) {
-      isLeadingInvoked = true;
-      fn(enabled);
-      return;
-    }
-
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-
-    if (options.trailing !== false) {
-      timeoutId = setTimeout(() => {
-        isLeadingInvoked = false;
-        timeoutId = undefined;
-        if (lastArg !== undefined) {
-          fn(lastArg);
-        }
-      }, wait);
-    }
-  };
-
-  debounced.cancel = () => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
-      isLeadingInvoked = false;
-      lastArg = undefined;
-    }
-  };
-
-  return debounced;
-};
-
 type EventCallback<T = unknown> = (data: T) => void;
 const eventBus = new Map<string, Set<EventCallback>>();
 
@@ -220,14 +183,16 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-export const storageGetItem = async <T>(
-  storageKey: string,
-  key: string,
-): Promise<T | null> => {
+const isStorageRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+export const storageGetItem = async <T>(storageKey: string, key: string): Promise<T | null> => {
   try {
     const result = await chrome.storage.local.get(storageKey);
     const data = result[storageKey];
-    return data?.[key] ?? null;
+    if (!isStorageRecord(data)) return null;
+    const value = data[key];
+    return value === undefined ? null : (value as T);
   } catch {
     return null;
   }
@@ -240,9 +205,11 @@ export const storageSetItem = async <T>(
 ): Promise<void> => {
   try {
     const result = await chrome.storage.local.get(storageKey);
-    const data = result[storageKey] || {};
-    data[key] = value;
-    await chrome.storage.local.set({ [storageKey]: data });
-  } catch {
-  }
+    const data = result[storageKey];
+    const updatedData = {
+      ...(isStorageRecord(data) ? data : {}),
+      [key]: value,
+    };
+    await chrome.storage.local.set({ [storageKey]: updatedData });
+  } catch {}
 };

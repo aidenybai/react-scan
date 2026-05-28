@@ -1,9 +1,7 @@
-import { createContext } from 'preact';
-import { SetStateAction } from 'preact/compat';
-import { Dispatch, useContext } from 'preact/hooks';
-import { HIGH_SEVERITY_FPS_DROP_TIME } from '~core/notifications/event-tracking';
-import { getFiberFromElement } from '../inspector/utils';
-import { hasMemoCache } from 'bippy';
+import { createContext } from "preact";
+import { SetStateAction } from "preact/compat";
+import { Dispatch, useContext } from "preact/hooks";
+import { HIGH_SEVERITY_FPS_DROP_TIME } from "~core/notifications/event-tracking";
 
 export type GroupedFiberRender = {
   id: string;
@@ -27,45 +25,31 @@ export const getComponentName = (path: Array<string>) => {
   const filteredPath = path.filter((item) => item.length > 2);
   // in production, all names can be minified
   if (filteredPath.length === 0) {
-    return path.at(-1) ?? 'Unknown';
+    return path.at(-1) ?? "Unknown";
   }
   // oxlint-disable-next-line typescript/no-non-null-assertion
   return filteredPath.at(-1)!;
 };
 
-export const getTotalTime = (
-  timing: InteractionTiming | DroppedFramesTiming,
-) => {
+export const getTotalTime = (timing: InteractionTiming | DroppedFramesTiming) => {
   switch (timing.kind) {
-    case 'interaction': {
-      const {
-        renderTime,
-        otherJSTime,
-        framePreparation,
-        frameConstruction,
-        frameDraw,
-      } = timing;
-      return (
-        renderTime +
-        otherJSTime +
-        framePreparation +
-        frameConstruction +
-        (frameDraw ?? 0)
-      );
+    case "interaction": {
+      const { renderTime, otherJSTime, framePreparation, frameConstruction, frameDraw } = timing;
+      return renderTime + otherJSTime + framePreparation + frameConstruction + (frameDraw ?? 0);
     }
-    case 'dropped-frames': {
+    case "dropped-frames": {
       return timing.otherTime + timing.renderTime;
     }
   }
 };
 
 export type DroppedFramesTiming = {
-  kind: 'dropped-frames';
+  kind: "dropped-frames";
   renderTime: number;
   otherTime: number;
 };
 export type InteractionTiming = {
-  kind: 'interaction';
+  kind: "interaction";
   renderTime: number;
   otherJSTime: number;
   /** After JS, before paint. Things like layerize, css style recalcs */
@@ -76,9 +60,7 @@ export type InteractionTiming = {
   frameDraw: number | null;
 };
 
-export const isRenderMemoizable = (
-  groupedFiberRender: GroupedFiberRender,
-): boolean => {
+export const isRenderMemoizable = (groupedFiberRender: GroupedFiberRender): boolean => {
   if (groupedFiberRender.wasFiberRenderMount) {
     // no amount of memoization can prevent a mount render
     return false;
@@ -95,28 +77,9 @@ export const isRenderMemoizable = (
   );
 };
 
-export const getTimeSplit = (
-  timing: DroppedFramesTiming | InteractionTiming,
-) => {
-  switch (timing.kind) {
-    case 'dropped-frames': {
-      return {
-        render: timing.renderTime,
-        other: timing.otherTime,
-      };
-    }
-    case 'interaction': {
-      return {
-        render: timing.renderTime,
-        other: getTotalTime(timing) + timing.renderTime,
-      };
-    }
-  }
-};
-
 export type InteractionEvent = {
-  kind: 'interaction';
-  type: 'click' | 'keyboard';
+  kind: "interaction";
+  type: "click" | "keyboard";
   id: string;
   componentPath: Array<string>;
   groupedFiberRenders: Array<GroupedFiberRender>;
@@ -126,7 +89,7 @@ export type InteractionEvent = {
   timestamp: number;
 };
 export type DroppedFramesEvent = {
-  kind: 'dropped-frames';
+  kind: "dropped-frames";
   id: string;
   groupedFiberRenders: Array<GroupedFiberRender>;
   timing: DroppedFramesTiming;
@@ -141,27 +104,23 @@ export type NotificationsState = {
   events: Array<NotificationEvent>;
   // todo: discriminated union this all, i don't want to do it yet till i stabilize the data i need/ implement it all
   selectedEvent: NotificationEvent | null;
-  filterBy: 'severity' | 'latest';
-  selectedFiber: NotificationEvent['groupedFiberRenders'][number] | null;
+  filterBy: "severity" | "latest";
+  selectedFiber: NotificationEvent["groupedFiberRenders"][number] | null;
   detailsExpanded: boolean;
   moreInfoExpanded: boolean;
   route:
-    | 'render-visualization'
-    | 'other-visualization'
+    | "render-visualization"
+    | "other-visualization"
     // | "render-guide"
-    | 'render-explanation'
+    | "render-explanation"
     // | "other-guide"
-    | 'optimize';
+    | "optimize";
   /**
    * Conceptually a synthetic query parameter
    */
   routeMessage: null | {
-    kind: 'auto-open-overview-accordion';
-    name:
-      | 'other-not-javascript'
-      | 'other-javascript'
-      | 'render'
-      | 'other-frame-drop';
+    kind: "auto-open-overview-accordion";
+    name: "other-not-javascript" | "other-javascript" | "render" | "other-frame-drop";
   };
   audioNotificationsOptions:
     | {
@@ -177,37 +136,20 @@ export type NotificationsState = {
 export const getEventSeverity = (event: NotificationEvent) => {
   const totalTime = getTotalTime(event.timing);
   switch (event.kind) {
-    case 'interaction': {
-      if (totalTime < 200) return 'low';
-      if (totalTime < 500) return 'needs-improvement';
-      return 'high';
+    case "interaction": {
+      if (totalTime < 200) return "low";
+      if (totalTime < 500) return "needs-improvement";
+      return "high";
     }
-    case 'dropped-frames': {
-      if (totalTime < 50) return 'low';
-      if (totalTime < HIGH_SEVERITY_FPS_DROP_TIME) return 'needs-improvement';
-      return 'high';
+    case "dropped-frames": {
+      if (totalTime < 50) return "low";
+      if (totalTime < HIGH_SEVERITY_FPS_DROP_TIME) return "needs-improvement";
+      return "high";
     }
   }
 };
 
-export const getReadableSeverity = (
-  severity: 'low' | 'needs-improvement' | 'high',
-) => {
-  switch (severity) {
-    case 'high': {
-      return 'Poor';
-    }
-    case 'needs-improvement': {
-      return 'Laggy';
-    }
-    case 'low': {
-      return 'Good';
-    }
-  }
-};
-export const NOTIFICATIONS_BORDER = '#27272A';
-export const useNotificationsContext = () =>
-  useContext(NotificationStateContext);
+export const useNotificationsContext = () => useContext(NotificationStateContext);
 
 export const NotificationStateContext = createContext<{
   notificationState: NotificationsState;
@@ -216,8 +158,8 @@ export const NotificationStateContext = createContext<{
     route,
     routeMessage,
   }: {
-    route: NotificationsState['route'];
-    routeMessage: NotificationsState['routeMessage'] | null;
+    route: NotificationsState["route"];
+    routeMessage: NotificationsState["routeMessage"] | null;
   }) => void;
   // oxlint-disable-next-line typescript/no-non-null-assertion
 }>(null!);

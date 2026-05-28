@@ -7,9 +7,9 @@ import {
   MemoComponentTag,
   type MemoizedState,
   SimpleMemoComponentTag,
-} from 'bippy';
-import { isEqual } from '~core/utils';
-import { getChangedPropsDetailed, isPromise } from '../utils';
+} from "bippy";
+import { isEqual } from "~core/utils";
+import { getChangedPropsDetailed, isPromise } from "../utils";
 
 interface ChangeTrackingInfo {
   count: number;
@@ -26,14 +26,12 @@ const contextTracker = new Map<string, ChangeTrackingInfo>();
 let lastComponentType: unknown = null;
 
 const STATE_NAME_REGEX = /\[(?<name>\w+),\s*set\w+\]/g;
-const PROPS_ORDER_REGEX = /\(\s*{\s*(?<props>[^}]+)\s*}\s*\)/;
-
 export const getStateNames = (fiber: Fiber): Array<string> => {
-  const componentSource = fiber.type?.toString?.() || '';
+  const componentSource = fiber.type?.toString?.() || "";
   return componentSource
     ? Array.from(
         componentSource.matchAll(STATE_NAME_REGEX),
-        (m: RegExpMatchArray) => m.groups?.name ?? '',
+        (m: RegExpMatchArray) => m.groups?.name ?? "",
       )
     : [];
 };
@@ -45,13 +43,13 @@ export const resetTracking = () => {
   lastComponentType = null;
 };
 
-export const isInitialComponentUpdate = (fiber: Fiber): boolean => {
+const isInitialComponentUpdate = (fiber: Fiber): boolean => {
   const isNewComponent = fiber.type !== lastComponentType;
   lastComponentType = fiber.type;
   return isNewComponent;
 };
 
-export const trackChange = (
+const trackChange = (
   tracker: Map<ChangeKey, ChangeTrackingInfo>,
   key: ChangeKey,
   currentValue: unknown,
@@ -104,9 +102,7 @@ export interface InspectorData {
   fiberContext: SectionData;
 }
 
-export const getStateFromFiber = (
-  fiber: Fiber,
-): Record<string | number, unknown> => {
+const getStateFromFiber = (fiber: Fiber): Record<string | number, unknown> => {
   if (!fiber) return {};
 
   if (
@@ -135,20 +131,6 @@ export const getStateFromFiber = (
   }
 
   return {};
-};
-
-/**
- * Used to preserve the order of the fiber's props as represented in source code
- */
-export const getPropsOrder = (fiber: Fiber): Array<string> => {
-  const componentSource = fiber.type?.toString?.() || '';
-  const match = componentSource.match(PROPS_ORDER_REGEX);
-  if (!match?.groups?.props) return [];
-
-  return match.groups.props
-    .split(',')
-    .map((prop: string) => prop.trim().split(':')[0].split('=')[0].trim())
-    .filter(Boolean);
 };
 
 export interface InspectorDataResult {
@@ -181,9 +163,7 @@ interface CollectorResult<T extends BaseChange = BaseChange> {
   changes: Array<T>;
 }
 
-export const collectPropsChanges = (
-  fiber: Fiber,
-): CollectorResult<PropChange> => {
+export const collectPropsChanges = (fiber: Fiber): CollectorResult<PropChange> => {
   const currentProps = fiber.memoizedProps || {};
   const prevProps = fiber.alternate?.memoizedProps || {};
 
@@ -207,9 +187,7 @@ export const collectPropsChanges = (
   return { current, prev, changes };
 };
 
-export const collectStateChanges = (
-  fiber: Fiber,
-): CollectorResult<StateChange> => {
+export const collectStateChanges = (fiber: Fiber): CollectorResult<StateChange> => {
   const current = getStateFromFiber(fiber);
   const prev = fiber.alternate ? getStateFromFiber(fiber.alternate) : {};
   const changes: Array<StateChange> = [];
@@ -228,13 +206,9 @@ export const collectStateChanges = (
   return { current, prev, changes };
 };
 
-export const collectContextChanges = (
-  fiber: Fiber,
-): CollectorResult<ContextChange> => {
+export const collectContextChanges = (fiber: Fiber): CollectorResult<ContextChange> => {
   const currentContexts = getAllFiberContexts(fiber);
-  const prevContexts = fiber.alternate
-    ? getAllFiberContexts(fiber.alternate)
-    : new Map();
+  const prevContexts = fiber.alternate ? getAllFiberContexts(fiber.alternate) : new Map();
 
   const current: Record<string, unknown> = {};
   const prev: Record<string, unknown> = {};
@@ -295,9 +269,7 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
     for (const [key, value] of Object.entries(current)) {
       propsData.current.push({
         name: key,
-        value: isPromise(value)
-          ? { type: 'promise', displayValue: 'Promise' }
-          : value,
+        value: isPromise(value) ? { type: "promise", displayValue: "Promise" } : value,
       });
     }
 
@@ -318,8 +290,7 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
   }
 
   const stateData = emptySection();
-  const { current: stateCurrent, changes: stateChanges } =
-    collectStateChanges(fiber);
+  const { current: stateCurrent, changes: stateChanges } = collectStateChanges(fiber);
 
   for (const [index, value] of Object.entries(stateCurrent)) {
     const stateKey = fiber.tag === ClassComponentTag ? index : Number(index);
@@ -342,8 +313,7 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
   }
 
   const contextData = emptySection();
-  const { current: contextCurrent, changes: contextChanges } =
-    collectContextChanges(fiber);
+  const { current: contextCurrent, changes: contextChanges } = collectContextChanges(fiber);
 
   for (const [name, value] of Object.entries(contextCurrent)) {
     contextData.current.push({ name, value });
@@ -397,9 +367,7 @@ interface ContextInfo {
 // the motivation is this fiber traversal on every rendering fiber is extremely expensive
 const fiberContextsCache = new WeakMap<Fiber, Map<unknown, ContextInfo>>();
 
-export const getAllFiberContexts = (
-  fiber: Fiber,
-): Map<unknown, ContextInfo> => {
+export const getAllFiberContexts = (fiber: Fiber): Map<unknown, ContextInfo> => {
   if (!fiber) {
     return new Map<unknown, ContextInfo>();
   }
@@ -418,8 +386,7 @@ export const getAllFiberContexts = (
     const dependencies = currentFiber.dependencies;
 
     if (dependencies?.firstContext) {
-      let contextItem: ContextDependency<unknown> | null =
-        dependencies.firstContext;
+      let contextItem: ContextDependency<unknown> | null = dependencies.firstContext;
 
       while (contextItem) {
         const memoizedValue = contextItem.memoizedValue;
@@ -428,7 +395,7 @@ export const getAllFiberContexts = (
         if (!contexts.has(memoizedValue)) {
           contexts.set(contextItem.context, {
             value: memoizedValue,
-            displayName: displayName ?? 'UnnamedContext',
+            displayName: displayName ?? "UnnamedContext",
             contextType: null,
           });
         }
@@ -474,9 +441,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     for (const [key, value] of Object.entries(current)) {
       propsData.current.push({
         name: key,
-        value: isPromise(value)
-          ? { type: 'promise', displayValue: 'Promise' }
-          : value,
+        value: isPromise(value) ? { type: "promise", displayValue: "Promise" } : value,
       });
     }
 
@@ -494,9 +459,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     for (const [key, value] of Object.entries(current)) {
       stateData.current.push({
         name: key,
-        value: isPromise(value)
-          ? { type: 'promise', displayValue: 'Promise' }
-          : value,
+        value: isPromise(value) ? { type: "promise", displayValue: "Promise" } : value,
       });
     }
 
@@ -513,9 +476,7 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
   for (const [key, value] of Object.entries(current)) {
     contextData.current.push({
       name: key,
-      value: isPromise(value)
-        ? { type: 'promise', displayValue: 'Promise' }
-        : value,
+      value: isPromise(value) ? { type: "promise", displayValue: "Promise" } : value,
     });
   }
 

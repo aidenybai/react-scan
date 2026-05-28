@@ -1,94 +1,84 @@
-import { ReactNode } from 'preact/compat';
-import { useContext, useEffect, useState } from 'preact/hooks';
-import { getIsProduction } from '~core/index';
-import { iife } from '~core/notifications/performance-utils';
-import { cn } from '~web/utils/helpers';
-import {
-  InteractionEvent,
-  NotificationEvent,
-  getTotalTime,
-  useNotificationsContext,
-} from './data';
-import { getLLMPrompt } from './optimize';
-import { ToolbarElementContext } from '~web/widget';
+import { ReactNode } from "preact/compat";
+import { useContext, useEffect, useState } from "preact/hooks";
+import { getIsProduction } from "~core/index";
+import { iife } from "~core/notifications/performance-utils";
+import { cn } from "~web/utils/helpers";
+import { InteractionEvent, NotificationEvent, getTotalTime, useNotificationsContext } from "./data";
+import { getLLMPrompt } from "./optimize";
+import { ToolbarElementContext } from "~web/widget";
 type BaseTimeDataItem = {
   name: string;
   time: number;
   color: string;
   kind:
-    | 'other-not-javascript'
-    | 'other-javascript'
-    | 'render'
-    | 'other-frame-drop'
-    | 'total-processing-time';
+    | "other-not-javascript"
+    | "other-javascript"
+    | "render"
+    | "other-frame-drop"
+    | "total-processing-time";
 };
 
 type TimeData = Array<BaseTimeDataItem>;
 
-const getTimeData = (
-  selectedEvent: NotificationEvent,
-  isProduction: boolean,
-) => {
+const getTimeData = (selectedEvent: NotificationEvent, isProduction: boolean) => {
   switch (selectedEvent.kind) {
     // todo: push instead of conditional spread
-    case 'dropped-frames': {
+    case "dropped-frames": {
       const timeData: TimeData = [
         ...(isProduction
           ? [
               {
-                name: 'Total Processing Time',
+                name: "Total Processing Time",
                 time: getTotalTime(selectedEvent.timing),
-                color: 'bg-red-500',
-                kind: 'total-processing-time' as const,
+                color: "bg-red-500",
+                kind: "total-processing-time" as const,
               },
             ]
           : [
               {
-                name: 'Renders',
+                name: "Renders",
                 time: selectedEvent.timing.renderTime,
-                color: 'bg-purple-500',
-                kind: 'render' as const,
+                color: "bg-purple-500",
+                kind: "render" as const,
               },
               {
-                name: 'JavaScript, DOM updates, Draw Frame',
+                name: "JavaScript, DOM updates, Draw Frame",
                 time: selectedEvent.timing.otherTime,
-                color: 'bg-[#4b4b4b]',
-                kind: 'other-frame-drop' as const,
+                color: "bg-[#4b4b4b]",
+                kind: "other-frame-drop" as const,
               },
             ]),
       ];
       return timeData;
     }
-    case 'interaction': {
+    case "interaction": {
       const timeData: TimeData = [
         ...(!isProduction
           ? [
               {
-                name: 'Renders',
+                name: "Renders",
                 time: selectedEvent.timing.renderTime,
-                color: 'bg-purple-500',
-                kind: 'render' as const,
+                color: "bg-purple-500",
+                kind: "render" as const,
               },
             ]
           : []),
         {
-          name: isProduction
-            ? 'React Renders, Hooks, Other JavaScript'
-            : 'JavaScript/React Hooks ',
+          name: isProduction ? "React Renders, Hooks, Other JavaScript" : "JavaScript/React Hooks ",
           time: selectedEvent.timing.otherJSTime,
-          color: 'bg-[#EFD81A]',
+          color: "bg-[#EFD81A]",
 
-          kind: 'other-javascript',
+          kind: "other-javascript",
         },
 
         {
-          name: 'Update DOM and Draw New Frame',
+          name: "Update DOM and Draw New Frame",
           time:
             getTotalTime(selectedEvent.timing) -
             selectedEvent.timing.renderTime -
             selectedEvent.timing.otherJSTime,
-          color: 'bg-[#1D3A66]',
-          kind: 'other-not-javascript',
+          color: "bg-[#1D3A66]",
+          kind: "other-not-javascript",
         },
       ];
 
@@ -97,17 +87,11 @@ const getTimeData = (
   }
 };
 
-export const OtherVisualization = ({
-  selectedEvent,
-}: {
-  selectedEvent: NotificationEvent;
-}) => {
+export const OtherVisualization = ({ selectedEvent }: { selectedEvent: NotificationEvent }) => {
   const [isProduction] = useState(getIsProduction() ?? false);
   const { notificationState } = useNotificationsContext();
   const [expandedItems, setExpandedItems] = useState<string[]>(
-    notificationState.routeMessage?.name
-      ? [notificationState.routeMessage.name]
-      : [],
+    notificationState.routeMessage?.name ? [notificationState.routeMessage.name] : [],
   );
   const timeData = getTimeData(selectedEvent, isProduction);
   const root = useContext(ToolbarElementContext);
@@ -116,7 +100,7 @@ export const OtherVisualization = ({
   // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (notificationState.routeMessage?.name) {
-      const container = root?.querySelector('#overview-scroll-container');
+      const container = root?.querySelector("#overview-scroll-container");
       const element = root?.querySelector(
         `#react-scan-overview-bar-${notificationState.routeMessage.name}`,
       ) as HTMLElement;
@@ -132,11 +116,9 @@ export const OtherVisualization = ({
 
   // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (notificationState.route === 'other-visualization') {
+    if (notificationState.route === "other-visualization") {
       setExpandedItems((prev) =>
-        notificationState.routeMessage?.name
-          ? [notificationState.routeMessage.name]
-          : prev,
+        notificationState.routeMessage?.name ? [notificationState.routeMessage.name] : prev,
       );
     }
   }, [notificationState.route]);
@@ -148,9 +130,7 @@ export const OtherVisualization = ({
       <div className="p-2 border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-medium">What was time spent on?</h3>
-          <span className="text-xs text-zinc-400">
-            Total: {totalTime.toFixed(0)}ms
-          </span>
+          <span className="text-xs text-zinc-400">Total: {totalTime.toFixed(0)}ms</span>
         </div>
       </div>
       <div className="divide-y divide-zinc-800">
@@ -172,7 +152,7 @@ export const OtherVisualization = ({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-0.5">
                       <svg
-                        className={`h-4 w-4 text-zinc-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                        className={`h-4 w-4 text-zinc-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -184,13 +164,9 @@ export const OtherVisualization = ({
                           d="M9 5l7 7-7 7"
                         />
                       </svg>
-                      <span className="font-medium flex items-center text-left">
-                        {entry.name}
-                      </span>
+                      <span className="font-medium flex items-center text-left">{entry.name}</span>
                     </div>
-                    <span className=" text-zinc-400">
-                      {entry.time.toFixed(0)}ms
-                    </span>
+                    <span className=" text-zinc-400">{entry.time.toFixed(0)}ms</span>
                   </div>
                   <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                     <div
@@ -207,40 +183,28 @@ export const OtherVisualization = ({
                   <p className=" text-zinc-400 mb-4 text-xs">
                     {iife(() => {
                       switch (selectedEvent.kind) {
-                        case 'interaction': {
+                        case "interaction": {
                           switch (entry.kind) {
-                            case 'render': {
-                              return (
-                                <Explanation
-                                  input={getRenderInput(selectedEvent)}
-                                />
-                              );
+                            case "render": {
+                              return <Explanation input={getRenderInput(selectedEvent)} />;
                             }
 
-                            case 'other-javascript': {
-                              return (
-                                <Explanation
-                                  input={getJSInput(selectedEvent)}
-                                />
-                              );
+                            case "other-javascript": {
+                              return <Explanation input={getJSInput(selectedEvent)} />;
                             }
 
-                            case 'other-not-javascript': {
-                              return (
-                                <Explanation
-                                  input={getDrawInput(selectedEvent)}
-                                />
-                              );
+                            case "other-not-javascript": {
+                              return <Explanation input={getDrawInput(selectedEvent)} />;
                             }
                           }
                         }
-                        case 'dropped-frames': {
+                        case "dropped-frames": {
                           switch (entry.kind) {
-                            case 'total-processing-time': {
+                            case "total-processing-time": {
                               return (
                                 <Explanation
                                   input={{
-                                    kind: 'total-processing',
+                                    kind: "total-processing",
                                     data: {
                                       time: getTotalTime(selectedEvent.timing),
                                     },
@@ -248,39 +212,32 @@ export const OtherVisualization = ({
                                 />
                               );
                             }
-                            case 'render': {
+                            case "render": {
                               return (
                                 <>
                                   <Explanation
                                     input={{
-                                      kind: 'render',
+                                      kind: "render",
                                       data: {
-                                        topByTime:
-                                          selectedEvent.groupedFiberRenders
-                                            .toSorted(
-                                              (a, b) =>
-                                                b.totalTime - a.totalTime,
-                                            )
-                                            .slice(0, 3)
-                                            .map((render) => ({
-                                              name: render.name,
-                                              percentage:
-                                                render.totalTime /
-                                                getTotalTime(
-                                                  selectedEvent.timing,
-                                                ),
-                                            })),
+                                        topByTime: selectedEvent.groupedFiberRenders
+                                          .toSorted((a, b) => b.totalTime - a.totalTime)
+                                          .slice(0, 3)
+                                          .map((render) => ({
+                                            name: render.name,
+                                            percentage:
+                                              render.totalTime / getTotalTime(selectedEvent.timing),
+                                          })),
                                       },
                                     }}
                                   />
                                 </>
                               );
                             }
-                            case 'other-frame-drop': {
+                            case "other-frame-drop": {
                               return (
                                 <Explanation
                                   input={{
-                                    kind: 'other',
+                                    kind: "other",
                                   }}
                                 />
                               );
@@ -302,29 +259,29 @@ export const OtherVisualization = ({
 
 type OverviewInput =
   | {
-      kind: 'js-explanation-base';
+      kind: "js-explanation-base";
     }
   | {
-      kind: 'total-processing';
+      kind: "total-processing";
       data: {
         time: number;
       };
     }
   | {
-      kind: 'high-render-count-high-js';
+      kind: "high-render-count-high-js";
       data: {
         renderCount: number;
         topByCount: Array<{ name: string; count: number }>;
       };
     }
   | {
-      kind: 'low-render-count-high-js';
+      kind: "low-render-count-high-js";
       data: {
         renderCount: number;
       };
     }
   | {
-      kind: 'high-render-count-update-dom-draw-frame';
+      kind: "high-render-count-update-dom-draw-frame";
       data: {
         count: number;
         percentageOfTotal: number;
@@ -332,33 +289,21 @@ type OverviewInput =
       };
     }
   | {
-      kind: 'update-dom-draw-frame';
+      kind: "update-dom-draw-frame";
       data: {
         copyButton: ReactNode;
       };
     }
   | {
-      kind: 'render';
+      kind: "render";
       data: { topByTime: Array<{ name: string; percentage: number }> };
     }
   | {
-      kind: 'other';
+      kind: "other";
     };
 
-export const getTotalProcessingTimeInput = (event: NotificationEvent) => {
-  return {
-    kind: 'total-processing',
-    data: {
-      time: getTotalTime(event.timing),
-    },
-  } satisfies OverviewInput;
-};
-
 const getDrawInput = (event: InteractionEvent): OverviewInput => {
-  const renderCount = event.groupedFiberRenders.reduce(
-    (prev, curr) => prev + curr.count,
-    0,
-  );
+  const renderCount = event.groupedFiberRenders.reduce((prev, curr) => prev + curr.count, 0);
 
   const renderTime = event.timing.renderTime;
   const totalTime = getTotalTime(event.timing);
@@ -366,7 +311,7 @@ const getDrawInput = (event: InteractionEvent): OverviewInput => {
 
   if (renderCount > 100) {
     return {
-      kind: 'high-render-count-update-dom-draw-frame',
+      kind: "high-render-count-update-dom-draw-frame",
       data: {
         count: renderCount,
         percentageOfTotal: renderPercentage,
@@ -376,7 +321,7 @@ const getDrawInput = (event: InteractionEvent): OverviewInput => {
   }
 
   return {
-    kind: 'update-dom-draw-frame',
+    kind: "update-dom-draw-frame",
     data: {
       copyButton: <CopyPromptButton />,
     },
@@ -395,14 +340,14 @@ const CopyPromptButton = () => {
         }
 
         await navigator.clipboard.writeText(
-          getLLMPrompt('explanation', notificationState.selectedEvent),
+          getLLMPrompt("explanation", notificationState.selectedEvent),
         );
         setCopying(true);
         setTimeout(() => setCopying(false), 1000);
       }}
       className="bg-zinc-800 flex hover:bg-zinc-700 text-zinc-200 px-2 py-1 rounded gap-x-3"
     >
-      <span>{copying ? 'Copied!' : 'Copy Prompt'}</span>
+      <span>{copying ? "Copied!" : "Copy Prompt"}</span>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="16"
@@ -413,10 +358,7 @@ const CopyPromptButton = () => {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={cn([
-          'transition-transform duration-200',
-          copying && 'scale-110',
-        ])}
+        className={cn(["transition-transform duration-200", copying && "scale-110"])}
       >
         {copying ? (
           <path d="M20 6L9 17l-5-5" />
@@ -434,7 +376,7 @@ const CopyPromptButton = () => {
 const getRenderInput = (event: InteractionEvent): OverviewInput => {
   if (event.timing.renderTime / getTotalTime(event.timing) > 0.3) {
     return {
-      kind: 'render',
+      kind: "render",
       data: {
         topByTime: event.groupedFiberRenders
           .toSorted((a, b) => b.totalTime - a.totalTime)
@@ -448,18 +390,15 @@ const getRenderInput = (event: InteractionEvent): OverviewInput => {
   }
 
   return {
-    kind: 'other',
+    kind: "other",
   };
 };
 
 const getJSInput = (event: InteractionEvent): OverviewInput => {
-  const renderCount = event.groupedFiberRenders.reduce(
-    (prev, curr) => prev + curr.count,
-    0,
-  );
+  const renderCount = event.groupedFiberRenders.reduce((prev, curr) => prev + curr.count, 0);
   if (event.timing.otherJSTime / getTotalTime(event.timing) < 0.2) {
     return {
-      kind: 'js-explanation-base',
+      kind: "js-explanation-base",
     };
   }
   if (
@@ -468,7 +407,7 @@ const getJSInput = (event: InteractionEvent): OverviewInput => {
   ) {
     // not sure a great heuristic for picking the render count
     return {
-      kind: 'high-render-count-high-js',
+      kind: "high-render-count-high-js",
       data: {
         renderCount,
         topByCount: event.groupedFiberRenders
@@ -481,12 +420,12 @@ const getJSInput = (event: InteractionEvent): OverviewInput => {
   if (event.timing.otherJSTime / getTotalTime(event.timing) > 0.3) {
     if (event.timing.renderTime > 0.2) {
       return {
-        kind: 'js-explanation-base',
+        kind: "js-explanation-base",
       };
     }
 
     return {
-      kind: 'low-render-count-high-js',
+      kind: "low-render-count-high-js",
       data: {
         renderCount,
       },
@@ -494,147 +433,121 @@ const getJSInput = (event: InteractionEvent): OverviewInput => {
   }
 
   return {
-    kind: 'js-explanation-base',
+    kind: "js-explanation-base",
   };
 };
 
 const Explanation = ({ input }: { input: OverviewInput }) => {
   switch (input.kind) {
-    case 'total-processing': {
+    case "total-processing": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            This is the time it took to draw the entire frame that was presented
-            to the user. To be at 60FPS, this number needs to be {'<=16ms'}
+            This is the time it took to draw the entire frame that was presented to the user. To be
+            at 60FPS, this number needs to be {"<=16ms"}
           </p>
 
           <p>
-            To debug the issue, check the "Ranked" tab to see if there are
-            significant component renders
+            To debug the issue, check the "Ranked" tab to see if there are significant component
+            renders
           </p>
           <p>
-            On a production React build, React Scan can't access the time it
-            took for component to render. To get that information, run React
-            Scan on a development build
+            On a production React build, React Scan can't access the time it took for component to
+            render. To get that information, run React Scan on a development build
           </p>
 
           <p>
-            To understand precisely what caused the slowdown while in
-            production, use the <strong>Chrome profiler</strong> and analyze the
-            function call times.
+            To understand precisely what caused the slowdown while in production, use the{" "}
+            <strong>Chrome profiler</strong> and analyze the function call times.
           </p>
 
           <p></p>
         </div>
       );
     }
-    case 'render': {
+    case "render": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            This is the time it took React to run components, and internal logic
-            to handle the output of your component.
+            This is the time it took React to run components, and internal logic to handle the
+            output of your component.
           </p>
 
-          <div className={cn(['flex flex-col'])}>
+          <div className={cn(["flex flex-col"])}>
             <p>The slowest components for this time period were:</p>
             {input.data.topByTime.map((item) => (
               <div key={item.name}>
-                <strong>{item.name}</strong>:{' '}
-                {(item.percentage * 100).toFixed(0)}% of total
+                <strong>{item.name}</strong>: {(item.percentage * 100).toFixed(0)}% of total
               </div>
             ))}
           </div>
           <p>
-            To view the render times of all your components, and what caused
-            them to render, go to the "Ranked" tab
+            To view the render times of all your components, and what caused them to render, go to
+            the "Ranked" tab
           </p>
           <p>The "Ranked" tab shows the render times of every component.</p>
+          <p>The render times of the same components are grouped together into one bar.</p>
           <p>
-            The render times of the same components are grouped together into
-            one bar.
-          </p>
-          <p>
-            Clicking the component will show you what props, state, or context
-            caused the component to re-render.
+            Clicking the component will show you what props, state, or context caused the component
+            to re-render.
           </p>
         </div>
       );
     }
-    case 'js-explanation-base': {
+    case "js-explanation-base": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            This is the period when JavaScript hooks and other JavaScript
-            outside of React Renders run.
+            This is the period when JavaScript hooks and other JavaScript outside of React Renders
+            run.
           </p>
           <p>
-            The most common culprit for high JS time is expensive hooks, like
-            expensive callbacks inside of <code>useEffect</code>'s or a large
-            number of useEffect's called, but this can also be JavaScript event
-            handlers (<code>'onclick'</code>, <code>'onchange'</code>) that
+            The most common culprit for high JS time is expensive hooks, like expensive callbacks
+            inside of <code>useEffect</code>'s or a large number of useEffect's called, but this can
+            also be JavaScript event handlers (<code>'onclick'</code>, <code>'onchange'</code>) that
             performed expensive computation.
           </p>
           <p>
-            If you have lots of components rendering that call hooks, like
-            useEffect, it can add significant overhead even if the callbacks are
-            not expensive. If this is the case, you can try optimizing the
-            renders of those components to avoid the hook from having to run.
+            If you have lots of components rendering that call hooks, like useEffect, it can add
+            significant overhead even if the callbacks are not expensive. If this is the case, you
+            can try optimizing the renders of those components to avoid the hook from having to run.
           </p>
           <p>
-            You should profile your app using the{' '}
-            <strong>Chrome DevTools profiler</strong> to learn exactly which
-            functions took the longest to execute.
+            You should profile your app using the <strong>Chrome DevTools profiler</strong> to learn
+            exactly which functions took the longest to execute.
           </p>
         </div>
       );
     }
-    case 'high-render-count-high-js': {
+    case "high-render-count-high-js": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            This is the period when JavaScript hooks and other JavaScript
-            outside of React Renders run.
+            This is the period when JavaScript hooks and other JavaScript outside of React Renders
+            run.
           </p>
           {input.data.renderCount === 0 ? (
             <>
               <p>
-                There were no renders, which means nothing related to React
-                caused this slowdown. The most likely cause of the slowdown is a
-                slow JavaScript event handler, or code related to a Web API
+                There were no renders, which means nothing related to React caused this slowdown.
+                The most likely cause of the slowdown is a slow JavaScript event handler, or code
+                related to a Web API
               </p>
               <p>
-                You should try to reproduce the slowdown while profiling your
-                website with the
-                <strong>Chrome DevTools profiler</strong> to see exactly what
-                functions took the longest to execute.
+                You should try to reproduce the slowdown while profiling your website with the
+                <strong>Chrome DevTools profiler</strong> to see exactly what functions took the
+                longest to execute.
               </p>
             </>
           ) : (
             <>
-              {' '}
+              {" "}
               <p>
-                There were <strong>{input.data.renderCount}</strong> renders,
-                which could have contributed to the high JavaScript/Hook time if
-                they ran lots of hooks, like <code>useEffects</code>.
+                There were <strong>{input.data.renderCount}</strong> renders, which could have
+                contributed to the high JavaScript/Hook time if they ran lots of hooks, like{" "}
+                <code>useEffects</code>.
               </p>
-              <div className={cn(['flex flex-col'])}>
+              <div className={cn(["flex flex-col"])}>
                 <p>You should try optimizing the renders of:</p>
                 {input.data.topByCount.map((item) => (
                   <div key={item.name}>
@@ -644,130 +557,107 @@ const Explanation = ({ input }: { input: OverviewInput }) => {
               </div>
               and then checking if the problem still exists.
               <p>
-                You can also try profiling your app using the{' '}
-                <strong>Chrome DevTools profiler</strong> to see exactly what
-                functions took the longest to execute.
+                You can also try profiling your app using the{" "}
+                <strong>Chrome DevTools profiler</strong> to see exactly what functions took the
+                longest to execute.
               </p>
             </>
           )}
         </div>
       );
     }
-    case 'low-render-count-high-js': {
+    case "low-render-count-high-js": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            This is the period when JavaScript hooks and other JavaScript
-            outside of React Renders run.
+            This is the period when JavaScript hooks and other JavaScript outside of React Renders
+            run.
           </p>
           <p>
-            There were only <strong>{input.data.renderCount}</strong> renders
-            detected, which means either you had very expensive hooks like{' '}
-            <code>useEffect</code>/<code>useLayoutEffect</code>, or there is
-            other JavaScript running during this interaction that took up the
-            majority of the time.
+            There were only <strong>{input.data.renderCount}</strong> renders detected, which means
+            either you had very expensive hooks like <code>useEffect</code>/
+            <code>useLayoutEffect</code>, or there is other JavaScript running during this
+            interaction that took up the majority of the time.
           </p>
           <p>
-            To understand precisely what caused the slowdown, use the{' '}
-            <strong>Chrome profiler</strong> and analyze the function call
-            times.
+            To understand precisely what caused the slowdown, use the{" "}
+            <strong>Chrome profiler</strong> and analyze the function call times.
           </p>
         </div>
       );
     }
-    case 'high-render-count-update-dom-draw-frame': {
+    case "high-render-count-update-dom-draw-frame": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            These are the calculations the browser is forced to do in response
-            to the JavaScript that ran during the interaction.
+            These are the calculations the browser is forced to do in response to the JavaScript
+            that ran during the interaction.
           </p>
           <p>
-            This can be caused by CSS updates/CSS recalculations, or new DOM
-            elements/DOM mutations.
+            This can be caused by CSS updates/CSS recalculations, or new DOM elements/DOM mutations.
           </p>
           <p>
-            During this interaction, there were{' '}
-            <strong>{input.data.count}</strong> renders, which was{' '}
-            <strong>{input.data.percentageOfTotal.toFixed(0)}%</strong> of the
-            time spent processing
+            During this interaction, there were <strong>{input.data.count}</strong> renders, which
+            was <strong>{input.data.percentageOfTotal.toFixed(0)}%</strong> of the time spent
+            processing
           </p>
           <p>
-            The work performed as a result of the renders may have forced the
-            browser to spend a lot of time to draw the next frame.
+            The work performed as a result of the renders may have forced the browser to spend a lot
+            of time to draw the next frame.
           </p>
           <p>
-            You can try optimizing the renders to see if the performance problem
-            still exists using the "Ranked" tab.
+            You can try optimizing the renders to see if the performance problem still exists using
+            the "Ranked" tab.
           </p>
           <p>
-            If you use an AI-based code editor, you can export the performance
-            data collected as a prompt.
+            If you use an AI-based code editor, you can export the performance data collected as a
+            prompt.
           </p>
 
           <p>{input.data.copyButton}</p>
           <p>
-            Provide this formatted data to the model and ask it to find, or fix,
-            what could be causing this performance problem.
+            Provide this formatted data to the model and ask it to find, or fix, what could be
+            causing this performance problem.
           </p>
           <p>For a larger selection of prompts, try the "Prompts" tab</p>
         </div>
       );
     }
-    case 'update-dom-draw-frame': {
+    case "update-dom-draw-frame": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            These are the calculations the browser is forced to do in response
-            to the JavaScript that ran during the interaction.
+            These are the calculations the browser is forced to do in response to the JavaScript
+            that ran during the interaction.
           </p>
           <p>
-            This can be caused by CSS updates/CSS recalculations, or new DOM
-            elements/DOM mutations.
+            This can be caused by CSS updates/CSS recalculations, or new DOM elements/DOM mutations.
           </p>
           <p>
-            If you use an AI-based code editor, you can export the performance
-            data collected as a prompt.
+            If you use an AI-based code editor, you can export the performance data collected as a
+            prompt.
           </p>
 
           <p>{input.data.copyButton}</p>
           <p>
-            Provide this formatted data to the model and ask it to find, or fix,
-            what could be causing this performance problem.
+            Provide this formatted data to the model and ask it to find, or fix, what could be
+            causing this performance problem.
           </p>
           <p>For a larger selection of prompts, try the "Prompts" tab</p>
         </div>
       );
     }
-    case 'other': {
+    case "other": {
       return (
-        <div
-          className={cn([
-            'text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2',
-          ])}
-        >
+        <div className={cn(["text-[#E4E4E7] text-[10px] leading-6 flex flex-col gap-y-2"])}>
           <p>
-            This is the time it took to run everything other than React renders.
-            This can be hooks like <code>useEffect</code>, other JavaScript not
-            part of React, or work the browser has to do to update the DOM and
-            draw the next frame.
+            This is the time it took to run everything other than React renders. This can be hooks
+            like <code>useEffect</code>, other JavaScript not part of React, or work the browser has
+            to do to update the DOM and draw the next frame.
           </p>
           <p>
-            To get a better picture of what happened, profile your app using the{' '}
-            <strong>Chrome profiler</strong> when the performance problem
-            arises.
+            To get a better picture of what happened, profile your app using the{" "}
+            <strong>Chrome profiler</strong> when the performance problem arises.
           </p>
         </div>
       );

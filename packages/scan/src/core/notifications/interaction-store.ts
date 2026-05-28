@@ -3,7 +3,7 @@ import { CompletedInteraction } from "./performance";
 
 type Subscriber<T> = (data: T) => void;
 
-export class Store<T> {
+class Store<T> {
   private subscribers: Set<Subscriber<T>> = new Set();
   private currentValue: T;
 
@@ -32,5 +32,5 @@ export class Store<T> {
 }
 export const MAX_INTERACTION_BATCH = 150;
 export const interactionStore = new Store<BoundedArray<CompletedInteraction>>(
-  new BoundedArray(MAX_INTERACTION_BATCH)
+  new BoundedArray(MAX_INTERACTION_BATCH),
 );

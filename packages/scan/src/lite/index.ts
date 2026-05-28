@@ -3,22 +3,19 @@ import {
   type ReactRenderer,
   getRDTHook,
   isRealReactDevtools,
-} from 'bippy';
-import type { SchedulerPriorityLevel } from './types';
-import {
-  DEFAULT_MAX_FIBERS_PER_COMMIT,
-  DEFAULT_MIN_FIBER_ACTUAL_DURATION_MS,
-} from './constants';
-import { createEmitter } from './create-emitter';
-import { createProfilingHooks } from './create-profiling-hooks';
-import { createLaneLabelTranslator } from './lane-labels';
+} from "bippy";
+import { DEFAULT_MAX_FIBERS_PER_COMMIT, DEFAULT_MIN_FIBER_ACTUAL_DURATION_MS } from "./constants";
+import { createEmitter } from "./create-emitter";
+import { createProfilingHooks } from "./create-profiling-hooks";
+import { createLaneLabelTranslator } from "./lane-labels";
 import type {
   LiteHandle,
   LiteOptions,
   ProfilingHooks,
   ReactRendererWithProfiling,
-} from './types';
-import { walkFiber } from './walk-fiber';
+  SchedulerPriorityLevel,
+} from "./types";
+import { walkFiber } from "./walk-fiber";
 
 const noopHandle: LiteHandle = {
   stop: () => {},
@@ -28,13 +25,13 @@ const noopHandle: LiteHandle = {
 
 interface ProfilingAttachOutcome {
   available: boolean;
-  reason?: 'no-inject-method' | 'threw' | 'opted-out';
+  reason?: "no-inject-method" | "threw" | "opted-out";
   error?: string;
 }
 
 const errorToMessage = (cause: unknown): string => {
   if (cause instanceof Error) return cause.message;
-  if (typeof cause === 'string') return cause;
+  if (typeof cause === "string") return cause;
   try {
     return JSON.stringify(cause);
   } catch {
@@ -47,35 +44,33 @@ const tryInjectProfilingHooks = (
   profilingHooks: ProfilingHooks,
 ): ProfilingAttachOutcome => {
   const rendererWithProfiling = renderer as ReactRendererWithProfiling;
-  if (typeof rendererWithProfiling.injectProfilingHooks !== 'function') {
-    return { available: false, reason: 'no-inject-method' };
+  if (typeof rendererWithProfiling.injectProfilingHooks !== "function") {
+    return { available: false, reason: "no-inject-method" };
   }
   try {
     rendererWithProfiling.injectProfilingHooks(profilingHooks);
     return { available: true };
   } catch (cause) {
-    return { available: false, reason: 'threw', error: errorToMessage(cause) };
+    return { available: false, reason: "threw", error: errorToMessage(cause) };
   }
 };
 
 const isValidEndpointUrl = (candidate: string): boolean => {
   try {
     const parsed = new URL(candidate);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;
   }
 };
 
 export const instrument = (options: LiteOptions = {}): LiteHandle => {
-  if (typeof window === 'undefined') return noopHandle;
+  if (typeof window === "undefined") return noopHandle;
   if (window.__REACT_SCAN_LITE__) return window.__REACT_SCAN_LITE__;
 
   if (options.endpoint && !options.sessionId) {
     // oxlint-disable-next-line no-console
-    console.warn(
-      '[react-scan/lite] `endpoint` requires `sessionId`; events will not be POSTed.',
-    );
+    console.warn("[react-scan/lite] `endpoint` requires `sessionId`; events will not be POSTed.");
   }
 
   // Validate the endpoint URL once at instrument() time and DROP it on failure
@@ -86,7 +81,7 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
   if (effectiveEndpoint && !isValidEndpointUrl(effectiveEndpoint)) {
     // oxlint-disable-next-line no-console
     console.error(
-      '[react-scan/lite] `endpoint` is not a valid http(s) URL; events will not be POSTed.',
+      "[react-scan/lite] `endpoint` is not a valid http(s) URL; events will not be POSTed.",
     );
     effectiveEndpoint = undefined;
   }
@@ -99,7 +94,7 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
   ) {
     // oxlint-disable-next-line no-console
     console.warn(
-      '[react-scan/lite] `includeFiberTree: false` disables per-fiber enrichment options (`recordChangeDescriptions`, `includeFiberSource`, `includeFiberIdentity`). Remove `includeFiberTree: false` to enable them.',
+      "[react-scan/lite] `includeFiberTree: false` disables per-fiber enrichment options (`recordChangeDescriptions`, `includeFiberSource`, `includeFiberIdentity`). Remove `includeFiberTree: false` to enable them.",
     );
   }
 
@@ -145,11 +140,11 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
     attachedRenderers.add(renderer);
     const outcome: ProfilingAttachOutcome = includeProfilingHooks
       ? tryInjectProfilingHooks(renderer, profilingHooks)
-      : { available: false, reason: 'opted-out' };
-    emitter.emit('renderer-injected', {
+      : { available: false, reason: "opted-out" };
+    emitter.emit("renderer-injected", {
       data: { version: renderer.version, bundleType: renderer.bundleType },
     });
-    emitter.emit('profiling-hooks-status', {
+    emitter.emit("profiling-hooks-status", {
       available: outcome.available,
       reason: outcome.reason,
       error: outcome.error,
@@ -169,7 +164,7 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
   if (includeProfilingHooks && isRealReactDevtools(hook)) {
     // oxlint-disable-next-line no-console
     console.warn(
-      '[react-scan/lite] React DevTools is also attached. Calling injectProfilingHooks replaces its profiling channel; the DevTools Timeline Profiler may stop receiving events while this instrumentation is active.',
+      "[react-scan/lite] React DevTools is also attached. Calling injectProfilingHooks replaces its profiling channel; the DevTools Timeline Profiler may stop receiving events while this instrumentation is active.",
     );
   }
 
@@ -195,12 +190,7 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
     didError?: boolean,
   ) => void;
 
-  const ourOnCommitFiberRoot: WidenedOnCommitFiberRoot = (
-    rendererId,
-    root,
-    priority,
-    didError,
-  ) => {
+  const ourOnCommitFiberRoot: WidenedOnCommitFiberRoot = (rendererId, root, priority, didError) => {
     if (originalOnCommitFiberRoot) {
       try {
         (originalOnCommitFiberRoot as WidenedOnCommitFiberRoot).call(
@@ -223,7 +213,7 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
           isCancelled: () => isStopped,
         })
       : undefined;
-    emitter.emit('commit', {
+    emitter.emit("commit", {
       rendererId,
       // HACK: bippy types `priority` as `number | void`. React actually
       // passes a Scheduler priority (1-5); narrow to `SchedulerPriorityLevel`.
@@ -233,35 +223,28 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
     });
   };
 
-  const ourOnPostCommitFiberRoot: typeof hook.onPostCommitFiberRoot = (
-    rendererId,
-    root,
-  ) => {
+  const ourOnPostCommitFiberRoot: typeof hook.onPostCommitFiberRoot = (rendererId, root) => {
     if (originalOnPostCommitFiberRoot) {
       try {
         originalOnPostCommitFiberRoot.call(hook, rendererId, root);
       } catch {}
     }
     if (isStopped) return;
-    emitter.emit('post-commit', { rendererId });
+    emitter.emit("post-commit", { rendererId });
   };
 
-  const ourOnCommitFiberUnmount: typeof hook.onCommitFiberUnmount = (
-    rendererId,
-    fiber,
-  ) => {
+  const ourOnCommitFiberUnmount: typeof hook.onCommitFiberUnmount = (rendererId, fiber) => {
     if (originalOnCommitFiberUnmount) {
       try {
         originalOnCommitFiberUnmount.call(hook, rendererId, fiber);
       } catch {}
     }
     if (isStopped) return;
-    emitter.emit('fiber-unmount', { rendererId });
+    emitter.emit("fiber-unmount", { rendererId });
   };
 
   hook.inject = ourInject;
-  hook.onCommitFiberRoot =
-    ourOnCommitFiberRoot as typeof hook.onCommitFiberRoot;
+  hook.onCommitFiberRoot = ourOnCommitFiberRoot as typeof hook.onCommitFiberRoot;
   hook.onPostCommitFiberRoot = ourOnPostCommitFiberRoot;
   hook.onCommitFiberUnmount = ourOnCommitFiberUnmount;
 
@@ -272,9 +255,7 @@ export const instrument = (options: LiteOptions = {}): LiteHandle => {
       if (isStopped) return;
       isStopped = true;
       if (hook.inject === ourInject) hook.inject = originalInject;
-      if (
-        (hook.onCommitFiberRoot as unknown) === (ourOnCommitFiberRoot as unknown)
-      ) {
+      if ((hook.onCommitFiberRoot as unknown) === (ourOnCommitFiberRoot as unknown)) {
         hook.onCommitFiberRoot = originalOnCommitFiberRoot;
       }
       if (hook.onPostCommitFiberRoot === ourOnPostCommitFiberRoot) {
@@ -309,4 +290,4 @@ export type {
   LiteOptions,
   ProfilingHooksUnavailableReason,
   SchedulerPriorityLevel,
-} from './types';
+} from "./types";

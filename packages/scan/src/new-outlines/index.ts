@@ -7,7 +7,7 @@ import {
   getTimings,
   getType,
   isCompositeFiber,
-} from 'bippy';
+} from "bippy";
 import {
   Change,
   ContextChange,
@@ -15,28 +15,22 @@ import {
   ReactScanInternals,
   Store,
   ignoredProps,
-} from '~core/index';
+} from "~core/index";
 import {
   ChangeReason,
   createInstrumentation,
   getContextChanges,
   getStateChanges,
   OldRenderData,
-} from '~core/instrumentation';
-import { log, logIntro } from '~web/utils/log';
-import { inspectorUpdateSignal } from '~web/views/inspector/states';
-import {
-  OUTLINE_ARRAY_SIZE,
-  drawCanvas,
-  initCanvas,
-  updateOutlines,
-  updateScroll,
-} from './canvas';
-import type { ActiveOutline, BlueprintOutline, OutlineData } from './types';
-import { getChangedPropsDetailed } from '~web/views/inspector/utils';
+} from "~core/instrumentation";
+import { log, logIntro } from "~web/utils/log";
+import { inspectorUpdateSignal } from "~web/views/inspector/states";
+import { OUTLINE_ARRAY_SIZE, drawCanvas, initCanvas, updateOutlines, updateScroll } from "./canvas";
+import type { ActiveOutline, BlueprintOutline, OutlineData } from "./types";
+import { getChangedPropsDetailed } from "~web/views/inspector/utils";
 
 // The worker code will be replaced at build time
-const workerCode = '__WORKER_CODE__';
+const workerCode = "__WORKER_CODE__";
 
 let worker: Worker | null = null;
 let canvas: HTMLCanvasElement | null = null;
@@ -48,10 +42,9 @@ const activeOutlines = new Map<string, ActiveOutline>();
 const blueprintMap = new Map<Fiber, BlueprintOutline>();
 const blueprintMapKeys = new Set<Fiber>();
 
-export const outlineFiber = (fiber: Fiber) => {
+const outlineFiber = (fiber: Fiber) => {
   if (!isCompositeFiber(fiber)) return;
-  const name =
-    typeof fiber.type === 'string' ? fiber.type : getDisplayName(fiber);
+  const name = typeof fiber.type === "string" ? fiber.type : getDisplayName(fiber);
   if (!name) return;
   const blueprint = blueprintMap.get(fiber);
   const nearestFibers = getNearestHostFibers(fiber);
@@ -83,12 +76,8 @@ const mergeRects = (rects: DOMRect[]) => {
     const rect = rects[i];
     minX = minX == null ? rect.x : Math.min(minX, rect.x);
     minY = minY == null ? rect.y : Math.min(minY, rect.y);
-    maxX =
-      maxX == null ? rect.x + rect.width : Math.max(maxX, rect.x + rect.width);
-    maxY =
-      maxY == null
-        ? rect.y + rect.height
-        : Math.max(maxY, rect.y + rect.height);
+    maxX = maxX == null ? rect.x + rect.width : Math.max(maxX, rect.x + rect.width);
+    maxY = maxY == null ? rect.y + rect.height : Math.max(maxY, rect.y + rect.height);
   }
 
   if (minX == null || minY == null || maxX == null || maxY == null) {
@@ -150,11 +139,9 @@ export const getBatchedRectMap = async function* (
   }
 
   while (!state.done) {
-    const entries = await new Promise<IntersectionObserverEntry[]>(
-      (resolve) => {
-        state.resolveNext = resolve;
-      },
-    );
+    const entries = await new Promise<IntersectionObserverEntry[]>((resolve) => {
+      state.resolveNext = resolve;
+    });
     if (entries.length > 0) {
       yield entries;
     }
@@ -162,9 +149,9 @@ export const getBatchedRectMap = async function* (
 };
 
 const SupportedArrayBuffer =
-  typeof SharedArrayBuffer !== 'undefined' ? SharedArrayBuffer : ArrayBuffer;
+  typeof SharedArrayBuffer !== "undefined" ? SharedArrayBuffer : ArrayBuffer;
 
-export const flushOutlines = async () => {
+const flushOutlines = async () => {
   const elements: Element[] = [];
 
   for (const fiber of blueprintMapKeys) {
@@ -215,9 +202,7 @@ export const flushOutlines = async () => {
     }
 
     if (blueprints.length > 0) {
-      const arrayBuffer = new SupportedArrayBuffer(
-        blueprints.length * OUTLINE_ARRAY_SIZE * 4,
-      );
+      const arrayBuffer = new SupportedArrayBuffer(blueprints.length * OUTLINE_ARRAY_SIZE * 4);
       const sharedView = new Float32Array(arrayBuffer);
       const blueprintNames = new Array(blueprints.length);
       let outlineData: OutlineData[] | undefined;
@@ -255,7 +240,7 @@ export const flushOutlines = async () => {
 
       if (worker) {
         worker.postMessage({
-          type: 'draw-outlines',
+          type: "draw-outlines",
           data: arrayBuffer,
           names: blueprintNames,
         });
@@ -287,25 +272,25 @@ const draw = () => {
 };
 
 const IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED =
-  typeof OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined';
+  typeof OffscreenCanvas !== "undefined" && typeof Worker !== "undefined";
 
 const getDpr = () => {
   return Math.min(window.devicePixelRatio || 1, 2);
 };
 
-export const getCanvasEl = () => {
+const getCanvasEl = () => {
   cleanup();
-  const host = document.createElement('div');
-  host.setAttribute('data-react-scan', 'true');
-  const shadowRoot = host.attachShadow({ mode: 'open' });
+  const host = document.createElement("div");
+  host.setAttribute("data-react-scan", "true");
+  const shadowRoot = host.attachShadow({ mode: "open" });
 
-  const canvasEl = document.createElement('canvas');
-  canvasEl.style.position = 'fixed';
-  canvasEl.style.top = '0';
-  canvasEl.style.left = '0';
-  canvasEl.style.pointerEvents = 'none';
-  canvasEl.style.zIndex = '2147483646';
-  canvasEl.setAttribute('aria-hidden', 'true');
+  const canvasEl = document.createElement("canvas");
+  canvasEl.style.position = "fixed";
+  canvasEl.style.top = "0";
+  canvasEl.style.left = "0";
+  canvasEl.style.pointerEvents = "none";
+  canvasEl.style.zIndex = "2147483646";
+  canvasEl.setAttribute("aria-hidden", "true");
   shadowRoot.appendChild(canvasEl);
 
   if (!canvasEl) return null;
@@ -323,24 +308,19 @@ export const getCanvasEl = () => {
 
   // Users on a strict CSP without `worker-src blob:` (see #372) can opt out;
   // we still render outlines on the main thread via `initCanvas` below.
-  const workerOptOut =
-    ReactScanInternals.options.value.useOffscreenCanvasWorker === false;
+  const workerOptOut = ReactScanInternals.options.value.useOffscreenCanvasWorker === false;
 
-  if (
-    IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED &&
-    !window.__REACT_SCAN_EXTENSION__ &&
-    !workerOptOut
-  ) {
+  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !window.__REACT_SCAN_EXTENSION__ && !workerOptOut) {
     try {
       const blobUrl = URL.createObjectURL(
-        new Blob([workerCode], { type: 'application/javascript' }),
+        new Blob([workerCode], { type: "application/javascript" }),
       );
       worker = new Worker(blobUrl);
 
       const offscreenCanvas = canvasEl.transferControlToOffscreen();
       worker.postMessage(
         {
-          type: 'init',
+          type: "init",
           canvas: offscreenCanvas,
           width: canvasEl.width,
           height: canvasEl.height,
@@ -353,9 +333,9 @@ export const getCanvasEl = () => {
       // The fallback below renders fine on the main thread, so log only when
       // the user explicitly asked for verbose diagnostics.
       worker = null;
-      if (ReactScanInternals.options.value._debug === 'verbose') {
+      if (ReactScanInternals.options.value._debug === "verbose") {
         // oxlint-disable-next-line no-console
-        console.warn('Failed to initialize OffscreenCanvas worker:', error);
+        console.warn("Failed to initialize OffscreenCanvas worker:", error);
       }
     }
     // The blob URL stays alive until the worker is GC'd. Revoking
@@ -369,7 +349,7 @@ export const getCanvasEl = () => {
   }
 
   let isResizeScheduled = false;
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     if (!isResizeScheduled) {
       isResizeScheduled = true;
       // TODO(Alexis): bindable
@@ -381,7 +361,7 @@ export const getCanvasEl = () => {
         canvasEl.style.height = `${height}px`;
         if (worker) {
           worker.postMessage({
-            type: 'resize',
+            type: "resize",
             width,
             height,
             dpr,
@@ -404,7 +384,7 @@ export const getCanvasEl = () => {
   let prevScrollY = window.scrollY;
   let isScrollScheduled = false;
 
-  window.addEventListener('scroll', () => {
+  window.addEventListener("scroll", () => {
     if (!isScrollScheduled) {
       isScrollScheduled = true;
       // TODO(Alexis): bindable
@@ -416,14 +396,12 @@ export const getCanvasEl = () => {
         prevScrollY = scrollY;
         if (worker) {
           worker.postMessage({
-            type: 'scroll',
+            type: "scroll",
             deltaX,
             deltaY,
           });
         } else {
-          requestAnimationFrame(
-            updateScroll.bind(null, activeOutlines, deltaX, deltaY),
-          );
+          requestAnimationFrame(updateScroll.bind(null, activeOutlines, deltaX, deltaY));
         }
         isScrollScheduled = false;
       }, 16 * 2);
@@ -440,17 +418,12 @@ export const getCanvasEl = () => {
   return host;
 };
 
-export const hasStopped = () => {
+const hasStopped = () => {
   return globalThis.__REACT_SCAN_STOP__;
 };
 
-export const stop = () => {
-  globalThis.__REACT_SCAN_STOP__ = true;
-  cleanup();
-};
-
-export const cleanup = () => {
-  const host = document.querySelector('[data-react-scan]');
+const cleanup = () => {
+  const host = document.querySelector("[data-react-scan]");
   if (host) {
     host.remove();
   }
@@ -461,7 +434,7 @@ const reportRenderToListeners = (fiber: Fiber) => {
     // report render has a non trivial cost because it calls Date.now(), so we want to avoid the computation if possible
     if (
       ReactScanInternals.options.value.showToolbar !== false &&
-      Store.inspectState.value.kind === 'focused'
+      Store.inspectState.value.kind === "focused"
     ) {
       const reportFiber = fiber;
       const { selfTime } = getTimings(fiber);
@@ -478,9 +451,7 @@ const reportRenderToListeners = (fiber: Fiber) => {
       const listeners = Store.changesListeners.get(getFiberId(fiber));
 
       if (listeners?.length) {
-        const propsChanges: Array<PropsChange> = getChangedPropsDetailed(
-          fiber,
-        ).map((change) => ({
+        const propsChanges: Array<PropsChange> = getChangedPropsDetailed(fiber).map((change) => ({
           type: ChangeReason.Props,
           name: change.name,
           value: change.value,
@@ -494,14 +465,12 @@ const reportRenderToListeners = (fiber: Fiber) => {
         // currently, we say every context change, regardless of the render it happened, is a change. Which requires us to hack change tracking
         // in the whats-changed toolbar component
         const fiberContext = getContextChanges(fiber);
-        const contextChanges: Array<ContextChange> = fiberContext.map(
-          (info) => ({
-            name: info.name,
-            type: ChangeReason.Context,
-            value: info.value,
-            contextType: info.contextType,
-          }),
-        );
+        const contextChanges: Array<ContextChange> = fiberContext.map((info) => ({
+          name: info.name,
+          type: ChangeReason.Context,
+          value: info.value,
+          contextType: info.contextType,
+        }));
 
         listeners.forEach((listener) => {
           listener({
@@ -528,7 +497,7 @@ const reportRenderToListeners = (fiber: Fiber) => {
 
 let needsReport = false;
 let reportInterval: ReturnType<typeof setInterval>;
-export const startReportInterval = () => {
+const startReportInterval = () => {
   clearInterval(reportInterval);
   reportInterval = setInterval(() => {
     if (needsReport) {
@@ -538,7 +507,7 @@ export const startReportInterval = () => {
   }, 50);
 };
 
-export const isValidFiber = (fiber: Fiber) => {
+const isValidFiber = (fiber: Fiber) => {
   if (ignoredProps.has(fiber.memoizedProps)) {
     return false;
   }
@@ -572,7 +541,7 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
     }); // TODO(Alexis): perhaps a better timing
   };
 
-  const instrumentation = createInstrumentation('react-scan-devtools-0.1.0', {
+  const instrumentation = createInstrumentation("react-scan-devtools-0.1.0", {
     onCommitStart: () => {
       ReactScanInternals.options.value.onCommitStart?.();
     },
@@ -601,11 +570,10 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       if (isCompositeFiber(fiber)) {
         Store.interactionListeningForRenders?.(fiber, renders);
       }
-      const isOverlayPaused =
-        ReactScanInternals.instrumentation?.isPaused.value;
+      const isOverlayPaused = ReactScanInternals.instrumentation?.isPaused.value;
       const isInspectorInactive =
-        Store.inspectState.value.kind === 'inspect-off' ||
-        Store.inspectState.value.kind === 'uninitialized';
+        Store.inspectState.value.kind === "inspect-off" ||
+        Store.inspectState.value.kind === "uninitialized";
       const shouldFullyAbort = isOverlayPaused && isInspectorInactive;
 
       if (shouldFullyAbort) {
@@ -619,7 +587,7 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
         log(renders);
       }
 
-      if (Store.inspectState.value.kind === 'focused') {
+      if (Store.inspectState.value.kind === "focused") {
         inspectorUpdateSignal.value = Date.now();
       }
       if (!isInspectorInactive) {

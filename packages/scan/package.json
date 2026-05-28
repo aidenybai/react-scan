@@ -3,19 +3,15 @@
   "version": "0.5.7",
   "description": "Scan your React app for renders",
   "keywords": [
+    "performance",
     "react",
-    "react-scan",
     "react scan",
-    "render",
-    "performance"
+    "react-scan",
+    "render"
   ],
   "homepage": "https://react-scan.million.dev",
   "bugs": {
     "url": "https://github.com/aidenybai/react-scan/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aidenybai/react-scan.git"
   },
   "license": "MIT",
   "author": {
@@ -23,21 +19,50 @@
     "email": "aiden@million.dev",
     "url": "https://million.dev"
   },
-  "scripts": {
-    "build": "pnpm build:css && NODE_ENV=production tsup",
-    "build:copy": "pnpm build && cat dist/auto.global.js | pbcopy",
-    "build:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css",
-    "dev:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css --watch",
-    "dev:tsup": "NODE_ENV=development tsup --watch",
-    "dev": "pnpm run --parallel \"/^dev:(css|tsup)/\"",
-    "pack": "npm version patch && pnpm build && npm pack",
-    "pack:bump": "node scripts/bump-version.mjs && pnpm run pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
-    "publint": "publint",
-    "test": "vp test run",
-    "test:watch": "vp test",
-    "lint": "vp lint",
-    "format": "vp fmt",
-    "typecheck": "tsc --noEmit"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidenybai/react-scan.git"
+  },
+  "bin": "bin/cli.js",
+  "files": [
+    "dist",
+    "bin",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "auto.d.ts"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "browser": "dist/auto.global.js",
+  "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "react-component-name/vite": [
+        "./dist/react-component-name/vite.d.ts"
+      ],
+      "react-component-name/webpack": [
+        "./dist/react-component-name/webpack.d.ts"
+      ],
+      "react-component-name/esbuild": [
+        "./dist/react-component-name/esbuild.d.ts"
+      ],
+      "react-component-name/rspack": [
+        "./dist/react-component-name/rspack.d.ts"
+      ],
+      "react-component-name/rolldown": [
+        "./dist/react-component-name/rolldown.d.ts"
+      ],
+      "react-component-name/rollup": [
+        "./dist/react-component-name/rollup.d.ts"
+      ],
+      "react-component-name/astro": [
+        "./dist/react-component-name/astro.d.ts"
+      ],
+      "react-component-name/loader": [
+        "./dist/react-component-name/loader.d.ts"
+      ]
+    }
   },
   "exports": {
     "./package.json": "./package.json",
@@ -164,47 +189,25 @@
       "require": "./dist/react-component-name/loader.js"
     }
   },
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "browser": "dist/auto.global.js",
-  "types": "dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "react-component-name/vite": [
-        "./dist/react-component-name/vite.d.ts"
-      ],
-      "react-component-name/webpack": [
-        "./dist/react-component-name/webpack.d.ts"
-      ],
-      "react-component-name/esbuild": [
-        "./dist/react-component-name/esbuild.d.ts"
-      ],
-      "react-component-name/rspack": [
-        "./dist/react-component-name/rspack.d.ts"
-      ],
-      "react-component-name/rolldown": [
-        "./dist/react-component-name/rolldown.d.ts"
-      ],
-      "react-component-name/rollup": [
-        "./dist/react-component-name/rollup.d.ts"
-      ],
-      "react-component-name/astro": [
-        "./dist/react-component-name/astro.d.ts"
-      ],
-      "react-component-name/loader": [
-        "./dist/react-component-name/loader.d.ts"
-      ]
-    }
+  "publishConfig": {
+    "access": "public"
   },
-  "bin": "bin/cli.js",
-  "files": [
-    "dist",
-    "bin",
-    "package.json",
-    "README.md",
-    "LICENSE",
-    "auto.d.ts"
-  ],
+  "scripts": {
+    "build": "pnpm build:css && NODE_ENV=production tsup",
+    "build:copy": "pnpm build && cat dist/auto.global.js | pbcopy",
+    "build:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css",
+    "dev:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css --watch",
+    "dev:tsup": "NODE_ENV=development tsup --watch",
+    "dev": "pnpm run --parallel \"/^dev:(css|tsup)/\"",
+    "pack": "npm version patch && pnpm build && npm pack",
+    "pack:bump": "node scripts/bump-version.mjs && pnpm run pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
+    "publint": "publint",
+    "test": "vp test run",
+    "test:watch": "vp test",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@babel/core": "^7.29.0",
     "@babel/types": "^7.29.0",
@@ -215,7 +218,6 @@
     "picocolors": "^1.1.1",
     "preact": "^10.29.1",
     "prompts": "^2.4.2",
-    "react-doctor": "latest",
     "react-grab": "latest"
   },
   "devDependencies": {
@@ -253,8 +255,5 @@
   },
   "optionalDependencies": {
     "unplugin": "^3.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

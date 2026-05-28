@@ -1,8 +1,7 @@
-import { signal } from '@preact/signals';
-import type { Fiber } from 'bippy';
-import type { ComponentType } from 'preact';
-import { flashManager } from './flash-overlay';
-import { type SectionData, resetTracking } from './timeline/utils';
+import { signal } from "@preact/signals";
+import type { Fiber } from "bippy";
+import type { ComponentType } from "preact";
+import type { SectionData } from "./timeline/utils";
 
 export interface MinimalFiberInfo {
   id?: string | number;
@@ -36,7 +35,7 @@ export interface TimelineState {
 
 export const TIMELINE_MAX_UPDATES = 1000;
 
-export const timelineStateDefault: TimelineState = {
+const timelineStateDefault: TimelineState = {
   updates: [],
   currentFiber: null,
   totalUpdates: 0,
@@ -60,8 +59,7 @@ const batchUpdates = () => {
 
   const batchedUpdates = [...pendingUpdates];
 
-  const { updates, totalUpdates, currentIndex, isViewingHistory } =
-    timelineState.value;
+  const { updates, totalUpdates, currentIndex, isViewingHistory } = timelineState.value;
   const newUpdates = [...updates];
   let newTotalUpdates = totalUpdates;
 
@@ -132,7 +130,7 @@ export const timelineActions = {
     };
   },
 
-  updatePlaybackSpeed: (speed: TimelineState['playbackSpeed']) => {
+  updatePlaybackSpeed: (speed: TimelineState["playbackSpeed"]) => {
     timelineState.value = {
       ...timelineState.value,
       playbackSpeed: speed,
@@ -163,18 +161,6 @@ export const timelineActions = {
       batchTimeout = null;
     }
     pendingUpdates = [];
-    timelineState.value = timelineStateDefault;
-  },
-};
-
-export const globalInspectorState = {
-  lastRendered: new Map<string, unknown>(),
-  expandedPaths: new Set<string>(),
-  cleanup: () => {
-    globalInspectorState.lastRendered.clear();
-    globalInspectorState.expandedPaths.clear();
-    flashManager.cleanupAll();
-    resetTracking();
     timelineState.value = timelineStateDefault;
   },
 };

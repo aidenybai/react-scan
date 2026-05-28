@@ -1,4 +1,4 @@
-import { type Signal, signal } from '@preact/signals';
+import { type Signal, signal } from "@preact/signals";
 import {
   ClassComponentTag,
   type Fiber,
@@ -19,20 +19,15 @@ import {
   traverseContexts,
   traverseProps,
   traverseRenderedFibers,
-} from 'bippy';
-import { isValidElement } from 'preact';
-import { isEqual } from '~core/utils';
+} from "bippy";
+import { isValidElement } from "preact";
+import { isEqual } from "~core/utils";
 import {
   collectContextChanges,
   collectPropsChanges,
   collectStateChanges,
-} from '~web/views/inspector/timeline/utils';
-import {
-  type Change,
-  type ContextChange,
-  ReactScanInternals,
-  type StateChange,
-} from './index';
+} from "~web/views/inspector/timeline/utils";
+import { type Change, type ContextChange, ReactScanInternals, type StateChange } from "./index";
 
 export enum RenderPhase {
   Mount = 0b001,
@@ -40,7 +35,7 @@ export enum RenderPhase {
   Unmount = 0b100,
 }
 
-export const RENDER_PHASE_STRING_TO_ENUM = {
+const RENDER_PHASE_STRING_TO_ENUM = {
   mount: RenderPhase.Mount,
   update: RenderPhase.Update,
   unmount: RenderPhase.Unmount,
@@ -62,7 +57,7 @@ export interface AggregatedRender {
   unnecessary: boolean | null;
   didCommit: boolean;
   fps: number;
-  computedKey: import('./index').OutlineKey | null;
+  computedKey: import("./index").OutlineKey | null;
   computedCurrent: DOMRect | null;
 }
 
@@ -92,13 +87,13 @@ export const getFPS = () => {
   return fps;
 };
 
-export const isElementVisible = (el: Element) => {
+const isElementVisible = (el: Element) => {
   const style = window.getComputedStyle(el);
   return (
-    style.display !== 'none' &&
-    style.visibility !== 'hidden' &&
-    style.contentVisibility !== 'hidden' &&
-    style.opacity !== '0'
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    style.contentVisibility !== "hidden" &&
+    style.opacity !== "0"
   );
 };
 
@@ -112,10 +107,7 @@ export const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
   );
 };
 
-export const isElementInViewport = (
-  el: Element,
-  rect = el.getBoundingClientRect(),
-) => {
+const isElementInViewport = (el: Element, rect = el.getBoundingClientRect()) => {
   const isVisible =
     rect.bottom > 0 &&
     rect.right > 0 &&
@@ -149,29 +141,29 @@ export interface Render {
   fps: number;
 }
 
-const unstableTypes = ['function', 'object'];
+const unstableTypes = ["function", "object"];
 
 const cache = new WeakMap<object, string>();
 
 export function fastSerialize(value: unknown, depth = 0): string {
-  if (depth < 0) return '…';
+  if (depth < 0) return "…";
 
   switch (typeof value) {
-    case 'function':
+    case "function":
       return value.toString();
-    case 'string':
+    case "string":
       return value;
-    case 'number':
-    case 'boolean':
-    case 'undefined':
+    case "number":
+    case "boolean":
+    case "undefined":
       return String(value);
-    case 'object':
+    case "object":
       break;
     default:
       return String(value);
   }
 
-  if (value === null) return 'null';
+  if (value === null) return "null";
 
   if (cache.has(value)) {
     const cached = cache.get(value);
@@ -181,13 +173,13 @@ export function fastSerialize(value: unknown, depth = 0): string {
   }
 
   if (Array.isArray(value)) {
-    const str = value.length ? `[${value.length}]` : '[]';
+    const str = value.length ? `[${value.length}]` : "[]";
     cache.set(value, str);
     return str;
   }
 
   if (isValidElement(value)) {
-    const type = getDisplayName(value.type) ?? '';
+    const type = getDisplayName(value.type) ?? "";
     const propCount = value.props ? Object.keys(value.props).length : 0;
     const str = `<${type} ${propCount}>`;
     cache.set(value, str);
@@ -196,14 +188,13 @@ export function fastSerialize(value: unknown, depth = 0): string {
 
   if (Object.getPrototypeOf(value) === Object.prototype) {
     const keys = Object.keys(value);
-    const str = keys.length ? `{${keys.length}}` : '{}';
+    const str = keys.length ? `{${keys.length}}` : "{}";
     cache.set(value, str);
     return str;
   }
 
-  const ctor =
-    value && typeof value === 'object' ? value.constructor : undefined;
-  if (ctor && typeof ctor === 'function' && ctor.name) {
+  const ctor = value && typeof value === "object" ? value.constructor : undefined;
+  if (ctor && typeof ctor === "function" && ctor.name) {
     const str = `${ctor.name}{…}`;
     cache.set(value, str);
     return str;
@@ -226,8 +217,7 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     fiber.tag === MemoComponentTag
   ) {
     let memoizedState: MemoizedState | null = fiber.memoizedState;
-    let prevState: MemoizedState | null | undefined =
-      fiber.alternate?.memoizedState;
+    let prevState: MemoizedState | null | undefined = fiber.alternate?.memoizedState;
     let index = 0;
 
     while (memoizedState) {
@@ -254,7 +244,7 @@ export const getStateChanges = (fiber: Fiber): StateChange[] => {
     // when we have class component fiber, memoizedState is the component state
     const change: StateChange = {
       type: ChangeReason.ClassState,
-      name: 'state',
+      name: "state",
       value: fiber.memoizedState,
       prevValue: fiber.alternate?.memoizedState,
     };
@@ -295,8 +285,7 @@ function getContextChangesTraversal(
   const change: ContextChange = {
     type: ChangeReason.Context,
     name:
-      (nextValue.context as { displayName: string | undefined }).displayName ??
-      'Context.Provider',
+      (nextValue.context as { displayName: string | undefined }).displayName ?? "Context.Provider",
     value: nextMemoizedValue,
     contextType: getContextId(nextValue.context as ContextFiber),
 
@@ -373,16 +362,13 @@ function isRenderUnnecessaryTraversal(
   prevValue: unknown,
   nextValue: unknown,
 ): void {
-  if (
-    !isEqual(prevValue, nextValue) &&
-    !isValueUnstable(prevValue, nextValue)
-  ) {
+  if (!isEqual(prevValue, nextValue) && !isValueUnstable(prevValue, nextValue)) {
     this.isRequiredChange = true;
   }
 }
 
 // FIXME: calculation is slow
-export const isRenderUnnecessary = (fiber: Fiber) => {
+const isRenderUnnecessary = (fiber: Fiber) => {
   if (!didFiberCommit(fiber)) return true;
 
   const mutatedHostFibers = getMutatedHostFibers(fiber);
@@ -442,7 +428,7 @@ export interface OldRenderData {
 
 const RENDER_DEBOUNCE_MS = 16;
 
-export const renderDataMap = new WeakMap<object, Map<string, RenderData>>();
+const renderDataMap = new WeakMap<object, Map<string, RenderData>>();
 
 function getFiberIdentifier(fiber: Fiber) {
   return String(getFiberId(fiber));
@@ -485,8 +471,7 @@ const trackRender = (
   if (
     (hasChanges || hasDomMutations) &&
     (!existingData ||
-      currentTimestamp - (existingData.lastRenderTimestamp || 0) >
-        RENDER_DEBOUNCE_MS)
+      currentTimestamp - (existingData.lastRenderTimestamp || 0) > RENDER_DEBOUNCE_MS)
   ) {
     const renderData: RenderData = existingData || {
       selfTime: 0,
@@ -504,10 +489,7 @@ const trackRender = (
   }
 };
 
-export const createInstrumentation = (
-  instanceKey: string,
-  config: InstrumentationConfig,
-) => {
+export const createInstrumentation = (instanceKey: string, config: InstrumentationConfig) => {
   const instrumentation: Instrumentation = {
     // this will typically be false, but in cases where a user provides showToolbar: true, this will be true
     isPaused: signal(!ReactScanInternals.options.value.enabled),
@@ -522,7 +504,7 @@ export const createInstrumentation = (
     inited = true;
 
     instrument({
-      name: 'react-scan',
+      name: "react-scan",
       onActive: config.onActive,
       onCommitFiberRoot(_rendererID, root) {
         instrumentation.fiberRoots.add(root);
@@ -542,7 +524,7 @@ export const createInstrumentation = (
 
         traverseRenderedFibers(
           root.current,
-          (fiber: Fiber, phase: 'mount' | 'update' | 'unmount') => {
+          (fiber: Fiber, phase: "mount" | "update" | "unmount") => {
             const type = getType(fiber.type);
             if (!type) return null;
 
@@ -604,8 +586,7 @@ export const createInstrumentation = (
               );
             }
 
-            const { selfTime: fiberSelfTime, totalTime: fiberTotalTime } =
-              getTimings(fiber);
+            const { selfTime: fiberSelfTime, totalTime: fiberTotalTime } = getTimings(fiber);
 
             const fps = getFPS();
             const render: Render = {
@@ -617,9 +598,7 @@ export const createInstrumentation = (
               forget: hasMemoCache(fiber),
               // todo: allow this to be toggle-able through toolbar
               // todo: performance optimization: if the last fiber measure was very off screen, do not run isRenderUnnecessary
-              unnecessary: TRACK_UNNECESSARY_RENDERS
-                ? isRenderUnnecessary(fiber)
-                : null,
+              unnecessary: TRACK_UNNECESSARY_RENDERS ? isRenderUnnecessary(fiber) : null,
               didCommit: didFiberCommit(fiber),
               fps,
             };
@@ -628,14 +607,8 @@ export const createInstrumentation = (
             const hasChanges = changes.length > 0;
             const hasDomMutations = getMutatedHostFibers(fiber).length > 0;
 
-            if (phase === 'update') {
-              trackRender(
-                fiber,
-                fiberSelfTime,
-                fiberTotalTime,
-                hasChanges,
-                hasDomMutations,
-              );
+            if (phase === "update") {
+              trackRender(fiber, fiberSelfTime, fiberTotalTime, hasChanges, hasDomMutations);
             }
 
             for (let i = 0, len = validInstancesIndicies.length; i < len; i++) {

@@ -5,35 +5,16 @@ import {
   SuspenseComponentTag,
   getDisplayName,
   hasMemoCache,
-} from 'bippy';
-import { type ClassValue, clsx } from 'clsx';
-import { IS_CLIENT } from './constants';
-import { twMerge } from 'tailwind-merge';
+} from "bippy";
+import { type ClassValue, clsx } from "clsx";
+import { IS_CLIENT } from "./constants";
+import { twMerge } from "tailwind-merge";
 
 export const cn = (...inputs: Array<ClassValue>): string => {
   return twMerge(clsx(inputs));
 };
 
-export const isFirefox =
-  /* @__PURE__ */ typeof navigator !== 'undefined' &&
-  navigator.userAgent.includes('Firefox');
-
-export const onIdle = (callback: () => void) => {
-  if ('scheduler' in globalThis) {
-    return globalThis.scheduler.postTask(callback, {
-      priority: 'background',
-    });
-  }
-  if ('requestIdleCallback' in window) {
-    return requestIdleCallback(callback);
-  }
-  return setTimeout(callback, 0);
-};
-
-export const throttle = <E>(
-  callback: (e?: E) => void,
-  delay: number,
-): ((e?: E) => void) => {
+export const throttle = <E>(callback: (e?: E) => void, delay: number): ((e?: E) => void) => {
   let lastCall = 0;
   return (e?: E) => {
     const now = Date.now();
@@ -43,14 +24,6 @@ export const throttle = <E>(
     }
     return undefined;
   };
-};
-
-export const tryOrElse = <T>(fn: () => T, defaultValue: T): T => {
-  try {
-    return fn();
-  } catch {
-    return defaultValue;
-  }
 };
 
 export const readLocalStorage = <T>(storageKey: string): T | null => {
@@ -80,12 +53,12 @@ export const removeLocalStorage = (storageKey: string): void => {
 };
 
 interface WrapperBadge {
-  type: 'memo' | 'forwardRef' | 'lazy' | 'suspense' | 'profiler' | 'strict';
+  type: "memo" | "forwardRef" | "lazy" | "suspense" | "profiler" | "strict";
   title: string;
   compiler?: boolean;
 }
 
-export interface ExtendedDisplayName {
+interface ExtendedDisplayName {
   name: string | null;
   wrappers: Array<string>;
   wrapperTypes: Array<WrapperBadge>;
@@ -98,7 +71,7 @@ const ProfilerTag = 12;
 export const getExtendedDisplayName = (fiber: Fiber): ExtendedDisplayName => {
   if (!fiber) {
     return {
-      name: 'Unknown',
+      name: "Unknown",
       wrappers: [],
       wrapperTypes: [],
     };
@@ -113,42 +86,41 @@ export const getExtendedDisplayName = (fiber: Fiber): ExtendedDisplayName => {
     hasMemoCache(fiber) ||
     tag === SimpleMemoComponentTag ||
     tag === MemoComponentTag ||
-    (type as { $$typeof?: symbol })?.$$typeof === Symbol.for('react.memo') ||
-    (elementType as { $$typeof?: symbol })?.$$typeof ===
-      Symbol.for('react.memo')
+    (type as { $$typeof?: symbol })?.$$typeof === Symbol.for("react.memo") ||
+    (elementType as { $$typeof?: symbol })?.$$typeof === Symbol.for("react.memo")
   ) {
     const compiler = hasMemoCache(fiber);
     wrapperTypes.push({
-      type: 'memo',
+      type: "memo",
       title: compiler
-        ? 'This component has been auto-memoized by the React Compiler.'
-        : 'Memoized component that skips re-renders if props are the same',
+        ? "This component has been auto-memoized by the React Compiler."
+        : "Memoized component that skips re-renders if props are the same",
       compiler,
     });
   }
 
   if (tag === LazyComponentTag) {
     wrapperTypes.push({
-      type: 'lazy',
-      title: 'Lazily loaded component that supports code splitting',
+      type: "lazy",
+      title: "Lazily loaded component that supports code splitting",
     });
   }
 
   if (tag === SuspenseComponentTag) {
     wrapperTypes.push({
-      type: 'suspense',
-      title: 'Component that can suspend while content is loading',
+      type: "suspense",
+      title: "Component that can suspend while content is loading",
     });
   }
 
   if (tag === ProfilerTag) {
     wrapperTypes.push({
-      type: 'profiler',
-      title: 'Component that measures rendering performance',
+      type: "profiler",
+      title: "Component that measures rendering performance",
     });
   }
 
-  if (typeof name === 'string') {
+  if (typeof name === "string") {
     const wrapperRegex = /^(\w+)\((.*)\)$/;
     let currentName = name;
     while (wrapperRegex.test(currentName)) {
@@ -164,7 +136,7 @@ export const getExtendedDisplayName = (fiber: Fiber): ExtendedDisplayName => {
   }
 
   return {
-    name: name || 'Unknown',
+    name: name || "Unknown",
     wrappers,
     wrapperTypes,
   };

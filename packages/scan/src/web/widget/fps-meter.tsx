@@ -1,25 +1,23 @@
-import { useEffect, useState } from 'preact/hooks';
-import { getFPS } from '~core/instrumentation';
-import { cn } from '~web/utils/helpers';
+import { useEffect, useState } from "preact/hooks";
+import { getFPS } from "~core/instrumentation";
+import { cn } from "~web/utils/helpers";
 
-export const FpsMeterInner = ({fps}:{fps: number}) => {
-
-
+const FpsMeterInner = ({ fps }: { fps: number }) => {
   const getColor = (fps: number) => {
-    if (fps < 30) return '#EF4444';
-    if (fps < 50) return '#F59E0B';
-    return 'rgb(214,132,245)';
+    if (fps < 30) return "#EF4444";
+    if (fps < 50) return "#F59E0B";
+    return "rgb(214,132,245)";
   };
 
   return (
     <div
       className={cn(
-        'flex items-center gap-x-1 px-2 w-full',
-        'h-6',
-        'rounded-md',
-        'font-mono leading-none',
-        'bg-[#141414]',
-        'ring-1 ring-white/[0.08]',
+        "flex items-center gap-x-1 px-2 w-full",
+        "h-6",
+        "rounded-md",
+        "font-mono leading-none",
+        "bg-[#141414]",
+        "ring-1 ring-white/[0.08]",
       )}
     >
       <div
@@ -35,7 +33,6 @@ export const FpsMeterInner = ({fps}:{fps: number}) => {
   );
 };
 
-
 export const FPSMeter = () => {
   const [fps, setFps] = useState<null | number>(null);
 
@@ -50,8 +47,8 @@ export const FPSMeter = () => {
   return (
     <div
       className={cn(
-        'flex items-center justify-end gap-x-2 px-1 ml-1 w-[72px]',
-        'whitespace-nowrap text-sm text-white',
+        "flex items-center justify-end gap-x-2 px-1 ml-1 w-[72px]",
+        "whitespace-nowrap text-sm text-white",
       )}
     >
       {/* fixme: default fps state*/}
@@ -59,5 +56,3 @@ export const FPSMeter = () => {
     </div>
   );
 };
-
-
