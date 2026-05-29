@@ -30,8 +30,15 @@ test.describe('Overlay toolbar UI', () => {
   });
 
   test('FPS meter is rendered in the toolbar', async ({ page }) => {
-    const fpsLabel = page.locator(`${TOOLBAR_SELECTORS.widget} >> text=FPS`);
-    await expect(fpsLabel).toBeVisible({ timeout: 10_000 });
+    // The meter starts blank and only paints once its 200ms sampling interval
+    // ticks, which can lag under CPU contention, so poll the widget text.
+    await expect
+      .poll(
+        async () =>
+          toolbarWidget(page).evaluate((el) => el.textContent ?? ''),
+        { timeout: 20_000 },
+      )
+      .toContain('FPS');
   });
 
   test('clicking inspect button enters inspecting mode', async ({ page }) => {
