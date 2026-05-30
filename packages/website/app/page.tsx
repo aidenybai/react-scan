@@ -10,7 +10,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-4 text-base sm:text-lg">
       <div className="text-pretty text-white">
-        <span className="font-bold">React&nbsp;Scan</span> automatically detects performance issues
+        <span className="font-bold">React&nbsp;Scan</span>&nbsp;automatically detects performance issues
         in your React&nbsp;app.
       </div>
 
