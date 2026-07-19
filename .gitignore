@@ -12,4 +12,6 @@ playgrounds
 # Playwright
 test-results/
 playwright-report/
+/.coverage-v8/
+/coverage/
 .cursor

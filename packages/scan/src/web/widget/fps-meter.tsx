@@ -1,8 +1,13 @@
-import { useEffect, useState } from "preact/hooks";
-import { getFPS } from "~core/instrumentation";
-import { cn } from "~web/utils/helpers";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { getFPS } from "../../core/instrumentation";
+import { FPS_SAMPLE_INTERVAL_MS } from "../constants";
+import { cn } from "../utils/helpers";
 
-const FpsMeterInner = ({ fps }: { fps: number }) => {
+interface FpsMeterInnerProps {
+  fps: number;
+}
+
+const FpsMeterInner = (props: FpsMeterInnerProps) => {
   const getColor = (fps: number) => {
     if (fps < 30) return "#EF4444";
     if (fps < 50) return "#F59E0B";
@@ -11,7 +16,7 @@ const FpsMeterInner = ({ fps }: { fps: number }) => {
 
   return (
     <div
-      className={cn(
+      class={cn(
         "flex items-center gap-x-1 px-2 w-full",
         "h-6",
         "rounded-md",
@@ -21,38 +26,34 @@ const FpsMeterInner = ({ fps }: { fps: number }) => {
       )}
     >
       <div
-        style={{ color: getColor(fps) }}
-        className="text-sm font-semibold tracking-wide transition-colors ease-in-out w-full flex justify-center items-center"
+        style={{ color: getColor(props.fps) }}
+        class="text-sm font-semibold tracking-wide transition-colors ease-in-out w-full flex justify-center items-center"
       >
-        {fps}
+        {props.fps}
       </div>
-      <span className="text-white/30 text-[11px] font-medium tracking-wide ml-auto min-w-fit">
-        FPS
-      </span>
+      <span class="text-white/30 text-[11px] font-medium tracking-wide ml-auto min-w-fit">FPS</span>
     </div>
   );
 };
 
 export const FPSMeter = () => {
-  const [fps, setFps] = useState<null | number>(null);
+  const [fps, setFps] = createSignal<number>();
 
-  useEffect(() => {
+  onMount(() => {
     const intervalId = setInterval(() => {
       setFps(getFPS());
-    }, 200);
-
-    return () => clearInterval(intervalId);
-  }, []);
+    }, FPS_SAMPLE_INTERVAL_MS);
+    onCleanup(() => clearInterval(intervalId));
+  });
 
   return (
     <div
-      className={cn(
+      class={cn(
         "flex items-center justify-end gap-x-2 px-1 ml-1 w-[72px]",
         "whitespace-nowrap text-sm text-white",
       )}
     >
-      {/* fixme: default fps state*/}
-      {fps === null ? <>️</> : <FpsMeterInner fps={fps} />}
+      <Show when={fps()}>{(currentFps) => <FpsMeterInner fps={currentFps()} />}</Show>
     </div>
   );
 };

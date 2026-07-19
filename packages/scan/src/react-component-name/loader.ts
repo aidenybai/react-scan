@@ -1,14 +1,10 @@
-import { type FilterPattern, createFilter } from '@rollup/pluginutils';
-import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, transform } from '.';
+import { type FilterPattern, createFilter } from "@rollup/pluginutils";
+import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, transform } from ".";
 
 interface LoaderContext {
   getOptions(): { include?: FilterPattern; exclude?: FilterPattern };
   resourcePath: string;
-  async(): (
-    error: Error | null,
-    content?: string,
-    sourceMap?: string | object,
-  ) => void;
+  async(): (error: Error | null, content?: string, sourceMap?: string | object) => void;
 }
 
 export default async function ReactComponentNameLoader(
@@ -16,8 +12,7 @@ export default async function ReactComponentNameLoader(
   code: string,
   sourceMap: string | object | undefined,
 ) {
-  const parsedMap =
-    typeof sourceMap === 'string' ? JSON.parse(sourceMap) : sourceMap;
+  const parsedMap = typeof sourceMap === "string" ? JSON.parse(sourceMap) : sourceMap;
   const callback = this.async();
   try {
     const options = this.getOptions();
@@ -27,22 +22,18 @@ export default async function ReactComponentNameLoader(
       options?.exclude || [
         DEFAULT_EXCLUDE,
         // Next.js pages dir specific
-        '**/_app.{jsx,tsx,js,ts}',
-        '**/_document.{jsx,tsx,js,ts}',
-        '**/api/**/*',
+        "**/_app.{jsx,tsx,js,ts}",
+        "**/_document.{jsx,tsx,js,ts}",
+        "**/api/**/*",
         // Million.js specific
-        '**/.million/**/*',
+        "**/.million/**/*",
       ],
     );
     if (!filter(id)) return callback(null, code, parsedMap);
 
     const result = await transform(code, id, filter);
 
-    callback(
-      null,
-      result?.code || '',
-      result?.map ? JSON.stringify(result.map) : undefined,
-    );
+    callback(null, result?.code || "", result?.map ? JSON.stringify(result.map) : undefined);
   } catch (e) {
     callback(e as Error);
   }

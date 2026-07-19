@@ -1,5 +1,5 @@
-import './polyfills';
+import "./polyfills";
 // Bippy has a side-effect that installs the hook.
-import 'bippy';
+import "bippy";
 
-export * from './core/index';
+export * from "./core/index";

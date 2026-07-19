@@ -1,6 +1,5 @@
-// @ts-nocheck
 import type { AggregatedRender, Render } from "./instrumentation";
-import { IS_CLIENT } from "~web/utils/constants";
+import { IS_CLIENT } from "../utils/is-client";
 
 function descending(a: number, b: number): number {
   return b - a;
@@ -113,7 +112,7 @@ export interface RenderData {
   renders: Array<Render>;
   displayName: string | null;
   type: unknown;
-  changes?: Array<RenderChange>;
+  changes?: Render["changes"];
 }
 
 export function isEqual(a: unknown, b: unknown): boolean {
@@ -125,12 +124,9 @@ export const not_globally_unique_generateId = () => {
     return "0";
   }
 
-  // @ts-expect-error
   if (window.reactScanIdCounter === undefined) {
-    // @ts-expect-error
     window.reactScanIdCounter = 0;
   }
-  // @ts-expect-error
   return `${++window.reactScanIdCounter}`;
 };
 

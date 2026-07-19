@@ -1,7 +1,7 @@
-import { type Fiber, getDisplayName, getFiberId } from 'bippy';
-import { getChangeDescription, isCompositeTag } from './change-description';
-import { getFiberSource, getOwnerName } from './fiber-source';
-import type { LiteFiberSummary } from './types';
+import { type Fiber, getDisplayName, getFiberId } from "bippy";
+import { getChangeDescription, isCompositeTag } from "./change-description";
+import { getFiberSource, getOwnerName } from "./fiber-source";
+import type { LiteFiberSummary } from "./types";
 
 export interface WalkFiberOptions {
   maxFibers: number;
@@ -29,9 +29,7 @@ interface PendingFiber {
 
 const compositeFiberDidRender = (fiber: Fiber): boolean => {
   const actualDuration = fiber.actualDuration;
-  return (
-    actualDuration != null && actualDuration > 0 && isCompositeTag(fiber.tag)
-  );
+  return actualDuration != null && actualDuration > 0 && isCompositeTag(fiber.tag);
 };
 
 export const walkFiber = (
@@ -62,7 +60,7 @@ export const walkFiber = (
     const actualDuration = currentFiber.actualDuration;
     if (actualDuration != null && actualDuration >= options.minActualDurationMs) {
       const summary: LiteFiberSummary = {
-        name: getDisplayName(currentFiber.type) ?? 'Anonymous',
+        name: getDisplayName(currentFiber.type) ?? "Anonymous",
         depth: currentDepth,
         tag: currentFiber.tag,
         actualDuration,
@@ -78,10 +76,7 @@ export const walkFiber = (
         summary.ownerName = getOwnerName(currentFiber);
       }
       if (options.recordChangeDescriptions) {
-        summary.changeDescription = getChangeDescription(
-          currentFiber,
-          hasCascadingAncestor,
-        );
+        summary.changeDescription = getChangeDescription(currentFiber, hasCascadingAncestor);
       }
       summaries.push(summary);
     }

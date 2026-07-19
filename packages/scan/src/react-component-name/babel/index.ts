@@ -1,9 +1,9 @@
-import type { NodePath, PluginObj } from '@babel/core';
-import * as t from '@babel/types';
-import type { Options } from '../core/options';
-import { isComponentishName } from './is-componentish-name';
-import { pathReferencesImport } from './path-references-import';
-import { unwrapNode, unwrapPath } from './unwrap';
+import type { NodePath, PluginObj } from "@babel/core";
+import * as t from "@babel/types";
+import type { Options } from "../core/options";
+import { isComponentishName } from "./is-componentish-name";
+import { pathReferencesImport } from "./path-references-import";
+import { unwrapNode, unwrapPath } from "./unwrap";
 
 function getAssignedDisplayNames(path: NodePath<t.Program>): Set<string> {
   const names = new Set<string>();
@@ -19,10 +19,7 @@ function getAssignedDisplayNames(path: NodePath<t.Program>): Set<string> {
       if (!object) {
         return;
       }
-      if (
-        t.isIdentifier(memberExpr.property) &&
-        memberExpr.property.name === 'displayName'
-      ) {
+      if (t.isIdentifier(memberExpr.property) && memberExpr.property.name === "displayName") {
         names.add(object.name);
       }
     },
@@ -30,9 +27,7 @@ function getAssignedDisplayNames(path: NodePath<t.Program>): Set<string> {
   return names;
 }
 
-function isValidFunction(
-  node: t.Node,
-): node is t.ArrowFunctionExpression | t.FunctionExpression {
+function isValidFunction(node: t.Node): node is t.ArrowFunctionExpression | t.FunctionExpression {
   return t.isArrowFunctionExpression(node) || t.isFunctionExpression(node);
 }
 
@@ -45,8 +40,8 @@ function assignDisplayName(
     statement.insertAfter([
       t.expressionStatement(
         t.assignmentExpression(
-          '=',
-          t.memberExpression(t.identifier(name), t.identifier('displayName')),
+          "=",
+          t.memberExpression(t.identifier(name), t.identifier("displayName")),
           t.stringLiteral(name),
         ),
       ),
@@ -57,22 +52,19 @@ function assignDisplayName(
         t.blockStatement([
           t.expressionStatement(
             t.assignmentExpression(
-              '=',
-              t.memberExpression(
-                t.identifier(name),
-                t.identifier('displayName'),
-              ),
+              "=",
+              t.memberExpression(t.identifier(name), t.identifier("displayName")),
               t.stringLiteral(name),
             ),
           ),
         ]),
-        t.catchClause(t.identifier('error'), t.blockStatement([])),
+        t.catchClause(t.identifier("error"), t.blockStatement([])),
       ),
     ]);
   }
 }
 
-const REACT_CLASS = ['Component', 'PureComponent'];
+const REACT_CLASS = ["Component", "PureComponent"];
 
 function isNamespaceExport(
   namespace: string,
@@ -85,28 +77,26 @@ function isNamespaceExport(
   }
   const memberExpr = unwrapPath(path, t.isMemberExpression);
   if (memberExpr) {
-    const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+    const object = unwrapPath(memberExpr.get("object"), t.isIdentifier);
     if (object && object.node.name === namespace) {
-      const property = memberExpr.get('property');
-      return (
-        property.isIdentifier() && moduleExports.includes(property.node.name)
-      );
+      const property = memberExpr.get("property");
+      return property.isIdentifier() && moduleExports.includes(property.node.name);
     }
   }
   return false;
 }
 
 function isReactClassComponent(path: NodePath<t.Class>): boolean {
-  const superClass = path.get('superClass');
+  const superClass = path.get("superClass");
 
   if (!superClass.isExpression()) {
     return false;
   }
-  if (isNamespaceExport('React', REACT_CLASS, superClass)) {
+  if (isNamespaceExport("React", REACT_CLASS, superClass)) {
     return true;
   }
   // The usual
-  if (pathReferencesImport(superClass, 'react', REACT_CLASS, false, true)) {
+  if (pathReferencesImport(superClass, "react", REACT_CLASS, false, true)) {
     return true;
   }
   return false;
@@ -119,13 +109,13 @@ function isStyledComponent(
 ): boolean {
   function isStyledImport(path: NodePath<t.Node>): boolean {
     return (
-      (path.isIdentifier() && path.node.name === 'styled') ||
+      (path.isIdentifier() && path.node.name === "styled") ||
       pathReferencesImport(path, moduleName, importName, false, false)
     );
   }
   const callExpr = unwrapPath(path, t.isCallExpression);
   if (callExpr) {
-    const callee = callExpr.get('callee');
+    const callee = callExpr.get("callee");
     // styled('h1', () => {...});
     if (isStyledImport(callee)) {
       return true;
@@ -133,7 +123,7 @@ function isStyledComponent(
     // styled.h1(() => {...})
     const memberExpr = unwrapPath(callee, t.isMemberExpression);
     if (memberExpr) {
-      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+      const object = unwrapPath(memberExpr.get("object"), t.isIdentifier);
       if (object && isStyledImport(object)) {
         return true;
       }
@@ -144,11 +134,11 @@ function isStyledComponent(
 
   const taggedExpr = unwrapPath(path, t.isTaggedTemplateExpression);
   if (taggedExpr) {
-    const tag = taggedExpr.get('tag');
+    const tag = taggedExpr.get("tag");
 
     const memberExpr = unwrapPath(tag, t.isMemberExpression);
     if (memberExpr) {
-      const object = unwrapPath(memberExpr.get('object'), t.isIdentifier);
+      const object = unwrapPath(memberExpr.get("object"), t.isIdentifier);
       // styled.h1`...`;
       if (object && isStyledImport(object)) {
         return true;
@@ -160,7 +150,7 @@ function isStyledComponent(
     // styled(Link)`...`
     const callExpr = unwrapPath(tag, t.isCallExpression);
     if (callExpr) {
-      const callee = callExpr.get('callee');
+      const callee = callExpr.get("callee");
       if (isStyledImport(callee)) {
         return true;
       }
@@ -172,16 +162,13 @@ function isStyledComponent(
 }
 
 const REACT_FACTORY = [
-  'forwardRef',
-  'memo',
-  'createClass',
+  "forwardRef",
+  "memo",
+  "createClass",
   // 'lazy',
 ];
 
-function isReactComponent(
-  expr: NodePath<t.Expression>,
-  flags: Options['flags'],
-): boolean {
+function isReactComponent(expr: NodePath<t.Expression>, flags: Options["flags"]): boolean {
   // Check for class components
   const classExpr = unwrapPath(expr, t.isClassExpression);
   if (classExpr && isReactClassComponent(classExpr)) {
@@ -195,22 +182,21 @@ function isReactComponent(
   // Time for call exprs
   const callExpr = unwrapPath(expr, t.isCallExpression);
   if (callExpr) {
-    const callee = callExpr.get('callee');
+    const callee = callExpr.get("callee");
     // React
     const factory = [...REACT_FACTORY];
     if (!flags?.noCreateContext) {
-      factory.push('createContext');
+      factory.push("createContext");
     }
     if (
-      (callee.isExpression() &&
-        isNamespaceExport('React', REACT_FACTORY, callee)) ||
-      pathReferencesImport(callee, 'react', REACT_FACTORY, false, true)
+      (callee.isExpression() && isNamespaceExport("React", REACT_FACTORY, callee)) ||
+      pathReferencesImport(callee, "react", REACT_FACTORY, false, true)
     ) {
       return true;
     }
     const identifier = unwrapPath(callee, t.isIdentifier);
     if (identifier) {
-      if (identifier.node.name === 'createReactClass') {
+      if (identifier.node.name === "createReactClass") {
         return true;
       }
       // Assume HOCs
@@ -221,17 +207,17 @@ function isReactComponent(
   }
 
   if (flags?.noStyledComponents) return false;
-  if (isStyledComponent('@emotion/styled', ['default'], expr)) {
+  if (isStyledComponent("@emotion/styled", ["default"], expr)) {
     return true;
   }
-  if (isStyledComponent('styled-components', ['default'], expr)) {
+  if (isStyledComponent("styled-components", ["default"], expr)) {
     return true;
   }
   return false;
 }
 
 export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
-  name: 'react-scan/component-name',
+  name: "react-scan/component-name",
   visitor: {
     Program(path) {
       const assignedNames = getAssignedDisplayNames(path);
@@ -276,7 +262,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
             return;
           }
           const identifier = path.node.id;
-          const init = path.get('init');
+          const init = path.get("init");
           if (!(init.isExpression() && t.isIdentifier(identifier))) {
             return;
           }
@@ -287,11 +273,7 @@ export const reactScanComponentNamePlugin = (options?: Options): PluginObj => ({
             const name = identifier.name;
 
             if (!assignedNames.has(name)) {
-              assignDisplayName(
-                path.parentPath,
-                name,
-                options?.flags?.noTryCatchDisplayNames,
-              );
+              assignDisplayName(path.parentPath, name, options?.flags?.noTryCatchDisplayNames);
             }
           }
         },

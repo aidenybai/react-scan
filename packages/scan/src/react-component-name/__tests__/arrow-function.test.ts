@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { transform } from './utils';
+import { describe, it, expect } from "vitest";
+import { transform } from "./utils";
 
-describe('arrow function components', () => {
-  it('handles inline JSX return', async () => {
+describe("arrow function components", () => {
+  it("handles inline JSX return", async () => {
     const input = `
       export const Button = () => <button>Click</button>
     `;
@@ -11,7 +11,7 @@ describe('arrow function components', () => {
     expect(result).toContain("Button.displayName = 'Button'");
   });
 
-  it('handles block with JSX return', async () => {
+  it("handles block with JSX return", async () => {
     const input = `
       const Modal = () => {
         return <div>Modal content</div>
@@ -21,7 +21,7 @@ describe('arrow function components', () => {
     expect(result).toContain("Modal.displayName = 'Modal'");
   });
 
-  it('handles conditional returns', async () => {
+  it("handles conditional returns", async () => {
     const input = `
       const ConditionalComponent = ({ show }) => {
         if (show) {
@@ -31,12 +31,10 @@ describe('arrow function components', () => {
       }
     `;
     const result = await transform(input);
-    expect(result).toContain(
-      "ConditionalComponent.displayName = 'ConditionalComponent'",
-    );
+    expect(result).toContain("ConditionalComponent.displayName = 'ConditionalComponent'");
   });
 
-  it('handles early returns', async () => {
+  it("handles early returns", async () => {
     const input = `
       const EarlyReturn = ({ loading, error, data }) => {
         if (loading) return <div>Loading...</div>

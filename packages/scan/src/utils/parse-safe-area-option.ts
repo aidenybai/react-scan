@@ -1,14 +1,20 @@
-import type { Options } from '~core/index';
-import { isFiniteNonNegative } from '~web/utils/is-finite-non-negative';
-import { isPlainObject } from '~web/utils/is-plain-object';
+import { isFiniteNonNegative } from "./is-finite-non-negative";
+import { isPlainObject } from "./is-plain-object";
 
-type SafeAreaOption = NonNullable<Options['safeArea']>;
+export interface SafeAreaInsets {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+}
+
+export type SafeAreaOption = number | SafeAreaInsets;
 
 export type ParsedSafeAreaOption =
   | { ok: true; value: SafeAreaOption }
   | { ok: false; error: string };
 
-const SAFE_AREA_EDGES = ['top', 'right', 'bottom', 'left'] as const;
+const SAFE_AREA_EDGES = ["top", "right", "bottom", "left"] as const;
 
 export const parseSafeAreaOption = (value: unknown): ParsedSafeAreaOption => {
   if (isFiniteNonNegative(value)) {
@@ -22,7 +28,7 @@ export const parseSafeAreaOption = (value: unknown): ParsedSafeAreaOption => {
     };
   }
 
-  const inset: Partial<Record<(typeof SAFE_AREA_EDGES)[number], number>> = {};
+  const inset: SafeAreaInsets = {};
   for (const edge of SAFE_AREA_EDGES) {
     const edgeValue = value[edge];
     if (edgeValue === undefined) continue;
@@ -34,5 +40,6 @@ export const parseSafeAreaOption = (value: unknown): ParsedSafeAreaOption => {
     }
     inset[edge] = edgeValue;
   }
+
   return { ok: true, value: inset };
 };

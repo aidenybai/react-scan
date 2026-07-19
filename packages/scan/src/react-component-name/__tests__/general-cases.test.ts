@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { transform } from './utils';
+import { describe, expect, it } from "vitest";
+import { transform } from "./utils";
 
-describe('edge cases', () => {
-  it('handles nested component declarations', async () => {
+describe("edge cases", () => {
+  it("handles nested component declarations", async () => {
     const input = `
       const Parent = () => {
         const NestedChild = () => <div>Child</div>
@@ -18,7 +18,7 @@ describe('edge cases', () => {
     expect(result).toContain("NestedChild.displayName = 'NestedChild'");
   });
 
-  it('handles components with complex expressions', async () => {
+  it("handles components with complex expressions", async () => {
     const input = `
       const DynamicComponent = () => {
         const content = useMemo(() => (
@@ -39,12 +39,10 @@ describe('edge cases', () => {
       }
     `;
     const result = await transform(input);
-    expect(result).toContain(
-      "DynamicComponent.displayName = 'DynamicComponent'",
-    );
+    expect(result).toContain("DynamicComponent.displayName = 'DynamicComponent'");
   });
 
-  it('handles components with multiple returns in switch/case', async () => {
+  it("handles components with multiple returns in switch/case", async () => {
     const input = `
       const StatusComponent = ({ status }) => {
         switch (status) {
@@ -63,7 +61,7 @@ describe('edge cases', () => {
     expect(result).toContain("StatusComponent.displayName = 'StatusComponent'");
   });
 
-  it('handles components with try/catch blocks', async () => {
+  it("handles components with try/catch blocks", async () => {
     const input = `
       const SafeComponent = () => {
         try {
@@ -78,7 +76,7 @@ describe('edge cases', () => {
     expect(result).toContain("SafeComponent.displayName = 'SafeComponent'");
   });
 
-  it('handles components returning primitive values', async () => {
+  it("handles components returning primitive values", async () => {
     const input = `
       // Null component
       const EmptyComponent = () => null;
@@ -146,21 +144,15 @@ describe('edge cases', () => {
     //   "BooleanComponent.displayName = 'BooleanComponent'",
     // );
     expect(result).toContain("ListComponent.displayName = 'ListComponent'");
-    expect(result).toContain(
-      "ConditionalComponent.displayName = 'ConditionalComponent'",
-    );
-    expect(result).toContain(
-      "DynamicComponent.displayName = 'DynamicComponent'",
-    );
+    expect(result).toContain("ConditionalComponent.displayName = 'ConditionalComponent'");
+    expect(result).toContain("DynamicComponent.displayName = 'DynamicComponent'");
     expect(result).toContain("AsyncComponent.displayName = 'AsyncComponent'");
     expect(result).toContain("PortalComponent.displayName = 'PortalComponent'");
-    expect(result).toContain(
-      "FragmentComponent.displayName = 'FragmentComponent'",
-    );
+    expect(result).toContain("FragmentComponent.displayName = 'FragmentComponent'");
     expect(result).toContain("NestedComponent.displayName = 'NestedComponent'");
   });
 
-  it('handles components with complex conditional returns', async () => {
+  it("handles components with complex conditional returns", async () => {
     const input = `
       const ComplexComponent = ({ type, data }) => {
         switch (type) {
@@ -217,29 +209,17 @@ describe('edge cases', () => {
       };
     `;
     const result = await transform(input);
-    expect(result).toContain(
-      "ComplexComponent.displayName = 'ComplexComponent'",
-    );
-    expect(result).toContain(
-      "TernaryComponent.displayName = 'TernaryComponent'",
-    );
-    expect(result).toContain(
-      "ShortCircuitComponent.displayName = 'ShortCircuitComponent'",
-    );
-    expect(result).toContain(
-      "NullishComponent.displayName = 'NullishComponent'",
-    );
-    expect(result).toContain(
-      "ChainedComponent.displayName = 'ChainedComponent'",
-    );
+    expect(result).toContain("ComplexComponent.displayName = 'ComplexComponent'");
+    expect(result).toContain("TernaryComponent.displayName = 'TernaryComponent'");
+    expect(result).toContain("ShortCircuitComponent.displayName = 'ShortCircuitComponent'");
+    expect(result).toContain("NullishComponent.displayName = 'NullishComponent'");
+    expect(result).toContain("ChainedComponent.displayName = 'ChainedComponent'");
     expect(result).toContain("DataComponent.displayName = 'DataComponent'");
     expect(result).toContain("SuspenseImage.displayName = 'SuspenseImage'");
-    expect(result).toContain(
-      "ProfileComponent.displayName = 'ProfileComponent'",
-    );
+    expect(result).toContain("ProfileComponent.displayName = 'ProfileComponent'");
   });
 
-  it('handles components with complex state and hooks', async () => {
+  it("handles components with complex state and hooks", async () => {
     const input = `
       export const ValueUpdate = ({
         valueUpdate,
@@ -367,7 +347,7 @@ describe('edge cases', () => {
     expect(result).toContain("DataGrid.displayName = 'DataGrid'");
   });
 
-  it('handles all forwardRef patterns', async () => {
+  it("handles all forwardRef patterns", async () => {
     const input = `
       import React from 'react';
 
@@ -434,7 +414,7 @@ describe('edge cases', () => {
     expect(result).toContain("EnhancedInput.displayName = 'EnhancedInput'");
   });
 
-  it('handles all memo patterns', async () => {
+  it("handles all memo patterns", async () => {
     const input = `
       import React from 'react';
       // Basic memo
@@ -512,7 +492,7 @@ describe('edge cases', () => {
     expect(result).toContain("MemoInput.displayName = 'MemoInput'");
   });
 
-  it('handles components with various function calls returning JSX', async () => {
+  it("handles components with various function calls returning JSX", async () => {
     const input = `
       const ArrayMethodsComponent = ({ items }) => {
         // Filter then map
@@ -632,23 +612,17 @@ describe('edge cases', () => {
     `;
 
     const result = await transform(input);
-    expect(result).toContain(
-      "ArrayMethodsComponent.displayName = 'ArrayMethodsComponent'",
-    );
-    expect(result).toContain(
-      "CustomFunctionsComponent.displayName = 'CustomFunctionsComponent'",
-    );
+    expect(result).toContain("ArrayMethodsComponent.displayName = 'ArrayMethodsComponent'");
+    expect(result).toContain("CustomFunctionsComponent.displayName = 'CustomFunctionsComponent'");
     expect(result).toContain("AsyncComponent.displayName = 'AsyncComponent'");
-    expect(result).toContain(
-      "ChainedComponent.displayName = 'ChainedComponent'",
-    );
+    expect(result).toContain("ChainedComponent.displayName = 'ChainedComponent'");
     expect(result).toContain("BaseComponent.displayName = 'BaseComponent'");
     // expect(result).toContain(
     //   "EnhancedComponent.displayName = 'EnhancedComponent'",
     // );
   });
 
-  it('handles shadcn-style component patterns', async () => {
+  it("handles shadcn-style component patterns", async () => {
     const input = `
       import React from 'react';
       // Basic shadcn component pattern
@@ -745,16 +719,14 @@ describe('edge cases', () => {
 
     const result = await transform(input);
     expect(result).toContain("Button.displayName = 'Button'");
-    expect(result).toContain(
-      "ButtonWithVariants.displayName = 'ButtonWithVariants'",
-    );
+    expect(result).toContain("ButtonWithVariants.displayName = 'ButtonWithVariants'");
     expect(result).toContain("Card.displayName = 'Card'");
     expect(result).toContain("CardHeader.displayName = 'CardHeader'");
     expect(result).toContain("Dialog.displayName = 'Dialog'");
     expect(result).toContain("DialogTrigger.displayName = 'DialogTrigger'");
   });
 
-  it('handles legacy and unconventional component patterns', async () => {
+  it("handles legacy and unconventional component patterns", async () => {
     const input = `
 
 
@@ -852,22 +824,14 @@ describe('edge cases', () => {
     `;
 
     const result = await transform(input);
-    expect(result).toContain(
-      "CreateClassComponent.displayName = 'CreateClassComponent'",
-    );
+    expect(result).toContain("CreateClassComponent.displayName = 'CreateClassComponent'");
     expect(result).toContain("WithMixins.displayName = 'WithMixins'");
     // expect(result).toContain(
     //   "FactoryComponent.displayName = 'FactoryComponent'",
     // );
-    expect(result).toContain(
-      "DecoratedComponent.displayName = 'DecoratedComponent'",
-    );
-    expect(result).toContain(
-      "RenderPropComponent.displayName = 'RenderPropComponent'",
-    );
-    expect(result).toContain(
-      "OldContextComponent.displayName = 'OldContextComponent'",
-    );
+    expect(result).toContain("DecoratedComponent.displayName = 'DecoratedComponent'");
+    expect(result).toContain("RenderPropComponent.displayName = 'RenderPropComponent'");
+    expect(result).toContain("OldContextComponent.displayName = 'OldContextComponent'");
     // expect(result).toContain("PartialButton.displayName = 'PartialButton'");
     expect(result).toContain("PluginComponent.displayName = 'PluginComponent'");
     // expect(result).toContain(

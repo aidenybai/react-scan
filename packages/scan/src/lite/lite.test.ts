@@ -1,22 +1,22 @@
-import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { instrument } from './index';
-import type { LiteEvent } from './types';
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { instrument } from "./index";
+import type { LiteEvent } from "./types";
 
 // HACK: vitest runs from the package root; relying on process.cwd() avoids
 // import.meta (which requires module: esnext in tsconfig).
 const SCAN_PACKAGE_DIR = process.cwd();
 
-const CJS_DIST = path.join(SCAN_PACKAGE_DIR, 'dist', 'lite', 'index.js');
-const ESM_DIST = path.join(SCAN_PACKAGE_DIR, 'dist', 'lite', 'index.mjs');
+const CJS_DIST = path.join(SCAN_PACKAGE_DIR, "dist", "lite", "index.js");
+const ESM_DIST = path.join(SCAN_PACKAGE_DIR, "dist", "lite", "index.mjs");
 
 const runInNode = (code: string): string =>
-  execFileSync('node', ['-e', code], {
+  execFileSync("node", ["-e", code], {
     cwd: SCAN_PACKAGE_DIR,
-    encoding: 'utf-8',
+    encoding: "utf-8",
     timeout: 10_000,
   }).trim();
 
@@ -36,7 +36,7 @@ const stashGlobal = (key: string): { restore: () => void } => {
 };
 
 const withDeletedWindow = <T>(fn: () => T): T => {
-  const stash = stashGlobal('window');
+  const stash = stashGlobal("window");
   delete (globalThis as { window?: unknown }).window;
   try {
     return fn();
@@ -45,20 +45,20 @@ const withDeletedWindow = <T>(fn: () => T): T => {
   }
 };
 
-describe('react-scan/lite SSR safety (in-process)', () => {
-  it('returns a noop handle when window is undefined', () => {
+describe("react-scan/lite SSR safety (in-process)", () => {
+  it("returns a noop handle when window is undefined", () => {
     withDeletedWindow(() => {
       const handle = instrument({
-        endpoint: 'http://example.test/ingest',
-        sessionId: 'abc',
+        endpoint: "http://example.test/ingest",
+        sessionId: "abc",
       });
       expect(handle.isActive()).toBe(false);
-      expect(typeof handle.stop).toBe('function');
-      expect(typeof handle.subscribe).toBe('function');
+      expect(typeof handle.stop).toBe("function");
+      expect(typeof handle.subscribe).toBe("function");
     });
   });
 
-  it('all noop handle methods are callable without throwing', () => {
+  it("all noop handle methods are callable without throwing", () => {
     withDeletedWindow(() => {
       const handle = instrument({ onEvent: () => {} });
       const unsubscribe = handle.subscribe(() => {});
@@ -69,10 +69,10 @@ describe('react-scan/lite SSR safety (in-process)', () => {
     });
   });
 
-  it('multiple instrument() calls in SSR all return noop handles', () => {
+  it("multiple instrument() calls in SSR all return noop handles", () => {
     withDeletedWindow(() => {
       const a = instrument();
-      const b = instrument({ endpoint: 'http://example.test', sessionId: 'x' });
+      const b = instrument({ endpoint: "http://example.test", sessionId: "x" });
       const c = instrument();
       expect(a.isActive()).toBe(false);
       expect(b.isActive()).toBe(false);
@@ -80,8 +80,8 @@ describe('react-scan/lite SSR safety (in-process)', () => {
     });
   });
 
-  it('does not touch document, fetch, navigator, or XMLHttpRequest', () => {
-    const guards = ['document', 'fetch', 'navigator', 'XMLHttpRequest'] as const;
+  it("does not touch document, fetch, navigator, or XMLHttpRequest", () => {
+    const guards = ["document", "fetch", "navigator", "XMLHttpRequest"] as const;
     const stashes = guards.map((name) => stashGlobal(name));
     for (const name of guards) {
       Object.defineProperty(globalThis, name, {
@@ -94,8 +94,8 @@ describe('react-scan/lite SSR safety (in-process)', () => {
     try {
       withDeletedWindow(() => {
         const handle = instrument({
-          endpoint: 'http://example.test',
-          sessionId: 'abc',
+          endpoint: "http://example.test",
+          sessionId: "abc",
           onEvent: () => {},
         });
         handle.subscribe(() => {})();
@@ -108,7 +108,7 @@ describe('react-scan/lite SSR safety (in-process)', () => {
   });
 });
 
-describe('react-scan/lite happy path (with stubbed window + hook)', () => {
+describe("react-scan/lite happy path (with stubbed window + hook)", () => {
   let stashedWindow: { restore: () => void };
   let stashedHook: { restore: () => void };
   let stashedReactScanLite: { restore: () => void };
@@ -126,9 +126,9 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
   const noopFn = (): void => {};
 
   beforeEach(() => {
-    stashedWindow = stashGlobal('window');
-    stashedHook = stashGlobal('__REACT_DEVTOOLS_GLOBAL_HOOK__');
-    stashedReactScanLite = stashGlobal('__REACT_SCAN_LITE__');
+    stashedWindow = stashGlobal("window");
+    stashedHook = stashGlobal("__REACT_DEVTOOLS_GLOBAL_HOOK__");
+    stashedReactScanLite = stashGlobal("__REACT_SCAN_LITE__");
     (globalThis as { window?: unknown }).window = globalThis;
     fakeHook = {
       renderers: new Map(),
@@ -177,7 +177,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     return { current: parent };
   };
 
-  it('emits a commit event with a populated tree on hook.onCommitFiberRoot', () => {
+  it("emits a commit event with a populated tree on hook.onCommitFiberRoot", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({ onEvent: (event) => events.push(event) });
     expect(handle.isActive()).toBe(true);
@@ -185,25 +185,25 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
 
-    const commitEvent = events.find((event) => event.kind === 'commit');
+    const commitEvent = events.find((event) => event.kind === "commit");
     expect(commitEvent).toBeDefined();
     expect(commitEvent?.rendererId).toBe(1);
     expect(commitEvent?.tree?.length).toBe(2);
-    expect(commitEvent?.tree?.[0]?.name).toBe('ParentComponent');
-    expect(commitEvent?.tree?.[1]?.name).toBe('LeafComponent');
+    expect(commitEvent?.tree?.[0]?.name).toBe("ParentComponent");
+    expect(commitEvent?.tree?.[1]?.name).toBe("LeafComponent");
     expect(commitEvent?.tree?.[1]?.depth).toBe(1);
 
     handle.stop();
   });
 
-  it('subscribe() listener receives commit events; unsubscribe stops them', () => {
+  it("subscribe() listener receives commit events; unsubscribe stops them", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument();
     const unsubscribe = handle.subscribe((event) => events.push(event));
 
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
-    expect(events.some((event) => event.kind === 'commit')).toBe(true);
+    expect(events.some((event) => event.kind === "commit")).toBe(true);
 
     unsubscribe();
     events.length = 0;
@@ -213,7 +213,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('stop() restores hook handlers and prevents further events', () => {
+  it("stop() restores hook handlers and prevents further events", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({ onEvent: (event) => events.push(event) });
     const ourCommit = fakeHook.onCommitFiberRoot;
@@ -226,10 +226,10 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
 
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
-    expect(events.filter((event) => event.kind === 'commit')).toEqual([]);
+    expect(events.filter((event) => event.kind === "commit")).toEqual([]);
   });
 
-  it('stop()/instrument() cycles do not leak chain layers', () => {
+  it("stop()/instrument() cycles do not leak chain layers", () => {
     const settler = instrument();
     settler.stop();
     const baselineCommit = fakeHook.onCommitFiberRoot;
@@ -244,21 +244,21 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }
   });
 
-  it('stop() is idempotent', () => {
+  it("stop() is idempotent", () => {
     const handle = instrument();
     handle.stop();
     expect(() => handle.stop()).not.toThrow();
     expect(handle.isActive()).toBe(false);
   });
 
-  it('returns the existing handle if instrument() is called twice without stop()', () => {
+  it("returns the existing handle if instrument() is called twice without stop()", () => {
     const first = instrument();
     const second = instrument();
     expect(second).toBe(first);
     first.stop();
   });
 
-  it('respects maxFibersPerCommit cap', () => {
+  it("respects maxFibersPerCommit cap", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -268,13 +268,13 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
 
-    const commitEvent = events.find((event) => event.kind === 'commit');
+    const commitEvent = events.find((event) => event.kind === "commit");
     expect(commitEvent?.tree?.length).toBe(1);
 
     handle.stop();
   });
 
-  it('respects minFiberActualDurationMs threshold', () => {
+  it("respects minFiberActualDurationMs threshold", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -284,26 +284,22 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
 
-    const commitEvent = events.find((event) => event.kind === 'commit');
+    const commitEvent = events.find((event) => event.kind === "commit");
     expect(commitEvent?.tree?.length).toBe(1);
-    expect(commitEvent?.tree?.[0]?.name).toBe('ParentComponent');
+    expect(commitEvent?.tree?.[0]?.name).toBe("ParentComponent");
 
     handle.stop();
   });
 
-  it('warns when endpoint is provided without sessionId', () => {
+  it("warns when endpoint is provided without sessionId", () => {
     const warnings: Array<unknown> = [];
     // oxlint-disable-next-line no-console
     const originalWarn = console.warn;
     // oxlint-disable-next-line no-console
     console.warn = (...args: Array<unknown>) => warnings.push(args);
     try {
-      const handle = instrument({ endpoint: 'http://example.test' });
-      expect(
-        warnings.some((entry) =>
-          String(entry).includes('endpoint'),
-        ),
-      ).toBe(true);
+      const handle = instrument({ endpoint: "http://example.test" });
+      expect(warnings.some((entry) => String(entry).includes("endpoint"))).toBe(true);
       handle.stop();
     } finally {
       // oxlint-disable-next-line no-console
@@ -311,26 +307,26 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }
   });
 
-  it('emits profiling-hooks-status with available=false when renderer has no injectProfilingHooks', () => {
+  it("emits profiling-hooks-status with available=false when renderer has no injectProfilingHooks", () => {
     const events: Array<LiteEvent> = [];
-    fakeHook.renderers.set(1, { version: '18.3.0', bundleType: 1 });
+    fakeHook.renderers.set(1, { version: "18.3.0", bundleType: 1 });
     const handle = instrument({ onEvent: (event) => events.push(event) });
 
-    const status = events.find((event) => event.kind === 'profiling-hooks-status');
+    const status = events.find((event) => event.kind === "profiling-hooks-status");
     expect(status).toBeDefined();
     expect(status?.available).toBe(false);
-    expect(status?.reason).toBe('no-inject-method');
-    expect(status?.reactVersion).toBe('18.3.0');
+    expect(status?.reason).toBe("no-inject-method");
+    expect(status?.reactVersion).toBe("18.3.0");
     expect(status?.bundleType).toBe(1);
 
     handle.stop();
   });
 
-  it('emits profiling-hooks-status with available=true when injectProfilingHooks succeeds', () => {
+  it("emits profiling-hooks-status with available=true when injectProfilingHooks succeeds", () => {
     const events: Array<LiteEvent> = [];
     let capturedHooks: unknown = null;
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       injectProfilingHooks: (hooks: unknown) => {
         capturedHooks = hooks;
@@ -338,7 +334,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     });
     const handle = instrument({ onEvent: (event) => events.push(event) });
 
-    const status = events.find((event) => event.kind === 'profiling-hooks-status');
+    const status = events.find((event) => event.kind === "profiling-hooks-status");
     expect(status?.available).toBe(true);
     expect(status?.reason).toBeUndefined();
     expect(capturedHooks).toBeTruthy();
@@ -346,37 +342,37 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('emits profiling-hooks-status with reason=threw when injectProfilingHooks throws', () => {
+  it("emits profiling-hooks-status with reason=threw when injectProfilingHooks throws", () => {
     const events: Array<LiteEvent> = [];
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       injectProfilingHooks: () => {
-        throw new Error('boom');
+        throw new Error("boom");
       },
     });
     const handle = instrument({ onEvent: (event) => events.push(event) });
 
-    const status = events.find((event) => event.kind === 'profiling-hooks-status');
+    const status = events.find((event) => event.kind === "profiling-hooks-status");
     expect(status?.available).toBe(false);
-    expect(status?.reason).toBe('threw');
+    expect(status?.reason).toBe("threw");
 
     handle.stop();
   });
 
-  it('translates lanes bitmask via getLaneLabelMap', () => {
+  it("translates lanes bitmask via getLaneLabelMap", () => {
     const events: Array<LiteEvent> = [];
     interface CapturedHooks {
       markCommitStarted: (lanes: number) => void;
     }
     const captured: { hooks: CapturedHooks | null } = { hooks: null };
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       getLaneLabelMap: () =>
         new Map<number, string>([
-          [1, 'SyncLane'],
-          [16, 'DefaultLane'],
+          [1, "SyncLane"],
+          [16, "DefaultLane"],
         ]),
       injectProfilingHooks: (hooks: CapturedHooks) => {
         captured.hooks = hooks;
@@ -385,18 +381,18 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const handle = instrument({ onEvent: (event) => events.push(event) });
     captured.hooks?.markCommitStarted(0b10001);
 
-    const commitStart = events.find((event) => event.kind === 'commit-start');
-    expect(commitStart?.laneLabels).toEqual(['SyncLane', 'DefaultLane']);
+    const commitStart = events.find((event) => event.kind === "commit-start");
+    expect(commitStart?.laneLabels).toEqual(["SyncLane", "DefaultLane"]);
 
     handle.stop();
   });
 
-  it('translates priorityLevel to priorityName on commit events', () => {
+  it("translates priorityLevel to priorityName on commit events", () => {
     const events: Array<LiteEvent> = [];
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
-      getLaneLabelMap: () => new Map<number, string>([[1, 'SyncLane']]),
+      getLaneLabelMap: () => new Map<number, string>([[1, "SyncLane"]]),
       injectProfilingHooks: () => {},
     });
     const handle = instrument({ onEvent: (event) => events.push(event) });
@@ -404,14 +400,14 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 2);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     expect(commit?.priorityLevel).toBe(2);
-    expect(commit?.priorityName).toBe('UserBlocking');
+    expect(commit?.priorityName).toBe("UserBlocking");
 
     handle.stop();
   });
 
-  it('attaches fiberId when includeFiberIdentity is true', () => {
+  it("attaches fiberId when includeFiberIdentity is true", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -428,15 +424,15 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
 
-    const commits = events.filter((event) => event.kind === 'commit');
-    expect(commits[1]?.tree?.[0]?.fiberId).toBeTypeOf('number');
+    const commits = events.filter((event) => event.kind === "commit");
+    expect(commits[1]?.tree?.[0]?.fiberId).toBeTypeOf("number");
     expect(commits[1]?.tree?.[0]?.fiberId).toBe(commits[2]?.tree?.[0]?.fiberId);
     expect(commits[1]?.tree?.[1]?.fiberId).toBe(commits[2]?.tree?.[1]?.fiberId);
 
     handle.stop();
   });
 
-  it('attaches changeDescription when recordChangeDescriptions is true', () => {
+  it("attaches changeDescription when recordChangeDescriptions is true", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -446,7 +442,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     const summary = commit?.tree?.[0];
     expect(summary?.changeDescription).toBeDefined();
     expect(summary?.changeDescription?.isFirstMount).toBe(true);
@@ -454,7 +450,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('changeDescription.parent reflects whether a composite ancestor rendered', () => {
+  it("changeDescription.parent reflects whether a composite ancestor rendered", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -525,9 +521,9 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
 
     fakeHook.onCommitFiberRoot?.(1, buildUpdatedTree(), 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
-    const parentSummary = commit?.tree?.find((entry) => entry.name === 'ParentComponent');
-    const leafSummary = commit?.tree?.find((entry) => entry.name === 'LeafComponent');
+    const commit = events.find((event) => event.kind === "commit");
+    const parentSummary = commit?.tree?.find((entry) => entry.name === "ParentComponent");
+    const leafSummary = commit?.tree?.find((entry) => entry.name === "LeafComponent");
 
     expect(parentSummary?.changeDescription?.parent).toBe(false);
     expect(leafSummary?.changeDescription?.parent).toBe(true);
@@ -535,7 +531,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('attaches source and ownerName when includeFiberSource is true', () => {
+  it("attaches source and ownerName when includeFiberSource is true", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -557,7 +553,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
         treeBaseDuration: 5,
         _debugOwner: ownerFiber,
         _debugSource: {
-          fileName: 'src/foo.tsx',
+          fileName: "src/foo.tsx",
           lineNumber: 42,
           columnNumber: 3,
         },
@@ -565,19 +561,19 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     };
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     const summary = commit?.tree?.[0];
     expect(summary?.source).toEqual({
-      fileName: 'src/foo.tsx',
+      fileName: "src/foo.tsx",
       lineNumber: 42,
       columnNumber: 3,
     });
-    expect(summary?.ownerName).toBe('OwnerComponent');
+    expect(summary?.ownerName).toBe("OwnerComponent");
 
     handle.stop();
   });
 
-  it('source/ownerName are null when includeFiberSource is true but the fiber has no debug info', () => {
+  it("source/ownerName are null when includeFiberSource is true but the fiber has no debug info", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({
       onEvent: (event) => events.push(event),
@@ -586,7 +582,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
 
     fakeHook.onCommitFiberRoot?.(1, buildFakeFiberTree(), 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     const summary = commit?.tree?.[0];
     expect(summary?.source).toBeNull();
     expect(summary?.ownerName).toBeNull();
@@ -594,10 +590,10 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('priorityName resolves even when no renderer exposes getLaneLabelMap', () => {
+  it("priorityName resolves even when no renderer exposes getLaneLabelMap", () => {
     const events: Array<LiteEvent> = [];
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       // no getLaneLabelMap, no injectProfilingHooks
     });
@@ -606,9 +602,9 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     const fakeRoot = buildFakeFiberTree();
     fakeHook.onCommitFiberRoot?.(1, fakeRoot, 3);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     expect(commit?.priorityLevel).toBe(3);
-    expect(commit?.priorityName).toBe('Normal');
+    expect(commit?.priorityName).toBe("Normal");
     expect(commit?.laneLabels).toBeUndefined();
 
     handle.stop();
@@ -617,10 +613,10 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
   it('emits "opted-out" reason when includeProfilingHooks is false', () => {
     const events: Array<LiteEvent> = [];
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       injectProfilingHooks: () => {
-        throw new Error('should not be called when opted out');
+        throw new Error("should not be called when opted out");
       },
     });
     const handle = instrument({
@@ -628,20 +624,20 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
       includeProfilingHooks: false,
     });
 
-    const status = events.find((event) => event.kind === 'profiling-hooks-status');
+    const status = events.find((event) => event.kind === "profiling-hooks-status");
     expect(status?.available).toBe(false);
-    expect(status?.reason).toBe('opted-out');
+    expect(status?.reason).toBe("opted-out");
 
     handle.stop();
   });
 
-  it('does not throw a TDZ error when a renderer is already injected', () => {
+  it("does not throw a TDZ error when a renderer is already injected", () => {
     // H2 regression: bippy may fire `onActive` synchronously inside
     // `getRDTHook(...)` if a renderer was already injected. Our previous
     // code referenced the not-yet-bound `hook` const inside that callback.
     // The fix is to acquire the hook first, then attach explicitly.
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       injectProfilingHooks: () => {},
     });
@@ -652,7 +648,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }).not.toThrow();
   });
 
-  it('forwards onCommitFiberRoot to the previously installed handler', () => {
+  it("forwards onCommitFiberRoot to the previously installed handler", () => {
     // M5: prove the chain forwarding actually invokes the previous handler.
     const calls: Array<{ rendererId: number; didError: boolean | undefined }> = [];
     fakeHook.onCommitFiberRoot = (
@@ -672,7 +668,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('captures and emits didError on commit events', () => {
+  it("captures and emits didError on commit events", () => {
     // H1: bippy's onCommitFiberRoot type omits the 4th `didError` arg, but
     // React passes it. We widen locally and emit it.
     const events: Array<LiteEvent> = [];
@@ -686,44 +682,44 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     ) => void;
     widenedHandler(1, buildFakeFiberTree(), 2, true);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     expect(commit?.didError).toBe(true);
 
     handle.stop();
   });
 
-  it('omits didError on commit events when React did not pass it', () => {
+  it("omits didError on commit events when React did not pass it", () => {
     const events: Array<LiteEvent> = [];
     const handle = instrument({ onEvent: (event) => events.push(event) });
 
     fakeHook.onCommitFiberRoot?.(1, buildFakeFiberTree(), 2);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     expect(commit?.didError).toBeUndefined();
 
     handle.stop();
   });
 
-  it('emits the underlying error message when injectProfilingHooks throws', () => {
+  it("emits the underlying error message when injectProfilingHooks throws", () => {
     // M3: error message should propagate so debug agents can attribute the failure.
     const events: Array<LiteEvent> = [];
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       injectProfilingHooks: () => {
-        throw new Error('renderer rejected hooks');
+        throw new Error("renderer rejected hooks");
       },
     });
     const handle = instrument({ onEvent: (event) => events.push(event) });
 
-    const status = events.find((event) => event.kind === 'profiling-hooks-status');
-    expect(status?.reason).toBe('threw');
-    expect(status?.error).toBe('renderer rejected hooks');
+    const status = events.find((event) => event.kind === "profiling-hooks-status");
+    expect(status?.reason).toBe("threw");
+    expect(status?.error).toBe("renderer rejected hooks");
 
     handle.stop();
   });
 
-  it('warns when includeFiberTree is false but enrichment options are set', () => {
+  it("warns when includeFiberTree is false but enrichment options are set", () => {
     // H3: silent ignore is the worst failure mode.
     const warnings: Array<unknown> = [];
     // oxlint-disable-next-line no-console
@@ -735,9 +731,9 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
         includeFiberTree: false,
         recordChangeDescriptions: true,
       });
-      expect(
-        warnings.some((entry) => String(entry).includes('includeFiberTree: false')),
-      ).toBe(true);
+      expect(warnings.some((entry) => String(entry).includes("includeFiberTree: false"))).toBe(
+        true,
+      );
       handle.stop();
     } finally {
       // oxlint-disable-next-line no-console
@@ -745,7 +741,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }
   });
 
-  it('logs an error when endpoint is not a valid http(s) URL', () => {
+  it("logs an error when endpoint is not a valid http(s) URL", () => {
     // S2: validate URL once at instrument() time instead of letting fetch fail
     // silently per-event.
     const errors: Array<unknown> = [];
@@ -755,14 +751,10 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     console.error = (...args: Array<unknown>) => errors.push(args);
     try {
       const handle = instrument({
-        endpoint: 'javascript:alert(1)',
-        sessionId: 'abc',
+        endpoint: "javascript:alert(1)",
+        sessionId: "abc",
       });
-      expect(
-        errors.some((entry) =>
-          String(entry).includes('not a valid http(s) URL'),
-        ),
-      ).toBe(true);
+      expect(errors.some((entry) => String(entry).includes("not a valid http(s) URL"))).toBe(true);
       handle.stop();
     } finally {
       // oxlint-disable-next-line no-console
@@ -770,16 +762,14 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }
   });
 
-  it('invalid endpoint does NOT trigger fetch on every emitted event', () => {
+  it("invalid endpoint does NOT trigger fetch on every emitted event", () => {
     // Bugbot regression on PR #435: previously the URL validator only logged
     // a warning, but `canPostToEndpoint` still saw the bad endpoint and
     // fired `fetch()` per event. Now `instrument()` clears the endpoint when
     // invalid before forwarding to `createEmitter`.
     const fetchCalls: Array<unknown> = [];
     const originalFetch = (globalThis as { fetch?: unknown }).fetch;
-    (globalThis as { fetch: (url: unknown) => Promise<unknown> }).fetch = (
-      url,
-    ) => {
+    (globalThis as { fetch: (url: unknown) => Promise<unknown> }).fetch = (url) => {
       fetchCalls.push(url);
       return Promise.resolve({});
     };
@@ -789,8 +779,8 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     console.error = () => {};
     try {
       const handle = instrument({
-        endpoint: 'javascript:alert(1)',
-        sessionId: 'abc',
+        endpoint: "javascript:alert(1)",
+        sessionId: "abc",
       });
       fakeHook.onCommitFiberRoot?.(1, buildFakeFiberTree(), 0);
       expect(fetchCalls).toEqual([]);
@@ -806,15 +796,15 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     }
   });
 
-  it('emit fast-path skips translator + listener work when nothing is listening', () => {
+  it("emit fast-path skips translator + listener work when nothing is listening", () => {
     // L5: when no onEvent + no endpoint + no subscribe, emit short-circuits.
     let translatorCalls = 0;
     fakeHook.renderers.set(1, {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       getLaneLabelMap: () => {
         translatorCalls++;
-        return new Map<number, string>([[1, 'SyncLane']]);
+        return new Map<number, string>([[1, "SyncLane"]]);
       },
       injectProfilingHooks: () => {},
     });
@@ -830,7 +820,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('cascade detection rejects fibers whose actualDuration is 0', () => {
+  it("cascade detection rejects fibers whose actualDuration is 0", () => {
     // L6: a parent that didn't actually render must not be reported as cascading.
     const events: Array<LiteEvent> = [];
     const handle = instrument({
@@ -898,19 +888,19 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
 
     fakeHook.onCommitFiberRoot?.(1, { current: parent }, 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
-    const leafSummary = commit?.tree?.find((entry) => entry.name === 'LeafComponent');
+    const commit = events.find((event) => event.kind === "commit");
+    const leafSummary = commit?.tree?.find((entry) => entry.name === "LeafComponent");
     expect(leafSummary?.changeDescription?.parent).toBe(false);
 
     handle.stop();
   });
 
-  it('does not double-attach a renderer across stop()/instrument() cycles', () => {
+  it("does not double-attach a renderer across stop()/instrument() cycles", () => {
     // L7: WeakSet of attached renderers must survive across cycles for the
     // same renderer instance.
     const injects: Array<number> = [];
     const renderer = {
-      version: '18.3.0',
+      version: "18.3.0",
       bundleType: 1,
       injectProfilingHooks: () => {
         injects.push(1);
@@ -931,7 +921,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('detects context value changes via traverseContexts', () => {
+  it("detects context value changes via traverseContexts", () => {
     // M4: covers `didAnyContextChange`.
     const events: Array<LiteEvent> = [];
     const handle = instrument({
@@ -939,7 +929,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
       recordChangeDescriptions: true,
     });
 
-    const contextRef = { displayName: 'TestContext' };
+    const contextRef = { displayName: "TestContext" };
     const previousFiber = {
       tag: 0,
       type: function Consumer() {},
@@ -954,7 +944,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
       selfBaseDuration: 5,
       treeBaseDuration: 5,
       dependencies: {
-        firstContext: { context: contextRef, memoizedValue: 'before', next: null },
+        firstContext: { context: contextRef, memoizedValue: "before", next: null },
       },
     };
     const fiber = {
@@ -971,20 +961,20 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
       selfBaseDuration: 5,
       treeBaseDuration: 5,
       dependencies: {
-        firstContext: { context: contextRef, memoizedValue: 'after', next: null },
+        firstContext: { context: contextRef, memoizedValue: "after", next: null },
       },
     };
 
     fakeHook.onCommitFiberRoot?.(1, { current: fiber }, 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     const summary = commit?.tree?.[0];
     expect(summary?.changeDescription?.context).toBe(true);
 
     handle.stop();
   });
 
-  it('detects class state changes via shallow key compare', () => {
+  it("detects class state changes via shallow key compare", () => {
     // M4: covers `didAnyClassStateChange`. Tag 1 = ClassComponentTag.
     const events: Array<LiteEvent> = [];
     const handle = instrument({
@@ -1023,7 +1013,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
 
     fakeHook.onCommitFiberRoot?.(1, { current: fiber }, 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     const summary = commit?.tree?.[0];
     expect(summary?.changeDescription?.state).toBe(true);
     expect(summary?.changeDescription?.hooks).toEqual([]);
@@ -1031,7 +1021,7 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
     handle.stop();
   });
 
-  it('detects hook-state changes via traverseState', () => {
+  it("detects hook-state changes via traverseState", () => {
     // M4: covers `collectChangedHookIndices`. Function components only.
     const events: Array<LiteEvent> = [];
     const handle = instrument({
@@ -1039,9 +1029,9 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
       recordChangeDescriptions: true,
     });
 
-    const prevHook2 = { memoizedState: 'b', next: null };
+    const prevHook2 = { memoizedState: "b", next: null };
     const prevHook1 = { memoizedState: 1, next: prevHook2 };
-    const nextHook2 = { memoizedState: 'b', next: null };
+    const nextHook2 = { memoizedState: "b", next: null };
     const nextHook1 = { memoizedState: 2, next: nextHook2 };
 
     const previousFiber = {
@@ -1075,20 +1065,20 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
 
     fakeHook.onCommitFiberRoot?.(1, { current: fiber }, 0);
 
-    const commit = events.find((event) => event.kind === 'commit');
+    const commit = events.find((event) => event.kind === "commit");
     const summary = commit?.tree?.[0];
     expect(summary?.changeDescription?.hooks).toEqual([0]);
 
     handle.stop();
   });
 
-  it('handle.stop() called from inside an onEvent listener takes effect', () => {
+  it("handle.stop() called from inside an onEvent listener takes effect", () => {
     // M6: realistic self-disabling instrumentation pattern.
     let commitCount = 0;
     let handleRef: { stop: () => void } | null = null;
     handleRef = instrument({
       onEvent: (event) => {
-        if (event.kind === 'commit') {
+        if (event.kind === "commit") {
           commitCount++;
           handleRef?.stop();
         }
@@ -1104,45 +1094,39 @@ describe('react-scan/lite happy path (with stubbed window + hook)', () => {
   });
 });
 
-describe.skipIf(!existsSync(CJS_DIST))(
-  'react-scan/lite SSR safety (built CJS in node -e)',
-  () => {
-    it('importing the CJS build does not throw', () => {
-      expect(runInNode(`require('${CJS_DIST}'); console.log('OK')`)).toBe('OK');
-    });
+describe.skipIf(!existsSync(CJS_DIST))("react-scan/lite SSR safety (built CJS in node -e)", () => {
+  it("importing the CJS build does not throw", () => {
+    expect(runInNode(`require('${CJS_DIST}'); console.log('OK')`)).toBe("OK");
+  });
 
-    it('instrument() returns a noop handle in node -e', () => {
-      const code = [
-        `const { instrument } = require('${CJS_DIST}');`,
-        "const handle = instrument({ endpoint: 'http://example.test', sessionId: 'abc' });",
-        "console.log(handle.isActive() === false ? 'NOOP' : 'UNEXPECTED');",
-      ].join(' ');
-      expect(runInNode(code)).toBe('NOOP');
-    });
-  },
-);
+  it("instrument() returns a noop handle in node -e", () => {
+    const code = [
+      `const { instrument } = require('${CJS_DIST}');`,
+      "const handle = instrument({ endpoint: 'http://example.test', sessionId: 'abc' });",
+      "console.log(handle.isActive() === false ? 'NOOP' : 'UNEXPECTED');",
+    ].join(" ");
+    expect(runInNode(code)).toBe("NOOP");
+  });
+});
 
-describe.skipIf(!existsSync(ESM_DIST))(
-  'react-scan/lite SSR safety (built ESM in node -e)',
-  () => {
-    it('importing the ESM build does not throw', () => {
-      const url = pathToFileURL(ESM_DIST).href;
-      expect(
-        runInNode(
-          `import('${url}').then(() => console.log('OK')).catch(e => { console.error(e); process.exit(1); })`,
-        ),
-      ).toBe('OK');
-    });
+describe.skipIf(!existsSync(ESM_DIST))("react-scan/lite SSR safety (built ESM in node -e)", () => {
+  it("importing the ESM build does not throw", () => {
+    const url = pathToFileURL(ESM_DIST).href;
+    expect(
+      runInNode(
+        `import('${url}').then(() => console.log('OK')).catch(e => { console.error(e); process.exit(1); })`,
+      ),
+    ).toBe("OK");
+  });
 
-    it('instrument() returns a noop handle when imported as ESM', () => {
-      const url = pathToFileURL(ESM_DIST).href;
-      const code = [
-        `import('${url}').then(({ instrument }) => {`,
-        "  const handle = instrument({ endpoint: 'http://example.test', sessionId: 'abc' });",
-        "  console.log(handle.isActive() === false ? 'NOOP' : 'UNEXPECTED');",
-        '}).catch(e => { console.error(e); process.exit(1); });',
-      ].join(' ');
-      expect(runInNode(code)).toBe('NOOP');
-    });
-  },
-);
+  it("instrument() returns a noop handle when imported as ESM", () => {
+    const url = pathToFileURL(ESM_DIST).href;
+    const code = [
+      `import('${url}').then(({ instrument }) => {`,
+      "  const handle = instrument({ endpoint: 'http://example.test', sessionId: 'abc' });",
+      "  console.log(handle.isActive() === false ? 'NOOP' : 'UNEXPECTED');",
+      "}).catch(e => { console.error(e); process.exit(1); });",
+    ].join(" ");
+    expect(runInNode(code)).toBe("NOOP");
+  });
+});

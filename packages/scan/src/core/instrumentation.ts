@@ -1,4 +1,5 @@
-import { type Signal, signal } from "@preact/signals";
+import { type Accessor } from "solid-js";
+import { createCompatibleSignal, type Signal } from "./compatibility";
 import {
   ClassComponentTag,
   type Fiber,
@@ -20,14 +21,15 @@ import {
   traverseProps,
   traverseRenderedFibers,
 } from "bippy";
-import { isValidElement } from "preact";
-import { isEqual } from "~core/utils";
+import { isValidElement } from "react";
+import { isEqual } from "./utils";
 import {
   collectContextChanges,
   collectPropsChanges,
   collectStateChanges,
-} from "~web/views/inspector/timeline/utils";
-import { type Change, type ContextChange, ReactScanInternals, type StateChange } from "./index";
+} from "./inspection/change-collection";
+import type { Change, ContextChange, StateChange } from "./index";
+import { getOptionsState } from "./native-state";
 
 export enum RenderPhase {
   Mount = 0b001,
@@ -87,16 +89,6 @@ export const getFPS = () => {
   return fps;
 };
 
-const isElementVisible = (el: Element) => {
-  const style = window.getComputedStyle(el);
-  return (
-    style.display !== "none" &&
-    style.visibility !== "hidden" &&
-    style.contentVisibility !== "hidden" &&
-    style.opacity !== "0"
-  );
-};
-
 export const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
   const prevValueString = fastSerialize(prevValue);
   const nextValueString = fastSerialize(nextValue);
@@ -105,16 +97,6 @@ export const isValueUnstable = (prevValue: unknown, nextValue: unknown) => {
     unstableTypes.includes(typeof prevValue) &&
     unstableTypes.includes(typeof nextValue)
   );
-};
-
-const isElementInViewport = (el: Element, rect = el.getBoundingClientRect()) => {
-  const isVisible =
-    rect.bottom > 0 &&
-    rect.right > 0 &&
-    rect.top < window.innerHeight &&
-    rect.left < window.innerWidth;
-
-  return isVisible && rect.width && rect.height;
 };
 
 export const enum ChangeReason {
@@ -344,6 +326,8 @@ interface InstrumentationInstance {
 
 interface Instrumentation {
   isPaused: Signal<boolean>;
+  getIsPaused: Accessor<boolean>;
+  setIsPaused: (isPaused: boolean) => boolean;
   fiberRoots: WeakSet<FiberRoot>;
 }
 
@@ -385,7 +369,7 @@ const isRenderUnnecessary = (fiber: Fiber) => {
 // // re-implement this in new-outlines
 // const shouldRunUnnecessaryRenderCheck = () => {
 //   // yes, this can be condensed into one conditional, but ifs are easier to reason/build on than long boolean expressions
-//   if (!ReactScanInternals.options.value.trackUnnecessaryRenders) {
+//   if (!getOptionsState().trackUnnecessaryRenders) {
 //     return false;
 //   }
 
@@ -393,8 +377,8 @@ const isRenderUnnecessary = (fiber: Fiber) => {
 //   if (
 //     getIsProduction() &&
 //     Store.monitor.value &&
-//     ReactScanInternals.options.value.dangerouslyForceRunInProduction &&
-//     ReactScanInternals.options.value.trackUnnecessaryRenders
+//     getOptionsState().dangerouslyForceRunInProduction &&
+//     getOptionsState().trackUnnecessaryRenders
 //   ) {
 //     return true;
 //   }
@@ -403,7 +387,7 @@ const isRenderUnnecessary = (fiber: Fiber) => {
 //     return false;
 //   }
 
-//   return ReactScanInternals.options.value.trackUnnecessaryRenders;
+//   return getOptionsState().trackUnnecessaryRenders;
 // };
 
 const TRACK_UNNECESSARY_RENDERS = false;
@@ -490,9 +474,12 @@ const trackRender = (
 };
 
 export const createInstrumentation = (instanceKey: string, config: InstrumentationConfig) => {
+  const pausedState = createCompatibleSignal(!getOptionsState().enabled);
   const instrumentation: Instrumentation = {
     // this will typically be false, but in cases where a user provides showToolbar: true, this will be true
-    isPaused: signal(!ReactScanInternals.options.value.enabled),
+    isPaused: pausedState.facade,
+    getIsPaused: pausedState.get,
+    setIsPaused: pausedState.set,
     fiberRoots: new WeakSet<FiberRoot>(),
   };
   instrumentationInstances.set(instanceKey, {
@@ -510,9 +497,9 @@ export const createInstrumentation = (instanceKey: string, config: Instrumentati
         instrumentation.fiberRoots.add(root);
         // for now we always track everything for notifications, it may be worth it to make this configurable
         // if (
-        //   ReactScanInternals.instrumentation?.isPaused.value &&
-        //   (Store.inspectState.value.kind === "inspect-off" ||
-        //     Store.inspectState.value.kind === "uninitialized") &&
+        //   instrumentation.getIsPaused() &&
+        //   (getInspectState().kind === "inspect-off" ||
+        //     getInspectState().kind === "uninitialized") &&
         //   !config.forceAlwaysTrackRenders
         // ) {
         //   return;

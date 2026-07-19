@@ -8,8 +8,8 @@ import {
   type MemoizedState,
   SimpleMemoComponentTag,
 } from "bippy";
-import { isEqual } from "~core/utils";
-import { getChangedPropsDetailed, isPromise } from "../utils";
+import { isEqual } from "../utils";
+import { getChangedPropsDetailed, isPromise } from "./fiber";
 
 interface ChangeTrackingInfo {
   count: number;
@@ -20,18 +20,78 @@ interface ChangeTrackingInfo {
 
 type ChangeKey = string | number;
 
+interface TrackedChange {
+  hasChanged: boolean;
+  count: number;
+}
+
+interface BaseChange {
+  name: string | number;
+  value: unknown;
+  prevValue: unknown;
+}
+
+interface PropChange extends BaseChange {
+  name: string;
+}
+
+interface StateChange extends BaseChange {
+  name: string | number;
+}
+
+interface ContextChange extends BaseChange {
+  name: string;
+  contextType: unknown;
+}
+
+interface CollectorResult<Change extends BaseChange = BaseChange> {
+  current: Record<string | number, unknown>;
+  prev: Record<string | number, unknown>;
+  changes: Array<Change>;
+}
+
+interface ContextInfo {
+  value: unknown;
+  displayName: string;
+  contextType: unknown;
+}
+
+export interface SectionData {
+  current: Array<{ name: string | number; value: unknown }>;
+  changes: Set<string | number>;
+  changesCounts: Map<string | number, number>;
+}
+
+export interface InspectorData {
+  fiberProps: SectionData;
+  fiberState: SectionData;
+  fiberContext: SectionData;
+}
+
+export interface InspectorDataResult {
+  data: InspectorData;
+  shouldUpdate: boolean;
+}
+
 const propsTracker = new Map<string, ChangeTrackingInfo>();
 const stateTracker = new Map<ChangeKey, ChangeTrackingInfo>();
 const contextTracker = new Map<string, ChangeTrackingInfo>();
 let lastComponentType: unknown = null;
 
 const STATE_NAME_REGEX = /\[(?<name>\w+),\s*set\w+\]/g;
+
+const createEmptySection = (): SectionData => ({
+  current: [],
+  changes: new Set<string | number>(),
+  changesCounts: new Map<string | number, number>(),
+});
+
 export const getStateNames = (fiber: Fiber): Array<string> => {
   const componentSource = fiber.type?.toString?.() || "";
   return componentSource
     ? Array.from(
         componentSource.matchAll(STATE_NAME_REGEX),
-        (m: RegExpMatchArray) => m.groups?.name ?? "",
+        (match: RegExpMatchArray) => match.groups?.name ?? "",
       )
     : [];
 };
@@ -54,13 +114,12 @@ const trackChange = (
   key: ChangeKey,
   currentValue: unknown,
   previousValue: unknown,
-): { hasChanged: boolean; count: number } => {
+): TrackedChange => {
   const existing = tracker.get(key);
   const isInitialValue = tracker === propsTracker || tracker === contextTracker;
   const hasChanged = !isEqual(currentValue, previousValue);
 
   if (!existing) {
-    // For props and context, start with count 1 if there's a change
     tracker.set(key, {
       count: hasChanged && isInitialValue ? 1 : 0,
       currentValue,
@@ -88,19 +147,7 @@ const trackChange = (
   return { hasChanged: false, count: existing.count };
 };
 
-export { propsTracker, stateTracker, contextTracker };
-
-export interface SectionData {
-  current: Array<{ name: string | number; value: unknown }>;
-  changes: Set<string | number>;
-  changesCounts: Map<string | number, number>;
-}
-
-export interface InspectorData {
-  fiberProps: SectionData;
-  fiberState: SectionData;
-  fiberContext: SectionData;
-}
+export { contextTracker, propsTracker, stateTracker };
 
 const getStateFromFiber = (fiber: Fiber): Record<string | number, unknown> => {
   if (!fiber) return {};
@@ -133,48 +180,16 @@ const getStateFromFiber = (fiber: Fiber): Record<string | number, unknown> => {
   return {};
 };
 
-export interface InspectorDataResult {
-  data: InspectorData;
-  shouldUpdate: boolean;
-}
-
-interface BaseChange {
-  name: string | number;
-  value: unknown;
-  prevValue: unknown;
-}
-
-interface PropChange extends BaseChange {
-  name: string;
-}
-
-interface StateChange extends BaseChange {
-  name: string | number;
-}
-
-interface ContextChange extends BaseChange {
-  name: string;
-  contextType: unknown;
-}
-
-interface CollectorResult<T extends BaseChange = BaseChange> {
-  current: Record<string | number, unknown>;
-  prev: Record<string | number, unknown>;
-  changes: Array<T>;
-}
-
 export const collectPropsChanges = (fiber: Fiber): CollectorResult<PropChange> => {
   const currentProps = fiber.memoizedProps || {};
-  const prevProps = fiber.alternate?.memoizedProps || {};
-
+  const previousProps = fiber.alternate?.memoizedProps || {};
   const current: Record<string, unknown> = {};
   const prev: Record<string, unknown> = {};
 
-  const allProps = Object.keys(currentProps);
-  for (const key of allProps) {
+  for (const key of Object.keys(currentProps)) {
     if (key in currentProps) {
       current[key] = currentProps[key];
-      prev[key] = prevProps[key];
+      prev[key] = previousProps[key];
     }
   }
 
@@ -208,30 +223,27 @@ export const collectStateChanges = (fiber: Fiber): CollectorResult<StateChange> 
 
 export const collectContextChanges = (fiber: Fiber): CollectorResult<ContextChange> => {
   const currentContexts = getAllFiberContexts(fiber);
-  const prevContexts = fiber.alternate ? getAllFiberContexts(fiber.alternate) : new Map();
-
+  const previousContexts = fiber.alternate ? getAllFiberContexts(fiber.alternate) : new Map();
   const current: Record<string, unknown> = {};
   const prev: Record<string, unknown> = {};
   const changes: Array<ContextChange> = [];
-
   const seenContexts = new Set<unknown>();
-  for (const [contextType, ctx] of currentContexts) {
-    const name = ctx.displayName;
-    const contextKey = contextType;
 
-    if (seenContexts.has(contextKey)) continue;
-    seenContexts.add(contextKey);
+  for (const [contextType, context] of currentContexts) {
+    const name = context.displayName;
+    if (seenContexts.has(contextType)) continue;
+    seenContexts.add(contextType);
 
-    current[name] = ctx.value;
+    current[name] = context.value;
 
-    const prevCtx = prevContexts.get(contextType);
-    if (prevCtx) {
-      prev[name] = prevCtx.value;
-      if (!isEqual(prevCtx.value, ctx.value)) {
+    const previousContext = previousContexts.get(contextType);
+    if (previousContext) {
+      prev[name] = previousContext.value;
+      if (!isEqual(previousContext.value, context.value)) {
         changes.push({
           name,
-          value: ctx.value,
-          prevValue: prevCtx.value,
+          value: context.value,
+          prevValue: previousContext.value,
           contextType,
         });
       }
@@ -242,18 +254,12 @@ export const collectContextChanges = (fiber: Fiber): CollectorResult<ContextChan
 };
 
 export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
-  const emptySection = (): SectionData => ({
-    current: [],
-    changes: new Set<string | number>(),
-    changesCounts: new Map<string | number, number>(),
-  });
-
   if (!fiber) {
     return {
       data: {
-        fiberProps: emptySection(),
-        fiberState: emptySection(),
-        fiberContext: emptySection(),
+        fiberProps: createEmptySection(),
+        fiberState: createEmptySection(),
+        fiberContext: createEmptySection(),
       },
       shouldUpdate: false,
     };
@@ -261,8 +267,8 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
 
   let hasNewChanges = false;
   const isInitialUpdate = isInitialComponentUpdate(fiber);
+  const propsData = createEmptySection();
 
-  const propsData = emptySection();
   if (fiber.memoizedProps) {
     const { current, changes } = collectPropsChanges(fiber);
 
@@ -289,7 +295,7 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
     }
   }
 
-  const stateData = emptySection();
+  const stateData = createEmptySection();
   const { current: stateCurrent, changes: stateChanges } = collectStateChanges(fiber);
 
   for (const [index, value] of Object.entries(stateCurrent)) {
@@ -312,7 +318,7 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
     }
   }
 
-  const contextData = emptySection();
+  const contextData = createEmptySection();
   const { current: contextCurrent, changes: contextChanges } = collectContextChanges(fiber);
 
   for (const [name, value] of Object.entries(contextCurrent)) {
@@ -352,15 +358,10 @@ export const collectInspectorData = (fiber: Fiber): InspectorDataResult => {
   };
 };
 
-interface ContextInfo {
-  value: unknown;
-  displayName: string;
-  contextType: unknown;
-}
 // hm we potentially want to revalidate this if a fiber has new context's, i'm not sure how we can do that reactively
 // i suppose we can do one traversal on render (or during the existing traversal) that checks if any new context providers were mounted
 // and when that happens we revalidate this cache
-
+//
 // i suppose a case this breaks is if a fiber changes ancestors through a key but doesn't remount
 // then it would have new parents... and that new parent may have new context
 // may be a fine trade off
@@ -371,8 +372,6 @@ export const getAllFiberContexts = (fiber: Fiber): Map<unknown, ContextInfo> => 
   if (!fiber) {
     return new Map<unknown, ContextInfo>();
   }
-
-  // todo validate this works
 
   const cachedContexts = fiberContextsCache.get(fiber);
   if (cachedContexts) {
@@ -411,30 +410,20 @@ export const getAllFiberContexts = (fiber: Fiber): Map<unknown, ContextInfo> => 
     currentFiber = currentFiber.return;
   }
 
-  // Cache the result for this fiber
   fiberContextsCache.set(fiber, contexts);
-
   return contexts;
 };
 
-export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
-  const emptySection = (): SectionData => ({
-    current: [],
-    changes: new Set<string | number>(),
-    changesCounts: new Map<string | number, number>(),
-  });
-
+export const collectInspectorDataWithoutCounts = (fiber: Fiber): InspectorData => {
   if (!fiber) {
     return {
-      fiberProps: emptySection(),
-      fiberState: emptySection(),
-      fiberContext: emptySection(),
+      fiberProps: createEmptySection(),
+      fiberState: createEmptySection(),
+      fiberContext: createEmptySection(),
     };
   }
 
-  // let hasNewChanges = false;
-
-  const propsData = emptySection();
+  const propsData = createEmptySection();
   if (fiber.memoizedProps) {
     const { current, changes } = collectPropsChanges(fiber);
 
@@ -446,13 +435,12 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     }
 
     for (const change of changes) {
-      // hasNewChanges = true;
       propsData.changes.add(change.name);
       propsData.changesCounts.set(change.name, 1);
     }
   }
 
-  const stateData = emptySection();
+  const stateData = createEmptySection();
   if (fiber.memoizedState) {
     const { current, changes } = collectStateChanges(fiber);
 
@@ -464,13 +452,12 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
     }
 
     for (const change of changes) {
-      // hasNewChanges = true;
       stateData.changes.add(change.name);
       stateData.changesCounts.set(change.name, 1);
     }
   }
 
-  const contextData = emptySection();
+  const contextData = createEmptySection();
   const { current, changes } = collectContextChanges(fiber);
 
   for (const [key, value] of Object.entries(current)) {
@@ -481,22 +468,13 @@ export const collectInspectorDataWithoutCounts = (fiber: Fiber) => {
   }
 
   for (const change of changes) {
-    // hasNewChanges = true;
     contextData.changes.add(change.name);
     contextData.changesCounts.set(change.name, 1);
   }
-  // todo: is isInitialUpdate correct? Is this necessary:
-  // if (!hasNewChanges && !isInitialUpdate) {
-  //   propsData.changes.clear();
-  //   stateData.changes.clear();
-  //   contextData.changes.clear();
-  // }
 
   return {
-    // data: {
     fiberProps: propsData,
     fiberState: stateData,
     fiberContext: contextData,
-    // },
   };
 };

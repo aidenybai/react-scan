@@ -1,42 +1,52 @@
 import {
-  ComponentProps,
-  ReactNode,
-  createPortal,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
   useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'preact/compat';
-import { cn } from '~web/utils/helpers';
-import { ToolbarElementContext } from '~web/widget';
+  type JSX,
+} from "solid-js";
+import { Portal } from "solid-js/web";
+import { cn } from "../../utils/helpers";
+import { ToolbarElementContext } from "../../widget";
 
-type PopoverState = 'closed' | 'opening' | 'open' | 'closing';
+type PopoverState = "closed" | "opening" | "open" | "closing";
 
-/**
- *
- * fixme: very hacky and suboptimal popover (api and implementation)
- */
-export const Popover = ({
-  children,
-  triggerContent,
-  wrapperProps,
-}: {
-  children: ReactNode;
-  triggerContent: ReactNode;
-  wrapperProps?: ComponentProps<'div'>;
+export const Popover = (props: {
+  children: JSX.Element;
+  triggerContent: JSX.Element;
+  wrapperProps?: JSX.HTMLAttributes<HTMLDivElement>;
 }) => {
-  const [popoverState, setPopoverState] = useState<PopoverState>('closed');
-  const [elBoundingRect, setElBoundingRect] = useState<DOMRect | null>(null);
-  const [viewportSize, setViewportSize] = useState({
+  const [popoverState, setPopoverState] = createSignal<PopoverState>("closed");
+  const [elementBoundingRect, setElementBoundingRect] = createSignal<DOMRect>();
+  const [viewportSize, setViewportSize] = createSignal({
     width: window.innerWidth,
     height: window.innerHeight,
   });
-  const triggerRef = useRef<HTMLDivElement | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
-  const portalEl = useContext(ToolbarElementContext);
-  const isHoveredRef = useRef(false);
+  const portalElement = useContext(ToolbarElementContext);
+  let triggerElement: HTMLDivElement | undefined;
+  let popoverElement: HTMLDivElement | undefined;
+  let isHovered = false;
 
-  useEffect(() => {
+  const updateRect = () => {
+    if (!triggerElement || !portalElement) return;
+
+    const triggerRect = triggerElement.getBoundingClientRect();
+    const portalRect = portalElement.getBoundingClientRect();
+    setElementBoundingRect(
+      new DOMRect(
+        triggerRect.left + triggerRect.width / 2 - portalRect.left,
+        triggerRect.top - portalRect.top,
+        triggerRect.width,
+        triggerRect.height,
+      ),
+    );
+  };
+
+  onMount(() => {
+    updateRect();
     const handleResize = () => {
       setViewportSize({
         width: window.innerWidth,
@@ -44,141 +54,119 @@ export const Popover = ({
       });
       updateRect();
     };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const updateRect = () => {
-    if (triggerRef.current && portalEl) {
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const portalRect = portalEl.getBoundingClientRect();
-
-      const centerX = triggerRect.left + triggerRect.width / 2;
-      const centerY = triggerRect.top;
-
-      const rect = new DOMRect(
-        centerX - portalRect.left,
-        centerY - portalRect.top,
-        triggerRect.width,
-        triggerRect.height,
-      );
-      setElBoundingRect(rect);
-    }
-  };
-
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    updateRect();
-  }, [triggerRef.current]);
-
-  useEffect(() => {
-    if (popoverState === 'opening') {
-      const timer = setTimeout(() => setPopoverState('open'), 120);
-      return () => clearTimeout(timer);
-    } else if (popoverState === 'closing') {
-      const timer = setTimeout(() => setPopoverState('closed'), 120);
-      return () => clearTimeout(timer);
-    }
-  }, [popoverState]);
-
-  // just incase we didn't capture the mouse leave event because the underlying container moved
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isHoveredRef.current && popoverState !== 'closed') {
-        setPopoverState('closing');
+    const hoverCheckInterval = setInterval(() => {
+      if (!isHovered && popoverState() !== "closed") {
+        setPopoverState("closing");
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [popoverState]);
+    window.addEventListener("resize", handleResize);
+    onCleanup(() => {
+      window.removeEventListener("resize", handleResize);
+      clearInterval(hoverCheckInterval);
+    });
+  });
 
-  const handleMouseEnter = () => {
-    isHoveredRef.current = true;
-    updateRect();
-    setPopoverState('opening');
-  };
+  createEffect(() => {
+    const currentState = popoverState();
+    if (currentState !== "opening" && currentState !== "closing") return;
 
-  const handleMouseLeave = () => {
-    isHoveredRef.current = false;
-    updateRect();
-    setPopoverState('closing');
-  };
+    const timer = setTimeout(
+      () => setPopoverState(currentState === "opening" ? "open" : "closed"),
+      120,
+    );
+    onCleanup(() => clearTimeout(timer));
+  });
 
-  const getPopoverPosition = () => {
-    if (!elBoundingRect || !portalEl) return { top: 0, left: 0 };
+  const popoverPosition = createMemo(() => {
+    const boundingRect = elementBoundingRect();
+    if (!boundingRect || !portalElement) return { top: 0, left: 0 };
 
-    const portalRect = portalEl.getBoundingClientRect();
+    const portalRect = portalElement.getBoundingClientRect();
     const popoverWidth = 175;
-    const popoverHeight = popoverRef.current?.offsetHeight || 40;
+    const popoverHeight = popoverElement?.offsetHeight || 40;
     const safeArea = 5;
-
-    const viewportX = elBoundingRect.x + portalRect.left;
-    const viewportY = elBoundingRect.y + portalRect.top;
-
+    const viewportX = boundingRect.x + portalRect.left;
+    const viewportY = boundingRect.y + portalRect.top;
     let left = viewportX;
     let top = viewportY - 4;
 
     if (left - popoverWidth / 2 < safeArea) {
       left = safeArea + popoverWidth / 2;
-    } else if (left + popoverWidth / 2 > viewportSize.width - safeArea) {
-      left = viewportSize.width - safeArea - popoverWidth / 2;
+    } else if (left + popoverWidth / 2 > viewportSize().width - safeArea) {
+      left = viewportSize().width - safeArea - popoverWidth / 2;
     }
 
     if (top - popoverHeight < safeArea) {
-      top = viewportY + elBoundingRect.height + 4;
+      top = viewportY + boundingRect.height + 4;
     }
 
     return {
       top: top - portalRect.top,
       left: left - portalRect.left,
     };
+  });
+
+  const handleMouseEnter = () => {
+    isHovered = true;
+    updateRect();
+    setPopoverState("opening");
   };
 
-  const popoverPosition = getPopoverPosition();
+  const handleMouseLeave = () => {
+    isHovered = false;
+    updateRect();
+    setPopoverState("closing");
+  };
 
   return (
     <>
-      {portalEl &&
-        elBoundingRect &&
-        popoverState !== 'closed' &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            className={cn([
-              'absolute z-100 bg-white text-black rounded-lg px-3 py-2 shadow-lg',
-              'transition-[opacity] duration-120 ease-out',
-              'after:content-[""] after:absolute after:top-[100%]',
-              'after:left-1/2 after:-translate-x-1/2',
-              'after:w-[10px] after:h-[6px]',
-              'after:border-l-[5px] after:border-l-transparent',
-              'after:border-r-[5px] after:border-r-transparent',
-              'after:border-t-[6px] after:border-t-white',
-              'pointer-events-none',
-              popoverState === 'opening' || popoverState === 'closing'
-                ? 'opacity-0'
-                : 'opacity-100',
-            ])}
-            style={{
-              top: popoverPosition.top + 'px',
-              left: popoverPosition.left + 'px',
-              transform: `translate(-50%, calc(-100% - 4px)) scale(${popoverState === 'open' ? 1 : 0.97})`,
-              minWidth: '175px',
-              willChange: 'opacity, transform',
-            }}
-          >
-            {children}
-          </div>,
-          portalEl,
+      <Show
+        when={
+          portalElement && elementBoundingRect() && popoverState() !== "closed" && portalElement
+        }
+      >
+        {(mountElement) => (
+          <Portal mount={mountElement()}>
+            <div
+              ref={popoverElement}
+              class={cn([
+                "absolute z-100 bg-white text-black rounded-lg px-3 py-2 shadow-lg",
+                "transition-[opacity] duration-120 ease-out",
+                'after:content-[""] after:absolute after:top-[100%]',
+                "after:left-1/2 after:-translate-x-1/2",
+                "after:w-[10px] after:h-[6px]",
+                "after:border-l-[5px] after:border-l-transparent",
+                "after:border-r-[5px] after:border-r-transparent",
+                "after:border-t-[6px] after:border-t-white",
+                "pointer-events-none",
+                popoverState() === "opening" || popoverState() === "closing"
+                  ? "opacity-0"
+                  : "opacity-100",
+              ])}
+              style={{
+                top: `${popoverPosition().top}px`,
+                left: `${popoverPosition().left}px`,
+                transform: `translate(-50%, calc(-100% - 4px)) scale(${
+                  popoverState() === "open" ? 1 : 0.97
+                })`,
+                "min-width": "175px",
+                "will-change": "opacity, transform",
+              }}
+            >
+              {props.children}
+            </div>
+          </Portal>
         )}
+      </Show>
 
       <div
-        ref={triggerRef}
+        {...props.wrapperProps}
+        ref={triggerElement}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        {...wrapperProps}
       >
-        {triggerContent}
+        {props.triggerContent}
       </div>
     </>
   );

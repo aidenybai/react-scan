@@ -1,6 +1,5 @@
-// @ts-nocheck
-import { ChangeReason, type Render } from "~core/instrumentation";
-import { getLabelText } from "~core/utils";
+import { ChangeReason, type Render, isValueUnstable } from "../../core/instrumentation";
+import { getLabelText } from "../../core/utils";
 
 export const log = (renders: Array<Render>) => {
   const logMap = new Map<
@@ -24,7 +23,9 @@ export const log = (renders: Array<Render>) => {
         changes: {
           // TODO(Alexis): use a faster reduction method
           type: render.changes.reduce((set, change) => set | change.type, 0),
-          unstable: render.changes.some((change) => change.unstable),
+          unstable: render.changes.some((change) =>
+            isValueUnstable(change.prevValue, change.value),
+          ),
         },
         phase: render.phase,
         computedCurrent: null,
@@ -37,7 +38,8 @@ export const log = (renders: Array<Render>) => {
 
     if (render.changes) {
       for (let i = 0, len = render.changes.length; i < len; i++) {
-        const { name, prevValue, nextValue, unstable, type } = render.changes[i];
+        const { name, prevValue, value: nextValue, type } = render.changes[i];
+        const unstable = isValueUnstable(prevValue, nextValue);
         if (type === ChangeReason.Props) {
           prevChangedProps ??= {};
           nextChangedProps ??= {};

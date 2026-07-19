@@ -1,115 +1,112 @@
-import { ReactScanInternals } from "~core/index";
-import { cn } from "~web/utils/helpers";
+import { getOptionsState } from "../../../core/native-state";
+import { cn } from "../../utils/helpers";
 
-export const ChevronRight = ({ size = 24, className }: { size?: number; className?: string }) => (
+interface IconProps {
+  size?: number;
+  class?: string;
+}
+
+interface NotificationProps extends IconProps {
+  events: Array<boolean>;
+}
+
+export const ChevronRight = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={cn(["lucide lucide-chevron-right", className])}
+    class={cn(["lucide lucide-chevron-right", props.class])}
   >
     <path d="m9 18 6-6-6-6" />
   </svg>
 );
 
-export const Notification = ({
-  className = "",
-  size = 24,
-  events = [],
-}: {
-  className?: string;
-  size?: number;
-  events: boolean[];
-}) => {
-  const hasHighSeverity = events.includes(true);
-  const totalSevere = events.filter((e) => e).length;
-  const displayCount = totalSevere > 99 ? ">99" : totalSevere;
-  const badgeSize = hasHighSeverity ? Math.max(size * 0.6, 14) : Math.max(size * 0.4, 6);
+export const Notification = (props: NotificationProps) => {
+  const hasHighSeverity = () => props.events.includes(true);
+  const totalSevere = () => props.events.filter((isSevere) => isSevere).length;
+  const displayCount = () => (totalSevere() > 99 ? ">99" : totalSevere());
+  const badgeSize = () =>
+    hasHighSeverity()
+      ? Math.max((props.size ?? 24) * 0.6, 14)
+      : Math.max((props.size ?? 24) * 0.4, 6);
 
   return (
-    <div className="relative">
+    <div class="relative">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
+        aria-hidden="true"
+        width={props.size ?? 24}
+        height={props.size ?? 24}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        className={`lucide lucide-bell ${className}`}
+        class={`lucide lucide-bell ${props.class ?? ""}`}
       >
         <path d="M10.268 21a2 2 0 0 0 3.464 0" />
         <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
       </svg>
-      {events.length > 0 &&
-        totalSevere > 0 &&
-        ReactScanInternals.options.value.showNotificationCount && (
-          <div
-            className={cn([
-              "absolute",
-              hasHighSeverity ? "-top-2.5 -right-2.5" : "-top-1 -right-1",
-              "rounded-full",
-              "flex items-center justify-center",
-              "text-[8px] font-medium text-white",
-              "aspect-square",
-              hasHighSeverity ? "bg-red-500/90" : "bg-purple-500/90",
-            ])}
-            style={{
-              width: `${badgeSize}px`,
-              height: `${badgeSize}px`,
-              padding: hasHighSeverity ? "0.5px" : "0",
-            }}
-          >
-            {hasHighSeverity && displayCount}
-          </div>
-        )}
+      {props.events.length > 0 && totalSevere() > 0 && getOptionsState().showNotificationCount && (
+        <div
+          class={cn([
+            "absolute",
+            hasHighSeverity() ? "-top-2.5 -right-2.5" : "-top-1 -right-1",
+            "rounded-full",
+            "flex items-center justify-center",
+            "text-[8px] font-medium text-white",
+            "aspect-square",
+            hasHighSeverity() ? "bg-red-500/90" : "bg-purple-500/90",
+          ])}
+          style={{
+            width: `${badgeSize()}px`,
+            height: `${badgeSize()}px`,
+            padding: hasHighSeverity() ? "0.5px" : "0",
+          }}
+        >
+          {hasHighSeverity() && displayCount()}
+        </div>
+      )}
     </div>
   );
 };
 
-export const CloseIcon = ({ className = "", size = 24 }: { className?: string; size?: number }) => (
+export const CloseIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={className}
+    class={props.class ?? ""}
   >
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
   </svg>
 );
-export const VolumeOnIcon = ({
-  className = "",
-  size = 24,
-}: {
-  className?: string;
-  size?: number;
-}) => (
+export const VolumeOnIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={className}
+    class={props.class ?? ""}
   >
     <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
     <path d="M16 9a5 5 0 0 1 0 6" />
@@ -117,24 +114,18 @@ export const VolumeOnIcon = ({
   </svg>
 );
 
-export const VolumeOffIcon = ({
-  className = "",
-  size = 24,
-}: {
-  className?: string;
-  size?: number;
-}) => (
+export const VolumeOffIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={className}
+    class={props.class ?? ""}
   >
     <path d="M16 9a5 5 0 0 1 .95 2.293" />
     <path d="M19.364 5.636a9 9 0 0 1 1.889 9.96" />
@@ -144,42 +135,36 @@ export const VolumeOffIcon = ({
   </svg>
 );
 
-export const ArrowLeft = ({ size = 24, className }: { size?: number; className?: string }) => (
+export const ArrowLeft = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={cn(["lucide lucide-arrow-left", className])}
+    class={cn(["lucide lucide-arrow-left", props.class])}
   >
     <path d="m12 19-7-7 7-7" />
     <path d="M19 12H5" />
   </svg>
 );
 
-export const PointerIcon = ({
-  className = "",
-  size = 24,
-}: {
-  className?: string;
-  size?: number;
-}) => (
+export const PointerIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={className}
+    class={props.class ?? ""}
   >
     <path d="M14 4.1 12 6" />
     <path d="m5.1 8-2.9-.8" />
@@ -189,24 +174,18 @@ export const PointerIcon = ({
   </svg>
 );
 
-export const KeyboardIcon = ({
-  className = "",
-  size = 24,
-}: {
-  className?: string;
-  size?: number;
-}) => (
+export const KeyboardIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    className={className}
+    class={props.class ?? ""}
   >
     <path d="M10 8h.01" />
     <path d="M12 12h.01" />
@@ -219,19 +198,19 @@ export const KeyboardIcon = ({
     <rect width="20" height="16" x="2" y="4" rx="2" />
   </svg>
 );
-export const ClearIcon = ({ className = "", size = 24 }: { className?: string; size?: number }) => {
+export const ClearIcon = (props: IconProps) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
+      width={props.size ?? 24}
+      height={props.size ?? 24}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"
-      className={className}
+      class={props.class ?? ""}
       style={{ transform: "rotate(180deg)" }}
     >
       <circle cx="12" cy="12" r="10" />
@@ -239,24 +218,18 @@ export const ClearIcon = ({ className = "", size = 24 }: { className?: string; s
     </svg>
   );
 };
-export const TrendingDownIcon = ({
-  className = "",
-  size = 24,
-}: {
-  className?: string;
-  size?: number;
-}) => (
+export const TrendingDownIcon = (props: IconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
+    width={props.size ?? 24}
+    height={props.size ?? 24}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    class={props.class ?? ""}
   >
     <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
     <polyline points="16 17 22 17 22 11" />

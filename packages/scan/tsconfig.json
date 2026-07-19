@@ -4,19 +4,14 @@
     "ignoreDeprecations": "6.0",
     "rootDir": "src",
     "outDir": "dist",
-    "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact",
-    "types": ["node"],
-    "paths": {
-      "~web/*": ["src/web/*"],
-      "~core/*": ["src/core/*"]
-    }
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": ["node"]
   },
   "include": ["src", "global.d.ts"],
   "exclude": ["node_modules", "dist"]

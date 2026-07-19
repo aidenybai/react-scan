@@ -12,6 +12,7 @@
     "format:check": "vp fmt --check",
     "check": "vp check",
     "test:e2e": "playwright test",
+    "test:e2e:coverage": "COVERAGE=1 playwright test",
     "test:e2e:ui": "playwright test --ui",
     "changeset": "changeset add",
     "version": "changeset version",
@@ -22,8 +23,9 @@
     "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
     "@voidzero-dev/vite-plus-core": "^0.1.12",
+    "monocart-coverage-reports": "^2.12.12",
     "turbo": "^2.9.3",
-    "typescript": "latest",
+    "typescript": "6.0.3",
     "vite-plus": "^0.1.12"
   },
   "engines": {

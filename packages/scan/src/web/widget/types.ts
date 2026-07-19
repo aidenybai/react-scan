@@ -9,11 +9,13 @@ export interface Size {
 }
 
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export type SnapEdge = "top" | "bottom" | "left" | "right";
 
-export type CollapsedPosition = {
-  corner: Corner;
-  orientation: "horizontal" | "vertical";
-};
+export interface ToolbarState {
+  edge: SnapEdge;
+  ratio: number;
+  collapsed: boolean;
+}
 
 export interface ResizeHandleProps {
   position: Corner | "top" | "bottom" | "left" | "right";

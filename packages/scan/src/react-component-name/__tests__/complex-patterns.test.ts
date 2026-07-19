@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { transform } from './utils';
+import { describe, it, expect } from "vitest";
+import { transform } from "./utils";
 
-describe('complex component patterns', () => {
-  it('handles components with hooks', async () => {
+describe("complex component patterns", () => {
+  it("handles components with hooks", async () => {
     const input = `
       const TodoList = () => {
         const [todos, setTodos] = useState([])
@@ -16,7 +16,7 @@ describe('complex component patterns', () => {
     expect(result).toContain("TodoList.displayName = 'TodoList'");
   });
 
-  it('handles components with multiple state updates', async () => {
+  it("handles components with multiple state updates", async () => {
     const input = `
       const Counter = () => {
         const [count, setCount] = useState(0)
@@ -35,7 +35,7 @@ describe('complex component patterns', () => {
     expect(result).toContain("Counter.displayName = 'Counter'");
   });
 
-  it('handles components with render props', async () => {
+  it("handles components with render props", async () => {
     const input = `
       const DataFetcher = ({ children, url }) => {
         const [data, setData] = useState(null)
@@ -49,7 +49,7 @@ describe('complex component patterns', () => {
     expect(result).toContain("DataFetcher.displayName = 'DataFetcher'");
   });
 
-  it('handles higher-order components', async () => {
+  it("handles higher-order components", async () => {
     const input = `
       const withData = (WrappedComponent) => {
         const WithData = (props) => {

@@ -1,1 +1,1 @@
-export { getRDTHook as init } from 'bippy';
+export { getRDTHook as init } from "bippy";

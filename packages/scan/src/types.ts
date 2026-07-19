@@ -28,10 +28,13 @@ declare global {
 
   interface Window {
     reactScan: Scan;
+    reactScanCleanupListeners?: () => void;
     __REACT_SCAN_TOOLBAR_CONTAINER__?: HTMLDivElement;
     __REACT_SCAN_VERSION__?: string;
     __REACT_SCAN_EXTENSION__?: boolean;
     __REACT_GRAB__?: unknown;
+    hideIntro?: boolean;
+    reactScanIdCounter?: number;
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       checkDCE: (fn: unknown) => void;
       supportsFiber: boolean;

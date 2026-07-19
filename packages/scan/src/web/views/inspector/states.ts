@@ -1,12 +1,11 @@
-import { signal } from "@preact/signals";
 import type { Fiber } from "bippy";
-import type { ComponentType } from "preact";
-import type { SectionData } from "./timeline/utils";
+import { createSignal } from "solid-js";
+import type { SectionData } from "../../../core/inspection/change-collection";
 
 export interface MinimalFiberInfo {
   id?: string | number;
   key: string | null;
-  type: ComponentType<unknown> | string;
+  type: Fiber["type"];
   displayName: string;
   selfTime: number;
   totalTime: number;
@@ -35,6 +34,11 @@ export interface TimelineState {
 
 export const TIMELINE_MAX_UPDATES = 1000;
 
+export const globalInspectorState = {
+  lastRendered: new Map<string, unknown>(),
+  expandedPaths: new Set<string>(),
+};
+
 const timelineStateDefault: TimelineState = {
   updates: [],
   currentFiber: null,
@@ -47,9 +51,16 @@ const timelineStateDefault: TimelineState = {
   playbackSpeed: 1,
 };
 
-export const timelineState = signal<TimelineState>(timelineStateDefault);
+const [getTimelineState, setTimelineState] =
+  /* @__PURE__ */ createSignal<TimelineState>(timelineStateDefault);
 
-export const inspectorUpdateSignal = signal<number>(0);
+const [getInspectorUpdateVersion, setInspectorUpdateVersion] = /* @__PURE__ */ createSignal(0);
+
+export { getInspectorUpdateVersion, getTimelineState, setTimelineState };
+
+export const notifyInspectorUpdate = () => {
+  setInspectorUpdateVersion((version) => version + 1);
+};
 
 let pendingUpdates: Array<{ update: TimelineUpdate; fiber: Fiber | null }> = [];
 let batchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -59,7 +70,7 @@ const batchUpdates = () => {
 
   const batchedUpdates = [...pendingUpdates];
 
-  const { updates, totalUpdates, currentIndex, isViewingHistory } = timelineState.value;
+  const { updates, totalUpdates, currentIndex, isViewingHistory } = getTimelineState();
   const newUpdates = [...updates];
   let newTotalUpdates = totalUpdates;
 
@@ -92,15 +103,15 @@ const batchUpdates = () => {
 
   const lastUpdate = batchedUpdates[batchedUpdates.length - 1];
 
-  timelineState.value = {
-    ...timelineState.value,
+  setTimelineState({
+    ...getTimelineState(),
     latestFiber: lastUpdate.fiber,
     updates: newUpdates,
     totalUpdates: newTotalUpdates,
     windowOffset: newWindowOffset,
     currentIndex: newCurrentIndex,
     isViewingHistory,
-  };
+  });
 
   // Only after signal is updated, remove the processed updates
   pendingUpdates = pendingUpdates.slice(batchedUpdates.length);
@@ -108,33 +119,34 @@ const batchUpdates = () => {
 
 export const timelineActions = {
   showTimeline: () => {
-    timelineState.value = {
-      ...timelineState.value,
+    setTimelineState({
+      ...getTimelineState(),
       isVisible: true,
-    };
+    });
   },
 
   hideTimeline: () => {
-    timelineState.value = {
-      ...timelineState.value,
+    const state = getTimelineState();
+    setTimelineState({
+      ...state,
       isVisible: false,
-      currentIndex: timelineState.value.updates.length - 1,
-    };
+      currentIndex: state.updates.length - 1,
+    });
   },
 
   updateFrame: (index: number, isViewingHistory: boolean) => {
-    timelineState.value = {
-      ...timelineState.value,
+    setTimelineState({
+      ...getTimelineState(),
       currentIndex: index,
       isViewingHistory,
-    };
+    });
   },
 
   updatePlaybackSpeed: (speed: TimelineState["playbackSpeed"]) => {
-    timelineState.value = {
-      ...timelineState.value,
+    setTimelineState({
+      ...getTimelineState(),
       playbackSpeed: speed,
-    };
+    });
   },
 
   addUpdate: (update: TimelineUpdate, latestFiber: Fiber | null) => {
@@ -161,6 +173,6 @@ export const timelineActions = {
       batchTimeout = null;
     }
     pendingUpdates = [];
-    timelineState.value = timelineStateDefault;
+    setTimelineState(timelineStateDefault);
   },
 };

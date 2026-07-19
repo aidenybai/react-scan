@@ -1,88 +1,19 @@
+import { type Fiber, getDisplayName, getTimings, traverseFiber } from "bippy";
+import { ReactScanInternals } from "../../../core/index";
 import {
-  type Fiber,
-  FunctionComponentTag,
-  type MemoizedState,
-  getDisplayName,
-  getTimings,
-  isCompositeFiber,
-  isHostFiber,
-  traverseFiber,
-} from "bippy";
-import { type PropsChange, ReactScanInternals } from "~core/index";
-import { ChangeReason } from "~core/instrumentation";
-import { isEqual } from "~core/utils";
-import { globalInspectorState } from ".";
-import type { ExtendedReactRenderer } from "../../../types";
-import { TIMELINE_MAX_UPDATES } from "./states";
+  getFiberFromElement,
+  getParentCompositeFiber,
+  isPromise,
+} from "../../../core/inspection/fiber";
 import type { MinimalFiberInfo } from "./states";
-import { getAllFiberContexts, getStateNames } from "./timeline/utils";
 
-interface StateItem {
-  name: string;
-  value: unknown;
-}
-
-// todo, change this to currently focused fiber
-export type States =
-  | {
-      kind: "inspecting";
-      hoveredDomElement: Element | null;
-    }
-  | {
-      kind: "inspect-off";
-    }
-  | {
-      kind: "focused";
-      focusedDomElement: Element;
-      fiber: Fiber;
-    }
-  | {
-      kind: "uninitialized";
-    };
-
-interface ReactRootContainer {
-  _reactRootContainer?: {
-    _internalRoot?: {
-      current?: {
-        child: Fiber;
-      };
-    };
-  };
-}
-
-interface ReactInternalProps {
-  [key: string]: Fiber;
-}
-
-export const getFiberFromElement = (element: Element): Fiber | null => {
-  if ("__REACT_DEVTOOLS_GLOBAL_HOOK__" in window) {
-    const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-    if (!hook?.renderers) return null;
-
-    for (const [, renderer] of Array.from(hook.renderers)) {
-      try {
-        const fiber = renderer.findFiberByHostInstance?.(element);
-        if (fiber) return fiber;
-      } catch {
-        // If React is mid-render, references to previous nodes may disappear
-      }
-    }
-  }
-
-  if ("_reactRootContainer" in element) {
-    const elementWithRoot = element as unknown as ReactRootContainer;
-    const rootContainer = elementWithRoot._reactRootContainer;
-    return rootContainer?._internalRoot?.current?.child ?? null;
-  }
-
-  for (const key in element) {
-    if (key.startsWith("__reactInternalInstance$") || key.startsWith("__reactFiber")) {
-      const elementWithFiber = element as unknown as ReactInternalProps;
-      return elementWithFiber[key];
-    }
-  }
-  return null;
-};
+export {
+  getChangedPropsDetailed,
+  getFiberFromElement,
+  getParentCompositeFiber,
+  isPromise,
+} from "../../../core/inspection/fiber";
+export type { States } from "../../../core/inspection/types";
 
 const getFirstStateNode = (fiber: Fiber): Element | null => {
   let current: Fiber | null = fiber;
@@ -124,19 +55,6 @@ const getNearestFiberFromElement = (element: Element | null): Fiber | null => {
   }
 };
 
-export const getParentCompositeFiber = (fiber: Fiber): readonly [Fiber, Fiber | null] | null => {
-  let current: Fiber | null = fiber;
-  let prevHost: Fiber | null = null;
-
-  while (current) {
-    if (isCompositeFiber(current)) return [current, prevHost] as const;
-    if (isHostFiber(current) && !prevHost) prevHost = current;
-    current = current.return;
-  }
-
-  return null;
-};
-
 const isFiberInTree = (fiber: Fiber, root: Fiber): boolean => {
   {
     // const root= fiberRootCache.get(fiber) || (fiber.alternate && fiberRootCache.get(fiber.alternate) )
@@ -147,39 +65,6 @@ const isFiberInTree = (fiber: Fiber, root: Fiber): boolean => {
 
     return res;
   }
-};
-
-const isCurrentTree = (fiber: Fiber) => {
-  let curr: Fiber | null = fiber;
-  let rootFiber: Fiber | null = null;
-
-  while (curr) {
-    // todo: make sure removing null check doesn't break
-    // todo: document that fiber stores root in stateNode
-    if (!curr.stateNode) {
-      curr = curr.return;
-      continue;
-    }
-    // if the app never rendered then fiber roots will always return false, but thats fine since we don't care which
-    // fiber we read from when there never has been a re-render
-    // todo: document that better
-    if (ReactScanInternals.instrumentation?.fiberRoots.has(curr.stateNode)) {
-      rootFiber = curr;
-
-      break;
-    }
-
-    curr = curr.return;
-  }
-
-  if (!rootFiber) {
-    return false;
-  }
-
-  const fiberRoot = rootFiber.stateNode;
-  const currentRootFiber = fiberRoot.current;
-
-  return isFiberInTree(fiber, currentRootFiber);
 };
 
 export const getAssociatedFiberRect = async (element: Element) => {
@@ -262,128 +147,6 @@ export const getCompositeFiberFromElement = (element: Element, knownFiber?: Fibe
   };
 };
 
-export const getChangedPropsDetailed = (fiber: Fiber): Array<PropsChange> => {
-  const currentProps = fiber.memoizedProps ?? {};
-  const previousProps = fiber.alternate?.memoizedProps ?? {};
-  const changes: Array<PropsChange> = [];
-
-  for (const key in currentProps) {
-    if (key === "children") continue;
-
-    const currentValue = currentProps[key];
-    const prevValue = previousProps[key];
-
-    if (!isEqual(currentValue, prevValue)) {
-      changes.push({
-        name: key,
-        value: currentValue,
-        prevValue,
-        type: ChangeReason.Props,
-      });
-    }
-  }
-
-  return changes;
-};
-
-export interface OverrideMethods {
-  overrideProps: ((fiber: Fiber, path: string[], value: unknown) => void) | null;
-  overrideHookState: ((fiber: Fiber, id: string, path: string[], value: unknown) => void) | null;
-  overrideContext: ((fiber: Fiber, contextType: unknown, value: unknown) => void) | null;
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return value !== null && typeof value === "object";
-};
-
-const getOverrideMethods = (): OverrideMethods => {
-  let overrideProps: OverrideMethods["overrideProps"] = null;
-  let overrideHookState: OverrideMethods["overrideHookState"] = null;
-  let overrideContext: OverrideMethods["overrideContext"] = null;
-
-  if ("__REACT_DEVTOOLS_GLOBAL_HOOK__" in window) {
-    const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-    if (!hook?.renderers) {
-      return {
-        overrideProps: null,
-        overrideHookState: null,
-        overrideContext: null,
-      };
-    }
-
-    for (const [, renderer] of Array.from(hook.renderers)) {
-      try {
-        const devToolsRenderer = renderer as ExtendedReactRenderer;
-
-        if (overrideHookState) {
-          const prevOverrideHookState = overrideHookState;
-          overrideHookState = (fiber: Fiber, id: string, path: string[], value: unknown) => {
-            // Find the hook
-            let current = fiber.memoizedState;
-            for (let i = 0; i < Number(id); i++) {
-              if (!current?.next) break;
-              current = current.next;
-            }
-
-            if (current?.queue) {
-              // Update through React's queue mechanism
-              const queue = current.queue;
-              if (isRecord(queue) && "dispatch" in queue) {
-                const dispatch = queue.dispatch as (value: unknown) => void;
-                dispatch(value);
-                return;
-              }
-            }
-
-            // Chain updates through all renderers to ensure consistency across different React renderers
-            // (e.g., React DOM + React Native Web in the same app)
-            prevOverrideHookState(fiber, id, path, value);
-            devToolsRenderer.overrideHookState?.(fiber, id, path, value);
-          };
-        } else if (devToolsRenderer.overrideHookState) {
-          overrideHookState = devToolsRenderer.overrideHookState;
-        }
-
-        if (overrideProps) {
-          const prevOverrideProps = overrideProps;
-          overrideProps = (fiber: Fiber, path: Array<string>, value: unknown) => {
-            // Chain updates through all renderers to maintain consistency
-            prevOverrideProps(fiber, path, value);
-            devToolsRenderer.overrideProps?.(fiber, path, value);
-          };
-        } else if (devToolsRenderer.overrideProps) {
-          overrideProps = devToolsRenderer.overrideProps;
-        }
-
-        // For context, we don't need the chaining pattern since we're using overrideProps internally
-        // to update the context provider's value prop, which already handles the chaining
-        overrideContext = (fiber: Fiber, contextType: unknown, value: unknown) => {
-          // Find the provider fiber for this context
-          let current: Fiber | null = fiber;
-          while (current) {
-            const type = current.type as { Provider?: unknown };
-            if (type === contextType || type?.Provider === contextType) {
-              // Found the provider, update both current and alternate fibers
-              if (overrideProps) {
-                overrideProps(current, ["value"], value);
-                if (current.alternate) {
-                  overrideProps(current.alternate, ["value"], value);
-                }
-              }
-              break;
-            }
-            current = current.return;
-          }
-        };
-      } catch {
-        /**/
-      }
-    }
-  }
-
-  return { overrideProps, overrideHookState, overrideContext };
-};
-
 export const nonVisualTags = new Set([
   "HTML",
   "HEAD",
@@ -415,11 +178,7 @@ export const findComponentDOMNode = (
 ): HTMLElement | null => {
   if (fiber.stateNode && "nodeType" in fiber.stateNode) {
     const element = fiber.stateNode as HTMLElement;
-    if (
-      excludeNonVisualTags &&
-      element.tagName &&
-      nonVisualTags.has(element.tagName.toLowerCase())
-    ) {
+    if (excludeNonVisualTags && element.tagName && nonVisualTags.has(element.tagName)) {
       return null;
     }
     return element;
@@ -482,46 +241,6 @@ export const getInspectableElements = (
   return result;
 };
 
-const fiberMap = new WeakMap<HTMLElement, Fiber>();
-
-const getInspectableAncestors = (element: HTMLElement): Array<InspectableElement> => {
-  const result: Array<InspectableElement> = [];
-
-  const findInspectableFiber = (element: HTMLElement | null): HTMLElement | null => {
-    if (!element) return null;
-    const { parentCompositeFiber } = getCompositeComponentFromElement(element);
-    if (!parentCompositeFiber) return null;
-
-    const componentRoot = findComponentDOMNode(parentCompositeFiber);
-    if (componentRoot === element) {
-      // Store the fiber reference in WeakMap
-      fiberMap.set(element, parentCompositeFiber);
-      return element;
-    }
-    return null;
-  };
-
-  let current: HTMLElement | null = element;
-  while (current && current !== document.body) {
-    const inspectable = findInspectableFiber(current);
-    if (inspectable) {
-      // Get fiber from WeakMap
-      const fiber = fiberMap.get(inspectable);
-      if (fiber) {
-        result.unshift({
-          element: inspectable,
-          depth: 0,
-          name: getDisplayName(fiber.type) ?? "Unknown",
-          fiber,
-        });
-      }
-    }
-    current = current.parentElement;
-  }
-
-  return result;
-};
-
 type DiffResult = {
   type: "primitive" | "reference" | "object";
   changes: Array<{
@@ -540,25 +259,6 @@ type DiffChange = {
   sameFunction?: boolean;
 };
 
-type InspectableValue =
-  | Record<string, unknown>
-  | Array<unknown>
-  | Map<unknown, unknown>
-  | Set<unknown>
-  | ArrayBuffer
-  | DataView
-  | Int8Array
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Float32Array
-  | Float64Array
-  | BigInt64Array
-  | BigUint64Array;
-
 export type AggregatedChanges = {
   count: number;
   // unstable: boolean;
@@ -566,113 +266,6 @@ export type AggregatedChanges = {
   previousValue: unknown;
   // displayName?:string
   name: string;
-};
-
-const isExpandable = (value: unknown): value is InspectableValue => {
-  if (value === null || typeof value !== "object" || isPromise(value)) {
-    return false;
-  }
-
-  if (value instanceof ArrayBuffer) {
-    return true;
-  }
-
-  if (value instanceof DataView) {
-    return true;
-  }
-
-  if (ArrayBuffer.isView(value)) {
-    return true;
-  }
-
-  if (value instanceof Map || value instanceof Set) {
-    return value.size > 0;
-  }
-
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
-
-  return Object.keys(value).length > 0;
-};
-
-const isEditableValue = (value: unknown, parentPath?: string): boolean => {
-  if (value == null) return true;
-
-  if (isPromise(value)) return false;
-
-  if (typeof value === "function") {
-    return false;
-  }
-
-  if (parentPath) {
-    const parts = parentPath.split(".");
-    let currentPath = "";
-    for (const part of parts) {
-      currentPath = currentPath ? `${currentPath}.${part}` : part;
-      const obj = globalInspectorState.lastRendered.get(currentPath);
-      if (obj instanceof DataView || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj)) {
-        return false;
-      }
-    }
-  }
-
-  switch (value.constructor) {
-    case Date:
-    case RegExp:
-    case Error:
-      return true;
-    default:
-      switch (typeof value) {
-        case "string":
-        case "number":
-        case "boolean":
-        case "bigint":
-          return true;
-        default:
-          return false;
-      }
-  }
-};
-
-const getPath = (
-  componentName: string,
-  section: string,
-  parentPath: string,
-  key: string,
-): string => {
-  if (parentPath) {
-    return `${componentName}.${parentPath}.${key}`;
-  }
-
-  if (section === "context" && !key.startsWith("context.")) {
-    return `${componentName}.${section}.context.${key}`;
-  }
-
-  return `${componentName}.${section}.${key}`;
-};
-
-const sanitizeString = (value: string): string => {
-  return value
-    .replace(/[<>]/g, "")
-    .replace(/javascript:/gi, "")
-    .replace(/data:/gi, "")
-    .replace(/on\w+=/gi, "")
-    .slice(0, 50000);
-};
-
-const sanitizeErrorMessage = (error: string): string => {
-  return error
-    .replace(/[<>]/g, "")
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;")
-    .replace(/\//g, "&#x2F;");
-};
-
-const formatValue = (value: unknown): string => {
-  const metadata = ensureRecord(value);
-  return metadata.displayValue as string;
 };
 
 export const formatForClipboard = (value: unknown): string => {
@@ -860,107 +453,6 @@ const parseValue = (value: string, currentType: unknown): unknown => {
   }
 };
 
-const detectValueType = (
-  value: string,
-): {
-  type: "string" | "number" | "undefined" | "null" | "boolean";
-  value: unknown;
-} => {
-  const trimmed = value.trim();
-
-  switch (trimmed) {
-    case "undefined":
-      return { type: "undefined", value: undefined };
-    case "null":
-      return { type: "null", value: null };
-    case "true":
-      return { type: "boolean", value: true };
-    case "false":
-      return { type: "boolean", value: false };
-  }
-
-  if (/^".*"$/.test(trimmed)) {
-    return { type: "string", value: trimmed.slice(1, -1) };
-  }
-
-  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
-    return { type: "number", value: Number(trimmed) };
-  }
-
-  return { type: "string", value: `"${trimmed}"` };
-};
-
-const formatInitialValue = (value: unknown): string => {
-  if (value === undefined) return "undefined";
-  if (value === null) return "null";
-  if (typeof value === "string") return `"${value}"`;
-  return String(value);
-};
-
-const updateNestedValue = (obj: unknown, path: Array<string>, value: unknown): unknown => {
-  try {
-    if (path.length === 0) return value;
-
-    const [key, ...rest] = path;
-
-    // Handle our special array of {name, value} pairs
-    if (
-      Array.isArray(obj) &&
-      obj.every((item): item is StateItem => "name" in item && "value" in item)
-    ) {
-      const index = obj.findIndex((item) => item.name === key);
-      if (index === -1) return obj;
-
-      const newArray = [...obj];
-      if (rest.length === 0) {
-        newArray[index] = { ...newArray[index], value };
-      } else {
-        newArray[index] = {
-          ...newArray[index],
-          value: updateNestedValue(newArray[index].value, rest, value),
-        };
-      }
-      return newArray;
-    }
-
-    if (obj instanceof Map) {
-      const newMap = new Map(obj);
-      if (rest.length === 0) {
-        newMap.set(key, value);
-      } else {
-        const currentValue = newMap.get(key);
-        newMap.set(key, updateNestedValue(currentValue, rest, value));
-      }
-      return newMap;
-    }
-
-    if (Array.isArray(obj)) {
-      const index = Number.parseInt(key, 10);
-      const newArray = [...obj];
-      if (rest.length === 0) {
-        newArray[index] = value;
-      } else {
-        newArray[index] = updateNestedValue(obj[index], rest, value);
-      }
-      return newArray;
-    }
-
-    if (obj && typeof obj === "object") {
-      if (rest.length === 0) {
-        return { ...obj, [key]: value };
-      }
-      return {
-        ...obj,
-        [key]: updateNestedValue((obj as Record<string, unknown>)[key], rest, value),
-      };
-    }
-
-    return value;
-  } catch {
-    return obj;
-  }
-};
-
 const areFunctionsEqual = (prev: unknown, current: unknown): boolean => {
   try {
     // Check if both values are actually functions
@@ -1080,23 +572,6 @@ export const formatPath = (path: string[]): string => {
   }, "");
 };
 
-const formatFunctionBody = (body: string): string => {
-  // Remove newlines and extra spaces
-  let formatted = body.replace(/\s+/g, " ").trim();
-
-  // Add newlines after {, ; and before }
-  formatted = formatted
-    .replace(/{/g, "{\n  ")
-    .replace(/;/g, ";\n  ")
-    .replace(/}/g, "\n}")
-    .replace(/{\s+}/g, "{ }"); // Clean up empty blocks
-
-  // Clean up arrow functions
-  formatted = formatted.replace(/=> {\n/g, "=> {").replace(/\n\s*}\s*$/g, " }");
-
-  return formatted;
-};
-
 function hackyJsFormatter(code: string) {
   //
   // 1) Collapse runs of whitespace to single spaces
@@ -1134,7 +609,7 @@ function hackyJsFormatter(code: string) {
     }
 
     // Single/double char punctuation
-    if (/[(){}[\];,<>:\?!]/.test(c)) {
+    if (/[(){}[\];,<>:?!]/.test(c)) {
       // If we had something in current, push it
       if (current.trim()) {
         rawTokens.push(current.trim());
@@ -1332,7 +807,7 @@ function hackyJsFormatter(code: string) {
     }
 
     // Combined empty pairs like '()', '[]', '{}', '<>'
-    else if (/^\(\)|\[\]|\{\}|\<\>$/.test(tok)) {
+    else if (/^\(\)|\[\]|\{\}|<>$/.test(tok)) {
       placeToken(tok);
 
       // Arrow =>
@@ -1432,408 +907,6 @@ export const safeGetValue = (value: unknown): { value: unknown; error?: string }
   } catch {
     return { value: null, error: "Error accessing value" };
   }
-};
-
-export interface TimelineSliderValues {
-  leftValue: number;
-  min: number;
-  max: number;
-  value: number;
-  rightValue: number;
-}
-
-const calculateSliderValues = (
-  totalUpdates: number,
-  currentIndex: number,
-): TimelineSliderValues => {
-  if (totalUpdates <= TIMELINE_MAX_UPDATES) {
-    return {
-      leftValue: 0,
-      min: 0,
-      max: totalUpdates - 1,
-      value: currentIndex,
-      rightValue: totalUpdates - 1,
-    };
-  }
-
-  return {
-    leftValue: totalUpdates - TIMELINE_MAX_UPDATES,
-    min: 0,
-    max: TIMELINE_MAX_UPDATES - 1,
-    value: currentIndex,
-    rightValue: totalUpdates - 1,
-  };
-};
-
-// be careful, this is an implementation detail is not stable or reliable across all react versions https://github.com/facebook/react/pull/15124
-// type UpdateQueue<S, A> = {
-//   last: Update<S, A> | null,
-//   dispatch: (A => mixed) | null,
-//   eagerReducer: ((S, A) => S) | null,
-//   eagerState: S | null,
-// };
-
-interface ExtendedMemoizedState extends MemoizedState {
-  queue?: {
-    lastRenderedState: unknown;
-  } | null;
-  element?: unknown;
-}
-
-const isDirectComponent = (fiber: Fiber): boolean => {
-  if (!fiber || !fiber.type) return false;
-
-  const isFunctionalComponent = typeof fiber.type === "function";
-  const isClassComponent = fiber.type?.prototype?.isReactComponent ?? false;
-
-  if (!(isFunctionalComponent || isClassComponent)) return false;
-
-  if (isClassComponent) {
-    return true;
-  }
-
-  let memoizedState = fiber.memoizedState;
-  while (memoizedState) {
-    if (memoizedState.queue) {
-      return true;
-    }
-    const nextState: ExtendedMemoizedState | null = memoizedState.next;
-    if (!nextState) break;
-    memoizedState = nextState;
-  }
-
-  return false;
-};
-
-export const isPromise = (value: unknown): value is Promise<unknown> => {
-  return !!value && (value instanceof Promise || (typeof value === "object" && "then" in value));
-};
-
-const ensureRecord = (
-  value: unknown,
-  maxDepth = 2,
-  seen = new WeakSet<object>(),
-): Record<string, unknown> => {
-  if (isPromise(value)) {
-    return { type: "promise", displayValue: "Promise" };
-  }
-
-  if (value === null) {
-    return { type: "null", displayValue: "null" };
-  }
-
-  if (value === undefined) {
-    return { type: "undefined", displayValue: "undefined" };
-  }
-
-  switch (typeof value) {
-    case "object": {
-      if (seen.has(value)) {
-        return { type: "circular", displayValue: "[Circular Reference]" };
-      }
-
-      if (!value) return { type: "null", displayValue: "null" };
-
-      seen.add(value);
-
-      try {
-        const result: Record<string, unknown> = {};
-
-        if (value instanceof Element) {
-          result.type = "Element";
-          result.tagName = value.tagName.toLowerCase();
-          result.displayValue = value.tagName.toLowerCase();
-          return result;
-        }
-
-        if (value instanceof Map) {
-          result.type = "Map";
-          result.size = value.size;
-          result.displayValue = `Map(${value.size})`;
-
-          if (maxDepth > 0) {
-            const entries: Record<string, unknown> = {};
-            let index = 0;
-            for (const [key, val] of value.entries()) {
-              if (index >= 50) break;
-              try {
-                entries[String(key)] = ensureRecord(val, maxDepth - 1, seen);
-              } catch {
-                entries[String(index)] = {
-                  type: "error",
-                  displayValue: "Error accessing Map entry",
-                };
-              }
-              index++;
-            }
-            result.entries = entries;
-          }
-          return result;
-        }
-
-        if (value instanceof Set) {
-          result.type = "Set";
-          result.size = value.size;
-          result.displayValue = `Set(${value.size})`;
-
-          if (maxDepth > 0) {
-            const items = [];
-            let count = 0;
-            for (const item of value) {
-              if (count >= 50) break;
-              items.push(ensureRecord(item, maxDepth - 1, seen));
-              count++;
-            }
-            result.items = items;
-          }
-          return result;
-        }
-
-        if (value instanceof Date) {
-          result.type = "Date";
-          result.value = value.toISOString();
-          result.displayValue = value.toLocaleString();
-          return result;
-        }
-
-        if (value instanceof RegExp) {
-          result.type = "RegExp";
-          result.value = value.toString();
-          result.displayValue = value.toString();
-          return result;
-        }
-
-        if (value instanceof Error) {
-          result.type = "Error";
-          result.name = value.name;
-          result.message = value.message;
-          result.displayValue = `${value.name}: ${value.message}`;
-          return result;
-        }
-
-        if (value instanceof ArrayBuffer) {
-          result.type = "ArrayBuffer";
-          result.byteLength = value.byteLength;
-          result.displayValue = `ArrayBuffer(${value.byteLength})`;
-          return result;
-        }
-
-        if (value instanceof DataView) {
-          result.type = "DataView";
-          result.byteLength = value.byteLength;
-          result.displayValue = `DataView(${value.byteLength})`;
-          return result;
-        }
-
-        if (ArrayBuffer.isView(value)) {
-          const typedArray = value as unknown as {
-            length: number;
-            constructor: { name: string };
-            buffer: ArrayBuffer;
-          };
-          result.type = typedArray.constructor.name;
-          result.length = typedArray.length;
-          result.byteLength = typedArray.buffer.byteLength;
-          result.displayValue = `${typedArray.constructor.name}(${typedArray.length})`;
-          return result;
-        }
-
-        if (Array.isArray(value)) {
-          result.type = "array";
-          result.length = value.length;
-          result.displayValue = `Array(${value.length})`;
-
-          if (maxDepth > 0) {
-            result.items = value.slice(0, 50).map((item) => ensureRecord(item, maxDepth - 1, seen));
-          }
-          return result;
-        }
-
-        const keys = Object.keys(value);
-        result.type = "object";
-        result.size = keys.length;
-        result.displayValue =
-          keys.length <= 5
-            ? `{${keys.join(", ")}}`
-            : `{${keys.slice(0, 5).join(", ")}, ...${keys.length - 5}}`;
-
-        if (maxDepth > 0) {
-          const entries: Record<string, unknown> = {};
-          for (const key of keys.slice(0, 50)) {
-            try {
-              entries[key] = ensureRecord(
-                (value as Record<string, unknown>)[key],
-                maxDepth - 1,
-                seen,
-              );
-            } catch {
-              entries[key] = {
-                type: "error",
-                displayValue: "Error accessing property",
-              };
-            }
-          }
-          result.entries = entries;
-        }
-        return result;
-      } finally {
-        seen.delete(value);
-      }
-    }
-    case "string":
-      return {
-        type: "string",
-        value,
-        displayValue: `"${value}"`,
-      };
-    case "function":
-      return {
-        type: "function",
-        displayValue: "ƒ()",
-        name: value.name || "anonymous",
-      };
-    default:
-      return {
-        type: typeof value,
-        value,
-        displayValue: String(value),
-      };
-  }
-};
-
-const getCurrentFiberState = (fiber: Fiber): Record<string, unknown> | null => {
-  if (fiber.tag !== FunctionComponentTag || !isDirectComponent(fiber)) {
-    return null;
-  }
-
-  const currentIsNewer = fiber.alternate
-    ? (fiber.actualStartTime ?? 0) > (fiber.alternate.actualStartTime ?? 0)
-    : true;
-
-  const memoizedState: ExtendedMemoizedState | null = currentIsNewer
-    ? fiber.memoizedState
-    : (fiber.alternate?.memoizedState ?? fiber.memoizedState);
-
-  if (!memoizedState) return null;
-
-  return memoizedState;
-};
-
-const replayComponent = async (fiber: Fiber): Promise<void> => {
-  const { overrideProps, overrideHookState, overrideContext } = getOverrideMethods();
-  if (!overrideProps || !overrideHookState || !fiber) return;
-
-  try {
-    // Handle props updates
-    const currentProps = fiber.memoizedProps || {};
-    const propKeys = Object.keys(currentProps).filter((key) => {
-      const value = currentProps[key];
-      if (Array.isArray(value) || typeof value === "string") {
-        return !Number.isInteger(Number(key)) && key !== "length";
-      }
-      return true;
-    });
-
-    for (const key of propKeys) {
-      try {
-        const value = currentProps[key];
-        // For arrays and objects, we need to clone to trigger updates
-        const propValue = Array.isArray(value)
-          ? [...value]
-          : typeof value === "object" && value !== null
-            ? { ...value }
-            : value;
-        overrideProps(fiber, [key], propValue);
-      } catch {}
-    }
-
-    // Handle state updates
-    const currentState = getCurrentFiberState(fiber);
-    if (currentState) {
-      const stateNames = getStateNames(fiber);
-
-      // First, handle named state hooks
-      for (const [key, value] of Object.entries(currentState)) {
-        try {
-          const namedStateIndex = stateNames.indexOf(key);
-          if (namedStateIndex !== -1) {
-            const hookId = namedStateIndex.toString();
-            // For arrays and objects, we need to clone to trigger updates
-            const stateValue = Array.isArray(value)
-              ? [...value]
-              : typeof value === "object" && value !== null
-                ? { ...value }
-                : value;
-            overrideHookState(fiber, hookId, [], stateValue);
-          }
-        } catch {}
-      }
-
-      // Then handle unnamed state hooks
-      let hookIndex = 0;
-      let currentHook = fiber.memoizedState;
-      while (currentHook !== null) {
-        try {
-          const hookId = hookIndex.toString();
-          const value = currentHook.memoizedState;
-
-          // Only update if this hook isn't already handled by named states
-          if (!stateNames.includes(hookId)) {
-            // For arrays and objects, we need to clone to trigger updates
-            const stateValue = Array.isArray(value)
-              ? [...value]
-              : typeof value === "object" && value !== null
-                ? { ...value }
-                : value;
-            overrideHookState(fiber, hookId, [], stateValue);
-          }
-        } catch {}
-
-        currentHook = currentHook.next as typeof currentHook;
-        hookIndex++;
-      }
-    }
-
-    // Handle context updates
-    if (overrideContext) {
-      const contexts = getAllFiberContexts(fiber);
-      if (contexts) {
-        for (const [contextType, ctx] of contexts) {
-          try {
-            // Find the provider fiber for this context
-            let current: Fiber | null = fiber;
-            while (current) {
-              const type = current.type as { Provider?: unknown };
-              if (type === contextType || type?.Provider === contextType) {
-                // Get the value we want to update to
-                const newValue = ctx.value;
-                if (newValue === undefined || newValue === null) break;
-
-                // Only update if the value has actually changed
-                const currentValue = current.memoizedProps?.value;
-                if (isEqual(currentValue, newValue)) break;
-
-                // Update the provider's value prop
-                overrideProps(current, ["value"], newValue);
-                if (current.alternate) {
-                  overrideProps(current.alternate, ["value"], newValue);
-                }
-                break;
-              }
-              current = current.return;
-            }
-          } catch {}
-        }
-      }
-    }
-
-    // Recursively handle children
-    let child = fiber.child;
-    while (child) {
-      await replayComponent(child);
-      child = child.sibling;
-    }
-  } catch {}
 };
 
 export const extractMinimalFiberInfo = (fiber: Fiber): MinimalFiberInfo => {

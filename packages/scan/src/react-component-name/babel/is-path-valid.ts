@@ -1,5 +1,5 @@
-import type { NodePath } from '@babel/core';
-import type * as t from '@babel/types';
+import type { NodePath } from "@babel/core";
+import type * as t from "@babel/types";
 
 type TypeFilter<V extends t.Node> = (node: t.Node) => node is V;
 

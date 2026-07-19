@@ -7,8 +7,10 @@ import {
   hasMemoCache,
 } from "bippy";
 import { type ClassValue, clsx } from "clsx";
-import { IS_CLIENT } from "./constants";
 import { twMerge } from "tailwind-merge";
+
+export { readLocalStorage } from "../../utils/read-local-storage";
+export { saveLocalStorage } from "../../utils/save-local-storage";
 
 export const cn = (...inputs: Array<ClassValue>): string => {
   return twMerge(clsx(inputs));
@@ -24,32 +26,6 @@ export const throttle = <E>(callback: (e?: E) => void, delay: number): ((e?: E) 
     }
     return undefined;
   };
-};
-
-export const readLocalStorage = <T>(storageKey: string): T | null => {
-  if (!IS_CLIENT) return null;
-
-  try {
-    const stored = localStorage.getItem(storageKey);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-};
-
-export const saveLocalStorage = <T>(storageKey: string, state: T): void => {
-  if (!IS_CLIENT) return;
-
-  try {
-    window.localStorage.setItem(storageKey, JSON.stringify(state));
-  } catch {}
-};
-export const removeLocalStorage = (storageKey: string): void => {
-  if (!IS_CLIENT) return;
-
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch {}
 };
 
 interface WrapperBadge {

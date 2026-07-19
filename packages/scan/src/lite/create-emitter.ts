@@ -1,6 +1,6 @@
-import { DEFAULT_LOCATION } from './constants';
-import type { LaneLabelTranslator } from './lane-labels';
-import type { LiteEvent, LiteEventKind, LiteOptions } from './types';
+import { DEFAULT_LOCATION } from "./constants";
+import type { LaneLabelTranslator } from "./lane-labels";
+import type { LiteEvent, LiteEventKind, LiteOptions } from "./types";
 
 /**
  * Surface used inside the lite module's hot path (event emission, listener
@@ -67,8 +67,8 @@ export const createEmitter = (
     if (canPostToEndpoint) {
       try {
         fetch(endpoint as string, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId,
             location: `${locationPrefix}:${kind}`,

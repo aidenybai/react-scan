@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { transform } from './utils';
+import { describe, it, expect } from "vitest";
+import { transform } from "./utils";
 
-describe('typescript patterns', () => {
-  it('handles components with type parameters', async () => {
+describe("typescript patterns", () => {
+  it("handles components with type parameters", async () => {
     const input = `
       interface Props<T> {
         items: T[]
@@ -17,7 +17,7 @@ describe('typescript patterns', () => {
     expect(result).toContain("List.displayName = 'List'");
   });
 
-  it('handles components with complex types', async () => {
+  it("handles components with complex types", async () => {
     const input = `
       type Props = {
         id: string
