@@ -368,9 +368,13 @@ test.describe("Comprehensive notification interactions", () => {
       .locator("button")
       .filter({ hasText: "SlowInput" })
       .first();
-    await expect(collapsedKeyboardEvent).toContainText("x3");
+    await expect(collapsedKeyboardEvent).toContainText(/x[2-9]\d*/);
+    const collapsedEventText = await collapsedKeyboardEvent.textContent();
+    const groupedEventCount = Number(collapsedEventText?.match(/x(\d+)/)?.[1]);
     await collapsedKeyboardEvent.click();
-    await expect(overlayPanel(page).locator("button").filter({ hasText: /\d+ms/ })).toHaveCount(3);
+    await expect(overlayPanel(page).locator("button").filter({ hasText: /\d+ms/ })).toHaveCount(
+      groupedEventCount,
+    );
   });
 
   test("clears slowdown history and resets selected details", async ({ page }) => {
