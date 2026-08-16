@@ -1,4 +1,6 @@
-import { version as REACT_GRAB_VERSION } from "react-grab/package.json";
+import REACT_GRAB_PKG from "react-grab/package.json";
+
+const REACT_GRAB_VERSION = REACT_GRAB_PKG.version;
 
 let didRunVersionCheck = false;
 
