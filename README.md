@@ -1,5 +1,9 @@
 # <img src="https://github.com/aidenybai/react-scan/blob/main/.github/assets/logo.svg" width="30" height="30" align="center" /> React Scan
 
+> **You can still use React Scan, but we recommend React Doctor**
+>
+> React Doctor brings React Scan’s performance focus to coding agents, with static checks for architecture, security, accessibility, and more. [Try React Doctor →](https://react.doctor)
+
 React Scan automatically detects performance issues in your React app.
 
 - Requires no code changes -- just drop it in

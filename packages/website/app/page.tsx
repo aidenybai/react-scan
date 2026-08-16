@@ -9,6 +9,22 @@ import { IconDiscord } from "@/components/icons/icon-discord";
 export default function Home() {
   return (
     <div className="flex flex-col gap-4 text-base sm:text-lg">
+      <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-4 text-white shadow-lg">
+        <div className="font-bold">You can still use React Scan, but we recommend React Doctor</div>
+        <div className="mt-1 text-sm text-white/70 sm:text-base">
+          React Doctor brings React Scan’s performance focus to coding agents, with static checks
+          for architecture, security, accessibility &amp; more.{" "}
+          <Link
+            href="https://react.doctor"
+            className="text-white underline transition-colors hover:text-white/80"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Try React Doctor&nbsp;→
+          </Link>
+        </div>
+      </div>
+
       <div className="text-pretty text-white">
         <span className="font-bold">React&nbsp;Scan</span> automatically detects performance issues
         in your React&nbsp;app.
