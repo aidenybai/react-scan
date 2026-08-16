@@ -26,8 +26,8 @@ export default function Home() {
       </div>
 
       <div className="text-pretty text-white">
-        <span className="font-bold">React&nbsp;Scan</span> automatically detects performance issues
-        in your React&nbsp;app.
+        <span className="font-bold">React&nbsp;Scan</span>
+        {"\u00A0"}automatically detects performance issues in your React&nbsp;app.
       </div>
 
       <div className="text-pretty text-white/70">
