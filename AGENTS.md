@@ -17,45 +17,74 @@
 - MUST: Put all magic numbers in `constants.ts` using `SCREAMING_SNAKE_CASE` with unit suffixes (`_MS`, `_PX`).
 - MUST: Put small, focused utility functions in `utils/` with one utility per file.
 - MUST: Use `Boolean(x)` over `!!x`.
+- MUST: Avoid dynamic imports unless they are required for meaningful code splitting or an otherwise unavoidable cycle.
 
-## Preact + @preact/signals Rules
+## V8 Hot-Path Rules
 
-React Scan's overlay UI runs as a Preact app mounted inside a Shadow DOM (see [`packages/scan/src/core/index.ts`](packages/scan/src/core/index.ts)). Reactivity is driven by `@preact/signals`, not React state.
+For hot per-frame paths such as pointer handlers, animation ticks, outline drawing, and fiber walks:
 
-### Signals
+- MUST: Keep indirect call sites monomorphic. Split hot iterators by callback shape or inline the loop.
+- MUST: Mutate stable object fields in place instead of allocating replacement objects every frame.
+- MUST: Keep numeric helpers in one number lane. Avoid mixing integer and double return shapes at the same hot call site.
+- SHOULD: Prefer closed-form arithmetic over normalization loops.
+- SHOULD: Reuse arrays, maps, rectangles, and coordinate records when profiling shows allocation pressure.
 
-- MUST: Read signals via `.value` inside JSX/effects: `signalWidget.value` not `signalWidget()`.
-- MUST: Write signals atomically: `signalWidget.value = { ...signalWidget.value, dimensions: ... }`. One signal per logical slice.
-- MUST: Use `useSignal(initial)` for component-local reactive state, `useComputed(() => ...)` for derived values, `useSignalEffect(() => ...)` for subscriptions/DOM imperative work.
-- MUST: Wrap module-level signals exported from a tree-shaken bundle with `/* @__PURE__ */ signal(...)` so production builds can drop unused state.
-- SHOULD: Persist user-facing state via `readLocalStorage`/`saveLocalStorage` from [`~web/utils/helpers`](packages/scan/src/web/utils/helpers.ts) and seed the signal with the persisted value.
-- NEVER: Mirror one signal into another inside `useSignalEffect` - find the single source of truth (compute on read).
+## SolidJS Rules
+
+React Scan's overlay UI is a SolidJS app mounted inside the Shadow DOM created by [`packages/scan/src/core/index.ts`](packages/scan/src/core/index.ts).
+
+### Mental Model
+
+- MUST: Treat components as setup functions that run once.
+- MUST: Put reactive work in Solid primitives and JSX control flow, not untracked component-body reads.
+- MUST: Access signals only inside reactive contexts.
+
+### Reactivity
+
+- MUST: Read signals by calling their accessors.
+- MUST: Use functional setters when the next value depends on the previous value.
+- MUST: Keep signals focused and use stores for nested state that benefits from path updates.
+- MUST: Use derived functions for cheap derivations and `createMemo` for expensive or frequently-read derivations.
+- MUST: Use `createEffect` only for external side effects.
+- MUST: Register listener, timer, observer, and subscription cleanup with `onCleanup`.
+- SHOULD: Use `batch` when multiple writes outside an event handler form one logical update.
+- SHOULD: Use `on` for explicit effect dependencies and `untrack` for intentional non-reactive reads.
+- NEVER: Mirror one signal or store into another in an effect.
+- NEVER: Put side effects inside `createMemo`.
 
 ### Effects
 
-Before reaching for `useEffect`/`useSignalEffect`, classify the work:
+Before reaching for `createEffect`, classify the work:
 
-- MUST: Use `useComputed` when the result is pure derived state from other signals. If no external system is touched, it is not an effect.
+- MUST: Use `createMemo` when the result is pure derived state.
 - MUST: Use event handlers and direct action calls when work happens because the user clicked, dragged, or navigated. Do not watch a flag in an effect to trigger imperative logic.
-- MUST: Use `useEffect(..., [])` (or `useSignalEffect` with no deps) for one-time mount/cleanup of subscriptions, timers, listeners, and `MutationObserver`s. Always return the cleanup.
+- MUST: Use `onMount` and `onCleanup` for one-time lifecycle setup and teardown.
 - MUST: Keep each effect single-purpose - one effect, one external bridge. Split mixed-responsibility effects.
 - NEVER: Use an effect just to copy one signal into another.
 - NEVER: Use an effect as an event bus (watching a trigger signal to run a command). Call the action directly from the event source.
 
 ### Props
 
-- MUST: Access props via `props.title`, not destructuring, when the prop is read inside an event handler that fires later or inside an effect.
-- SHOULD: Destructure props at the top of the body for purely-rendered values (read once during render).
-- NEVER: Destructure a prop that is itself a signal-driven slice if you intend to re-read it after async work.
+- MUST: Access reactive props through `props.title`; do not destructure them.
+- SHOULD: Use `splitProps` for local versus pass-through props and `mergeProps` for defaults.
+- SHOULD: Use a getter when a derived prop name improves readability.
+
+### Control Flow
+
+- MUST: Use `<For>` for object arrays and `<Index>` for primitive arrays or editable items.
+- SHOULD: Use `<Show>` for conditional branches and `<Switch>/<Match>` for multiple exclusive branches.
+- NEVER: Use `.map()` directly in JSX.
 
 ### JSX & DOM
 
-- MUST: Use `className` (we render via Preact's React-compat JSX in [`tsconfig.json`](tsconfig.json) `jsxImportSource: preact`).
-- MUST: Combine static `className="btn"` with reactive `className={cn("btn", isActive.value && "active")}` via [`cn`](packages/scan/src/web/utils/helpers.ts).
-- MUST: Read refs in `useEffect` or via the callback ref pattern - DOM refs are populated after render.
+- MUST: Use `class`, not `className`.
+- MUST: Use `classList` for reactive class toggles and `cn` for composed static classes.
+- MUST: Read refs after mount or inside reactive callbacks where connection is guaranteed.
 - MUST: Mount overlay UI under the existing shadow root from `initRootContainer()` in [`core/index.ts`](packages/scan/src/core/index.ts). Do not append directly to `document.body`.
-- SHOULD: Use `style={{ "--css-var": value }}` for dynamic CSS variables; class toggles for boolean states.
-- SHOULD: Type refs as `let element: HTMLElement | null = null` with a guard.
+- SHOULD: Use CSS variables for dynamic scalar styles and classes for boolean visual state.
+- SHOULD: Type refs as `let element: HTMLElement | undefined` and guard before use.
+- SHOULD: Use native `on:event` listeners when propagation, capture, passive options, or exact element ownership matters.
+- NEVER: Mix a reactive `class` expression with `classList` on the same element.
 
 ## Build & Toolchain
 
@@ -75,19 +104,19 @@ The root [`package.json`](package.json) declares `pnpm.onlyBuiltDependencies` fo
 
 ### Key commands
 
-| Task           | Command                                      |
-| -------------- | -------------------------------------------- |
-| Install        | `pnpm install`                               |
-| Build          | `pnpm build`                                 |
-| Dev watch      | `pnpm dev` (watches `react-scan` + kitchen-sink) |
-| Unit tests     | `pnpm test`                                  |
-| E2E tests      | `pnpm test:e2e`                              |
-| Lint           | `pnpm lint` (oxlint via vite-plus)           |
-| Lint + fix     | `pnpm lint:fix`                              |
-| Format         | `pnpm format` (oxfmt via vite-plus)          |
-| Format check   | `pnpm format:check`                          |
-| Typecheck      | `pnpm typecheck`                             |
-| Combined       | `pnpm check` (lint + fmt check + typecheck)  |
+| Task         | Command                                          |
+| ------------ | ------------------------------------------------ |
+| Install      | `pnpm install`                                   |
+| Build        | `pnpm build`                                     |
+| Dev watch    | `pnpm dev` (watches `react-scan` + kitchen-sink) |
+| Unit tests   | `pnpm test`                                      |
+| E2E tests    | `pnpm test:e2e`                                  |
+| Lint         | `pnpm lint` (oxlint via vite-plus)               |
+| Lint + fix   | `pnpm lint:fix`                                  |
+| Format       | `pnpm format` (oxfmt via vite-plus)              |
+| Format check | `pnpm format:check`                              |
+| Typecheck    | `pnpm typecheck`                                 |
+| Combined     | `pnpm check` (lint + fmt check + typecheck)      |
 
 ## Testing
 

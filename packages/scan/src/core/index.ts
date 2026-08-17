@@ -1,4 +1,6 @@
-import { type Signal, signal } from "@preact/signals";
+import type { Signal } from "./compatibility";
+import type {} from "../types";
+import { createScanRuntime } from "../runtime/create-scan-runtime";
 import {
   type Fiber,
   detectReactBuildType,
@@ -6,49 +8,24 @@ import {
   getType,
   isInstrumentationActive,
 } from "bippy";
-import type { ComponentType } from "preact";
-import type { ReactNode } from "preact/compat";
-import type { RenderData } from "src/core/utils";
-import { initReactScanInstrumentation } from "src/new-outlines";
-import styles from "~web/assets/css/styles.css";
-import { createToolbar } from "~web/toolbar";
-import { IS_CLIENT } from "~web/utils/constants";
-import { checkReactGrabVersion } from "~web/utils/check-react-grab-version";
-import { readLocalStorage, saveLocalStorage } from "~web/utils/helpers";
-import { parseSafeAreaOption } from "~web/utils/parse-safe-area-option";
-import type { States } from "~web/views/inspector/utils";
+import type { ComponentType, ReactNode } from "react";
+import type { RenderData } from "./utils";
+import { initReactScanInstrumentation } from "../new-outlines";
+import { checkReactGrabVersion } from "../utils/check-react-grab-version";
+import { IS_CLIENT } from "../utils/is-client";
+import { parseSafeAreaOption } from "../utils/parse-safe-area-option";
+import { readLocalStorage } from "../utils/read-local-storage";
+import { saveLocalStorage } from "../utils/save-local-storage";
+import type { States } from "./inspection/types";
 import type { ChangeReason, Render, createInstrumentation } from "./instrumentation";
-import { startTimingTracking } from "./notifications/event-tracking";
-import { createHighlightCanvas } from "./notifications/outline-overlay";
+import {
+  Store as nativeStore,
+  getIsInIframe,
+  getOptionsState,
+  optionsFacade,
+  setOptionsState,
+} from "./native-state";
 import packageJson from "../../package.json";
-
-let rootContainer: HTMLDivElement | null = null;
-let shadowRoot: ShadowRoot | null = null;
-
-interface RootContainer {
-  rootContainer: HTMLDivElement;
-  shadowRoot: ShadowRoot;
-}
-
-const initRootContainer = (): RootContainer => {
-  if (rootContainer && shadowRoot) {
-    return { rootContainer, shadowRoot };
-  }
-
-  rootContainer = document.createElement("div");
-  rootContainer.id = "react-scan-root";
-
-  shadowRoot = rootContainer.attachShadow({ mode: "open" });
-
-  const cssStyles = document.createElement("style");
-  cssStyles.textContent = styles;
-
-  shadowRoot.appendChild(cssStyles);
-
-  document.documentElement.appendChild(rootContainer);
-
-  return { rootContainer, shadowRoot };
-};
 
 export interface Options {
   /**
@@ -230,33 +207,12 @@ export type ChangesPayload = {
 };
 export type ChangesListener = (changes: ChangesPayload) => void;
 
-export const Store: StoreType = {
-  wasDetailsOpen: signal(true),
-  isInIframe: signal(IS_CLIENT && window.self !== window.top),
-  inspectState: signal<States>({
-    kind: "uninitialized",
-  }),
-  fiberRoots: new Set<Fiber>(),
-  reportData: new Map<number, RenderData>(),
-  legacyReportData: new Map<string, RenderData>(),
-  lastReportTime: signal(0),
-  interactionListeningForRenders: null,
-  changesListeners: new Map(),
-};
+export const Store: StoreType = nativeStore;
 
 export const ReactScanInternals: Internals = {
   instrumentation: null,
   componentAllowList: null,
-  options: signal({
-    enabled: true,
-    log: false,
-    showToolbar: true,
-    animationSpeed: "fast",
-    dangerouslyForceRunInProduction: false,
-    showFPS: true,
-    showNotificationCount: true,
-    allowInIframe: false,
-  }),
+  options: optionsFacade,
   runInAllEnvironments: false,
   onRender: null,
   Store,
@@ -270,7 +226,12 @@ if (IS_CLIENT && window.__REACT_SCAN_EXTENSION__) {
 export type LocalStorageOptions = Omit<Options, "onCommitStart" | "onRender" | "onCommitFinish">;
 
 const applyLocalStorageOptions = (options: Options): LocalStorageOptions => {
-  const { onCommitStart, onRender, onCommitFinish, ...rest } = options;
+  const {
+    onCommitStart: _onCommitStart,
+    onRender: _onRender,
+    onCommitFinish: _onCommitFinish,
+    ...rest
+  } = options;
   return rest;
 };
 
@@ -369,16 +330,16 @@ export const setOptions = (userOptions: Partial<Options>) => {
       "showToolbar" in validOptions && validOptions.showToolbar !== undefined;
 
     const newOptions = {
-      ...ReactScanInternals.options.value,
+      ...getOptionsState(),
       ...validOptions,
     };
 
     const { instrumentation } = ReactScanInternals;
     if (instrumentation && "enabled" in validOptions) {
-      instrumentation.isPaused.value = validOptions.enabled === false;
+      instrumentation.setIsPaused(validOptions.enabled === false);
     }
 
-    ReactScanInternals.options.value = newOptions;
+    setOptionsState(newOptions);
 
     // temp hack since defaults override stored local storage values
     // we actually don't care about any other local storage option other than enabled, we should not be syncing those to local storage
@@ -391,7 +352,7 @@ export const setOptions = (userOptions: Partial<Options>) => {
         newOptions.enabled = existing;
       }
     } catch (e) {
-      if (ReactScanInternals.options.value._debug === "verbose") {
+      if (getOptionsState()._debug === "verbose") {
         // oxlint-disable-next-line no-console
         console.error(
           "[React Scan Internal Error]",
@@ -408,12 +369,12 @@ export const setOptions = (userOptions: Partial<Options>) => {
     );
 
     if (shouldInitToolbar) {
-      initToolbar(!!newOptions.showToolbar);
+      initToolbar(Boolean(newOptions.showToolbar));
     }
 
     return newOptions;
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === "verbose") {
+    if (getOptionsState()._debug === "verbose") {
       // oxlint-disable-next-line no-console
       console.error(
         "[React Scan Internal Error]",
@@ -462,7 +423,7 @@ export const start = () => {
     if (
       !ReactScanInternals.runInAllEnvironments &&
       getIsProduction() &&
-      !ReactScanInternals.options.value.dangerouslyForceRunInProduction
+      !getOptionsState().dangerouslyForceRunInProduction
     ) {
       return;
     }
@@ -475,17 +436,15 @@ export const start = () => {
       const validLocalOptions = validateOptions(localStorageOptions);
 
       if (Object.keys(validLocalOptions).length > 0) {
-        ReactScanInternals.options.value = {
-          ...ReactScanInternals.options.value,
+        setOptionsState({
+          ...getOptionsState(),
           ...validLocalOptions,
-        };
+        });
       }
     }
 
-    const options = getOptions();
-
     initReactScanInstrumentation(() => {
-      initToolbar(!!options.value.showToolbar);
+      initToolbar(Boolean(getOptionsState().showToolbar));
     });
 
     if (IS_CLIENT) {
@@ -496,7 +455,7 @@ export const start = () => {
       }, 5000);
     }
   } catch (e) {
-    if (ReactScanInternals.options.value._debug === "verbose") {
+    if (getOptionsState()._debug === "verbose") {
       // oxlint-disable-next-line no-console
       console.error(
         "[React Scan Internal Error]",
@@ -507,54 +466,18 @@ export const start = () => {
   }
 };
 
-const initToolbar = (showToolbar: boolean) => {
-  window.reactScanCleanupListeners?.();
-
-  const cleanupTimingTracking = startTimingTracking();
-  const cleanupOutlineCanvas = createNotificationsOutlineCanvas();
-
-  window.reactScanCleanupListeners = () => {
-    cleanupTimingTracking();
-    cleanupOutlineCanvas?.();
-  };
-
-  const windowToolbarContainer = window.__REACT_SCAN_TOOLBAR_CONTAINER__;
-
-  if (!showToolbar) {
-    windowToolbarContainer?.remove();
-    return;
-  }
-
-  windowToolbarContainer?.remove();
-  const { shadowRoot } = initRootContainer();
-  createToolbar(shadowRoot);
-};
-
-const createNotificationsOutlineCanvas = () => {
-  try {
-    const highlightRoot = document.documentElement;
-    return createHighlightCanvas(highlightRoot);
-  } catch (e) {
-    if (ReactScanInternals.options.value._debug === "verbose") {
-      // oxlint-disable-next-line no-console
-      console.error(
-        "[React Scan Internal Error]",
-        "Failed to create notifications outline canvas",
-        e,
-      );
-    }
-  }
+const initToolbar = (showToolbar: boolean): void => {
+  createScanRuntime({
+    showToolbar,
+    isVerbose: () => getOptionsState()._debug === "verbose",
+  });
 };
 
 export const scan = (options: Options = {}) => {
   setOptions(options);
-  const isInIframe = Store.isInIframe.value;
+  const isInIframe = getIsInIframe();
 
-  if (
-    isInIframe &&
-    !ReactScanInternals.options.value.allowInIframe &&
-    !ReactScanInternals.runInAllEnvironments
-  ) {
+  if (isInIframe && !getOptionsState().allowInIframe && !ReactScanInternals.runInAllEnvironments) {
     return;
   }
 
@@ -583,9 +506,7 @@ export const onRender = (
   };
 };
 
-export const ignoredProps = new WeakSet<
-  Exclude<ReactNode, undefined | null | string | number | boolean | bigint>
->();
+export const ignoredProps = new WeakSet<object>();
 
 export const ignoreScan = (node: ReactNode) => {
   if (node && typeof node === "object") {

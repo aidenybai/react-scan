@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { createEffect, createSignal, onCleanup, untrack, type Accessor } from "solid-js";
 
 /**
  * Delays a boolean value change by a specified duration.
@@ -32,26 +32,21 @@ import { useEffect, useState } from 'preact/hooks';
  *   </div>
  * );
  */
-export const useDelayedValue = (
-  value: boolean,
+export const createDelayedValue = (
+  value: Accessor<boolean>,
   onDelay: number,
-  offDelay: number = onDelay,
-): boolean => {
-  const [delayedValue, setDelayedValue] = useState(value);
+  offDelay = onDelay,
+): Accessor<boolean> => {
+  const [delayedValue, setDelayedValue] = createSignal(value());
 
-  /*
-   * oxlint-disable-next-line react-hooks/exhaustive-deps
-   * delayedValue is intentionally omitted to prevent unnecessary timeouts
-   * and used only in the early return check
-   */
-  useEffect(() => {
-    if (value === delayedValue) return;
+  createEffect(() => {
+    const nextValue = value();
+    if (nextValue === untrack(delayedValue)) return;
 
-    const delay = value ? onDelay : offDelay;
-    const timeout = setTimeout(() => setDelayedValue(value), delay);
-
-    return () => clearTimeout(timeout);
-  }, [value, onDelay, offDelay]);
+    const delay = nextValue ? onDelay : offDelay;
+    const timeoutId = setTimeout(() => setDelayedValue(nextValue), delay);
+    onCleanup(() => clearTimeout(timeoutId));
+  });
 
   return delayedValue;
 };

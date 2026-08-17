@@ -1,53 +1,46 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "./fixtures";
 import {
   gotoFixture,
+  overlayPanel,
   toolbarWidget,
   notificationsButton,
   isReactScanActive,
   waitForToolbarReady,
   TOOLBAR_SELECTORS,
-} from './helpers';
+} from "./helpers";
 
-const LOCALSTORAGE_WIDGET_KEY = 'react-scan-widget-settings-v2';
+const LOCALSTORAGE_WIDGET_KEY = "react-scan-widget-settings-v2";
+const LOCALSTORAGE_TOOLBAR_KEY = "react-scan-toolbar-state-v1";
 
-test.describe('Overlay widget container', () => {
+test.describe("Overlay widget container", () => {
   test.beforeEach(async ({ page }) => {
     await gotoFixture(page);
     await waitForToolbarReady(page);
   });
 
-  test('widget mounts with the expected identity attributes', async ({
-    page,
-  }) => {
+  test("widget mounts with the expected identity attributes", async ({ page }) => {
     const widget = toolbarWidget(page);
     await expect(widget).toBeVisible();
-    await expect(widget).toHaveAttribute('dir', 'ltr');
+    await expect(widget).toHaveAttribute("dir", "ltr");
   });
 
-  test('widget fades in to full opacity', async ({ page }) => {
+  test("widget fades in to full opacity", async ({ page }) => {
     await expect
-      .poll(async () =>
-        toolbarWidget(page).evaluate((el) =>
-          Number(getComputedStyle(el).opacity),
-        ),
-      )
+      .poll(async () => toolbarWidget(page).evaluate((el) => Number(getComputedStyle(el).opacity)))
       .toBeGreaterThan(0.9);
   });
 
-  test('all four resize handles are present in the DOM', async ({ page }) => {
+  test("all four resize handles are present in the DOM", async ({ page }) => {
     const handles = page.locator(
-      `${TOOLBAR_SELECTORS.root} .resize-left, ${TOOLBAR_SELECTORS.root} .resize-right, ${TOOLBAR_SELECTORS.root} .resize-top, ${TOOLBAR_SELECTORS.root} .resize-bottom`,
+      `${TOOLBAR_SELECTORS.panel} .resize-left, ${TOOLBAR_SELECTORS.panel} .resize-right, ${TOOLBAR_SELECTORS.panel} .resize-top, ${TOOLBAR_SELECTORS.panel} .resize-bottom`,
     );
     await expect(handles).toHaveCount(4);
   });
 
-  test('widget settings are persisted to localStorage', async ({ page }) => {
+  test("widget settings are persisted to localStorage", async ({ page }) => {
     await expect
       .poll(async () =>
-        page.evaluate(
-          (key) => localStorage.getItem(key) !== null,
-          LOCALSTORAGE_WIDGET_KEY,
-        ),
+        page.evaluate((key) => localStorage.getItem(key) !== null, LOCALSTORAGE_WIDGET_KEY),
       )
       .toBe(true);
 
@@ -60,7 +53,7 @@ test.describe('Overlay widget container', () => {
     expect(settings.dimensions).toBeTruthy();
   });
 
-  test('widget survives repeated host-app interactions', async ({ page }) => {
+  test("widget survives repeated host-app interactions", async ({ page }) => {
     for (let clickIndex = 0; clickIndex < 5; clickIndex++) {
       await page.click('[data-testid="increment"]');
     }
@@ -68,18 +61,26 @@ test.describe('Overlay widget container', () => {
     expect(await isReactScanActive(page)).toBe(true);
   });
 
-  test('opening a panel expands the widget', async ({ page }) => {
-    const minimizedBox = await toolbarWidget(page).boundingBox();
-    expect(minimizedBox).not.toBeNull();
+  test("opening a panel leaves the toolbar compact", async ({ page }) => {
+    const toolbarBox = await toolbarWidget(page).boundingBox();
+    expect(toolbarBox).not.toBeNull();
+    await expect(overlayPanel(page)).toBeHidden();
 
     await notificationsButton(page).click();
-    await page.waitForTimeout(600);
+    await expect(overlayPanel(page)).toBeVisible();
 
-    await expect
-      .poll(async () => {
-        const box = await toolbarWidget(page).boundingBox();
-        return box?.width ?? 0;
-      })
-      .toBeGreaterThan(minimizedBox?.width ?? 0);
+    const openToolbarBox = await toolbarWidget(page).boundingBox();
+    expect(openToolbarBox?.width).toBeCloseTo(toolbarBox?.width ?? 0, 0);
+  });
+
+  test("toolbar collapse state is persisted", async ({ page }) => {
+    await page.getByTitle("Collapse React Scan").click();
+    await expect(page.getByTitle("Expand React Scan")).toBeVisible();
+
+    const state = await page.evaluate((key) => {
+      const rawState = localStorage.getItem(key);
+      return rawState ? JSON.parse(rawState) : null;
+    }, LOCALSTORAGE_TOOLBAR_KEY);
+    expect(state?.collapsed).toBe(true);
   });
 });

@@ -1,18 +1,16 @@
-import { signal } from "@preact/signals";
+import { createSignal } from "solid-js";
 import {
   LOCALSTORAGE_KEY,
-  LOCALSTORAGE_COLLAPSED_KEY,
+  LOCALSTORAGE_TOOLBAR_STATE_KEY,
   MIN_CONTAINER_WIDTH,
   MIN_SIZE,
   SAFE_AREA,
+  TOOLBAR_DEFAULT_POSITION_RATIO,
 } from "./constants";
-import { IS_CLIENT } from "./utils/constants";
 import { readLocalStorage, saveLocalStorage } from "./utils/helpers";
-import { getSafeArea } from "./utils/safe-area";
-import type { CollapsedPosition, Corner, WidgetConfig, WidgetSettings } from "./widget/types";
+import type { Corner, SnapEdge, ToolbarState, WidgetConfig, WidgetSettings } from "./widget/types";
 
-export const signalIsSettingsOpen = /* @__PURE__ */ signal(false);
-export const signalRefWidget = /* @__PURE__ */ signal<HTMLDivElement | null>(null);
+export const [getWidgetRef, setWidgetRef] = createSignal<HTMLDivElement | null>(null);
 
 // Use the raw SAFE_AREA constant (not getSafeArea()) here: this runs at
 // module-init time, before any user has called scan() with options.
@@ -37,11 +35,6 @@ export const getDefaultWidgetConfig = (): WidgetConfig => ({
   },
 });
 
-// Deprecated alias kept for one minor version to avoid breaking downstream
-// imports of the pre-refactor `defaultWidgetConfig` const.
-/** @deprecated use {@link getDefaultWidgetConfig} */
-export const defaultWidgetConfig: WidgetConfig = getDefaultWidgetConfig();
-
 const getInitialWidgetConfig = (): WidgetConfig => {
   const defaults = getDefaultWidgetConfig();
   const stored = readLocalStorage<WidgetSettings>(LOCALSTORAGE_KEY);
@@ -65,26 +58,8 @@ const getInitialWidgetConfig = (): WidgetConfig => {
   };
 };
 
-export const signalWidget = signal<WidgetConfig>(getInitialWidgetConfig());
-
-export const updateDimensions = (): void => {
-  if (!IS_CLIENT) return;
-
-  const { dimensions } = signalWidget.value;
-  const { width, height, position } = dimensions;
-  const safeArea = getSafeArea();
-
-  signalWidget.value = {
-    ...signalWidget.value,
-    dimensions: {
-      isFullWidth: width >= window.innerWidth - safeArea.left - safeArea.right,
-      isFullHeight: height >= window.innerHeight - safeArea.top - safeArea.bottom,
-      width,
-      height,
-      position,
-    },
-  };
-};
+export const [getWidgetState, setWidgetState] =
+  createSignal<WidgetConfig>(getInitialWidgetConfig());
 
 export type WidgetStates =
   | {
@@ -106,10 +81,27 @@ export type WidgetStates =
 //     view: 'summary';
 //     // extra params
 //   };
-export const signalWidgetViews = signal<WidgetStates>({
+export const [getWidgetView, setWidgetView] = createSignal<WidgetStates>({
   view: "none",
 });
 
-const storedCollapsed = readLocalStorage<CollapsedPosition | null>(LOCALSTORAGE_COLLAPSED_KEY);
-export const signalWidgetCollapsed =
-  /* @__PURE__ */ signal<CollapsedPosition | null>(storedCollapsed ?? null);
+const isSnapEdge = (edge: unknown): edge is SnapEdge =>
+  edge === "top" || edge === "bottom" || edge === "left" || edge === "right";
+
+const getInitialToolbarState = (): ToolbarState => {
+  const stored = readLocalStorage<Partial<ToolbarState>>(LOCALSTORAGE_TOOLBAR_STATE_KEY);
+  return {
+    edge: isSnapEdge(stored?.edge) ? stored.edge : "bottom",
+    ratio: typeof stored?.ratio === "number" ? stored.ratio : TOOLBAR_DEFAULT_POSITION_RATIO,
+    collapsed: stored?.collapsed === true,
+  };
+};
+
+export const [getToolbarState, setToolbarState] =
+  createSignal<ToolbarState>(getInitialToolbarState());
+
+export const updateToolbarState = (update: (state: ToolbarState) => ToolbarState): void => {
+  const nextState = update(getToolbarState());
+  setToolbarState(nextState);
+  saveLocalStorage(LOCALSTORAGE_TOOLBAR_STATE_KEY, nextState);
+};

@@ -1,18 +1,9 @@
-import type { JSX } from 'preact';
-import { useCallback, useEffect, useRef } from 'preact/hooks';
-import { Store } from '~core/index';
-import { Icon } from '~web/components/icon';
-import {
-  LOCALSTORAGE_KEY,
-  MIN_CONTAINER_WIDTH,
-  MIN_SIZE,
-} from '~web/constants';
-import {
-  signalRefWidget,
-  signalWidget,
-  signalWidgetViews,
-} from '~web/state';
-import { cn, saveLocalStorage } from '~web/utils/helpers';
+import { createEffect, onCleanup } from "solid-js";
+import { getInspectState } from "../../core/native-state";
+import { Icon } from "../components/icon";
+import { LOCALSTORAGE_KEY, MIN_CONTAINER_WIDTH, MIN_SIZE } from "../constants";
+import { getWidgetRef, getWidgetState, getWidgetView, setWidgetState } from "../state";
+import { cn, saveLocalStorage } from "../utils/helpers";
 import {
   calculateNewSizeAndPosition,
   calculatePosition,
@@ -20,355 +11,301 @@ import {
   getHandleVisibility,
   getOppositeCorner,
   getWindowDimensions,
-} from './helpers';
-import type { Corner, ResizeHandleProps } from './types';
+} from "./helpers";
+import type { ResizeHandleProps } from "./types";
 
-export const ResizeHandle = ({ position }: ResizeHandleProps) => {
-  const refContainer = useRef<HTMLDivElement>(null);
+export const ResizeHandle = (props: ResizeHandleProps) => {
+  let container: HTMLDivElement | undefined;
+  let resizeAbortController: AbortController | undefined;
 
-  const prevWidth = useRef<number | null>(null);
-  const prevHeight = useRef<number | null>(null);
-  const prevCorner = useRef<Corner | null>(null);
-
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const container = refContainer.current;
+  const updateVisibility = () => {
     if (!container) return;
 
-    const updateVisibility = () => {
-      container.classList.remove('pointer-events-none');
+    container.classList.remove("pointer-events-none");
 
-      const isFocused = Store.inspectState.value.kind === 'focused';
-      const shouldShow = signalWidgetViews.value.view !== 'none';
-      const isVisible =
-        (isFocused || shouldShow) &&
-        getHandleVisibility(
-          position,
-          signalWidget.value.corner,
-          signalWidget.value.dimensions.isFullWidth,
-          signalWidget.value.dimensions.isFullHeight,
-        );
+    const widgetState = getWidgetState();
+    const isFocused = getInspectState().kind === "focused";
+    const shouldShow = getWidgetView().view !== "none";
+    const isVisible =
+      (isFocused || shouldShow) &&
+      getHandleVisibility(
+        props.position,
+        widgetState.corner,
+        widgetState.dimensions.isFullWidth,
+        widgetState.dimensions.isFullHeight,
+      );
 
-      if (isVisible) {
-        container.classList.remove(
-          'hidden',
-          'pointer-events-none',
-          'opacity-0',
-        );
-      } else {
-        container.classList.add('hidden', 'pointer-events-none', 'opacity-0');
-      }
-    };
+    if (isVisible) {
+      container.classList.remove("hidden", "pointer-events-none", "opacity-0");
+    } else {
+      container.classList.add("hidden", "pointer-events-none", "opacity-0");
+    }
+  };
 
-    const unsubscribeSignalWidget = signalWidget.subscribe((state) => {
-      if (
-        prevWidth.current !== null &&
-        prevHeight.current !== null &&
-        prevCorner.current !== null &&
-        state.dimensions.width === prevWidth.current &&
-        state.dimensions.height === prevHeight.current &&
-        state.corner === prevCorner.current
-      ) {
-        return;
-      }
+  createEffect(updateVisibility);
+  onCleanup(() => resizeAbortController?.abort());
 
-      updateVisibility();
+  const handleResize = (event: PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
 
-      prevWidth.current = state.dimensions.width;
-      prevHeight.current = state.dimensions.height;
-      prevCorner.current = state.corner;
-    });
+    const widget = getWidgetRef();
+    if (!widget) return;
 
-    const unsubscribeInspectState = Store.inspectState.subscribe(() => {
-      updateVisibility();
-    });
+    const containerStyle = widget.style;
+    const { dimensions } = getWidgetState();
+    const initialX = event.clientX;
+    const initialY = event.clientY;
 
-    return () => {
-      unsubscribeSignalWidget();
-      unsubscribeInspectState();
-      prevWidth.current = null;
-      prevHeight.current = null;
-      prevCorner.current = null;
-    };
-  }, []);
+    const initialWidth = dimensions.width;
+    const initialHeight = dimensions.height;
+    const initialPosition = dimensions.position;
 
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  const handleResize = useCallback(
-    (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
+    setWidgetState((state) => ({
+      ...state,
+      dimensions: {
+        ...dimensions,
+        isFullWidth: false,
+        isFullHeight: false,
+        width: initialWidth,
+        height: initialHeight,
+        position: initialPosition,
+      },
+    }));
 
-      const widget = signalRefWidget.value;
-      if (!widget) return;
+    const pointerId = event.pointerId;
+    let latestClientX = initialX;
+    let latestClientY = initialY;
+    let resizeFrameId: number | undefined;
 
-      const containerStyle = widget.style;
-      const { dimensions } = signalWidget.value;
-      const initialX = e.clientX;
-      const initialY = e.clientY;
+    const applyResize = () => {
+      const { newSize, newPosition } = calculateNewSizeAndPosition(
+        props.position,
+        { width: initialWidth, height: initialHeight },
+        initialPosition,
+        latestClientX - initialX,
+        latestClientY - initialY,
+      );
 
-      const initialWidth = dimensions.width;
-      const initialHeight = dimensions.height;
-      const initialPosition = dimensions.position;
+      containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
+      containerStyle.width = `${newSize.width}px`;
+      containerStyle.height = `${newSize.height}px`;
 
-      signalWidget.value = {
-        ...signalWidget.value,
+      const maxTreeWidth = Math.floor(newSize.width - MIN_CONTAINER_WIDTH / 2);
+      const currentTreeWidth = getWidgetState().componentsTree.width;
+      const newTreeWidth = Math.min(maxTreeWidth, Math.max(MIN_CONTAINER_WIDTH, currentTreeWidth));
+
+      setWidgetState((state) => ({
+        ...state,
         dimensions: {
-          ...dimensions,
           isFullWidth: false,
           isFullHeight: false,
-          width: initialWidth,
-          height: initialHeight,
-          position: initialPosition,
+          width: newSize.width,
+          height: newSize.height,
+          position: newPosition,
         },
-      };
+        componentsTree: {
+          ...state.componentsTree,
+          width: newTreeWidth,
+        },
+      }));
 
-      let rafId: number | null = null;
+      resizeFrameId = undefined;
+    };
 
-      const handlePointerMove = (e: PointerEvent) => {
-        if (rafId) return;
+    const handlePointerMove = (pointerEvent: PointerEvent) => {
+      latestClientX = pointerEvent.clientX;
+      latestClientY = pointerEvent.clientY;
+      containerStyle.transition = "none";
+      if (resizeFrameId !== undefined) return;
+      resizeFrameId = requestAnimationFrame(applyResize);
+    };
 
-        containerStyle.transition = 'none';
+    const handlePointerUp = () => {
+      if (resizeFrameId !== undefined) {
+        cancelAnimationFrame(resizeFrameId);
+        applyResize();
+      }
+      resizeAbortController?.abort();
+      resizeAbortController = undefined;
+      if (container?.hasPointerCapture(pointerId)) {
+        container.releasePointerCapture(pointerId);
+      }
 
-        rafId = requestAnimationFrame(() => {
-          const { newSize, newPosition } = calculateNewSizeAndPosition(
-            position,
-            { width: initialWidth, height: initialHeight },
-            initialPosition,
-            e.clientX - initialX,
-            e.clientY - initialY,
-          );
-
-          containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
-          containerStyle.width = `${newSize.width}px`;
-          containerStyle.height = `${newSize.height}px`;
-
-          // Adjust components tree width when widget is resized
-          const maxTreeWidth = Math.floor(newSize.width - (MIN_CONTAINER_WIDTH / 2));
-          const currentTreeWidth = signalWidget.value.componentsTree.width;
-          const newTreeWidth = Math.min(
-            maxTreeWidth,
-            Math.max(MIN_CONTAINER_WIDTH, currentTreeWidth),
-          );
-
-          signalWidget.value = {
-            ...signalWidget.value,
-            dimensions: {
-              isFullWidth: false,
-              isFullHeight: false,
-              width: newSize.width,
-              height: newSize.height,
-              position: newPosition,
-            },
-            componentsTree: {
-              ...signalWidget.value.componentsTree,
-              width: newTreeWidth,
-            },
-          };
-
-          rafId = null;
-        });
-      };
-
-      const handlePointerUp = () => {
-        if (rafId) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
-        }
-        document.removeEventListener('pointermove', handlePointerMove);
-        document.removeEventListener('pointerup', handlePointerUp);
-
-        const { dimensions, corner } = signalWidget.value;
-        const windowDims = getWindowDimensions();
-        const isCurrentFullWidth = windowDims.isFullWidth(dimensions.width);
-        const isCurrentFullHeight = windowDims.isFullHeight(dimensions.height);
-        const isFullScreen = isCurrentFullWidth && isCurrentFullHeight;
-
-        let newCorner = corner;
-        if (isFullScreen || isCurrentFullWidth || isCurrentFullHeight) {
-          newCorner = getClosestCorner(dimensions.position);
-        }
-
-        const newPosition = calculatePosition(
-          newCorner,
-          dimensions.width,
-          dimensions.height,
-        );
-
-        const onTransitionEnd = () => {
-          widget.removeEventListener('transitionend', onTransitionEnd);
-        };
-
-        widget.addEventListener('transitionend', onTransitionEnd);
-        containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
-
-        signalWidget.value = {
-          ...signalWidget.value,
-          corner: newCorner,
-          dimensions: {
-            isFullWidth: isCurrentFullWidth,
-            isFullHeight: isCurrentFullHeight,
-            width: dimensions.width,
-            height: dimensions.height,
-            position: newPosition,
-          },
-          lastDimensions: {
-            isFullWidth: isCurrentFullWidth,
-            isFullHeight: isCurrentFullHeight,
-            width: dimensions.width,
-            height: dimensions.height,
-            position: newPosition,
-          },
-        };
-
-        saveLocalStorage(LOCALSTORAGE_KEY, {
-          corner: newCorner,
-          dimensions: signalWidget.value.dimensions,
-          lastDimensions: signalWidget.value.lastDimensions,
-          componentsTree: signalWidget.value.componentsTree,
-        });
-      };
-
-      document.addEventListener('pointermove', handlePointerMove, {
-        passive: true,
-      });
-      document.addEventListener('pointerup', handlePointerUp);
-    },
-    [],
-  );
-
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  const handleDoubleClick = useCallback(
-    (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const widget = signalRefWidget.value;
-      if (!widget) return;
-
-      const containerStyle = widget.style;
-      const { dimensions, corner } = signalWidget.value;
+      const { dimensions, corner } = getWidgetState();
       const windowDims = getWindowDimensions();
-
       const isCurrentFullWidth = windowDims.isFullWidth(dimensions.width);
       const isCurrentFullHeight = windowDims.isFullHeight(dimensions.height);
       const isFullScreen = isCurrentFullWidth && isCurrentFullHeight;
-      const isPartiallyMaximized =
-        (isCurrentFullWidth || isCurrentFullHeight) && !isFullScreen;
 
-      let newWidth = dimensions.width;
-      let newHeight = dimensions.height;
-      const newCorner = getOppositeCorner(
-        position,
-        corner,
-        isFullScreen,
-        isCurrentFullWidth,
-        isCurrentFullHeight,
-      );
-
-      if (position === 'left' || position === 'right') {
-        newWidth = isCurrentFullWidth ? dimensions.width : windowDims.maxWidth;
-        if (isPartiallyMaximized) {
-          newWidth = isCurrentFullWidth ? MIN_SIZE.width : windowDims.maxWidth;
-        }
-      } else {
-        newHeight = isCurrentFullHeight
-          ? dimensions.height
-          : windowDims.maxHeight;
-        if (isPartiallyMaximized) {
-          newHeight = isCurrentFullHeight
-            ? MIN_SIZE.initialHeight
-            : windowDims.maxHeight;
-        }
+      let newCorner = corner;
+      if (isFullScreen || isCurrentFullWidth || isCurrentFullHeight) {
+        newCorner = getClosestCorner(dimensions.position);
       }
 
-      if (isFullScreen) {
-        if (position === 'left' || position === 'right') {
-          newWidth = MIN_SIZE.width;
-        } else {
-          newHeight = MIN_SIZE.initialHeight;
-        }
-      }
+      const newPosition = calculatePosition(newCorner, dimensions.width, dimensions.height);
 
-      const newPosition = calculatePosition(newCorner, newWidth, newHeight);
-      const newDimensions = {
-        isFullWidth: windowDims.isFullWidth(newWidth),
-        isFullHeight: windowDims.isFullHeight(newHeight),
-        width: newWidth,
-        height: newHeight,
-        position: newPosition,
-      };
+      containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
 
-      // Adjust components tree width when widget is resized
-      const maxTreeWidth = Math.floor(newWidth - MIN_SIZE.width / 2);
-      const currentTreeWidth = signalWidget.value.componentsTree.width;
-      const defaultWidth = Math.floor(newWidth * 0.3); // Use 30% of window width as default
+      setWidgetState((state) => ({
+        ...state,
+        corner: newCorner,
+        dimensions: {
+          isFullWidth: isCurrentFullWidth,
+          isFullHeight: isCurrentFullHeight,
+          width: dimensions.width,
+          height: dimensions.height,
+          position: newPosition,
+        },
+        lastDimensions: {
+          isFullWidth: isCurrentFullWidth,
+          isFullHeight: isCurrentFullHeight,
+          width: dimensions.width,
+          height: dimensions.height,
+          position: newPosition,
+        },
+      }));
 
-      const newTreeWidth = isCurrentFullWidth
-        ? MIN_CONTAINER_WIDTH
-        : (position === 'left' || position === 'right') && !isCurrentFullWidth
-          ? Math.min(maxTreeWidth, Math.max(MIN_CONTAINER_WIDTH, defaultWidth))
-          : Math.min(
-              maxTreeWidth,
-              Math.max(MIN_CONTAINER_WIDTH, currentTreeWidth),
-            );
-
-      requestAnimationFrame(() => {
-        signalWidget.value = {
-          corner: newCorner,
-          dimensions: newDimensions,
-          lastDimensions: dimensions,
-          componentsTree: {
-            ...signalWidget.value.componentsTree,
-            width: newTreeWidth,
-          },
-        };
-
-        containerStyle.transition = 'all 0.25s cubic-bezier(0, 0, 0.2, 1)';
-        containerStyle.width = `${newWidth}px`;
-        containerStyle.height = `${newHeight}px`;
-        containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
-      });
-
+      const widgetState = getWidgetState();
       saveLocalStorage(LOCALSTORAGE_KEY, {
+        corner: newCorner,
+        dimensions: widgetState.dimensions,
+        lastDimensions: widgetState.lastDimensions,
+        componentsTree: widgetState.componentsTree,
+      });
+    };
+
+    container?.setPointerCapture(pointerId);
+    resizeAbortController?.abort();
+    resizeAbortController = new AbortController();
+    const listenerOptions = { signal: resizeAbortController.signal };
+    window.addEventListener("pointermove", handlePointerMove, listenerOptions);
+    window.addEventListener("pointerup", handlePointerUp, listenerOptions);
+    window.addEventListener("pointercancel", handlePointerUp, listenerOptions);
+  };
+
+  const handleDoubleClick = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const widget = getWidgetRef();
+    if (!widget) return;
+
+    const containerStyle = widget.style;
+    const { dimensions, corner } = getWidgetState();
+    const windowDims = getWindowDimensions();
+
+    const isCurrentFullWidth = windowDims.isFullWidth(dimensions.width);
+    const isCurrentFullHeight = windowDims.isFullHeight(dimensions.height);
+    const isFullScreen = isCurrentFullWidth && isCurrentFullHeight;
+    const isPartiallyMaximized = (isCurrentFullWidth || isCurrentFullHeight) && !isFullScreen;
+
+    let newWidth = dimensions.width;
+    let newHeight = dimensions.height;
+    const newCorner = getOppositeCorner(
+      props.position,
+      corner,
+      isFullScreen,
+      isCurrentFullWidth,
+      isCurrentFullHeight,
+    );
+
+    if (props.position === "left" || props.position === "right") {
+      newWidth = isCurrentFullWidth ? dimensions.width : windowDims.maxWidth;
+      if (isPartiallyMaximized) {
+        newWidth = isCurrentFullWidth ? MIN_SIZE.width : windowDims.maxWidth;
+      }
+    } else {
+      newHeight = isCurrentFullHeight ? dimensions.height : windowDims.maxHeight;
+      if (isPartiallyMaximized) {
+        newHeight = isCurrentFullHeight ? MIN_SIZE.initialHeight : windowDims.maxHeight;
+      }
+    }
+
+    if (isFullScreen) {
+      if (props.position === "left" || props.position === "right") {
+        newWidth = MIN_SIZE.width;
+      } else {
+        newHeight = MIN_SIZE.initialHeight;
+      }
+    }
+
+    const newPosition = calculatePosition(newCorner, newWidth, newHeight);
+    const newDimensions = {
+      isFullWidth: windowDims.isFullWidth(newWidth),
+      isFullHeight: windowDims.isFullHeight(newHeight),
+      width: newWidth,
+      height: newHeight,
+      position: newPosition,
+    };
+
+    // Adjust components tree width when widget is resized
+    const maxTreeWidth = Math.floor(newWidth - MIN_SIZE.width / 2);
+    const currentTreeWidth = getWidgetState().componentsTree.width;
+    const defaultWidth = Math.floor(newWidth * 0.3); // Use 30% of window width as default
+
+    const newTreeWidth = isCurrentFullWidth
+      ? MIN_CONTAINER_WIDTH
+      : (props.position === "left" || props.position === "right") && !isCurrentFullWidth
+        ? Math.min(maxTreeWidth, Math.max(MIN_CONTAINER_WIDTH, defaultWidth))
+        : Math.min(maxTreeWidth, Math.max(MIN_CONTAINER_WIDTH, currentTreeWidth));
+
+    requestAnimationFrame(() => {
+      setWidgetState((state) => ({
         corner: newCorner,
         dimensions: newDimensions,
         lastDimensions: dimensions,
         componentsTree: {
-          ...signalWidget.value.componentsTree,
+          ...state.componentsTree,
           width: newTreeWidth,
         },
-      });
-    },
-    [],
-  );
+      }));
+
+      containerStyle.transition = "all 0.25s cubic-bezier(0, 0, 0.2, 1)";
+      containerStyle.width = `${newWidth}px`;
+      containerStyle.height = `${newHeight}px`;
+      containerStyle.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0)`;
+    });
+
+    saveLocalStorage(LOCALSTORAGE_KEY, {
+      corner: newCorner,
+      dimensions: newDimensions,
+      lastDimensions: dimensions,
+      componentsTree: {
+        ...getWidgetState().componentsTree,
+        width: newTreeWidth,
+      },
+    });
+  };
 
   return (
     <div
-      ref={refContainer}
+      ref={container}
       onPointerDown={handleResize}
       onDblClick={handleDoubleClick}
-      className={cn(
-        'absolute z-50',
-        'flex items-center justify-center',
-        'group',
-        'transition-colors select-none',
-        'peer',
+      style={{ "touch-action": "none" }}
+      class={cn(
+        "absolute z-50",
+        "flex items-center justify-center",
+        "group",
+        "transition-colors select-none",
+        "peer",
         {
-          'resize-left peer/left': position === 'left',
-          'resize-right peer/right z-10': position === 'right',
-          'resize-top peer/top': position === 'top',
-          'resize-bottom peer/bottom': position === 'bottom',
+          "resize-left peer/left": props.position === "left",
+          "resize-right peer/right z-10": props.position === "right",
+          "resize-top peer/top": props.position === "top",
+          "resize-bottom peer/bottom": props.position === "bottom",
         },
       )}
     >
-      <span className="resize-line-wrapper">
-        <span className="resize-line">
+      <span class="resize-line-wrapper">
+        <span class="resize-line">
           <Icon
             name="icon-ellipsis"
             size={18}
-            className={cn(
-              'text-neutral-400',
-              (position === 'left' || position === 'right') && 'rotate-90',
+            class={cn(
+              "text-neutral-400",
+              (props.position === "left" || props.position === "right") && "rotate-90",
             )}
           />
         </span>

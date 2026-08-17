@@ -12,13 +12,13 @@ const trackElementPosition = (
 ): (() => void) => {
   const handleScroll = callback.bind(null, element);
 
-  document.addEventListener('scroll', handleScroll, {
+  document.addEventListener("scroll", handleScroll, {
     passive: true,
     capture: true,
   });
 
   return () => {
-    document.removeEventListener('scroll', handleScroll, { capture: true });
+    document.removeEventListener("scroll", handleScroll, { capture: true });
   };
 };
 
@@ -26,20 +26,18 @@ export const flashManager = {
   activeFlashes: new Map<HTMLElement, FlashEntry>(),
 
   create(container: HTMLElement) {
-    const existingOverlay = container.querySelector(
-      '.react-scan-flash-overlay',
-    );
+    const existingOverlay = container.querySelector(".react-scan-flash-overlay");
 
     const overlay =
       existingOverlay instanceof HTMLElement
         ? existingOverlay
         : (() => {
-            const newOverlay = document.createElement('div');
-            newOverlay.className = 'react-scan-flash-overlay';
+            const newOverlay = document.createElement("div");
+            newOverlay.className = "react-scan-flash-overlay";
             container.appendChild(newOverlay);
 
             const scrollCleanup = trackElementPosition(container, () => {
-              if (container.querySelector('.react-scan-flash-overlay')) {
+              if (container.querySelector(".react-scan-flash-overlay")) {
                 this.create(container);
               }
             });
@@ -60,12 +58,12 @@ export const flashManager = {
     }
 
     requestAnimationFrame(() => {
-      overlay.style.transition = 'none';
-      overlay.style.opacity = '0.9';
+      overlay.style.transition = "none";
+      overlay.style.opacity = "0.9";
 
       const timerId = setTimeout(() => {
-        overlay.style.transition = 'opacity 150ms ease-out';
-        overlay.style.opacity = '0';
+        overlay.style.transition = "opacity 150ms ease-out";
+        overlay.style.opacity = "0";
 
         const cleanupTimer = setTimeout(() => {
           if (overlay.parentNode) {

@@ -1,6 +1,6 @@
-import { signal } from "@preact/signals";
 import type { Fiber } from "bippy";
-import type { RenderData } from "~core/instrumentation";
+import { createSignal } from "solid-js";
+import type { RenderData } from "../../../../core/instrumentation";
 
 export interface TreeNode {
   label: string;
@@ -18,14 +18,18 @@ export interface FlattenedNode extends TreeNode {
   fiber: Fiber;
 }
 
-export const searchState = signal<{
+export interface SearchState {
   query: string;
   matches: FlattenedNode[];
   currentMatchIndex: number;
-}>({
-  query: "",
-  matches: [],
-  currentMatchIndex: -1,
-});
+}
 
-export const signalSkipTreeUpdate = /* @__PURE__ */ signal(false);
+export const [getSearchState, setSearchState] =
+  /* @__PURE__ */ createSignal<SearchState>({
+    query: "",
+    matches: [],
+    currentMatchIndex: -1,
+  });
+
+export const [getShouldSkipTreeUpdate, setShouldSkipTreeUpdate] =
+  /* @__PURE__ */ createSignal(false);

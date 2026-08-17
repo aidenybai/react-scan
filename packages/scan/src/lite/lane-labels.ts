@@ -1,5 +1,5 @@
-import { REACT_TOTAL_NUM_LANES, SCHEDULER_PRIORITY_NAMES } from './constants';
-import type { Lanes, ReactRendererWithProfiling } from './types';
+import { REACT_TOTAL_NUM_LANES, SCHEDULER_PRIORITY_NAMES } from "./constants";
+import type { Lanes, ReactRendererWithProfiling } from "./types";
 
 export interface LaneLabelTranslator {
   laneLabels: (lanes: Lanes | undefined) => Array<string> | undefined;
@@ -41,7 +41,7 @@ export const createLaneLabelTranslator = (
 ): LaneLabelTranslatorResult => {
   let laneToLabel: Map<number, string> | null = null;
   for (const renderer of renderers) {
-    if (typeof renderer.getLaneLabelMap !== 'function') continue;
+    if (typeof renderer.getLaneLabelMap !== "function") continue;
     try {
       const map = renderer.getLaneLabelMap();
       if (map && map.size > 0) {

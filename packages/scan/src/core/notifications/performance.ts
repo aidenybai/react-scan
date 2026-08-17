@@ -1,15 +1,11 @@
 import { Fiber, getDisplayName, getTimings, hasMemoCache, isHostFiber, traverseFiber } from "bippy";
-import { Store } from "../..";
+import { Store } from "../native-state";
 
-import { BoundedArray, invariantError } from "~core/notifications/performance-utils";
-import {
-  SectionData,
-  collectInspectorDataWithoutCounts,
-} from "~web/views/inspector/timeline/utils";
-import { getFiberFromElement, getParentCompositeFiber } from "~web/views/inspector/utils";
-import { performanceEntryChannels } from "./performance-store";
+import { BoundedArray, invariantError } from "./performance-utils";
+import { SectionData, collectInspectorDataWithoutCounts } from "../inspection/change-collection";
+import { getFiberFromElement, getParentCompositeFiber } from "../inspection/fiber";
 import type { PerformanceInteraction, PerformanceInteractionEntry } from "./types";
-import { not_globally_unique_generateId } from "~core/utils";
+import { not_globally_unique_generateId } from "../utils";
 
 interface PathFilters {
   skipProviders: boolean;
@@ -219,6 +215,31 @@ export type PerformanceEntryChannelEvent =
       detailedTiming: TimeoutStage;
     };
 
+const MAX_PERFORMANCE_ENTRIES = 50;
+let performanceEntries = new BoundedArray<PerformanceEntryChannelEvent>(MAX_PERFORMANCE_ENTRIES);
+const performanceEntrySubscribers = new Set<(event: PerformanceEntryChannelEvent) => void>();
+
+const publishPerformanceEntry = (event: PerformanceEntryChannelEvent): void => {
+  performanceEntries.push(event);
+  performanceEntrySubscribers.forEach((subscriber) => subscriber(event));
+};
+
+const subscribePerformanceEntries = (
+  subscriber: (event: PerformanceEntryChannelEvent) => void,
+): (() => void) => {
+  performanceEntries.forEach((event) => subscriber(event));
+  performanceEntrySubscribers.add(subscriber);
+  return () => {
+    performanceEntrySubscribers.delete(subscriber);
+  };
+};
+
+export const hasPendingPerformanceEntries = (): boolean => performanceEntries.length > 0;
+
+export const clearPerformanceEntries = (): void => {
+  performanceEntries = new BoundedArray(MAX_PERFORMANCE_ENTRIES);
+};
+
 export type CompletedInteraction = {
   detailedTiming: TimeoutStage;
   latency: number;
@@ -360,13 +381,10 @@ const setupPerformanceListener = (onEntry: (interaction: PerformanceInteraction)
 
 export const setupPerformancePublisher = () => {
   return setupPerformanceListener((entry) => {
-    performanceEntryChannels.publish(
-      {
-        kind: "entry-received",
-        entry,
-      },
-      "recording",
-    );
+    publishPerformanceEntry({
+      kind: "entry-received",
+      entry,
+    });
   });
 };
 
@@ -409,11 +427,9 @@ const getAssociatedDetailedTimingInteraction = (
 };
 
 // this would be cool if it listened for merge, so it had to be after
-export const listenForPerformanceEntryInteractions = (
-  onComplete: (completedInteraction: CompletedInteraction) => void,
-) => {
+export const listenForPerformanceEntryInteractions = () => {
   // we make the assumption that the detailed timing will be ready before the performance timing
-  const unsubscribe = performanceEntryChannels.subscribe("recording", (event) => {
+  const unsubscribe = subscribePerformanceEntries((event) => {
     const associatedDetailedInteraction =
       event.kind === "auto-complete-race"
         ? tasks.find((task) => task.interactionUUID === event.interactionUUID)
@@ -426,8 +442,7 @@ export const listenForPerformanceEntryInteractions = (
       return;
     }
 
-    const completedInteraction = associatedDetailedInteraction.completeInteraction(event);
-    onComplete(completedInteraction);
+    associatedDetailedInteraction.completeInteraction(event);
   });
 
   return unsubscribe;

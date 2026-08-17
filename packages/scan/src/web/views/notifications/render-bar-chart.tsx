@@ -1,8 +1,8 @@
-import { useRef, useState } from "preact/hooks";
-import { getBatchedRectMap } from "src/new-outlines";
-import { getIsProduction } from "~core/index";
-import { iife } from "~core/notifications/performance-utils";
-import { cn } from "~web/utils/helpers";
+import { For, Show, createMemo, createSignal } from "solid-js";
+import { getBatchedRectMap } from "../../../new-outlines";
+import { getIsProduction } from "../../../core/index";
+import { iife } from "../../../core/notifications/performance-utils";
+import { cn } from "../../utils/helpers";
 import {
   GroupedFiberRender,
   NotificationEvent,
@@ -10,41 +10,46 @@ import {
   isRenderMemoizable,
   useNotificationsContext,
 } from "./data";
-import { HighlightStore, drawHighlights } from "~core/notifications/outline-overlay";
+import {
+  drawHighlights,
+  getHighlightState,
+  setHighlightState,
+} from "../../../core/notifications/outline-overlay";
 import { ChevronRight } from "./icons";
 
 // todo: cleanup, convoluted ternaries
 export const fadeOutHighlights = () => {
-  const curr = HighlightStore.value.current
-    ? HighlightStore.value.current
-    : HighlightStore.value.kind === "transition"
-      ? HighlightStore.value.transitionTo
+  const state = getHighlightState();
+  const curr = state.current
+    ? state.current
+    : state.kind === "transition"
+      ? state.transitionTo
       : null;
   if (!curr) {
     return;
   }
 
-  if (HighlightStore.value.kind === "transition") {
-    HighlightStore.value = {
+  if (state.kind === "transition") {
+    setHighlightState({
       kind: "move-out",
       // because we want to dynamically fade this value
       current:
-        HighlightStore.value.current?.alpha === 0
+        state.current?.alpha === 0
           ? // we want to only start fading from transition if current is done animating out
-            HighlightStore.value.transitionTo
+            state.transitionTo
           : // if current doesn't exist then transition must exist
-            (HighlightStore.value.current ?? HighlightStore.value.transitionTo),
-    };
+            (state.current ?? state.transitionTo),
+    });
     return;
   }
 
-  HighlightStore.value = {
+  setHighlightState({
     kind: "move-out",
     current: {
       alpha: 0,
       ...curr,
     },
-  };
+  });
 };
 
 type Bars = Array<
@@ -54,101 +59,94 @@ type Bars = Array<
   | { kind: "render"; event: GroupedFiberRender; totalTime: number }
 >;
 
-export const RenderBarChart = ({ selectedEvent }: { selectedEvent: NotificationEvent }) => {
-  const totalInteractionTime = getTotalTime(selectedEvent.timing);
-  const nonRender = totalInteractionTime - selectedEvent.timing.renderTime;
-  const [isProduction] = useState(getIsProduction());
-  const events = selectedEvent.groupedFiberRenders;
-  const bars: Bars = events.map((event) => ({
-    event,
-    kind: "render",
-    totalTime: isProduction ? event.count : event.totalTime,
-  }));
-
-  const isShowingExtraInfo = iife(() => {
-    switch (selectedEvent.kind) {
-      case "dropped-frames": {
-        return selectedEvent.timing.renderTime / totalInteractionTime < 0.1;
-      }
-      case "interaction": {
-        return (
-          (selectedEvent.timing.otherJSTime + selectedEvent.timing.renderTime) /
+export const RenderBarChart = (props: { selectedEvent: NotificationEvent }) => {
+  const isProduction = getIsProduction();
+  const bars = createMemo<Bars>(() => {
+    const selectedEvent = props.selectedEvent;
+    const totalInteractionTime = getTotalTime(selectedEvent.timing);
+    const result: Bars = selectedEvent.groupedFiberRenders.map((event) => ({
+      event,
+      kind: "render",
+      totalTime: isProduction ? event.count : event.totalTime,
+    }));
+    const isShowingExtraInfo =
+      selectedEvent.kind === "dropped-frames"
+        ? selectedEvent.timing.renderTime / totalInteractionTime < 0.1
+        : (selectedEvent.timing.otherJSTime + selectedEvent.timing.renderTime) /
             totalInteractionTime <
-          0.2
-        );
+          0.2;
+
+    if (selectedEvent.kind === "interaction" && !isProduction) {
+      result.push({
+        kind: "other-javascript",
+        totalTime: selectedEvent.timing.otherJSTime,
+      });
+    }
+    if (isShowingExtraInfo && !isProduction) {
+      if (selectedEvent.kind === "interaction") {
+        result.push({
+          kind: "other-not-javascript",
+          totalTime:
+            totalInteractionTime -
+            selectedEvent.timing.renderTime -
+            selectedEvent.timing.otherJSTime,
+        });
+      } else {
+        result.push({
+          kind: "other-frame-drop",
+          totalTime: totalInteractionTime - selectedEvent.timing.renderTime,
+        });
       }
     }
+    return result;
   });
-  /**
-   * We don't add the extra bars in production because we can't compare them to the renders, so the bar is useless, user can use overview tab to see times
-   */
-  if (selectedEvent.kind === "interaction" && !isProduction) {
-    bars.push({
-      kind: "other-javascript",
-      totalTime: selectedEvent.timing.otherJSTime,
-    });
-  }
 
-  if (isShowingExtraInfo && !isProduction) {
-    if (selectedEvent.kind === "interaction") {
-      bars.push({
-        kind: "other-not-javascript",
-        totalTime:
-          getTotalTime(selectedEvent.timing) -
-          selectedEvent.timing.renderTime -
-          selectedEvent.timing.otherJSTime,
-      });
-    } else {
-      bars.push({
-        kind: "other-frame-drop",
-        totalTime: nonRender,
-      });
-    }
-  }
-
-  const debouncedMouseEnter = useRef<{
+  const debouncedMouseEnter: {
     timer: ReturnType<typeof setTimeout> | null;
     lastCallAt: number | null;
-  }>({
+  } = {
     lastCallAt: null,
     timer: null,
-  });
+  };
 
-  const totalBarTime = bars.reduce((prev, curr) => prev + curr.totalTime, 0);
+  const totalBarTime = createMemo(() =>
+    bars().reduce((totalTime, bar) => totalTime + bar.totalTime, 0),
+  );
 
   return (
-    <div className={cn(["flex flex-col h-full w-full gap-y-1"])}>
+    <div class={cn(["flex flex-col h-full w-full gap-y-1"])}>
       {iife(() => {
-        if (isProduction && bars.length === 0) {
+        if (isProduction && bars().length === 0) {
           return (
-            <div className="flex flex-col items-center justify-center h-full text-zinc-400">
-              <p className="text-sm w-full text-left text-white mb-1.5">No data available</p>
-              <p className="text-x w-full text-lefts">No data was collected during this period</p>
+            <div class="flex flex-col items-center justify-center h-full text-zinc-400">
+              <p class="text-sm w-full text-left text-white mb-1.5">No data available</p>
+              <p class="text-x w-full text-lefts">No data was collected during this period</p>
             </div>
           );
         }
-        if (bars.length === 0) {
+        if (bars().length === 0) {
           return (
-            <div className="flex flex-col items-center justify-center h-full text-zinc-400">
-              <p className="text-sm w-full text-left text-white mb-1.5">No renders collected</p>
-              <p className="text-x w-full text-lefts">There were no renders during this period</p>
+            <div class="flex flex-col items-center justify-center h-full text-zinc-400">
+              <p class="text-sm w-full text-left text-white mb-1.5">No renders collected</p>
+              <p class="text-x w-full text-lefts">There were no renders during this period</p>
             </div>
           );
         }
       })}
 
-      {bars
-        .toSorted((a, b) => b.totalTime - a.totalTime)
-        .map((bar) => (
+      <For
+        each={bars().toSorted((firstBar, secondBar) => secondBar.totalTime - firstBar.totalTime)}
+      >
+        {(bar) => (
           <RenderBar
-            key={bar.kind === "render" ? bar.event.id : bar.kind}
-            bars={bars}
+            bars={bars()}
             bar={bar}
             debouncedMouseEnter={debouncedMouseEnter}
-            totalBarTime={totalBarTime}
+            totalBarTime={totalBarTime()}
             isProduction={isProduction}
           />
-        ))}
+        )}
+      </For>
     </div>
   );
 };
@@ -178,16 +176,14 @@ const RenderBar = ({
   bars: Bars;
   bar: Bars[number];
   debouncedMouseEnter: {
-    current: {
-      timer: ReturnType<typeof setTimeout> | null;
-      lastCallAt: number | null;
-    };
+    timer: ReturnType<typeof setTimeout> | null;
+    lastCallAt: number | null;
   };
   totalBarTime: number;
   isProduction: boolean | null;
 }) => {
   const { setNotificationState, setRoute } = useNotificationsContext();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = createSignal(false);
 
   const isLeaf = bar.kind === "render" ? bar.event.parents.size === 0 : true;
 
@@ -206,10 +202,7 @@ const RenderBar = ({
 
   const handleBarClick = () => {
     if (bar.kind === "render") {
-      setNotificationState((prev) => ({
-        ...prev,
-        selectedFiber: bar.event,
-      }));
+      setNotificationState("selectedFiber", bar.event);
 
       setRoute({
         route: "render-explanation",
@@ -227,42 +220,43 @@ const RenderBar = ({
   };
 
   return (
-    <div className="w-full">
-      <div className={cn(["w-full flex items-center relative text-xs min-w-0"])}>
+    <div class="w-full">
+      <div class={cn(["w-full flex items-center relative text-xs min-w-0"])}>
         <button
           onMouseLeave={() => {
-            if (debouncedMouseEnter.current.timer) {
-              clearTimeout(debouncedMouseEnter.current.timer);
+            if (debouncedMouseEnter.timer) {
+              clearTimeout(debouncedMouseEnter.timer);
             }
             fadeOutHighlights();
           }}
           onMouseEnter={async () => {
             const highlightBars = async () => {
-              debouncedMouseEnter.current.lastCallAt = Date.now();
+              debouncedMouseEnter.lastCallAt = Date.now();
               if (bar.kind !== "render") {
-                const curr = HighlightStore.value.current
-                  ? HighlightStore.value.current
-                  : HighlightStore.value.kind === "transition"
-                    ? HighlightStore.value.transitionTo
+                const highlightState = getHighlightState();
+                const curr = highlightState.current
+                  ? highlightState.current
+                  : highlightState.kind === "transition"
+                    ? highlightState.transitionTo
                     : null;
 
                 if (!curr) {
-                  HighlightStore.value = {
+                  setHighlightState({
                     kind: "idle",
                     current: null,
-                  };
+                  });
                   return;
                 }
-                HighlightStore.value = {
+                setHighlightState({
                   kind: "move-out",
                   current: {
                     alpha: 0,
                     ...curr,
                   },
-                };
+                });
                 return;
               }
-              const state = HighlightStore.value;
+              const state = getHighlightState();
               const currentState = iife(() => {
                 switch (state.kind) {
                   case "transition": {
@@ -281,7 +275,7 @@ const RenderBar = ({
                 iife(() => {
                   switch (transitionState) {
                     case "fading-in": {
-                      HighlightStore.value = {
+                      setHighlightState({
                         kind: "transition",
                         current: state.transitionTo,
                         transitionTo: {
@@ -289,16 +283,15 @@ const RenderBar = ({
                           alpha: 0,
                           name: bar.event.name,
                         },
-                      };
+                      });
                       return;
                     }
                     case "fading-out": {
-                      HighlightStore.value = {
+                      setHighlightState({
                         kind: "transition",
-                        current: HighlightStore.value.current
+                        current: state.current
                           ? {
-                              alpha: 0,
-                              ...HighlightStore.value.current,
+                              ...state.current,
                             }
                           : null,
                         transitionTo: {
@@ -306,13 +299,13 @@ const RenderBar = ({
                           alpha: 0,
                           name: bar.event.name,
                         },
-                      };
+                      });
                       return;
                     }
                   }
                 });
               } else {
-                HighlightStore.value = {
+                setHighlightState({
                   kind: "transition",
                   transitionTo: {
                     rects: stateRects,
@@ -325,7 +318,7 @@ const RenderBar = ({
                         ...currentState,
                       }
                     : null,
-                };
+                });
               }
 
               const trueElements = bar.event.elements.filter(
@@ -341,13 +334,13 @@ const RenderBar = ({
             };
 
             if (
-              debouncedMouseEnter.current.lastCallAt &&
-              Date.now() - debouncedMouseEnter.current.lastCallAt < 200
+              debouncedMouseEnter.lastCallAt &&
+              Date.now() - debouncedMouseEnter.lastCallAt < 200
             ) {
-              if (debouncedMouseEnter.current.timer) {
-                clearTimeout(debouncedMouseEnter.current.timer);
+              if (debouncedMouseEnter.timer) {
+                clearTimeout(debouncedMouseEnter.timer);
               }
-              debouncedMouseEnter.current.timer = setTimeout(() => {
+              debouncedMouseEnter.timer = setTimeout(() => {
                 highlightBars();
               }, 200);
               return;
@@ -356,16 +349,16 @@ const RenderBar = ({
             highlightBars();
           }}
           onClick={handleBarClick}
-          className={cn([
+          class={cn([
             "h-full w-[90%] flex items-center hover:bg-[#0f0f0f] rounded-l-md min-w-0 relative",
           ])}
         >
           <div
             style={{
-              minWidth: "fit-content",
+              "min-width": "fit-content",
               width: `${(bar.totalTime / totalBarTime) * 100}%`,
             }}
-            className={cn([
+            class={cn([
               "flex items-center rounded-sm text-white text-xs h-[28px] shrink-0",
               bar.kind === "render" && "bg-[#412162] group-hover:bg-[#5b2d89]",
               bar.kind === "other-frame-drop" && "bg-[#44444a] group-hover:bg-[#6a6a6a]",
@@ -373,9 +366,9 @@ const RenderBar = ({
               bar.kind === "other-not-javascript" && "bg-[#214379d4] group-hover:bg-[#21437982]",
             ])}
           />
-          <div className={cn(["absolute inset-0 flex items-center px-2", "min-w-0"])}>
-            <div className="flex items-center gap-x-2 min-w-0 w-full">
-              <span className={cn(["truncate"])}>
+          <div class={cn(["absolute inset-0 flex items-center px-2", "min-w-0"])}>
+            <div class="flex items-center gap-x-2 min-w-0 w-full">
+              <span class={cn(["truncate"])}>
                 {iife(() => {
                   switch (bar.kind) {
                     case "other-frame-drop": {
@@ -396,9 +389,9 @@ const RenderBar = ({
               {bar.kind === "render" && isRenderMemoizable(bar.event) && (
                 <div
                   style={{
-                    lineHeight: "10px",
+                    "line-height": "10px",
                   }}
-                  className={cn([
+                  class={cn([
                     "px-1 py-0.5 bg-[#6a369e] flex items-center rounded-sm font-semibold text-[8px] shrink-0",
                   ])}
                 >
@@ -410,17 +403,17 @@ const RenderBar = ({
         </button>
 
         <button
-          onClick={() => bar.kind === "render" && !isLeaf && setIsExpanded(!isExpanded)}
-          className={cn([
+          onClick={() => bar.kind === "render" && !isLeaf && setIsExpanded(!isExpanded())}
+          class={cn([
             "flex items-center min-w-fit shrink-0 rounded-r-md h-[28px]",
             !isLeaf && "hover:bg-[#0f0f0f]",
             bar.kind === "render" && !isLeaf ? "cursor-pointer" : "cursor-default",
           ])}
         >
-          <div className="w-[20px] flex items-center justify-center">
+          <div class="w-[20px] flex items-center justify-center">
             {bar.kind === "render" && !isLeaf && (
               <ChevronRight
-                className={cn("transition-transform", isExpanded && "rotate-90")}
+                class={cn("transition-transform", isExpanded() && "rotate-90")}
                 size={16}
               />
             )}
@@ -428,16 +421,14 @@ const RenderBar = ({
 
           <div
             style={{
-              minWidth: isLeaf ? "fit-content" : isProduction ? "30px" : "60px",
+              "min-width": isLeaf ? "fit-content" : isProduction ? "30px" : "60px",
             }}
-            className="flex items-center justify-end gap-x-1"
+            class="flex items-center justify-end gap-x-1"
           >
-            {bar.kind === "render" && (
-              <span className={cn(["text-[10px]"])}>x{bar.event.count}</span>
-            )}
+            {bar.kind === "render" && <span class={cn(["text-[10px]"])}>x{bar.event.count}</span>}
 
             {(bar.kind !== "render" || !isProduction) && (
-              <span className="text-[10px] text-[#7346a0] pr-1">
+              <span class="text-[10px] text-[#7346a0] pr-1">
                 {bar.totalTime < 1 ? "<1" : bar.totalTime.toFixed(0)}
                 ms
               </span>
@@ -447,7 +438,7 @@ const RenderBar = ({
 
         {depth === 0 && (
           <div
-            className={cn([
+            class={cn([
               "absolute right-0 top-1/2 transition-none -translate-y-1/2 bg-white text-black px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity mr-16",
               "pointer-events-none",
             ])}
@@ -457,37 +448,42 @@ const RenderBar = ({
         )}
       </div>
 
-      {isExpanded && (parentBars.length > 0 || missingParentNames.length > 0) && (
-        <div className="pl-3 flex flex-col gap-y-1 mt-1">
-          {parentBars
-            .toSorted((a, b) => b.totalTime - a.totalTime)
-            .map((parentBar, i) => (
+      <Show when={isExpanded() && (parentBars.length > 0 || missingParentNames.length > 0)}>
+        <div class="pl-3 flex flex-col gap-y-1 mt-1">
+          <For
+            each={parentBars.toSorted(
+              (firstBar, secondBar) => secondBar.totalTime - firstBar.totalTime,
+            )}
+          >
+            {(parentBar) => (
               <RenderBar
                 depth={depth + 1}
-                key={i}
                 bar={parentBar}
                 debouncedMouseEnter={debouncedMouseEnter}
                 totalBarTime={totalBarTime}
                 isProduction={isProduction}
                 bars={bars}
               />
-            ))}
-          {missingParentNames.map((parentName) => (
-            <div key={parentName} className="w-full">
-              <div className="w-full flex items-center relative text-xs">
-                <div className="h-full w-full flex items-center relative">
-                  <div className="flex items-center rounded-sm text-white text-xs h-[28px] w-full" />
-                  <div className="absolute inset-0 flex items-center px-2">
-                    <span className="truncate whitespace-nowrap text-white/70 w-full">
-                      {parentName}
-                    </span>
+            )}
+          </For>
+          <For each={missingParentNames}>
+            {(parentName) => (
+              <div class="w-full">
+                <div class="w-full flex items-center relative text-xs">
+                  <div class="h-full w-full flex items-center relative">
+                    <div class="flex items-center rounded-sm text-white text-xs h-[28px] w-full" />
+                    <div class="absolute inset-0 flex items-center px-2">
+                      <span class="truncate whitespace-nowrap text-white/70 w-full">
+                        {parentName}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )}
+          </For>
         </div>
-      )}
+      </Show>
     </div>
   );
 };

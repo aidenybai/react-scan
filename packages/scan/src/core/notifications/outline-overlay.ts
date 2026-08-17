@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { createSignal } from "solid-js";
 import { iife } from "./performance-utils";
 
 let highlightCanvas: HTMLCanvasElement | null = null;
@@ -37,10 +37,19 @@ type HighlightState =
       } | null;
     };
 
-export const HighlightStore = signal<HighlightState>({
+const [getHighlightState, setHighlightStateValue] = /* @__PURE__ */ createSignal<HighlightState>({
   kind: "idle",
   current: null,
 });
+
+export { getHighlightState };
+
+export const setHighlightState = (state: HighlightState) => {
+  setHighlightStateValue(state);
+  requestAnimationFrame(() => {
+    drawHighlights();
+  });
+};
 
 let currFrame: ReturnType<typeof requestAnimationFrame> | null = null;
 let lastFrameTime = 0;
@@ -66,7 +75,7 @@ export const drawHighlights = () => {
     highlightCtx.clearRect(0, 0, highlightCanvas.width, highlightCanvas.height);
 
     const color = "hsl(271, 76%, 53%)";
-    const state = HighlightStore.value;
+    const state = getHighlightState();
     const { alpha, current } = iife(() => {
       switch (state.kind) {
         case "transition": {
@@ -113,10 +122,10 @@ export const drawHighlights = () => {
     switch (state.kind) {
       case "move-out": {
         if (state.current.alpha === 0) {
-          HighlightStore.value = {
+          setHighlightState({
             kind: "idle",
             current: null,
-          };
+          });
           lastFrameTime = 0;
           return;
         }
@@ -136,10 +145,10 @@ export const drawHighlights = () => {
 
         // invariant, state.current.alpha === 0
         if (state.transitionTo.alpha === 1) {
-          HighlightStore.value = {
+          setHighlightState({
             kind: "idle",
             current: state.transitionTo,
-          };
+          });
           lastFrameTime = 0;
           return;
         }
@@ -200,12 +209,6 @@ export const createHighlightCanvas = (root: HTMLElement) => {
   handleResizeListener = handleResize;
 
   window.addEventListener("resize", handleResize);
-
-  HighlightStore.subscribe(() => {
-    requestAnimationFrame(() => {
-      drawHighlights();
-    });
-  });
 
   return cleanup;
 };

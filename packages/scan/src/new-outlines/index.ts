@@ -9,25 +9,25 @@ import {
   isCompositeFiber,
 } from "bippy";
 import {
-  Change,
-  ContextChange,
-  PropsChange,
+  type Change,
+  type ContextChange,
+  type PropsChange,
   ReactScanInternals,
-  Store,
   ignoredProps,
-} from "~core/index";
+} from "../core/index";
+import { Store, getInspectState, getOptionsState, setLastReportTime } from "../core/native-state";
 import {
   ChangeReason,
   createInstrumentation,
   getContextChanges,
   getStateChanges,
   OldRenderData,
-} from "~core/instrumentation";
-import { log, logIntro } from "~web/utils/log";
-import { inspectorUpdateSignal } from "~web/views/inspector/states";
+} from "../core/instrumentation";
+import { getChangedPropsDetailed } from "../core/inspection/fiber";
+import { log, logIntro } from "../web/utils/log";
+import { notifyInspectorUpdate } from "../web/views/inspector/states";
 import { OUTLINE_ARRAY_SIZE, drawCanvas, initCanvas, updateOutlines, updateScroll } from "./canvas";
 import type { ActiveOutline, BlueprintOutline, OutlineData } from "./types";
-import { getChangedPropsDetailed } from "~web/views/inspector/utils";
 
 // The worker code will be replaced at build time
 const workerCode = "__WORKER_CODE__";
@@ -273,6 +273,7 @@ const draw = () => {
 
 const IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED =
   typeof OffscreenCanvas !== "undefined" && typeof Worker !== "undefined";
+const HAS_BUNDLED_WORKER_CODE = workerCode !== "__WORKER_CODE__";
 
 const getDpr = () => {
   return Math.min(window.devicePixelRatio || 1, 2);
@@ -308,9 +309,14 @@ const getCanvasEl = () => {
 
   // Users on a strict CSP without `worker-src blob:` (see #372) can opt out;
   // we still render outlines on the main thread via `initCanvas` below.
-  const workerOptOut = ReactScanInternals.options.value.useOffscreenCanvasWorker === false;
+  const workerOptOut = getOptionsState().useOffscreenCanvasWorker === false;
 
-  if (IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED && !window.__REACT_SCAN_EXTENSION__ && !workerOptOut) {
+  if (
+    IS_OFFSCREEN_CANVAS_WORKER_SUPPORTED &&
+    HAS_BUNDLED_WORKER_CODE &&
+    !window.__REACT_SCAN_EXTENSION__ &&
+    !workerOptOut
+  ) {
     try {
       const blobUrl = URL.createObjectURL(
         new Blob([workerCode], { type: "application/javascript" }),
@@ -333,7 +339,7 @@ const getCanvasEl = () => {
       // The fallback below renders fine on the main thread, so log only when
       // the user explicitly asked for verbose diagnostics.
       worker = null;
-      if (ReactScanInternals.options.value._debug === "verbose") {
+      if (getOptionsState()._debug === "verbose") {
         // oxlint-disable-next-line no-console
         console.warn("Failed to initialize OffscreenCanvas worker:", error);
       }
@@ -432,10 +438,7 @@ const cleanup = () => {
 const reportRenderToListeners = (fiber: Fiber) => {
   if (isCompositeFiber(fiber)) {
     // report render has a non trivial cost because it calls Date.now(), so we want to avoid the computation if possible
-    if (
-      ReactScanInternals.options.value.showToolbar !== false &&
-      Store.inspectState.value.kind === "focused"
-    ) {
+    if (getOptionsState().showToolbar !== false && getInspectState().kind === "focused") {
       const reportFiber = fiber;
       const { selfTime } = getTimings(fiber);
       const displayName = getDisplayName(fiber.type);
@@ -501,7 +504,7 @@ const startReportInterval = () => {
   clearInterval(reportInterval);
   reportInterval = setInterval(() => {
     if (needsReport) {
-      Store.lastReportTime.value = Date.now();
+      setLastReportTime(Date.now());
       needsReport = false;
     }
   }, 50);
@@ -543,7 +546,7 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
 
   const instrumentation = createInstrumentation("react-scan-devtools-0.1.0", {
     onCommitStart: () => {
-      ReactScanInternals.options.value.onCommitStart?.();
+      getOptionsState().onCommitStart?.();
     },
     onActive: (() => {
       let didActivate = false;
@@ -570,10 +573,10 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       if (isCompositeFiber(fiber)) {
         Store.interactionListeningForRenders?.(fiber, renders);
       }
-      const isOverlayPaused = ReactScanInternals.instrumentation?.isPaused.value;
+      const isOverlayPaused = instrumentation.getIsPaused();
+      const inspectState = getInspectState();
       const isInspectorInactive =
-        Store.inspectState.value.kind === "inspect-off" ||
-        Store.inspectState.value.kind === "uninitialized";
+        inspectState.kind === "inspect-off" || inspectState.kind === "uninitialized";
       const shouldFullyAbort = isOverlayPaused && isInspectorInactive;
 
       if (shouldFullyAbort) {
@@ -582,23 +585,23 @@ export const initReactScanInstrumentation = (setupToolbar: () => void) => {
       if (!isOverlayPaused) {
         outlineFiber(fiber);
       }
-      if (ReactScanInternals.options.value.log) {
+      if (getOptionsState().log) {
         // this can be expensive given enough re-renders
         log(renders);
       }
 
-      if (Store.inspectState.value.kind === "focused") {
-        inspectorUpdateSignal.value = Date.now();
+      if (inspectState.kind === "focused") {
+        notifyInspectorUpdate();
       }
       if (!isInspectorInactive) {
         reportRenderToListeners(fiber);
       }
 
-      ReactScanInternals.options.value.onRender?.(fiber, renders);
+      getOptionsState().onRender?.(fiber, renders);
     },
     onCommitFinish: () => {
       scheduleSetup();
-      ReactScanInternals.options.value.onCommitFinish?.();
+      getOptionsState().onCommitFinish?.();
     },
     onPostCommitFiberRoot() {
       scheduleSetup();

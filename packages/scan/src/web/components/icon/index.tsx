@@ -1,48 +1,45 @@
-import type { JSX } from 'preact';
-import { type ForwardedRef, forwardRef } from 'preact/compat';
+import type { JSX } from "solid-js";
 
 export interface SVGIconProps {
   size?: number | Array<number>;
   name: string;
   fill?: string;
   stroke?: string;
-  className?: string;
+  class?: string;
   externalURL?: string;
   style?: JSX.CSSProperties;
 }
 
-export const Icon = forwardRef(({
-  size = 15,
-  name,
-  fill = 'currentColor',
-  stroke = 'currentColor',
-  className,
-  externalURL = '',
-  style,
-}: SVGIconProps, ref: ForwardedRef<SVGSVGElement>) => {
-  const width = Array.isArray(size) ? size[0] : size;
-  const height = Array.isArray(size) ? size[1] || size[0] : size;
-
-  const path = `${externalURL}#${name}`;
+export const Icon = (props: SVGIconProps) => {
+  const dimensions = () => {
+    const size = props.size ?? 15;
+    if (Array.isArray(size)) {
+      return {
+        width: size[0],
+        height: size[1] || size[0],
+      };
+    }
+    return { width: size, height: size };
+  };
+  const path = () => `${props.externalURL ?? ""}#${props.name}`;
 
   return (
     <svg
-      ref={ref}
-      width={`${width}px`}
-      height={`${height}px`}
-      fill={fill}
-      stroke={stroke}
-      className={className}
+      width={`${dimensions().width}px`}
+      height={`${dimensions().height}px`}
+      fill={props.fill ?? "currentColor"}
+      stroke={props.stroke ?? "currentColor"}
+      class={props.class}
+      aria-hidden="true"
       style={{
-        ...style,
-        minWidth: `${width}px`,
-        maxWidth: `${width}px`,
-        minHeight: `${height}px`,
-        maxHeight: `${height}px`,
+        ...props.style,
+        "min-width": `${dimensions().width}px`,
+        "max-width": `${dimensions().width}px`,
+        "min-height": `${dimensions().height}px`,
+        "max-height": `${dimensions().height}px`,
       }}
     >
-      <title>{name}</title>
-      <use href={path} />
+      <use href={path()} />
     </svg>
   );
-});
+};

@@ -74,9 +74,9 @@
           "default": "./dist/index.mjs"
         },
         "require": {
-          "types": "./dist/index.d.mts",
+          "types": "./dist/index.d.ts",
           "react-server": "./dist/rsc-shim.js",
-          "default": "./dist/index.mjs"
+          "default": "./dist/index.js"
         }
       },
       "development": {
@@ -122,24 +122,24 @@
     "./auto": {
       "production": {
         "import": {
-          "types": "./dist/rsc-shim.d.mts",
+          "types": "./dist/index.d.mts",
           "react-server": "./dist/rsc-shim.mjs",
           "default": "./dist/rsc-shim.mjs"
         },
         "require": {
-          "types": "./dist/rsc-shim.d.ts",
+          "types": "./dist/index.d.ts",
           "react-server": "./dist/rsc-shim.js",
           "default": "./dist/rsc-shim.js"
         }
       },
       "development": {
         "import": {
-          "types": "./dist/auto.d.mts",
+          "types": "./dist/index.d.mts",
           "react-server": "./dist/rsc-shim.mjs",
           "default": "./dist/auto.mjs"
         },
         "require": {
-          "types": "./dist/auto.d.ts",
+          "types": "./dist/index.d.ts",
           "react-server": "./dist/rsc-shim.js",
           "default": "./dist/auto.js"
         }
@@ -193,12 +193,13 @@
     "access": "public"
   },
   "scripts": {
-    "build": "pnpm build:css && NODE_ENV=production tsup",
+    "build": "pnpm build:css && NODE_ENV=production vp pack && node scripts/finalize-declarations.mjs",
+    "build:coverage": "pnpm build:css && NODE_ENV=production REACT_SCAN_COVERAGE=true vp pack",
     "build:copy": "pnpm build && cat dist/auto.global.js | pbcopy",
     "build:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css",
     "dev:css": "postcss ./src/web/assets/css/styles.tailwind.css -o ./src/web/assets/css/styles.css --watch",
-    "dev:tsup": "NODE_ENV=development tsup --watch",
-    "dev": "pnpm run --parallel \"/^dev:(css|tsup)/\"",
+    "dev:pack": "NODE_ENV=development vp pack --watch",
+    "dev": "pnpm run --parallel \"/^dev:(css|pack)/\"",
     "pack": "npm version patch && pnpm build && npm pack",
     "pack:bump": "node scripts/bump-version.mjs && pnpm run pack && echo $(pwd)/react-scan-$(node -p \"require('./package.json').version\").tgz | pbcopy",
     "publint": "publint",
@@ -211,28 +212,24 @@
   "dependencies": {
     "@babel/core": "^7.29.0",
     "@babel/types": "^7.29.0",
-    "@preact/signals": "^2.9.0",
     "@rollup/pluginutils": "^5.3.0",
-    "bippy": "^0.5.39",
+    "bippy": "^0.6.0",
     "commander": "^14.0.0",
     "picocolors": "^1.1.1",
-    "preact": "^10.29.1",
     "prompts": "^2.4.2",
-    "react-doctor": "latest",
-    "react-grab": "latest"
+    "react-grab": "latest",
+    "solid-js": "^1.9.14"
   },
   "devDependencies": {
-    "@esbuild-plugins/tsconfig-paths": "^0.1.2",
-    "@remix-run/react": "*",
+    "@babel/preset-typescript": "^7.28.5",
     "@tailwindcss/postcss": "^4.2.4",
     "@types/babel__core": "^7.20.5",
     "@types/prompts": "^2.4.9",
     "@types/react": "^19.2.14",
     "autoprefixer": "^10.5.0",
+    "babel-preset-solid": "^1.9.12",
     "clsx": "^2.1.1",
-    "es-module-lexer": "^2.1.0",
     "esbuild": "^0.28.0",
-    "next": "*",
     "postcss": "^8.5.13",
     "postcss-cli": "^11.0.0",
     "publint": "^0.3.18",
@@ -240,8 +237,7 @@
     "react-dom": "*",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.4",
-    "terser": "^5.46.2",
-    "tsup": "^8.5.1",
+    "typescript": "6.0.3",
     "vitest": "^3.0.0"
   },
   "peerDependencies": {

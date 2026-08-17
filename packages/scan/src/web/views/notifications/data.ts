@@ -1,7 +1,6 @@
-import { createContext } from "preact";
-import { SetStateAction } from "preact/compat";
-import { Dispatch, useContext } from "preact/hooks";
-import { HIGH_SEVERITY_FPS_DROP_TIME } from "~core/notifications/event-tracking";
+import { createContext, useContext } from "solid-js";
+import type { SetStoreFunction } from "solid-js/store";
+import { HIGH_SEVERITY_FPS_DROP_TIME } from "../../../core/notifications/event-tracking";
 
 export type GroupedFiberRender = {
   id: string;
@@ -112,9 +111,8 @@ export type NotificationsState = {
     | "render-visualization"
     | "other-visualization"
     // | "render-guide"
-    | "render-explanation"
-    // | "other-guide"
-    | "optimize";
+    | "render-explanation";
+  // | "other-guide"
   /**
    * Conceptually a synthetic query parameter
    */
@@ -149,11 +147,9 @@ export const getEventSeverity = (event: NotificationEvent) => {
   }
 };
 
-export const useNotificationsContext = () => useContext(NotificationStateContext);
-
-export const NotificationStateContext = createContext<{
+export interface NotificationsContextValue {
   notificationState: NotificationsState;
-  setNotificationState: Dispatch<SetStateAction<NotificationsState>>;
+  setNotificationState: SetStoreFunction<NotificationsState>;
   setRoute: ({
     route,
     routeMessage,
@@ -161,5 +157,14 @@ export const NotificationStateContext = createContext<{
     route: NotificationsState["route"];
     routeMessage: NotificationsState["routeMessage"] | null;
   }) => void;
-  // oxlint-disable-next-line typescript/no-non-null-assertion
-}>(null!);
+}
+
+export const NotificationStateContext = createContext<NotificationsContextValue>();
+
+export const useNotificationsContext = () => {
+  const context = useContext(NotificationStateContext);
+  if (!context) {
+    throw new Error("Notifications context is unavailable");
+  }
+  return context;
+};

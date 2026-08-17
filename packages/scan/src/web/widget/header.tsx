@@ -1,49 +1,50 @@
-import { useSignal } from "@preact/signals";
-import { useEffect, useRef } from "preact/hooks";
-import { Store } from "~core/index";
-import { Icon } from "~web/components/icon";
-import { COPY_FEEDBACK_DURATION_MS } from "~web/constants";
-import { useDelayedValue } from "~web/hooks/use-delayed-value";
-import { signalWidgetViews } from "~web/state";
-import { copyFocusedElement } from "~web/utils/copy-focused-element";
-import { hasNonEmptyTextSelection } from "~web/utils/has-non-empty-text-selection";
-import { cn } from "~web/utils/helpers";
-import { isInputLikeFocused } from "~web/utils/is-input-like-focused";
-import { isMac } from "~web/utils/is-mac";
-import { isUserReactGrabActive } from "~web/utils/is-user-react-grab-active";
-import { HeaderInspect } from "~web/views/inspector/header";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { getInspectState, setInspectState } from "../../core/native-state";
+import { Icon } from "../components/icon";
+import { COPY_FEEDBACK_DURATION_MS, HEADER_TRANSITION_DELAY_MS } from "../constants";
+import { createDelayedValue } from "../hooks/use-delayed-value";
+import { getWidgetView, setWidgetView } from "../state";
+import { copyFocusedElement } from "../utils/copy-focused-element";
+import { hasNonEmptyTextSelection } from "../utils/has-non-empty-text-selection";
+import { cn } from "../utils/helpers";
+import { isInputLikeFocused } from "../utils/is-input-like-focused";
+import { isMac } from "../utils/is-mac";
+import { isUserReactGrabActive } from "../utils/is-user-react-grab-active";
+import { HeaderInspect } from "../views/inspector/header";
 
 export const Header = () => {
-  const isInitialView = useDelayedValue(Store.inspectState.value.kind === "focused", 150, 0);
-  const isCopied = useSignal(false);
+  const isInitialView = createDelayedValue(
+    () => getInspectState().kind === "focused",
+    HEADER_TRANSITION_DELAY_MS,
+    0,
+  );
+  const [isCopied, setIsCopied] = createSignal(false);
+  let copyTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const handleClose = () => {
-    signalWidgetViews.value = {
+    setWidgetView({
       view: "none",
-    };
-    Store.inspectState.value = {
+    });
+    setInspectState({
       kind: "inspect-off",
-    };
+    });
   };
 
   const handleCopy = async () => {
-    const state = Store.inspectState.value;
+    const state = getInspectState();
     if (state.kind !== "focused" || !state.focusedDomElement) return;
     const didCopy = await copyFocusedElement(state.focusedDomElement);
     if (!didCopy) return;
-    isCopied.value = true;
-    setTimeout(() => {
-      isCopied.value = false;
+    setIsCopied(true);
+    copyTimeoutId = setTimeout(() => {
+      setIsCopied(false);
       handleClose();
     }, COPY_FEEDBACK_DURATION_MS);
   };
 
-  const refHandleCopy = useRef(handleCopy);
-  refHandleCopy.current = handleCopy;
-
-  useEffect(() => {
+  onMount(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const state = Store.inspectState.value;
+      const state = getInspectState();
       if (state.kind !== "focused" || !state.focusedDomElement) return;
       if (isUserReactGrabActive()) return;
       if (!(event.metaKey || event.ctrlKey)) return;
@@ -53,49 +54,46 @@ export const Header = () => {
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      void refHandleCopy.current();
+      void handleCopy();
     };
 
     document.addEventListener("keydown", onKeyDown, { capture: true });
-    return () => {
+    onCleanup(() => {
       document.removeEventListener("keydown", onKeyDown, { capture: true });
-    };
-  }, []);
+      clearTimeout(copyTimeoutId);
+    });
+  });
 
-  const isHeaderIsNotifications = signalWidgetViews.value.view === "notifications";
-
-  if (isHeaderIsNotifications) {
-    return;
-  }
-
-  const isFocused = Store.inspectState.value.kind === "focused";
+  const isFocused = () => getInspectState().kind === "focused";
   const copyShortcutLabel = isMac() ? "⌘C" : "Ctrl+C";
 
   return (
-    <div className="react-scan-header">
-      <div className="relative flex-1 h-full">
-        <div className={cn("react-scan-header-item is-visible", !isInitialView && "!duration-0")}>
-          <HeaderInspect />
+    <Show when={getWidgetView().view !== "notifications"}>
+      <div class="react-scan-header">
+        <div class="relative flex-1 h-full">
+          <div class={cn("react-scan-header-item is-visible", !isInitialView() && "!duration-0")}>
+            <HeaderInspect />
+          </div>
         </div>
-      </div>
 
-      {isFocused && (
-        <button
-          type="button"
-          title={`Copy element (${copyShortcutLabel})`}
-          className="react-scan-close-button"
-          onClick={handleCopy}
-        >
-          <Icon
-            name={isCopied.value ? "icon-check" : "icon-copy"}
-            className={cn(isCopied.value && "text-green-500")}
-          />
+        <Show when={isFocused()}>
+          <button
+            type="button"
+            title={`Copy element (${copyShortcutLabel})`}
+            class="react-scan-close-button"
+            onClick={handleCopy}
+          >
+            <Icon
+              name={isCopied() ? "icon-check" : "icon-copy"}
+              class={cn(isCopied() && "text-green-500")}
+            />
+          </button>
+        </Show>
+
+        <button type="button" title="Close" class="react-scan-close-button" onClick={handleClose}>
+          <Icon name="icon-close" />
         </button>
-      )}
-
-      <button type="button" title="Close" className="react-scan-close-button" onClick={handleClose}>
-        <Icon name="icon-close" />
-      </button>
-    </div>
+      </div>
+    </Show>
   );
 };

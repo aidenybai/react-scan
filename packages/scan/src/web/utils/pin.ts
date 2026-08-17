@@ -1,4 +1,4 @@
-import type { Fiber } from 'bippy';
+import type { Fiber } from "bippy";
 
 export const getFiberPath = (fiber: Fiber): string => {
   const pathSegments: string[] = [];
@@ -7,18 +7,17 @@ export const getFiberPath = (fiber: Fiber): string => {
   while (currentFiber) {
     const elementType = currentFiber.elementType;
     const name =
-      typeof elementType === 'function'
+      typeof elementType === "function"
         ? elementType.displayName || elementType.name
-        : typeof elementType === 'string'
+        : typeof elementType === "string"
           ? elementType
-          : 'Unknown';
+          : "Unknown";
 
-    const index =
-      currentFiber.index !== undefined ? `[${currentFiber.index}]` : '';
+    const index = currentFiber.index !== undefined ? `[${currentFiber.index}]` : "";
     pathSegments.unshift(`${name}${index}`);
 
     currentFiber = currentFiber.return ?? null;
   }
 
-  return pathSegments.join('::');
+  return pathSegments.join("::");
 };

@@ -1,13 +1,18 @@
 import { type Fiber, getDisplayName } from "bippy";
-import { useEffect, useRef } from "preact/hooks";
-import { ReactScanInternals, Store } from "~core/index";
+import { createEffect, on, onCleanup, onMount } from "solid-js";
+import {
+  getInspectState,
+  getLastReportTime,
+  getOptionsState,
+  setInspectState,
+} from "../../../../core/native-state";
+import type { States } from "../../../../core/inspection/types";
+import { IS_CLIENT } from "../../../../utils/is-client";
 
-import { signalIsSettingsOpen, signalWidgetViews } from "~web/state";
-import { IS_CLIENT } from "~web/utils/constants";
-import { cn, throttle } from "~web/utils/helpers";
+import { setWidgetView } from "../../../state";
+import { cn, throttle } from "../../../utils/helpers";
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 import {
-  type States,
   findComponentDOMNode,
   getAssociatedFiberRect,
   getCompositeComponentFromElement,
@@ -42,16 +47,16 @@ const ANIMATION_CONFIG = {
 const OVERLAY_DPR = IS_CLIENT ? /* @__PURE__ */ window.devicePixelRatio || 1 : 1;
 
 export const ScanOverlay = () => {
-  const refCanvas = useRef<HTMLCanvasElement>(null);
-  const refEventCatcher = useRef<HTMLDivElement>(null);
-  const refCurrentRect = useRef<Rect | null>(null);
-  const refCurrentLockIconRect = useRef<LockIconRect | null>(null);
-  const refLastHoveredElement = useRef<Element | null>(null);
-  const refRafId = useRef<number>(0);
-  const refTimeout = useRef<TTimer>();
-  const refCleanupMap = useRef(new Map<States["kind"] | "fade-out", () => void>());
-  const refIsFadingOut = useRef(false);
-  const refLastFrameTime = useRef<number>(0);
+  let canvasElement: HTMLCanvasElement | undefined;
+  let eventCatcherElement: HTMLDivElement | undefined;
+  let currentRect: Rect | null = null;
+  let currentLockIconRect: LockIconRect | null = null;
+  let lastHoveredElement: Element | null = null;
+  let animationFrameId = 0;
+  let timeout: TTimer | undefined;
+  const cleanupMap = new Map<States["kind"] | "fade-out", () => void>();
+  let isFadingOut = false;
+  let lastFrameTime = 0;
 
   const drawLockIcon = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
     ctx.save();
@@ -117,14 +122,14 @@ export const ScanOverlay = () => {
       const lockX = pillX + pillPadding;
       const lockY = pillY + (pillHeight - lockIconSize) / 2 + 2;
       drawLockIcon(ctx, lockX, lockY, lockIconSize);
-      refCurrentLockIconRect.current = {
+      currentLockIconRect = {
         x: lockX,
         y: lockY,
         width: lockIconSize,
         height: lockIconSize,
       };
     } else {
-      refCurrentLockIconRect.current = null;
+      currentLockIconRect = null;
     }
 
     ctx.fillStyle = "white";
@@ -140,8 +145,8 @@ export const ScanOverlay = () => {
     kind: DrawKind,
     fiber: Fiber | null,
   ) => {
-    if (!refCurrentRect.current) return;
-    const rect = refCurrentRect.current;
+    if (!currentRect) return;
+    const rect = currentRect;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.strokeStyle = "rgba(142, 97, 227, 0.5)";
@@ -168,56 +173,55 @@ export const ScanOverlay = () => {
     parentCompositeFiber: Fiber,
     onComplete?: () => void,
   ) => {
-    const speed = ReactScanInternals.options.value
-      .animationSpeed as keyof typeof ANIMATION_CONFIG.speeds;
+    const speed = getOptionsState().animationSpeed as keyof typeof ANIMATION_CONFIG.speeds;
     const t = ANIMATION_CONFIG.speeds[speed] ?? ANIMATION_CONFIG.speeds.off;
 
     const animationFrame = (timestamp: number) => {
-      if (timestamp - refLastFrameTime.current < ANIMATION_CONFIG.frameInterval) {
-        refRafId.current = requestAnimationFrame(animationFrame);
+      if (timestamp - lastFrameTime < ANIMATION_CONFIG.frameInterval) {
+        animationFrameId = requestAnimationFrame(animationFrame);
         return;
       }
-      refLastFrameTime.current = timestamp;
+      lastFrameTime = timestamp;
 
-      if (!refCurrentRect.current) {
-        cancelAnimationFrame(refRafId.current);
+      if (!currentRect) {
+        cancelAnimationFrame(animationFrameId);
         return;
       }
 
-      refCurrentRect.current = {
-        left: lerp(refCurrentRect.current.left, targetRect.left, t),
-        top: lerp(refCurrentRect.current.top, targetRect.top, t),
-        width: lerp(refCurrentRect.current.width, targetRect.width, t),
-        height: lerp(refCurrentRect.current.height, targetRect.height, t),
+      currentRect = {
+        left: lerp(currentRect.left, targetRect.left, t),
+        top: lerp(currentRect.top, targetRect.top, t),
+        width: lerp(currentRect.width, targetRect.width, t),
+        height: lerp(currentRect.height, targetRect.height, t),
       };
 
       drawRect(canvas, ctx, kind, parentCompositeFiber);
 
       const stillMoving =
-        Math.abs(refCurrentRect.current.left - targetRect.left) > 0.1 ||
-        Math.abs(refCurrentRect.current.top - targetRect.top) > 0.1 ||
-        Math.abs(refCurrentRect.current.width - targetRect.width) > 0.1 ||
-        Math.abs(refCurrentRect.current.height - targetRect.height) > 0.1;
+        Math.abs(currentRect.left - targetRect.left) > 0.1 ||
+        Math.abs(currentRect.top - targetRect.top) > 0.1 ||
+        Math.abs(currentRect.width - targetRect.width) > 0.1 ||
+        Math.abs(currentRect.height - targetRect.height) > 0.1;
 
       if (stillMoving) {
-        refRafId.current = requestAnimationFrame(animationFrame);
+        animationFrameId = requestAnimationFrame(animationFrame);
       } else {
-        refCurrentRect.current = targetRect;
+        currentRect = targetRect;
         drawRect(canvas, ctx, kind, parentCompositeFiber);
-        cancelAnimationFrame(refRafId.current);
+        cancelAnimationFrame(animationFrameId);
         ctx.restore();
         onComplete?.();
       }
     };
 
-    cancelAnimationFrame(refRafId.current);
-    clearTimeout(refTimeout.current);
+    cancelAnimationFrame(animationFrameId);
+    clearTimeout(timeout);
 
-    refRafId.current = requestAnimationFrame(animationFrame);
+    animationFrameId = requestAnimationFrame(animationFrame);
 
-    refTimeout.current = setTimeout(() => {
-      cancelAnimationFrame(refRafId.current);
-      refCurrentRect.current = targetRect;
+    timeout = setTimeout(() => {
+      cancelAnimationFrame(animationFrameId);
+      currentRect = targetRect;
       drawRect(canvas, ctx, kind, parentCompositeFiber);
       ctx.restore();
       onComplete?.();
@@ -233,8 +237,8 @@ export const ScanOverlay = () => {
   ) => {
     ctx.save();
 
-    if (!refCurrentRect.current) {
-      refCurrentRect.current = targetRect;
+    if (!currentRect) {
+      currentRect = targetRect;
       drawRect(canvas, ctx, kind, parentCompositeFiber);
       ctx.restore();
       return;
@@ -260,7 +264,7 @@ export const ScanOverlay = () => {
   };
 
   const unsubscribeAll = () => {
-    for (const cleanup of refCleanupMap.current.values()) {
+    for (const cleanup of cleanupMap.values()) {
       cleanup?.();
     }
   };
@@ -270,55 +274,55 @@ export const ScanOverlay = () => {
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
-    refCurrentRect.current = null;
-    refCurrentLockIconRect.current = null;
-    refLastHoveredElement.current = null;
+    currentRect = null;
+    currentLockIconRect = null;
+    lastHoveredElement = null;
     canvas.classList.remove("fade-in");
-    refIsFadingOut.current = false;
+    isFadingOut = false;
   };
 
   const startFadeOut = (onComplete?: () => void) => {
-    if (!refCanvas.current || refIsFadingOut.current) return;
+    if (!canvasElement || isFadingOut) return;
 
     const handleTransitionEnd = (e: TransitionEvent) => {
-      if (!refCanvas.current || e.propertyName !== "opacity" || !refIsFadingOut.current) {
+      if (!canvasElement || e.propertyName !== "opacity" || !isFadingOut) {
         return;
       }
-      refCanvas.current.removeEventListener("transitionend", handleTransitionEnd);
-      cleanupCanvas(refCanvas.current);
+      canvasElement.removeEventListener("transitionend", handleTransitionEnd);
+      cleanupCanvas(canvasElement);
       onComplete?.();
     };
-    const existingListener = refCleanupMap.current.get("fade-out");
+    const existingListener = cleanupMap.get("fade-out");
     if (existingListener) {
       existingListener();
-      refCleanupMap.current.delete("fade-out");
+      cleanupMap.delete("fade-out");
     }
 
-    refCanvas.current.addEventListener("transitionend", handleTransitionEnd);
-    refCleanupMap.current.set("fade-out", () => {
-      refCanvas.current?.removeEventListener("transitionend", handleTransitionEnd);
+    canvasElement.addEventListener("transitionend", handleTransitionEnd);
+    cleanupMap.set("fade-out", () => {
+      canvasElement?.removeEventListener("transitionend", handleTransitionEnd);
     });
 
-    refIsFadingOut.current = true;
-    refCanvas.current.classList.remove("fade-in");
+    isFadingOut = true;
+    canvasElement.classList.remove("fade-in");
     requestAnimationFrame(() => {
-      refCanvas.current?.classList.add("fade-out");
+      canvasElement?.classList.add("fade-out");
     });
   };
 
   const startFadeIn = () => {
-    if (!refCanvas.current) return;
-    refIsFadingOut.current = false;
-    refCanvas.current.classList.remove("fade-out");
+    if (!canvasElement) return;
+    isFadingOut = false;
+    canvasElement.classList.remove("fade-out");
     requestAnimationFrame(() => {
-      refCanvas.current?.classList.add("fade-in");
+      canvasElement?.classList.add("fade-in");
     });
   };
 
   const handleHoverableElement = (componentElement: Element) => {
-    if (componentElement === refLastHoveredElement.current) return;
+    if (componentElement === lastHoveredElement) return;
 
-    refLastHoveredElement.current = componentElement;
+    lastHoveredElement = componentElement;
 
     if (nonVisualTags.has(componentElement.tagName)) {
       startFadeOut();
@@ -326,14 +330,14 @@ export const ScanOverlay = () => {
       startFadeIn();
     }
 
-    Store.inspectState.value = {
+    setInspectState({
       kind: "inspecting",
       hoveredDomElement: componentElement,
-    };
+    });
   };
 
   const handleNonHoverableArea = () => {
-    if (!refCurrentRect.current || !refCanvas.current || refIsFadingOut.current) {
+    if (!currentRect || !canvasElement || isFadingOut) {
       return;
     }
 
@@ -341,17 +345,17 @@ export const ScanOverlay = () => {
   };
 
   const handlePointerMove = throttle((e?: PointerEvent) => {
-    const state = Store.inspectState.peek();
-    if (state.kind !== "inspecting" || !refEventCatcher.current) return;
+    const state = getInspectState();
+    if (state.kind !== "inspecting" || !eventCatcherElement) return;
 
-    refEventCatcher.current.style.pointerEvents = "none";
+    eventCatcherElement.style.pointerEvents = "none";
     const element = document.elementFromPoint(e?.clientX ?? 0, e?.clientY ?? 0);
 
-    refEventCatcher.current.style.removeProperty("pointer-events");
+    eventCatcherElement.style.removeProperty("pointer-events");
 
-    clearTimeout(refTimeout.current);
+    clearTimeout(timeout);
 
-    if (element && element !== refCanvas.current) {
+    if (element && element !== canvasElement) {
       const { parentCompositeFiber } = getCompositeComponentFromElement(element as Element);
       if (parentCompositeFiber) {
         const componentElement = findComponentDOMNode(parentCompositeFiber);
@@ -366,8 +370,8 @@ export const ScanOverlay = () => {
   }, 32);
 
   const isClickInLockIcon = (e: MouseEvent, canvas: HTMLCanvasElement) => {
-    const currentRect = refCurrentLockIconRect.current;
-    if (!currentRect) return false;
+    const lockIconRect = currentLockIconRect;
+    if (!lockIconRect) return false;
 
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -378,19 +382,19 @@ export const ScanOverlay = () => {
     const adjustedY = y / OVERLAY_DPR;
 
     return (
-      adjustedX >= currentRect.x &&
-      adjustedX <= currentRect.x + currentRect.width &&
-      adjustedY >= currentRect.y &&
-      adjustedY <= currentRect.y + currentRect.height
+      adjustedX >= lockIconRect.x &&
+      adjustedX <= lockIconRect.x + lockIconRect.width &&
+      adjustedY >= lockIconRect.y &&
+      adjustedY <= lockIconRect.y + lockIconRect.height
     );
   };
 
   const handleLockIconClick = (state: States) => {
     if (state.kind === "focused") {
-      Store.inspectState.value = {
+      setInspectState({
         kind: "inspecting",
         hoveredDomElement: state.focusedDomElement,
-      };
+      });
     }
   };
 
@@ -401,7 +405,7 @@ export const ScanOverlay = () => {
       return;
     }
 
-    const tagName = refLastHoveredElement.current?.tagName;
+    const tagName = lastHoveredElement?.tagName;
     if (tagName && nonVisualTags.has(tagName)) {
       return;
     }
@@ -409,16 +413,15 @@ export const ScanOverlay = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    const element =
-      refLastHoveredElement.current ?? document.elementFromPoint(e.clientX, e.clientY);
+    const element = lastHoveredElement ?? document.elementFromPoint(e.clientX, e.clientY);
     if (!element) return;
 
     const clickedEl = e.composedPath().at(0);
 
     if (clickedEl instanceof HTMLElement && clickableElements.includes(clickedEl.id)) {
-      const syntheticEvent = new MouseEvent(e.type, e);
-      // @ts-ignore - this allows to know to not re-process this event when this event handler captures it
-      syntheticEvent.__reactScanSyntheticEvent = true;
+      const syntheticEvent = Object.assign(new MouseEvent(e.type, e), {
+        __reactScanSyntheticEvent: true,
+      });
       clickedEl.dispatchEvent(syntheticEvent);
       return;
     }
@@ -428,29 +431,28 @@ export const ScanOverlay = () => {
     const componentElement = findComponentDOMNode(parentCompositeFiber);
 
     if (!componentElement) {
-      refLastHoveredElement.current = null;
-      Store.inspectState.value = {
+      lastHoveredElement = null;
+      setInspectState({
         kind: "inspect-off",
-      };
+      });
       return;
     }
 
-    Store.inspectState.value = {
+    setInspectState({
       kind: "focused",
       focusedDomElement: componentElement,
       fiber: parentCompositeFiber,
-    };
+    });
   };
 
   const handleClick = (e: MouseEvent) => {
-    // @ts-ignore - metadata added to toolbar button events we create and dispatch
-    if (e.__reactScanSyntheticEvent) {
+    if ("__reactScanSyntheticEvent" in e && e.__reactScanSyntheticEvent === true) {
       return;
     }
 
-    const state = Store.inspectState.peek();
-    const canvas = refCanvas.current;
-    if (!canvas || !refEventCatcher.current) return;
+    const state = getInspectState();
+    const canvas = canvasElement;
+    if (!canvas || !eventCatcherElement) return;
 
     if (isClickInLockIcon(e, canvas)) {
       e.preventDefault();
@@ -467,17 +469,17 @@ export const ScanOverlay = () => {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Escape") return;
 
-    const state = Store.inspectState.peek();
-    const canvas = refCanvas.current;
+    const state = getInspectState();
+    const canvas = canvasElement;
     if (!canvas) return;
 
     if (document.activeElement?.id === "react-scan-root") {
       return;
     }
 
-    signalWidgetViews.value = {
+    setWidgetView({
       view: "none",
-    };
+    });
 
     if (state.kind === "focused" || state.kind === "inspecting") {
       e.preventDefault();
@@ -486,20 +488,19 @@ export const ScanOverlay = () => {
       switch (state.kind) {
         case "focused": {
           startFadeIn();
-          refCurrentRect.current = null;
-          refLastHoveredElement.current = state.focusedDomElement;
-          Store.inspectState.value = {
+          currentRect = null;
+          lastHoveredElement = state.focusedDomElement;
+          setInspectState({
             kind: "inspecting",
             hoveredDomElement: state.focusedDomElement,
-          };
+          });
           break;
         }
         case "inspecting": {
           startFadeOut(() => {
-            signalIsSettingsOpen.value = false;
-            Store.inspectState.value = {
+            setInspectState({
               kind: "inspect-off",
-            };
+            });
           });
           break;
         }
@@ -512,19 +513,17 @@ export const ScanOverlay = () => {
     canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D,
   ) => {
-    refCleanupMap.current.get(state.kind)?.();
+    cleanupMap.get(state.kind)?.();
 
-    if (refEventCatcher.current) {
+    if (eventCatcherElement) {
       if (state.kind !== "inspecting") {
-        refEventCatcher.current.style.pointerEvents = "none";
+        eventCatcherElement.style.pointerEvents = "none";
       }
     }
 
-    if (refRafId.current) {
-      cancelAnimationFrame(refRafId.current);
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
     }
-
-    let unsubReport: (() => void) | undefined;
 
     switch (state.kind) {
       case "inspect-off":
@@ -538,30 +537,15 @@ export const ScanOverlay = () => {
       case "focused":
         if (!state.focusedDomElement) return;
 
-        if (refLastHoveredElement.current !== state.focusedDomElement) {
-          refLastHoveredElement.current = state.focusedDomElement;
+        if (lastHoveredElement !== state.focusedDomElement) {
+          lastHoveredElement = state.focusedDomElement;
         }
 
-        signalWidgetViews.value = {
+        setWidgetView({
           view: "inspector",
-        };
-
-        drawHoverOverlay(state.focusedDomElement, canvas, ctx, "locked");
-
-        unsubReport = Store.lastReportTime.subscribe(() => {
-          if (refRafId.current && refCurrentRect.current) {
-            const { parentCompositeFiber } = getCompositeComponentFromElement(
-              state.focusedDomElement,
-            );
-            if (parentCompositeFiber) {
-              drawHoverOverlay(state.focusedDomElement, canvas, ctx, "locked");
-            }
-          }
         });
 
-        if (unsubReport) {
-          refCleanupMap.current.set(state.kind, unsubReport);
-        }
+        drawHoverOverlay(state.focusedDomElement, canvas, ctx, "locked");
         break;
     }
   };
@@ -575,17 +559,17 @@ export const ScanOverlay = () => {
   };
 
   const handleResizeOrScroll = () => {
-    const state = Store.inspectState.peek();
-    const canvas = refCanvas.current;
+    const state = getInspectState();
+    const canvas = canvasElement;
     if (!canvas) return;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
 
-    cancelAnimationFrame(refRafId.current);
-    clearTimeout(refTimeout.current);
+    cancelAnimationFrame(animationFrameId);
+    clearTimeout(timeout);
 
     updateCanvasSize(canvas, ctx);
-    refCurrentRect.current = null;
+    currentRect = null;
 
     if (state.kind === "focused" && state.focusedDomElement) {
       drawHoverOverlay(state.focusedDomElement, canvas, ctx, "locked");
@@ -595,8 +579,8 @@ export const ScanOverlay = () => {
   };
 
   const handlePointerDown = (e: PointerEvent) => {
-    const state = Store.inspectState.peek();
-    const canvas = refCanvas.current;
+    const state = getInspectState();
+    const canvas = canvasElement;
     if (!canvas) return;
 
     if (state.kind === "inspecting" || isClickInLockIcon(e as unknown as MouseEvent, canvas)) {
@@ -606,18 +590,40 @@ export const ScanOverlay = () => {
     }
   };
 
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const canvas = refCanvas.current;
+  onMount(() => {
+    const canvas = canvasElement;
     if (!canvas) return;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
 
     updateCanvasSize(canvas, ctx);
 
-    const unSubState = Store.inspectState.subscribe((state) => {
-      handleStateChange(state, canvas, ctx);
-    });
+    createEffect(
+      on(
+        getInspectState,
+        (state) => {
+          handleStateChange(state, canvas, ctx);
+        },
+        { defer: true },
+      ),
+    );
+
+    createEffect(
+      on(
+        getLastReportTime,
+        () => {
+          const state = getInspectState();
+          if (state.kind !== "focused" || !animationFrameId || !currentRect) return;
+          const { parentCompositeFiber } = getCompositeComponentFromElement(
+            state.focusedDomElement,
+          );
+          if (parentCompositeFiber) {
+            drawHoverOverlay(state.focusedDomElement, canvas, ctx, "locked");
+          }
+        },
+        { defer: true },
+      ),
+    );
 
     window.addEventListener("scroll", handleResizeOrScroll, { passive: true });
     window.addEventListener("resize", handleResizeOrScroll, { passive: true });
@@ -631,9 +637,8 @@ export const ScanOverlay = () => {
     document.addEventListener("click", handleClick, { capture: true });
     document.addEventListener("keydown", handleKeyDown, { capture: true });
 
-    return () => {
+    onCleanup(() => {
       unsubscribeAll();
-      unSubState();
       window.removeEventListener("scroll", handleResizeOrScroll);
       window.removeEventListener("resize", handleResizeOrScroll);
       document.removeEventListener("pointermove", handlePointerMove, {
@@ -645,27 +650,27 @@ export const ScanOverlay = () => {
       });
       document.removeEventListener("keydown", handleKeyDown, { capture: true });
 
-      if (refRafId.current) {
-        cancelAnimationFrame(refRafId.current);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
       }
-      clearTimeout(refTimeout.current);
-    };
-  }, []);
+      clearTimeout(timeout);
+    });
+  });
 
   return (
     <>
       <div
-        ref={refEventCatcher}
-        className={cn("fixed top-0 left-0 w-screen h-screen", "z-[214748365]")}
+        ref={eventCatcherElement}
+        class={cn("fixed top-0 left-0 w-screen h-screen", "z-[214748365]")}
         // DO NOT DO NOT DO NOT REMOVE THE STYLE IT WILL CAUSE MASSIVE PERFORMANCE ISSUES https://x.com/RobKnight__/status/1897524145157439558
         style={{
-          pointerEvents: "none",
+          "pointer-events": "none",
         }}
       />
       <canvas
-        ref={refCanvas}
+        ref={canvasElement}
         dir="ltr"
-        className={cn(
+        class={cn(
           "react-scan-inspector-overlay",
           "fixed top-0 left-0 w-screen h-screen",
           "pointer-events-none",

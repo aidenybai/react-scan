@@ -1,22 +1,18 @@
-import type { JSX } from 'preact';
-import { cn } from '~web/utils/helpers';
+import { splitProps, type JSX } from "solid-js";
+import { cn } from "../../utils/helpers";
 
 interface ToggleProps extends JSX.HTMLAttributes<HTMLInputElement> {
   checked: boolean;
-  onChange: ((e: Event) => void);
-  className?: string;
-};
+  onChange: (event: Event) => void;
+  class?: string;
+}
 
-export const Toggle = ({
-  className,
-  ...props
-}: ToggleProps) => {
+export const Toggle = (props: ToggleProps) => {
+  const [localProps, inputProps] = splitProps(props, ["class"]);
+
   return (
-    <div className={cn('react-scan-toggle', className)}>
-      <input
-        type="checkbox"
-        {...props}
-      />
+    <div class={cn("react-scan-toggle", localProps.class)}>
+      <input type="checkbox" {...inputProps} />
       <div />
     </div>
   );

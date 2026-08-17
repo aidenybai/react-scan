@@ -12,5 +12,5 @@
     "skipDefaultLibCheck": true,
     "types": ["@types/node"]
   },
-  "include": ["."],
+  "include": ["."]
 }

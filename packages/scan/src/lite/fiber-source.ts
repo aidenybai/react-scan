@@ -1,11 +1,5 @@
-import { type Fiber, getDisplayName } from 'bippy';
-import {
-  type FiberSource,
-  formatOwnerStack,
-  hasDebugSource,
-  hasDebugStack,
-  parseStack,
-} from 'bippy/source';
+import { type Fiber, getDisplayName } from "bippy";
+import { type FiberSource, formatOwnerStack, hasDebugStack, parseStack } from "bippy/source";
 
 /**
  * Synchronous source extraction. We deliberately avoid `bippy/source`'s
@@ -19,22 +13,23 @@ import {
  *      element. Bundled URLs only; callers must symbolicate offline.
  */
 export const getFiberSource = (fiber: Fiber): FiberSource | null => {
-  // `hasDebugSource` narrows `_debugSource` to NonNullable, so direct access
-  // is safe. Same for `_debugStack` via `hasDebugStack`. Both guards live in
-  // `bippy/source` because the underlying fields are version-dependent and
-  // bippy is the canonical place to know what shape they take.
+  // Reading `_debugSource` into a local narrows it to NonNullable, so direct
+  // access is safe. `_debugStack` is narrowed via `hasDebugStack`, whose guard
+  // lives in `bippy/source` because the underlying field is version-dependent
+  // and bippy is the canonical place to know what shape it takes.
   //
-  // ASSUMPTION: bippy's guards are tight — `hasDebugSource(fiber) === true`
-  // implies `fiber._debugSource.fileName` is a `string` and `lineNumber` is
-  // a `number` (verified in bippy 0.5.39). If a future bippy loosens this
+  // ASSUMPTION: bippy's Fiber type keeps `_debugSource.fileName` as a `string`
+  // and `lineNumber` as a `number` whenever `_debugSource` is present
+  // (verified in bippy 0.6.0). If a future bippy loosens this
   // (e.g. narrows to `fileName?: string`), the resulting `FiberSource` would
   // violate `bippy/source`'s `FiberSource.fileName: string` contract. Re-check
   // this file when bumping bippy.
-  if (hasDebugSource(fiber)) {
+  const debugSource = fiber._debugSource;
+  if (debugSource) {
     return {
-      fileName: fiber._debugSource.fileName,
-      lineNumber: fiber._debugSource.lineNumber,
-      columnNumber: fiber._debugSource.columnNumber,
+      fileName: debugSource.fileName,
+      lineNumber: debugSource.lineNumber,
+      columnNumber: debugSource.columnNumber,
     };
   }
 

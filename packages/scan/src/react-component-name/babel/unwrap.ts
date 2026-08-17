@@ -1,7 +1,7 @@
-import type { NodePath } from '@babel/core';
-import type * as t from '@babel/types';
-import { isNestedExpression } from './is-nested-expression';
-import { isPathValid } from './is-path-valid';
+import type { NodePath } from "@babel/core";
+import type * as t from "@babel/types";
+import { isNestedExpression } from "./is-nested-expression";
+import { isPathValid } from "./is-path-valid";
 
 type TrueTypeFilter<U extends t.Node> = (node: t.Node) => node is U;
 type TypeCheck<K> = K extends TrueTypeFilter<infer U> ? U : never;
@@ -34,7 +34,7 @@ export const unwrapPath = <V extends t.Node>(
     return path;
   }
   if (isPathValid(path, isNestedExpression)) {
-    return unwrapPath(path.get('expression'), key);
+    return unwrapPath(path.get("expression"), key);
   }
   return undefined;
 };

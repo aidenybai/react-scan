@@ -1,5 +1,5 @@
-import type { BundleType, Fiber, Lanes, ReactRenderer } from 'bippy';
-import type { FiberSource } from 'bippy/source';
+import type { BundleType, Fiber, Lanes, ReactRenderer } from "bippy";
+import type { FiberSource } from "bippy/source";
 
 export type { BundleType, Fiber, FiberSource, Lanes };
 
@@ -84,43 +84,43 @@ export interface LiteFiberSummary {
 }
 
 export type LiteEventKind =
-  | 'renderer-injected'
-  | 'profiling-hooks-status'
-  | 'commit'
-  | 'post-commit'
-  | 'fiber-unmount'
-  | 'commit-start'
-  | 'commit-stop'
-  | 'render-start'
-  | 'render-yield'
-  | 'render-stop'
-  | 'render-scheduled'
-  | 'layout-effects-start'
-  | 'layout-effects-stop'
-  | 'passive-effects-start'
-  | 'passive-effects-stop'
-  | 'component-render-start'
-  | 'component-render-stop'
-  | 'component-layout-effect-mount-start'
-  | 'component-layout-effect-mount-stop'
-  | 'component-layout-effect-unmount-start'
-  | 'component-layout-effect-unmount-stop'
-  | 'component-passive-effect-mount-start'
-  | 'component-passive-effect-mount-stop'
-  | 'component-passive-effect-unmount-start'
-  | 'component-passive-effect-unmount-stop'
-  | 'state-update'
-  | 'force-update'
-  | 'component-suspended'
-  | 'component-errored';
+  | "renderer-injected"
+  | "profiling-hooks-status"
+  | "commit"
+  | "post-commit"
+  | "fiber-unmount"
+  | "commit-start"
+  | "commit-stop"
+  | "render-start"
+  | "render-yield"
+  | "render-stop"
+  | "render-scheduled"
+  | "layout-effects-start"
+  | "layout-effects-stop"
+  | "passive-effects-start"
+  | "passive-effects-stop"
+  | "component-render-start"
+  | "component-render-stop"
+  | "component-layout-effect-mount-start"
+  | "component-layout-effect-mount-stop"
+  | "component-layout-effect-unmount-start"
+  | "component-layout-effect-unmount-stop"
+  | "component-passive-effect-mount-start"
+  | "component-passive-effect-mount-stop"
+  | "component-passive-effect-unmount-start"
+  | "component-passive-effect-unmount-stop"
+  | "state-update"
+  | "force-update"
+  | "component-suspended"
+  | "component-errored";
 
 export type ProfilingHooksUnavailableReason =
   /** Renderer doesn't expose `injectProfilingHooks` (R19.2+ prod, non-`__PROFILE__` builds). */
-  | 'no-inject-method'
+  | "no-inject-method"
   /** `injectProfilingHooks` threw when called. */
-  | 'threw'
+  | "threw"
   /** Caller passed `includeProfilingHooks: false`; we never tried to attach. */
-  | 'opted-out';
+  | "opted-out";
 
 export interface LiteEvent {
   kind: LiteEventKind;

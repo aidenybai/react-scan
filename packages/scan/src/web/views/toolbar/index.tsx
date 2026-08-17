@@ -1,218 +1,234 @@
-import { useSignalEffect } from '@preact/signals';
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from 'preact/hooks';
-import {
-  type LocalStorageOptions,
-  ReactScanInternals,
-  Store,
-} from '~core/index';
-import { Icon } from '~web/components/icon';
-import { Toggle } from '~web/components/toggle';
-import { signalWidgetViews } from '~web/state';
-import { cn, readLocalStorage, saveLocalStorage } from '~web/utils/helpers';
-import { constant } from '~web/utils/preact/constant';
-import { FPSMeter } from '~web/widget/fps-meter';
-import { getEventSeverity } from '../notifications/data';
-import { Notification } from '../notifications/icons';
-import { useAppNotifications } from '../notifications/notifications';
+import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
+import { type LocalStorageOptions, ReactScanInternals } from "../../../core/index";
+import { getInspectState, getOptionsState, setInspectState } from "../../../core/native-state";
+import { Icon } from "../../components/icon";
+import { Tooltip } from "../../components/tooltip";
+import { Toggle } from "../../components/toggle";
+import { NOTIFICATION_LAG_MS } from "../../constants";
+import { getWidgetView, setWidgetView } from "../../state";
+import { cn, readLocalStorage, saveLocalStorage } from "../../utils/helpers";
+import { FPSMeter } from "../../widget/fps-meter";
+import type { SnapEdge } from "../../widget/types";
+import { getEventSeverity } from "../notifications/data";
+import { Notification } from "../notifications/icons";
+import { useAppNotifications } from "../notifications/notifications";
 
-export const Toolbar = constant(() => {
+interface ToolbarProps {
+  edge: SnapEdge;
+  onCollapse: (event: MouseEvent) => void;
+}
+
+export const Toolbar = (props: ToolbarProps) => {
   const events = useAppNotifications();
-  const [laggedEvents, setLaggedEvents] = useState(events);
+  const [laggedEvents, setLaggedEvents] = createSignal(events());
+  const [seenEvents, setSeenEvents] = createSignal<Array<string>>([]);
+  const [hoveredControl, setHoveredControl] = createSignal<
+    "inspect" | "notifications" | "collapse" | null
+  >(null);
+  const inspectState = getInspectState;
+  const isInspectActive = () => inspectState().kind === "inspecting";
+  const isInspectFocused = () => inspectState().kind === "focused";
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setLaggedEvents(events);
-      // 500 + buffer to never see intermediary state
-      // todo: check if we still need this large of buffer
-    }, 500 + 100);
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [events]);
+  createEffect(() => {
+    const nextEvents = events();
+    const timeoutId = setTimeout(() => {
+      setLaggedEvents(nextEvents);
+    }, NOTIFICATION_LAG_MS);
+    onCleanup(() => clearTimeout(timeoutId));
+  });
 
-  const inspectState = Store.inspectState;
-  const isInspectActive = inspectState.value.kind === 'inspecting';
-  const isInspectFocused = inspectState.value.kind === 'focused';
-
-  const [seenEvents, setSeenEvents] = useState<Array<string>>([]);
-
-  const onToggleInspect = useCallback(() => {
-    const currentState = Store.inspectState.value;
+  const onToggleInspect = () => {
+    const currentState = getInspectState();
 
     switch (currentState.kind) {
-      case 'inspecting': {
-        signalWidgetViews.value = {
-          view: 'none',
-        };
-        Store.inspectState.value = {
-          kind: 'inspect-off',
-        };
+      case "inspecting": {
+        setWidgetView({ view: "none" });
+        setInspectState({ kind: "inspect-off" });
         return;
       }
-
-      case 'focused': {
-        signalWidgetViews.value = {
-          view: 'inspector',
-        };
-        Store.inspectState.value = {
-          kind: 'inspecting',
+      case "focused": {
+        setWidgetView({ view: "inspector" });
+        setInspectState({
+          kind: "inspecting",
           hoveredDomElement: null,
-        };
+        });
         return;
       }
-      // todo: auto select the root fibers first stateNode, and tell the user to select the element
-      case 'inspect-off': {
-        signalWidgetViews.value = {
-          view: 'none',
-        };
-        Store.inspectState.value = {
-          kind: 'inspecting',
+      case "inspect-off": {
+        setWidgetView({ view: "none" });
+        setInspectState({
+          kind: "inspecting",
           hoveredDomElement: null,
-        };
+        });
         return;
       }
-      case 'uninitialized': {
+      case "uninitialized": {
         return;
       }
     }
-  }, []);
+  };
 
-  const onToggleActive = useCallback((e: Event) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const onToggleActive = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (!ReactScanInternals.instrumentation) {
       return;
     }
-    // todo: set a single source of truth
-    const isPaused = !ReactScanInternals.instrumentation.isPaused.value;
-    ReactScanInternals.instrumentation.isPaused.value = isPaused;
-    const existingLocalStorageOptions =
-      readLocalStorage<LocalStorageOptions>('react-scan-options');
-    saveLocalStorage('react-scan-options', {
+    const isPaused = !ReactScanInternals.instrumentation.getIsPaused();
+    ReactScanInternals.instrumentation.setIsPaused(isPaused);
+    const existingLocalStorageOptions = readLocalStorage<LocalStorageOptions>("react-scan-options");
+    saveLocalStorage("react-scan-options", {
       ...existingLocalStorageOptions,
       enabled: !isPaused,
     });
-  }, []);
+  };
 
-  useSignalEffect(() => {
-    const state = Store.inspectState.value;
-    if (state.kind === 'uninitialized') {
-      Store.inspectState.value = {
-        kind: 'inspect-off',
-      };
+  createEffect(() => {
+    const state = getInspectState();
+    if (state.kind === "uninitialized") {
+      setInspectState({ kind: "inspect-off" });
     }
   });
 
-  let inspectIcon = null;
-  let inspectColor = '#999';
+  createEffect(() => {
+    if (getWidgetView().view !== "notifications") return;
+    const ids = new Set(events().map((event) => event.id));
+    setSeenEvents([...ids.values()]);
+  });
 
-  if (isInspectActive) {
-    inspectIcon = <Icon name="icon-inspect" />;
-    inspectColor = '#8e61e3';
-  } else if (isInspectFocused) {
-    inspectIcon = <Icon name="icon-focus" />;
-    inspectColor = '#8e61e3';
-  } else {
-    inspectIcon = <Icon name="icon-inspect" />;
-    inspectColor = '#999';
-  }
+  const inspectIconName = createMemo(() => (isInspectFocused() ? "icon-focus" : "icon-inspect"));
+  const isInspectSelected = () => isInspectActive() || isInspectFocused();
+  const collapseRotation = () => {
+    switch (props.edge) {
+      case "top":
+        return "-rotate-90";
+      case "bottom":
+        return "rotate-90";
+      case "left":
+        return "rotate-180";
+      case "right":
+        return "";
+    }
+  };
+  const tooltipPosition = (): "top" | "bottom" | "left" | "right" => {
+    switch (props.edge) {
+      case "top":
+        return "bottom";
+      case "bottom":
+        return "top";
+      case "left":
+        return "right";
+      case "right":
+        return "left";
+    }
+  };
 
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useLayoutEffect(() => {
-    if (signalWidgetViews.value.view !== 'notifications') {
+  const showNotifications = () => {
+    if (getInspectState().kind !== "inspect-off") {
+      setInspectState({ kind: "inspect-off" });
+    }
+    if (getWidgetView().view === "notifications") {
+      setWidgetView({ view: "none" });
       return;
     }
-    const ids = new Set(events.map((event) => event.id));
-    setSeenEvents([...ids.values()]);
-  }, [events.length, signalWidgetViews.value.view]);
+    setSeenEvents(events().map((event) => event.id));
+    setWidgetView({ view: "notifications" });
+  };
 
   return (
-    <div className="flex max-h-9 min-h-9 flex-1 items-stretch overflow-hidden">
-      <div className="h-full flex items-center min-w-fit">
+    <div class="flex h-7 items-center gap-0.5 rounded-full border border-[var(--rs-border-subtle)] bg-[var(--rs-panel-bg)] px-1 text-[var(--rs-text-secondary)] [box-shadow:var(--rs-shadow)]">
+      <div class="flex h-5 w-5 items-center justify-center text-[#8e61e3]">
+        <Icon name="icon-react-scan-logo" size={14} />
+      </div>
+      <div
+        class="relative size-5"
+        onMouseEnter={() => setHoveredControl("inspect")}
+        onMouseLeave={() => setHoveredControl(null)}
+      >
         <button
           type="button"
           id="react-scan-inspect-element"
           title="Inspect element"
+          aria-label="Inspect element"
+          aria-pressed={isInspectSelected()}
           onClick={onToggleInspect}
-          className="button flex items-center justify-center h-full w-full pl-3 pr-2.5"
-          style={{ color: inspectColor }}
+          class={cn(
+            "react-scan-interactive-scale react-scan-a11y-hitbox",
+            "flex size-5 items-center justify-center rounded-full",
+            "hover:bg-[var(--rs-surface-hover)]",
+            isInspectSelected() && "bg-[#8e61e3] text-white",
+          )}
         >
-          {inspectIcon}
+          <Icon name={inspectIconName()} size={13} />
         </button>
+        <Tooltip visible={hoveredControl() === "inspect"} position={tooltipPosition()}>
+          Inspect element
+        </Tooltip>
       </div>
-
-      <div className="h-full flex items-center justify-center">
+      <div
+        class="relative size-5"
+        onMouseEnter={() => setHoveredControl("notifications")}
+        onMouseLeave={() => setHoveredControl(null)}
+      >
         <button
           type="button"
           id="react-scan-notifications"
           title="Notifications"
-          onClick={() => {
-            if (Store.inspectState.value.kind !== 'inspect-off') {
-              Store.inspectState.value = {
-                kind: 'inspect-off',
-              };
-            }
-            switch (signalWidgetViews.value.view) {
-              case 'inspector': {
-                Store.inspectState.value = {
-                  kind: 'inspect-off',
-                };
-
-                const ids = new Set(events.map((event) => event.id));
-                setSeenEvents([...ids.values()]);
-                signalWidgetViews.value = {
-                  view: 'notifications',
-                };
-                return;
-              }
-              case 'notifications': {
-                signalWidgetViews.value = {
-                  view: 'none',
-                };
-                return;
-              }
-              case 'none': {
-                const ids = new Set(events.map((event) => event.id));
-                setSeenEvents([...ids.values()]);
-                signalWidgetViews.value = {
-                  view: 'notifications',
-                };
-                return;
-              }
-            }
-          }}
-          className="button flex items-center justify-center h-full pl-2.5 pr-2.5"
-          style={{ color: inspectColor }}
+          aria-label="Notifications"
+          aria-pressed={getWidgetView().view === "notifications"}
+          onClick={showNotifications}
+          class={cn(
+            "react-scan-interactive-scale react-scan-a11y-hitbox",
+            "flex size-5 items-center justify-center rounded-full",
+            "hover:bg-[var(--rs-surface-hover)]",
+            getWidgetView().view === "notifications" &&
+              "bg-[var(--rs-surface-active)] text-[#8e61e3]",
+          )}
         >
           <Notification
-            events={laggedEvents
-              .filter((event) => !seenEvents.includes(event.id))
-              .map((event) => getEventSeverity(event) === 'high')}
-            size={16}
-            className={cn([
-              'text-[#999]',
-              signalWidgetViews.value.view === 'notifications' &&
-                'text-[#8E61E3]',
-            ])}
+            events={laggedEvents()
+              .filter((event) => !seenEvents().includes(event.id))
+              .map((event) => getEventSeverity(event) === "high")}
+            size={13}
+            class="text-current"
           />
         </button>
+        <Tooltip visible={hoveredControl() === "notifications"} position={tooltipPosition()}>
+          Notifications
+        </Tooltip>
       </div>
-
       <Toggle
-        checked={!ReactScanInternals.instrumentation?.isPaused.value}
+        checked={!ReactScanInternals.instrumentation?.getIsPaused()}
         onChange={onToggleActive}
-        className="place-self-center"
-        title="Outline Re-renders"
+        class="mx-0.5 scale-75"
+        title="Outline re-renders"
+        aria-label="Outline re-renders"
       />
-
-      {/* todo add back showFPS*/}
-      {ReactScanInternals.options.value.showFPS && <FPSMeter />}
+      <Show when={getOptionsState().showFPS}>
+        <FPSMeter />
+      </Show>
+      <div
+        class="relative size-5"
+        onMouseEnter={() => setHoveredControl("collapse")}
+        onMouseLeave={() => setHoveredControl(null)}
+      >
+        <button
+          type="button"
+          title="Collapse React Scan"
+          aria-label="Collapse React Scan"
+          onClick={props.onCollapse}
+          class="react-scan-interactive-scale react-scan-a11y-hitbox flex size-5 items-center justify-center rounded-full hover:bg-[var(--rs-surface-hover)]"
+        >
+          <Icon
+            name="icon-chevron-right"
+            size={11}
+            class={cn("transition-transform duration-200", collapseRotation())}
+          />
+        </button>
+        <Tooltip visible={hoveredControl() === "collapse"} position={tooltipPosition()}>
+          Collapse
+        </Tooltip>
+      </div>
     </div>
   );
-});
+};

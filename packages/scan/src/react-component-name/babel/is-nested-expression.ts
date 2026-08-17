@@ -1,4 +1,4 @@
-import type * as t from '@babel/types';
+import type * as t from "@babel/types";
 type NestedExpression =
   | t.ParenthesizedExpression
   | t.TypeCastExpression
@@ -10,13 +10,13 @@ type NestedExpression =
 
 export const isNestedExpression = (node: t.Node): node is NestedExpression => {
   switch (node.type) {
-    case 'ParenthesizedExpression':
-    case 'TypeCastExpression':
-    case 'TSAsExpression':
-    case 'TSSatisfiesExpression':
-    case 'TSNonNullExpression':
-    case 'TSTypeAssertion':
-    case 'TSInstantiationExpression':
+    case "ParenthesizedExpression":
+    case "TypeCastExpression":
+    case "TSAsExpression":
+    case "TSSatisfiesExpression":
+    case "TSNonNullExpression":
+    case "TSTypeAssertion":
+    case "TSInstantiationExpression":
       return true;
     default:
       return false;

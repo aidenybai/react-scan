@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { transform } from './utils';
+import { describe, it, expect } from "vitest";
+import { transform } from "./utils";
 
-describe('modern React patterns', () => {
-  it('handles components with hooks and context', async () => {
+describe("modern React patterns", () => {
+  it("handles components with hooks and context", async () => {
     const input = `
       const UserProfile = () => {
         const { user } = useContext(UserContext)
@@ -19,7 +19,7 @@ describe('modern React patterns', () => {
     expect(result).toContain("UserProfile.displayName = 'UserProfile'");
   });
 
-  it('handles components with custom hooks', async () => {
+  it("handles components with custom hooks", async () => {
     const input = `
       const SearchResults = () => {
         const { data, loading, error } = useQuery(SEARCH_QUERY)
@@ -41,7 +41,7 @@ describe('modern React patterns', () => {
     expect(result).toContain("SearchResults.displayName = 'SearchResults'");
   });
 
-  it('handles components with suspense boundaries', async () => {
+  it("handles components with suspense boundaries", async () => {
     const input = `
       const AsyncContent = () => {
         const data = useSuspenseQuery(QUERY)
@@ -56,7 +56,7 @@ describe('modern React patterns', () => {
     expect(result).toContain("AsyncContent.displayName = 'AsyncContent'");
   });
 
-  it('handles components with error boundaries', async () => {
+  it("handles components with error boundaries", async () => {
     const input = `
       import React from 'react';
 

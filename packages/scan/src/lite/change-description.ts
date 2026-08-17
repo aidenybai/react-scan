@@ -8,8 +8,8 @@ import {
   traverseContexts,
   traverseProps,
   traverseState,
-} from 'bippy';
-import type { ChangeDescription } from './types';
+} from "bippy";
+import type { ChangeDescription } from "./types";
 
 const objectIs = Object.is;
 
@@ -59,17 +59,14 @@ const didAnyClassStateChange = (fiber: Fiber): boolean => {
   if (
     !previousState ||
     !nextState ||
-    typeof previousState !== 'object' ||
-    typeof nextState !== 'object'
+    typeof previousState !== "object" ||
+    typeof nextState !== "object"
   ) {
     return previousState !== nextState;
   }
   const previousObject = previousState as Record<string, unknown>;
   const nextObject = nextState as Record<string, unknown>;
-  const allKeys = new Set<string>([
-    ...Object.keys(previousObject),
-    ...Object.keys(nextObject),
-  ]);
+  const allKeys = new Set<string>([...Object.keys(previousObject), ...Object.keys(nextObject)]);
   for (const key of allKeys) {
     if (!objectIs(previousObject[key], nextObject[key])) return true;
   }
@@ -91,11 +88,7 @@ const collectChangedHookIndices = (fiber: Fiber): Array<number> => {
   const indices: Array<number> = [];
   let index = 0;
   traverseState(fiber, (nextState, prevState) => {
-    if (
-      nextState &&
-      prevState &&
-      !objectIs(prevState.memoizedState, nextState.memoizedState)
-    ) {
+    if (nextState && prevState && !objectIs(prevState.memoizedState, nextState.memoizedState)) {
       indices.push(index);
     }
     index++;

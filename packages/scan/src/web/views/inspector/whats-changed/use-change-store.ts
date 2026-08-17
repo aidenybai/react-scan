@@ -1,20 +1,38 @@
-import { useEffect, useRef, useState } from "preact/hooks";
-import { ChangesListener, ChangesPayload, ContextChange, Store } from "~core/index";
+import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import {
+  type ChangesListener,
+  type ChangesPayload,
+  type ContextChange,
+} from "../../../../core/index";
+import { Store, getInspectState } from "../../../../core/native-state";
 import { getFiberId } from "bippy";
-import { isEqual } from "~core/utils";
+import { isEqual } from "../../../../core/utils";
 
 const CHANGES_QUEUE_INTERVAL = 50;
 
-export type AggregatedChanges = {
+export interface AggregatedChanges {
   count: number;
   currentValue: unknown;
   previousValue: unknown;
   name: string;
   lastUpdated: number;
   id: string;
-};
+}
 
-export type AllAggregatedChanges = {
+interface InitializedContextChanges {
+  changes: AggregatedChanges;
+  kind: "initialized";
+}
+
+interface PartiallyInitializedContextChanges {
+  kind: "partially-initialized";
+  value: unknown;
+  name: string;
+  lastUpdated: number;
+  id: string;
+}
+
+export interface AllAggregatedChanges {
   // oxlint-disable-next-line typescript/no-explicit-any
   propsChanges: Map<any, AggregatedChanges>;
   // oxlint-disable-next-line typescript/no-explicit-any
@@ -22,19 +40,9 @@ export type AllAggregatedChanges = {
   contextChanges: Map<
     // oxlint-disable-next-line typescript/no-explicit-any
     any,
-    | { changes: AggregatedChanges; kind: "initialized" }
-    | {
-        // this looks weird, because it is
-        // its a work around to allow context changes to be sent impotently
-        // (react-scan internals do not yet handle sending context changes the render they change)
-        kind: "partially-initialized";
-        value: unknown;
-        name: string;
-        lastUpdated: number;
-        id: string;
-      }
+    InitializedContextChanges | PartiallyInitializedContextChanges
   >;
-};
+}
 
 const getContextChangesValue = (
   discriminated:
@@ -307,28 +315,27 @@ export const calculateTotalChanges = (changes: AllAggregatedChanges) => {
   );
 };
 
-export const useInspectedFiberChangeStore = (opts?: {
+export const createInspectedFiberChangeStore = (opts?: {
   onChangeUpdate?: (countUpdated: number) => void;
 }) => {
-  const pendingChanges = useRef<{ queue: ChangesPayload[] }>({ queue: [] });
-  // flushed state read from queue stream
-  const [aggregatedChanges, setAggregatedChanges] = useState<AllAggregatedChanges>({
+  const pendingChanges: { queue: ChangesPayload[] } = { queue: [] };
+  const [aggregatedChanges, setAggregatedChanges] = createSignal<AllAggregatedChanges>({
     propsChanges: new Map(),
     stateChanges: new Map(),
     contextChanges: new Map(),
   });
 
-  const fiber = Store.inspectState.value.kind === "focused" ? Store.inspectState.value.fiber : null;
-  const fiberId = fiber ? getFiberId(fiber) : null;
+  const fiberId = createMemo(() => {
+    const inspectState = getInspectState();
+    return inspectState.kind === "focused" ? getFiberId(inspectState.fiber) : null;
+  });
 
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+  onMount(() => {
     const interval = setInterval(() => {
-      // optimization to avoid unconditional renders
-      if (pendingChanges.current.queue.length === 0) return;
+      if (pendingChanges.queue.length === 0) return;
 
       setAggregatedChanges((prevAggregatedChanges) => {
-        const queueChanges = collapseQueue(pendingChanges.current.queue);
+        const queueChanges = collapseQueue(pendingChanges.queue);
         const merged = mergeChanges(prevAggregatedChanges, queueChanges);
         const prevTotal = calculateTotalChanges(prevAggregatedChanges);
         const newTotal = calculateTotalChanges(merged);
@@ -338,58 +345,47 @@ export const useInspectedFiberChangeStore = (opts?: {
         return merged;
       });
 
-      pendingChanges.current.queue = [];
+      pendingChanges.queue = [];
     }, CHANGES_QUEUE_INTERVAL);
 
-    return () => {
+    onCleanup(() => {
       clearInterval(interval);
-    };
-  }, [fiber]);
+    });
+  });
 
-  // un-throttled subscription
-  useEffect(() => {
-    if (!fiberId) {
+  createEffect(() => {
+    const currentFiberId = fiberId();
+    if (!currentFiberId) {
       return;
     }
     const listener: ChangesListener = (change) => {
-      pendingChanges.current?.queue.push(change);
+      pendingChanges.queue.push(change);
     };
 
-    let listeners = Store.changesListeners.get(fiberId);
+    let listeners = Store.changesListeners.get(currentFiberId);
 
     if (!listeners) {
       listeners = [];
-      Store.changesListeners.set(fiberId, listeners);
+      Store.changesListeners.set(currentFiberId, listeners);
     }
 
     listeners.push(listener);
 
-    return () => {
+    onCleanup(() => {
       setAggregatedChanges({
         propsChanges: new Map(),
         stateChanges: new Map(),
         contextChanges: new Map(),
       });
-      pendingChanges.current.queue = [];
+      pendingChanges.queue = [];
       Store.changesListeners.set(
-        fiberId,
-        Store.changesListeners.get(fiberId)?.filter((l) => l !== listener) ?? [],
+        currentFiberId,
+        Store.changesListeners
+          .get(currentFiberId)
+          ?.filter((candidateListener) => candidateListener !== listener) ?? [],
       );
-    };
-  }, [fiberId]);
-
-  // cleanup
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    return () => {
-      setAggregatedChanges({
-        propsChanges: new Map(),
-        stateChanges: new Map(),
-        contextChanges: new Map(),
-      });
-      pendingChanges.current.queue = [];
-    };
-  }, [fiberId]);
+    });
+  });
 
   return aggregatedChanges;
 };

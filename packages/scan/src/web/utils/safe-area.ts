@@ -1,17 +1,17 @@
-import { ReactScanInternals } from '~core/index';
-import { SAFE_AREA } from '~web/constants';
-import { isFiniteNonNegative } from '~web/utils/is-finite-non-negative';
-import { isPlainObject } from '~web/utils/is-plain-object';
+import { getOptionsState } from "../../core/native-state";
+import { isFiniteNonNegative } from "../../utils/is-finite-non-negative";
+import { isPlainObject } from "../../utils/is-plain-object";
+import { SAFE_AREA } from "../constants";
 
-export interface SafeAreaInsets {
+export interface ResolvedSafeAreaInsets {
   top: number;
   right: number;
   bottom: number;
   left: number;
 }
 
-export const getSafeArea = (): SafeAreaInsets => {
-  const value = ReactScanInternals.options.value.safeArea;
+export const getSafeArea = (): ResolvedSafeAreaInsets => {
+  const value = getOptionsState().safeArea;
 
   if (isFiniteNonNegative(value)) {
     return { top: value, right: value, bottom: value, left: value };

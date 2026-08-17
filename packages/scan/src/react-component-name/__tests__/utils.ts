@@ -1,9 +1,6 @@
-import { type Options, reactComponentNamePlugin } from '..';
+import { type Options, reactComponentNamePlugin } from "..";
 
-type TransformFn = (
-  code: string,
-  id: string,
-) => Promise<{ code: string } | string | null>;
+type TransformFn = (code: string, id: string) => Promise<{ code: string } | string | null>;
 
 export const transform = async (code: string, options?: Options) => {
   const plugin = reactComponentNamePlugin.vite(options || {}) as {
@@ -18,10 +15,10 @@ export const transform = async (code: string, options?: Options) => {
       error: console.error,
     },
     code,
-    'test.tsx',
+    "test.tsx",
   );
 
   if (!result) return code;
-  if (typeof result === 'string') return result;
+  if (typeof result === "string") return result;
   return result.code;
 };

@@ -1,18 +1,16 @@
-import { useSyncExternalStore } from "preact/compat";
-import { not_globally_unique_generateId } from "~core/utils";
-import { MAX_INTERACTION_BATCH, interactionStore } from "./interaction-store";
+import { not_globally_unique_generateId } from "../utils";
 import {
   FiberRenders,
   PerformanceEntryChannelEvent,
   TimeoutStage,
+  clearPerformanceEntries,
+  hasPendingPerformanceEntries,
   listenForPerformanceEntryInteractions,
   listenForRenders,
   setupDetailedPointerTimingListener,
   setupPerformancePublisher,
 } from "./performance";
-import { MAX_CHANNEL_SIZE, performanceEntryChannels } from "./performance-store";
 import { BoundedArray } from "./performance-utils";
-import { createStore } from "~web/utils/create-store";
 
 type FinalInteraction = {
   detailedTiming: TimeoutStage;
@@ -51,130 +49,102 @@ export type SlowdownEvent = (InteractionEvent | LongRenderPipeline) & {
   id: string;
 };
 
-type ToolbarEventStoreState = {
-  state: {
-    events: BoundedArray<SlowdownEvent>;
-  };
-  actions: {
-    addEvent: (event: SlowdownEvent) => void;
-    addListener: (listener: (event: SlowdownEvent) => void) => () => void;
-    clear: () => void;
+const EVENT_STORE_CAPACITY = 200;
+let toolbarEvents = new BoundedArray<SlowdownEvent>(EVENT_STORE_CAPACITY);
+const toolbarEventSubscribers = new Set<() => void>();
+
+export const getToolbarEvents = (): BoundedArray<SlowdownEvent> => toolbarEvents;
+
+export const subscribeToolbarEvents = (subscriber: () => void): (() => void) => {
+  toolbarEventSubscribers.add(subscriber);
+  return () => {
+    toolbarEventSubscribers.delete(subscriber);
   };
 };
 
-const EVENT_STORE_CAPACITY = 200;
+export const clearToolbarEvents = (): void => {
+  toolbarEvents = new BoundedArray(EVENT_STORE_CAPACITY);
+  toolbarEventSubscribers.forEach((subscriber) => subscriber());
+};
 
-export const toolbarEventStore = createStore<ToolbarEventStoreState>()((set, get) => {
-  const listeners = new Set<(event: SlowdownEvent) => void>();
+const addToolbarEvent = (event: SlowdownEvent): void => {
+  const events = [...toolbarEvents, event];
+  const applyOverlapCheckToLongRenderEvent = (
+    longRenderEvent: LongRenderPipeline & { id: string },
+    onOverlap: (overlapsWith: InteractionEvent & { id: string }) => void,
+  ) => {
+    const overlapsWith = events.find(
+      (candidateEvent): candidateEvent is InteractionEvent & { id: string } => {
+        if (candidateEvent.kind === "long-render") {
+          return false;
+        }
 
-  return {
-    state: {
-      events: new BoundedArray(EVENT_STORE_CAPACITY),
-    },
+        if (candidateEvent.id === longRenderEvent.id) {
+          return false;
+        }
 
-    actions: {
-      addEvent: (event: SlowdownEvent) => {
-        listeners.forEach((listener) => listener(event));
+        /**
+         * |---x-----------x------ (interaction)
+         * |x-----------x          (long-render)
+         */
 
-        const events = [...get().state.events, event];
-        const applyOverlapCheckToLongRenderEvent = (
-          longRenderEvent: LongRenderPipeline & { id: string },
-          onOverlap: (overlapsWith: InteractionEvent & { id: string }) => void,
-        ) => {
-          const overlapsWith = events.find((event) => {
-            if (event.kind === "long-render") {
-              return;
-            }
+        if (
+          longRenderEvent.data.startAt <= candidateEvent.data.startAt &&
+          longRenderEvent.data.endAt <= candidateEvent.data.endAt &&
+          longRenderEvent.data.endAt >= candidateEvent.data.startAt
+        ) {
+          return true;
+        }
 
-            if (event.id === longRenderEvent.id) {
-              return;
-            }
-
-            /**
-             * |---x-----------x------ (interaction)
-             * |x-----------x          (long-render)
-             */
-
-            if (
-              longRenderEvent.data.startAt <= event.data.startAt &&
-              longRenderEvent.data.endAt <= event.data.endAt &&
-              longRenderEvent.data.endAt >= event.data.startAt
-            ) {
-              return true;
-            }
-
-            /**
+        /**
              * |x-----------x---- (interaction)
              * |--x------------x  (long-render)
              *
 
              */
 
-            if (
-              event.data.startAt <= longRenderEvent.data.startAt &&
-              event.data.endAt >= longRenderEvent.data.startAt
-            ) {
-              return true;
-            }
+        if (
+          candidateEvent.data.startAt <= longRenderEvent.data.startAt &&
+          candidateEvent.data.endAt >= longRenderEvent.data.startAt
+        ) {
+          return true;
+        }
 
-            /**
-             *
-             * |--x-------------x    (interaction)
-             * |x------------------x (long-render)
-             *
-             */
+        /**
+         *
+         * |--x-------------x    (interaction)
+         * |x------------------x (long-render)
+         *
+         */
 
-            if (
-              longRenderEvent.data.startAt <= event.data.startAt &&
-              longRenderEvent.data.endAt >= event.data.endAt
-            ) {
-              return true;
-            }
-          }) as undefined | (InteractionEvent & { id: string }); // invariant: because we early check the typechecker does not know it must be the case that when it finds something, it will be an interaction it overlaps with
-
-          if (overlapsWith) {
-            onOverlap(overlapsWith);
-          }
-        };
-
-        const toRemove = new Set<string>();
-
-        events.forEach((event) => {
-          if (event.kind === "interaction") return;
-          applyOverlapCheckToLongRenderEvent(event, () => {
-            toRemove.add(event.id);
-          });
-        });
-
-        const withRemovedEvents = events.filter((event) => !toRemove.has(event.id));
-
-        set(() => ({
-          state: {
-            events: BoundedArray.fromArray(withRemovedEvents, EVENT_STORE_CAPACITY),
-          },
-        }));
+        if (
+          longRenderEvent.data.startAt <= candidateEvent.data.startAt &&
+          longRenderEvent.data.endAt >= candidateEvent.data.endAt
+        ) {
+          return true;
+        }
+        return false;
       },
+    );
 
-      addListener: (listener: (event: SlowdownEvent) => void) => {
-        listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
-      },
-
-      clear: () => {
-        set({
-          state: {
-            events: new BoundedArray(EVENT_STORE_CAPACITY),
-          },
-        });
-      },
-    },
+    if (overlapsWith) {
+      onOverlap(overlapsWith);
+    }
   };
-});
 
-export const useToolbarEventLog = () => {
-  return useSyncExternalStore(toolbarEventStore.subscribe, toolbarEventStore.getState);
+  const eventIdsToRemove = new Set<string>();
+  events.forEach((candidateEvent) => {
+    if (candidateEvent.kind === "interaction") return;
+    applyOverlapCheckToLongRenderEvent(candidateEvent, () => {
+      eventIdsToRemove.add(candidateEvent.id);
+    });
+  });
+
+  toolbarEvents = BoundedArray.fromArray(
+    events.filter((candidateEvent) => !eventIdsToRemove.has(candidateEvent.id)),
+    EVENT_STORE_CAPACITY,
+  );
+  toolbarEventSubscribers.forEach((subscriber) => subscriber());
 };
 
 let taskDirtyAt: null | number = null;
@@ -263,7 +233,7 @@ function startLongPipelineTracking() {
           const endAt = endOrigin + endNow;
           const startAt = startTime + startOrigin;
 
-          toolbarEventStore.getState().actions.addEvent({
+          addToolbarEvent({
             kind: "long-render",
             id: not_globally_unique_generateId(),
             data: {
@@ -308,7 +278,7 @@ export const startTimingTracking = () => {
     finalInteraction: FinalInteraction,
     event: PerformanceEntryChannelEvent,
   ) => {
-    toolbarEventStore.getState().actions.addEvent({
+    addToolbarEvent({
       kind: "interaction",
       id: not_globally_unique_generateId(),
       data: {
@@ -318,18 +288,13 @@ export const startTimingTracking = () => {
       },
     });
 
-    const existingCompletedInteractions = performanceEntryChannels.getChannelState("recording");
-
     finalInteraction.detailedTiming.stopListeningForRenders();
 
-    if (existingCompletedInteractions.length) {
+    if (hasPendingPerformanceEntries()) {
       // then performance entry and our detailed timing handlers are out of sync, we disregard that entry
       // it may be possible the performance entry returned before detailed timing. If that's the case we should update
       // assumptions and deal with mapping the entry back to the detailed timing here
-      performanceEntryChannels.updateChannelState(
-        "recording",
-        () => new BoundedArray(MAX_CHANNEL_SIZE),
-      );
+      clearPerformanceEntries();
     }
   };
   const unSubDetailedPointerTiming = setupDetailedPointerTimingListener("pointer", {
@@ -339,14 +304,7 @@ export const startTimingTracking = () => {
     onComplete,
   });
 
-  const unSubInteractions = listenForPerformanceEntryInteractions((completedInteraction) => {
-    interactionStore.setState(
-      BoundedArray.fromArray(
-        interactionStore.getCurrentState().concat(completedInteraction),
-        MAX_INTERACTION_BATCH,
-      ),
-    );
-  });
+  const unSubInteractions = listenForPerformanceEntryInteractions();
 
   return () => {
     unSubMouseOver();
