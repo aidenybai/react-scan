@@ -1,0 +1,696 @@
+@import "tailwindcss";
+@config "../../../../tailwind.config.mjs";
+
+* {
+  outline: none !important;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* WebKit (Chrome, Safari, Edge) specific scrollbar styles */
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    border-radius: 10px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+    scrollbar-width: 6px;
+  }
+}
+
+button {
+  @apply hover:bg-none;
+  @apply outline-none;
+  @apply border-none;
+  @apply transition-colors ease-out;
+  @apply cursor-pointer;
+}
+
+input {
+  @apply outline-none;
+  @apply border-none;
+  @apply bg-none bg-transparent;
+  @apply placeholder:text-neutral-500 placeholder:italic placeholder:text-xs;
+  @apply placeholder-shown:truncate;
+}
+
+svg {
+  @apply w-auto h-auto;
+  @apply pointer-events-none;
+}
+
+/*
+  Using CSS content with data attributes is more performant than:
+  1. React re-renders with JSX text content
+  2. Direct DOM manipulation methods:
+     - element.textContent (creates/updates text nodes, triggers repaint)
+     - element.innerText (triggers reflow by computing styles & layout)
+     - element.innerHTML (heavy parsing, triggers reflow, security risks)
+  3. Multiple data attributes with complex CSS concatenation
+
+  This approach:
+  - Avoids React reconciliation
+  - Uses browser's native CSS engine (optimized content updates)
+  - Minimizes main thread work
+  - Reduces DOM operations
+  - Avoids forced reflows (layout recalculation)
+  - Only triggers necessary repaints
+  - Keeps pseudo-element updates in render layer
+*/
+.with-data-text {
+  overflow: hidden;
+  &::before {
+    content: attr(data-text);
+    @apply block;
+    @apply truncate;
+  }
+}
+
+#react-scan-toolbar {
+  @apply fixed left-0 top-0;
+  @apply flex flex-col;
+  @apply shadow-lg;
+  @apply font-mono text-[13px] text-white;
+  @apply bg-black;
+  @apply select-none;
+  @apply cursor-move;
+  @apply opacity-0;
+  @apply z-[2147483678];
+  @apply animate-fade-in animation-duration-300 animation-delay-300;
+  @apply shadow-[0_4px_12px_rgba(0,0,0,0.2)];
+  @apply place-self-start;
+
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* The toolbar uses select-none for drag UX, so re-enable text selection on
+ * content elements (e.g. AI prompt <pre>, search inputs). See #415. */
+#react-scan-toolbar pre,
+#react-scan-toolbar textarea,
+#react-scan-toolbar input[type='text'],
+#react-scan-toolbar input[type='search'],
+#react-scan-toolbar [data-react-scan-selectable] {
+  @apply select-text;
+  cursor: text;
+}
+
+.button {
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.resize-line-wrapper {
+  @apply absolute;
+  @apply overflow-hidden;
+}
+
+.resize-line {
+  @apply absolute inset-0;
+  @apply overflow-hidden;
+  @apply bg-black;
+  @apply transition-all;
+
+  svg {
+    @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
+  }
+}
+
+.resize-right,
+.resize-left {
+  @apply inset-y-0;
+  @apply w-6;
+  @apply cursor-ew-resize;
+
+  .resize-line-wrapper {
+    @apply inset-y-0;
+    @apply w-1/2;
+  }
+
+  &:hover {
+    .resize-line {
+      @apply translate-x-0;
+    }
+  }
+}
+.resize-right {
+  @apply right-0;
+  @apply translate-x-1/2;
+
+  .resize-line-wrapper {
+    @apply right-0;
+  }
+  .resize-line {
+    @apply rounded-r-lg;
+    @apply -translate-x-full;
+  }
+}
+
+.resize-left {
+  @apply left-0;
+  @apply -translate-x-1/2;
+
+  .resize-line-wrapper {
+    @apply left-0;
+  }
+  .resize-line {
+    @apply rounded-l-lg;
+    @apply translate-x-full;
+  }
+}
+
+.resize-top,
+.resize-bottom {
+  @apply inset-x-0;
+  @apply h-6;
+  @apply cursor-ns-resize;
+
+  .resize-line-wrapper {
+    @apply inset-x-0;
+    @apply h-1/2;
+  }
+
+  &:hover {
+    .resize-line {
+      @apply translate-y-0;
+    }
+  }
+}
+.resize-top {
+  @apply top-0;
+  @apply -translate-y-1/2;
+
+  .resize-line-wrapper {
+    @apply top-0;
+  }
+  .resize-line {
+    @apply rounded-t-lg;
+    @apply translate-y-full;
+  }
+}
+
+.resize-bottom {
+  @apply bottom-0;
+  @apply translate-y-1/2;
+
+  .resize-line-wrapper {
+    @apply bottom-0;
+  }
+  .resize-line {
+    @apply rounded-b-lg;
+    @apply -translate-y-full;
+  }
+}
+
+.react-scan-header {
+  @apply flex items-center gap-x-2;
+  @apply pl-3 pr-2;
+  @apply min-h-9;
+  @apply border-b-1 border-[#222];
+  @apply whitespace-nowrap overflow-hidden;
+}
+
+.react-scan-replay-button,
+.react-scan-close-button {
+  @apply flex items-center;
+  @apply p-1;
+  @apply min-w-fit;
+  @apply rounded;
+  @apply transition-all duration-300;
+}
+
+.react-scan-replay-button {
+  @apply relative;
+  @apply overflow-hidden;
+  @apply !bg-purple-500/50;
+
+  &:hover {
+    @apply bg-purple-500/25;
+  }
+
+  &.disabled {
+    @apply opacity-50;
+    @apply pointer-events-none;
+  }
+
+  &:before {
+    content: "";
+    @apply absolute;
+    @apply inset-0;
+    @apply -translate-x-full;
+    animation: shimmer 2s infinite;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(142, 97, 227, 0.3),
+      transparent
+    );
+  }
+}
+
+.react-scan-close-button {
+  @apply bg-white/10;
+
+  &:hover {
+    @apply bg-white/15;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.react-section-header {
+  @apply sticky z-100;
+  @apply flex items-center gap-x-2;
+  @apply px-3;
+  @apply w-full h-7;
+  @apply text-[#888] truncate;
+  @apply bg-[#0a0a0a] border-b-1 border-[#222];
+}
+
+.react-scan-section {
+  @apply flex flex-col;
+  @apply px-2;
+  @apply text-[#888];
+  @apply before:content-[attr(data-section)] before:text-gray-500;
+  @apply text-xs;
+
+  > .react-scan-property {
+    @apply -ml-3.5;
+  }
+}
+
+.react-scan-property {
+  @apply relative;
+  @apply flex flex-col;
+  @apply pl-8;
+  @apply border-l-1 border-transparent;
+  @apply overflow-hidden;
+}
+
+.react-scan-property-content {
+  @apply flex-1 flex flex-col;
+  @apply min-h-7;
+  @apply max-w-full;
+  @apply overflow-hidden;
+}
+
+.react-scan-string {
+  color: #9ecbff;
+}
+
+.react-scan-number {
+  color: #79c7ff;
+}
+
+.react-scan-boolean {
+  color: #56b6c2;
+}
+
+.react-scan-key {
+  @apply w-fit max-w-60;
+  @apply text-white whitespace-nowrap;
+}
+
+.react-scan-input {
+  @apply text-white;
+  @apply bg-black;
+}
+
+@keyframes blink {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.react-scan-arrow {
+  @apply absolute top-0 left-7;
+  @apply flex items-center justify-center;
+  @apply cursor-pointer;
+  @apply w-6 h-7;
+  @apply -translate-x-full;
+  @apply z-10;
+
+  > svg {
+    @apply transition-transform;
+  }
+}
+
+.react-scan-nested {
+  @apply relative;
+  @apply overflow-hidden;
+
+  &:before {
+    content: "";
+    @apply absolute top-0 left-0;
+    @apply w-[1px] h-full;
+    @apply bg-gray-500/30;
+  }
+}
+
+.react-scan-settings {
+  @apply absolute inset-0;
+  @apply flex flex-col gap-4;
+  @apply py-2 px-4;
+  @apply text-[#888];
+
+  > div {
+    @apply flex items-center justify-between;
+    @apply transition-colors duration-300;
+  }
+}
+
+.react-scan-preview-line {
+  @apply relative;
+  @apply flex items-center min-h-7 gap-x-2;
+}
+
+.react-scan-flash-overlay {
+  @apply absolute inset-0;
+  @apply opacity-0;
+  @apply z-50;
+  @apply pointer-events-none;
+  @apply transition-opacity;
+  @apply mix-blend-multiply;
+  @apply bg-purple-500/90;
+}
+
+.react-scan-toggle {
+  @apply relative;
+  @apply inline-flex;
+  @apply w-10 h-6;
+
+  input {
+    @apply absolute inset-0;
+    @apply opacity-0 z-20;
+    @apply cursor-pointer;
+    @apply w-full h-full;
+  }
+
+  input:checked {
+    + div {
+      @apply bg-[#5f3f9a];
+
+      &::before {
+        @apply translate-x-full;
+        @apply left-auto;
+        @apply border-[#5f3f9a];
+      }
+    }
+  }
+
+  > div {
+    @apply absolute inset-1;
+    @apply bg-neutral-700;
+    @apply rounded-full;
+    @apply pointer-events-none;
+    @apply transition-colors duration-300;
+
+    &:before {
+      @apply content-[''];
+      @apply absolute top-1/2 left-0;
+      @apply -translate-y-1/2;
+      @apply w-4 h-4;
+      @apply bg-white;
+      @apply border-2 border-neutral-700;
+      @apply rounded-full;
+      @apply shadow-sm;
+      @apply transition-all duration-300;
+    }
+  }
+}
+
+.react-scan-flash-active {
+  @apply opacity-40;
+  @apply transition-opacity duration-300;
+}
+
+.react-scan-inspector-overlay {
+  @apply flex flex-col;
+  @apply opacity-0;
+  @apply transition-opacity duration-200 ease-out;
+  will-change: opacity;
+
+  &.fade-out {
+    @apply opacity-0;
+  }
+
+  &.fade-in {
+    @apply opacity-100;
+  }
+}
+
+.react-scan-what-changed {
+  ul {
+    @apply list-disc;
+    @apply pl-4;
+  }
+
+  li {
+    @apply whitespace-nowrap;
+    > div {
+      @apply flex items-center justify-between gap-x-2;
+    }
+  }
+}
+
+.count-badge {
+  @apply flex gap-x-2 items-center;
+  @apply px-1.5 py-0.5;
+  @apply text-[#a855f7] text-xs font-medium tabular-nums rounded-[4px];
+  @apply bg-[#a855f7]/10;
+  @apply origin-center;
+  @apply transition-all duration-300 delay-150;
+}
+
+.count-flash {
+  @apply animate-count-flash;
+}
+
+.count-flash-white {
+  @apply animate-count-flash-shake !delay-500;
+}
+
+.change-scope {
+  @apply flex items-center gap-x-1;
+  @apply text-[#666];
+  @apply text-xs;
+  @apply font-mono;
+
+  > div {
+    @apply px-1.5 py-0.5;
+    @apply text-xs font-medium tabular-nums rounded-[4px];
+    @apply origin-center;
+    @apply transition-all duration-300 delay-150;
+
+    &[data-flash="true"] {
+      @apply bg-[#a855f7]/10 text-[#a855f7];
+    }
+  }
+}
+
+.react-scan-slider {
+  @apply relative;
+  @apply min-h-6;
+
+  > input {
+    @apply absolute inset-0;
+    @apply opacity-0;
+  }
+
+  &:before {
+    @apply content-[''];
+    @apply absolute inset-x-0 top-1/2 -translate-y-1/2;
+    @apply h-1.5;
+    @apply bg-[#8e61e3]/40;
+    @apply rounded-lg;
+    @apply pointer-events-none;
+  }
+
+  &:after {
+    @apply content-[''];
+    @apply absolute inset-x-0 -inset-y-2;
+    @apply -z-10;
+  }
+
+  span {
+    @apply absolute left-0 top-1/2 -translate-y-1/2;
+    @apply w-2.5 h-2.5;
+    @apply rounded-lg;
+    @apply bg-[#8e61e3];
+    @apply pointer-events-none;
+    @apply transition-transform duration-75;
+  }
+}
+
+.resize-v-line {
+  @apply flex items-center justify-center;
+  @apply min-w-1 max-w-1;
+  @apply w-full h-full;
+  @apply transition-colors;
+
+  &:hover,
+  &:active {
+    > span {
+      @apply bg-[#222];
+    }
+
+    svg {
+      @apply opacity-100;
+    }
+  }
+
+  &::before {
+    @apply content-[""];
+    @apply absolute inset-0 left-1/2 -translate-x-1/2;
+    @apply w-[1px];
+    @apply bg-[#222];
+    @apply transition-colors;
+  }
+
+  > span {
+    @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+    @apply w-1.5 h-4.5;
+    @apply rounded;
+    @apply transition-colors;
+  }
+
+  svg {
+    @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+    @apply text-neutral-400 rotate-90;
+    @apply opacity-0;
+    @apply transition-opacity;
+    @apply z-50;
+  }
+}
+
+.tree-node-search-highlight {
+  @apply truncate;
+
+  span {
+    @apply py-[1px];
+    @apply font-medium bg-yellow-300 text-black rounded-sm;
+  }
+
+  .single {
+    @apply px-[2px] mr-[1px];
+  }
+
+  .regex {
+    @apply px-[2px];
+  }
+
+  .start {
+    @apply rounded-l-sm ml-[1px];
+  }
+
+  .end {
+    @apply rounded-r-sm mr-[1px];
+  }
+
+  .middle {
+    @apply rounded-sm mx-[1px];
+  }
+}
+
+.react-scan-toolbar-notification {
+  @apply absolute inset-x-0;
+  @apply flex items-center gap-x-2;
+  @apply p-1 pl-2 text-[10px];
+  @apply text-neutral-300;
+  @apply bg-black/90;
+  @apply transition-transform;
+
+  &:before {
+    @apply content-[''];
+    @apply absolute inset-x-0;
+    @apply bg-black;
+    @apply h-2;
+  }
+
+  &.position-top {
+    @apply top-full -translate-y-full;
+    @apply rounded-b-lg;
+
+    &::before {
+      @apply top-0 -translate-y-full;
+    }
+  }
+
+  &.position-bottom {
+    @apply bottom-full translate-y-full;
+    @apply rounded-t-lg;
+
+    &::before {
+      @apply bottom-0 translate-y-full;
+    }
+  }
+
+  &.is-open {
+    @apply translate-y-0;
+  }
+}
+
+.react-scan-header-item {
+  @apply absolute inset-0 -translate-y-[200%];
+  @apply transition-transform duration-300;
+
+  &.is-visible {
+    @apply translate-y-0;
+  }
+}
+
+.react-scan-components-tree:has(.resize-v-line:hover, .resize-v-line:active)
+  .tree {
+  overflow: hidden;
+}
+
+.react-scan-expandable {
+  display: grid;
+  grid-template-rows: 0fr;
+  @apply overflow-hidden;
+  @apply transition-all duration-75;
+  transition-timing-function: ease-out;
+
+  > * {
+    min-height: 0;
+  }
+
+  &.react-scan-expanded {
+    grid-template-rows: 1fr;
+    transition-duration: 100ms;
+  }
+}

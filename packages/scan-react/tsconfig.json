@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": false,
+    "sourceMap": true,
+    "noEmit": true,
+    // The React port uses the React automatic JSX runtime instead of Preact's.
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "types": ["node", "react", "react-dom"],
+    "paths": {
+      // UI lives here; the profiling engine ("core") is re-used from the
+      // original `react-scan` package source — it is framework-agnostic state.
+      "~web/*": ["src/web/*"],
+      "~core/*": ["../scan/src/core/*"],
+      // The re-used engine uses baseUrl-rooted `src/...` imports; resolve them
+      // against the original react-scan source so core does not need editing.
+      "src/*": ["../scan/src/*"]
+    }
+  },
+  // Pull in the upstream global type augmentations (window.__REACT_SCAN__,
+  // RequestInit.priority, etc.) and the `*.css` ambient module that the
+  // re-used `~core` engine relies on.
+  "include": ["src", "global.d.ts", "../scan/src/types.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

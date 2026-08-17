@@ -233,6 +233,37 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
 
+  packages/scan-react:
+    dependencies:
+      bippy:
+        specifier: 0.5.39
+        version: 0.5.39(react@19.2.5)
+      react-doctor:
+        specifier: latest
+        version: 0.2.10(eslint@10.4.0(jiti@2.6.1))(oxlint-tsgolint@0.22.0)(vite-plus@0.1.20(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(publint@0.3.18)(terser@5.46.2)(tsx@4.20.3)(typescript@6.0.3)(vite@6.3.5(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.2)(tsx@4.20.3)(yaml@2.9.0))(yaml@2.9.0))
+      react-grab:
+        specifier: latest
+        version: 0.1.37(react@19.2.5)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: 19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: 19.2.5
+        version: 19.2.5(react@19.2.5)
+      react-scan:
+        specifier: workspace:*
+        version: link:../scan
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
   packages/vite-plugin-react-scan:
     dependencies:
       '@babel/core':
@@ -7050,6 +7081,10 @@ snapshots:
     dependencies:
       react: 19.0.0
 
+  bippy@0.5.41(react@19.2.5):
+    dependencies:
+      react: 19.2.5
+
   bluebird@3.7.2: {}
 
   boolbase@1.0.0: {}
@@ -8676,6 +8711,13 @@ snapshots:
       bippy: 0.5.41(react@19.0.0)
     optionalDependencies:
       react: 19.0.0
+
+  react-grab@0.1.37(react@19.2.5):
+    dependencies:
+      '@react-grab/cli': 0.1.37
+      bippy: 0.5.41(react@19.2.5)
+    optionalDependencies:
+      react: 19.2.5
 
   react-router-dom@6.30.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
