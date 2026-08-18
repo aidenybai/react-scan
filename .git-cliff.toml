@@ -1,0 +1,59 @@
+# .git-cliff.toml
+[changelog]
+header = """
+# Changelog
+"""
+
+body = """{% for group, commits in commits | group_by(attribute="group") %}
+## {{ group | upper_first }}{% for commit in commits %}
+- {{ commit.message | upper_first }}{% if commit.hash %} ([{{ commit.hash | truncate(length=7) }}]({{ commit.hash | commit_url }})){% endif %}{% endfor %}
+
+{% endfor %}"""
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+    { message = "^feat", group = "Features"},
+    { message = "^fix", group = "Bug Fixes"},
+    { message = "^perf", group = "Performance"},
+    { message = "^refactor", group = "Code Refactoring"},
+    { message = "^docs", group = "Documentation"},
+    { message = "^test", group = "Tests"},
+    { message = "^build", group = "Build"},
+    { message = "^ci", group = "CI"},
+    { message = ".*", group = "Chores"},
+]
+
+[[commit.types]]
+name = "feat"
+title = "Features"
+
+[[commit.types]]
+name = "fix"
+title = "Bug Fixes"
+
+[[commit.types]]
+name = "perf"
+title = "Performance"
+
+[[commit.types]]
+name = "refactor"
+title = "Code Refactoring"
+
+[[commit.types]]
+name = "docs"
+title = "Documentation"
+
+[[commit.types]]
+name = "test"
+title = "Tests"
+
+[[commit.types]]
+name = "chore"
+title = "Chores"
+
+[[commit.types]]
+name = "ci"
+title = "CI"
